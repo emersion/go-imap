@@ -48,6 +48,7 @@ func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
 				r.Capabilities[i] = c.(string)
 			}
 		case *imap.StatusResp:
+			// TODO: check tag
 			if res.Type != imap.OK {
 				err = res
 			}
