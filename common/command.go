@@ -11,6 +11,30 @@ const (
 	Noop = "NOOP"
 	Logout = "LOGOUT"
 	Starttls = "STARTTLS"
+
+	Authenticate = "AUTHENTICATE"
+	Login = "LOGIN"
+
+	Select = "SELECT"
+	Examine = "EXAMINE"
+	Create = "CREATE"
+	Delete = "DELETE"
+	Rename = "RENAME"
+	Subscribe = "SUBSCRIBE"
+	Unsubscribe = "UNSUBSCRIBE"
+	List = "LIST"
+	Lsub = "LSUB"
+	Status = "STATUS"
+	Append = "APPEND"
+
+	Check = "CHECK"
+	Close = "CLOSE"
+	Expunge = "EXPUNGE"
+	Search = "SEARCH"
+	Fetch = "FETCH"
+	Store = "STORE"
+	Copy = "COPY"
+	Uid = "UID"
 )
 
 // A command.
@@ -28,34 +52,14 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 	}
 	N += n
 
-	for i, argi := range c.Arguments {
-		if argw, ok := argi.(io.WriterTo); ok {
-			n, err := argw.WriteTo(w)
-			if err != nil {
-				return N, err
-			}
-			N += n
-		}
-
-		var b []byte
-		switch arg := argi.(type) {
-		case []byte:
-			b = arg
-		case string:
-			b = []byte(arg)
-		case int:
-			b = []byte(strconv.Itoa(arg))
-		default:
-			return N, errors.New("Cannot format argument #" + strconv.Itoa(i))
-		}
-
-		n, err = w.Write([]byte(" "))
+	if len(c.Arguments) > 0 {
+		var args string
+		args, err = formatList(c.Arguments)
 		if err != nil {
 			return
 		}
-		N += n
 
-		n, err = w.Write(b)
+		n, err = w.Write([]byte(" " + args))
 		if err != nil {
 			return
 		}
@@ -63,4 +67,9 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 	}
 
 	return
+}
+
+// A value that can be converted to a command.
+type Commander interface {
+	Command() *Command
 }

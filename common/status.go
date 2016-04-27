@@ -38,9 +38,30 @@ type StatusResp struct {
 	Info string
 }
 
-func (r *StatusResp) WriteTo(w io.Writer) (n int64, err error) {
-	// TODO
-	return
+func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
+	fields := []interface{}{r.Type}
+
+	if r.Code != "" {
+		code := r.Code
+
+		if len(r.Arguments) > 0 {
+			// TODO: convert Arguments to []string
+			//code += " " + strings.Join(" ", r.Arguments)
+		}
+
+		fields = append(fields, "[" + code + "]")
+	}
+
+	if r.Info != "" {
+		fields = append(fields, r.Info)
+	}
+
+	res := &Response{
+		Tag: r.Tag,
+		Fields: fields,
+	}
+
+	return res.WriteTo(w)
 }
 
 func StatusRespFromError(tag string, err error) *StatusResp {
