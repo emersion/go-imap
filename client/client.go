@@ -7,25 +7,17 @@ import (
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
+	"github.com/emersion/imap/responses"
 )
 
 type Client struct {
 	conn net.Conn
 
 	capabilities []string
-	readers map[string]io.ReaderFrom
 }
 
-// TODO: support async reads
-func (c *Client) execute(cmdr imap.Commander) (r io.ReaderFrom, err error) {
+func (c *Client) execute(cmdr imap.Commander, r io.ReaderFrom) (err error) {
 	cmd := cmdr.Command()
-
-	r, ok := c.readers[cmd.Name]
-	if !ok {
-		// TODO: use generic reader?
-		err = errors.New("No reader found for command: " + cmd.Name)
-		return
-	}
 
 	_, err := cmd.WriteTo(c.conn)
 	if err != nil {
@@ -36,9 +28,11 @@ func (c *Client) execute(cmdr imap.Commander) (r io.ReaderFrom, err error) {
 	return
 }
 
-func (c *Client) Capability() {
+func (c *Client) Capability() []string {
 	cmd := &commands.Capability{}
-	c.execute(cmd)
+	res := &responses.Capability{}
+	c.execute(cmd, res)
+	return res.Capabilities
 }
 
 func NewClient(conn net.Conn) *Client {

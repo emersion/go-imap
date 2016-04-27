@@ -13,7 +13,3 @@ type Noop struct {}
 func (r *Noop) WriteTo(w io.Writer) (N int64, err error) {
 	return
 }
-
-func ParseNoop(fields []interface{}) *Noop {
-	return &Noop{}
-}

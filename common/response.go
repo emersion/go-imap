@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bufio"
+	"errors"
 	"io"
 )
 
@@ -33,6 +35,26 @@ func (r *Response) WriteTo(w io.Writer) (N int64, err error) {
 		N += n
 	}
 
+	return
+}
+
+// Implements io.ReaderFrom interface.
+func (r *Response) ReadFrom(r io.Reader) (n int64, err error) {
+	br := bufio.NewReader(r)
+	line, err := br.ReadString(byte('\n'))
+	if err != nil {
+		return
+	}
+	n += len(line)
+
+	fields := parseLine(line)
+	if len(fields) == 0 {
+		err = errors.New("Cannot read response: line has no fields")
+		return
+	}
+
+	r.Tag = fields[0]
+	r.Fields = fields[1:]
 	return
 }
 

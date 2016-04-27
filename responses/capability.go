@@ -25,14 +25,34 @@ func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 	return res.WriteTo(w)
 }
 
-func ParseCapability(fields []interface{}) *Capability {
-	caps := make([]string, len(fields))
+// TODO: add a tag parameter
+func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
+	res := &imap.Response{}
 
-	for i, c := range fields {
-		caps[i] = c.(string)
-	}
+	for {
+		// TODO: improve this, add a readResp() that returns an interface{},
+		// which can be an imap.Response or an imap.StatusResp.
 
-	return &Capability{
-		Capabilities: caps,
+		_, err = res.ReadFrom(r)
+		if err != nil {
+			return
+		}
+
+		if res.Tag == "*" {
+			name := res.Fields[0].(string)
+			if name != imap.Capability {
+				continue
+			}
+
+			caps := res.Fields[1:]
+			r.Capabilities = make([]string, len(caps))
+			for i, c := caps {
+				r.Capabilities[i] = c.(string)
+			}
+		}
+		if res.Tag == tag {
+			// TODO: handle res
+			return
+		}
 	}
 }
