@@ -10,7 +10,7 @@ const (
 	Capability string = "CAPABILITY"
 	Noop = "NOOP"
 	Logout = "LOGOUT"
-	Starttls = "STARTTLS"
+	StartTLS = "STARTTLS"
 
 	Authenticate = "AUTHENTICATE"
 	Login = "LOGIN"
@@ -54,7 +54,7 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 
 	if len(c.Arguments) > 0 {
 		var args string
-		args, err = formatList(c.Arguments)
+		args, err = formatFields(c.Arguments)
 		if err != nil {
 			return
 		}
@@ -64,6 +64,17 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 			return
 		}
 		N += n
+
+		var literals []*Literal
+		for _, f := range c.Arguments {
+			if literal, ok := f.(*Literal); ok {
+				literals = append(literals, literal)
+			}
+		}
+
+		if len(literals) > 0 {
+			// TODO: send literals
+		}
 	}
 
 	return

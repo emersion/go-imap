@@ -38,6 +38,11 @@ type StatusResp struct {
 	Info string
 }
 
+// Implements error.
+func (r *StatusResp) Error() string {
+	return r.Info
+}
+
 func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
 	fields := []interface{}{r.Type}
 
@@ -62,6 +67,17 @@ func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
 	}
 
 	return res.WriteTo(w)
+}
+
+func ParseStatusResp(res *Response) *StatusResp {
+	status := &StatusResp{
+		Tag: res.Tag,
+		Type: res.Fields[0].(StatusRespType),
+	}
+
+	// TODO: parse Code, Arguments, Info
+
+	return status
 }
 
 func StatusRespFromError(tag string, err error) *StatusResp {

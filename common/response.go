@@ -63,12 +63,47 @@ type ContinuationResp struct {
 	Info string
 }
 
-func (r *ContinuationResp) WriteTo(w io.Writer) (int64, error) {
+func (r *ContinuationResp) Response() *Response {
 	res := &Response{Tag: "+"}
 
 	if r.Info != "" {
 		res.Fields = append(res.Fields, r.Info)
 	}
 
-	return res.WriteTo(w)
+	return res
+}
+
+func (r *ContinuationResp) WriteTo(w io.Writer) (int64, error) {
+	return r.Response().WriteTo(w)
+}
+
+func ParseContinuationResp(res *Response) *ContinuationResp {
+	cont := &ContinuationResp{}
+
+	if len(res.Fields) > 0 {
+		cont.Info = res.Fields[0].(string)
+	}
+
+	return cont
+}
+
+func readResp(r io.Reader) (out interface{}, size int, err error) {
+	res := &Response{}
+
+	n, err := res.ReadFrom(r)
+	size = int(n)
+	if err != nil {
+		return
+	}
+
+	switch res.Tag {
+	case "+":
+		out = ParseContinuationResp(res)
+	case "*":
+		out = res
+	default:
+		// TODO: can be a generic response too? Check if name is a StatusRespType
+		out = ParseStatusResp(res)
+	}
+	return
 }
