@@ -89,11 +89,7 @@ func parseQuotedString(r bufio.Reader) (str string, err error) {
 	return
 }
 
-func parseList(r bufio.Reader) (fields []interface{}, err error) {
-	return // TODO
-}
-
-func parseLine(r bufio.Reader) (fields []interface{}, err error) {
+func parseFields(r bufio.Reader) (fields []interface{}, err error) {
 	var char rune
 	for {
 		chars, err = r.Peek(1)
@@ -104,7 +100,7 @@ func parseLine(r bufio.Reader) (fields []interface{}, err error) {
 
 		var field interface{}
 		switch char {
-		case '\n':
+		case '\n', ')', ']': // TODO: more generic check
 			return
 		case literalStart:
 			field, err = parseLiteral(r)
@@ -122,4 +118,45 @@ func parseLine(r bufio.Reader) (fields []interface{}, err error) {
 
 		fields = append(fields, field)
 	}
+}
+
+func parseList(r bufio.Reader) (fields []interface{}, err error) {
+	char, _, err := r.ReadRune()
+	if err != nil {
+		return
+	}
+	if char != listStart {
+		err = errors.New("List doesn't start with an open parenthesis")
+		return
+	}
+
+	fields, err = parseFields(r)
+	if err != nil {
+		return
+	}
+
+	char, _, err := r.ReadRune()
+	if err != nil {
+		return
+	}
+	if char != listStart {
+		err = errors.New("List doesn't end with a close parenthesis")
+	}
+	return
+}
+
+func parseLine(r bufio.Reader) (fields []interface{}, err error) {
+	fields, err = parseFields(r)
+	if err != nil {
+		return
+	}
+
+	char, _, err := r.ReadRune()
+	if err != nil {
+		return
+	}
+	if char != '\n' {
+		err = errors.New("Line doesn't end with a newline character")
+	}
+	return
 }
