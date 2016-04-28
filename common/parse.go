@@ -1,7 +1,7 @@
 package common
 
 import (
-	"bufio"
+	"errors"
 	"io"
 	"strconv"
 )
@@ -20,20 +20,29 @@ type Literal struct {
 	Str string
 }
 
-func (l *Literal) String() string {
-	return l.Str
+func (l *Literal) Field() string {
+	return string(literalStart) + strconv.Itoa(l.Len) + string(literalEnd)
 }
 
 func (l *Literal) WriteTo(w io.Writer) (N int64, err error) {
-	n, err := io.WriteString(w, string(literalStart) + strconv.Itoa(l.Len) + string(literalEnd))
+	n, err := io.WriteString(w, l.Str)
 	return int64(n), err
+}
+
+type StringReader interface {
+	ReadString(delim byte) (line string, err error)
+}
+
+type Reader interface {
+	io.RuneScanner
+	StringReader
 }
 
 func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
 
-func parseAtom(r bufio.Reader) (interface{}, error) {
+func parseAtom(r Reader) (interface{}, error) {
 	atom, err := r.ReadString(byte(delim))
 	if err != nil && err != io.EOF {
 		return nil, err
@@ -46,7 +55,7 @@ func parseAtom(r bufio.Reader) (interface{}, error) {
 	return atom, nil
 }
 
-func parseLiteral(r bufio.Reader) (literal *imap.Literal, err error) {
+func parseLiteral(r Reader) (literal *Literal, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -71,7 +80,7 @@ func parseLiteral(r bufio.Reader) (literal *imap.Literal, err error) {
 	return
 }
 
-func parseQuotedString(r bufio.Reader) (str string, err error) {
+func parseQuotedString(r Reader) (str string, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -81,7 +90,7 @@ func parseQuotedString(r bufio.Reader) (str string, err error) {
 		return
 	}
 
-	str, err := r.ReadString(byte(quote))
+	str, err = r.ReadString(byte(quote))
 	if err != nil {
 		return
 	}
@@ -89,14 +98,15 @@ func parseQuotedString(r bufio.Reader) (str string, err error) {
 	return
 }
 
-func parseFields(r bufio.Reader) (fields []interface{}, err error) {
+func parseFields(r Reader) (fields []interface{}, err error) {
 	var char rune
 	for {
-		chars, err = r.Peek(1)
-		if err != nil {
+		if char, _, err = r.ReadRune(); err != nil {
 			return
 		}
-		char = rune(chars[0])
+		if err = r.UnreadRune(); err != nil {
+			return
+		}
 
 		var field interface{}
 		switch char {
@@ -120,7 +130,7 @@ func parseFields(r bufio.Reader) (fields []interface{}, err error) {
 	}
 }
 
-func parseList(r bufio.Reader) (fields []interface{}, err error) {
+func parseList(r Reader) (fields []interface{}, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -135,7 +145,7 @@ func parseList(r bufio.Reader) (fields []interface{}, err error) {
 		return
 	}
 
-	char, _, err := r.ReadRune()
+	char, _, err = r.ReadRune()
 	if err != nil {
 		return
 	}
@@ -145,7 +155,7 @@ func parseList(r bufio.Reader) (fields []interface{}, err error) {
 	return
 }
 
-func parseLine(r bufio.Reader) (fields []interface{}, err error) {
+func parseLine(r Reader) (fields []interface{}, err error) {
 	fields, err = parseFields(r)
 	if err != nil {
 		return

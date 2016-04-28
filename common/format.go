@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -19,7 +20,7 @@ func formatFields(fields []interface{}) (string, error) {
 		case string:
 			str = formatQuotedString(f)
 		case int:
-			str = strconv.Itoa(arg)
+			str = strconv.Itoa(f)
 		case *Literal:
 			str = f.Field()
 		default:
@@ -29,7 +30,7 @@ func formatFields(fields []interface{}) (string, error) {
 		formatted[i] = str
 	}
 
-	return strings.Join(formatted, " ")
+	return strings.Join(formatted, " "), nil
 }
 
 func formatList(fields []interface{}) (str string, err error) {

@@ -1,9 +1,7 @@
 package common
 
 import (
-	"errors"
 	"io"
-	"strconv"
 )
 
 const (
@@ -50,7 +48,7 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 	if err != nil {
 		return
 	}
-	N += n
+	N += int64(n)
 
 	if len(c.Arguments) > 0 {
 		var args string
@@ -63,7 +61,7 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 		if err != nil {
 			return
 		}
-		N += n
+		N += int64(n)
 
 		var literals []*Literal
 		for _, f := range c.Arguments {

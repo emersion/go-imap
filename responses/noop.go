@@ -2,8 +2,6 @@ package responses
 
 import (
 	"io"
-
-	imap "github.com/emersion/imap/common"
 )
 
 // A NOOP response.

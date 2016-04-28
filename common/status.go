@@ -1,5 +1,9 @@
 package common
 
+import (
+	"io"
+)
+
 // A status response type.
 type StatusRespType string
 

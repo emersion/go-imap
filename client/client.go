@@ -1,10 +1,12 @@
 package client
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"net"
 	"crypto/tls"
+	"strings"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
@@ -13,6 +15,26 @@ import (
 
 type Client struct {
 	conn net.Conn
+}
+
+func (c *Client) read() error {
+	scanner := bufio.NewScanner(c.conn)
+	r := bufio.NewReader(nil)
+
+	for scanner.Scan() {
+		line := scanner.Text() + "\n"
+		rd := strings.NewReader(line)
+		r.Reset(rd)
+
+		fields, err := imap.parseLine(r)
+		if err != nil {
+			return err
+		}
+
+		// TODO: handle fields
+	}
+
+	return scanner.Err()
 }
 
 func (c *Client) execute(cmdr imap.Commander, r io.ReaderFrom) (err error) {
@@ -63,6 +85,8 @@ func NewClient(conn net.Conn) *Client {
 	c := &Client{
 		conn: conn,
 	}
+
+	go c.read()
 
 	return c
 }

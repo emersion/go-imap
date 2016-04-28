@@ -19,9 +19,9 @@ func (r *Response) WriteTo(w io.Writer) (N int64, err error) {
 	if err != nil {
 		return
 	}
-	N += n
+	N += int64(n)
 
-	if len(c.Fields) > 0 {
+	if len(r.Fields) > 0 {
 		var fields string
 		fields, err = formatList(r.Fields)
 		if err != nil {
@@ -32,28 +32,28 @@ func (r *Response) WriteTo(w io.Writer) (N int64, err error) {
 		if err != nil {
 			return
 		}
-		N += n
+		N += int64(n)
 	}
 
 	return
 }
 
 // Implements io.ReaderFrom interface.
-func (r *Response) ReadFrom(r io.Reader) (n int64, err error) {
-	br := bufio.NewReader(r)
-	line, err := br.ReadString(byte('\n'))
+func (r *Response) ReadFrom(rd io.Reader) (n int64, err error) {
+	br := bufio.NewReader(rd)
+	// TODO: set n
+
+	fields, err := parseLine(br)
 	if err != nil {
 		return
 	}
-	n += len(line)
 
-	fields := parseLine(line)
 	if len(fields) == 0 {
 		err = errors.New("Cannot read response: line has no fields")
 		return
 	}
 
-	r.Tag = fields[0]
+	r.Tag = fields[0].(string)
 	r.Fields = fields[1:]
 	return
 }

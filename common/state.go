@@ -5,8 +5,8 @@ package common
 type ConnState int
 
 const (
-	NotAuthenticated ConnState = iota
-	Authenticated
-	Selected
-	Logout
+	NotAuthenticatedState ConnState = iota
+	AuthenticatedState
+	SelectedState
+	LogoutState
 )

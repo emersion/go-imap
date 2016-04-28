@@ -14,8 +14,10 @@ type Capability struct {
 
 func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 	// Insert IMAP4rev1 at the begining of capabilities list
-	caps := []string{"IMAP4rev1"}
-	caps = append(caps, r.Capabilities...)
+	caps := []interface{}{"IMAP4rev1"}
+	for _, c := range r.Capabilities {
+		caps = append(caps, c)
+	}
 
 	res := &imap.Response{
 		Tag: imap.Capability,
@@ -26,10 +28,11 @@ func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 }
 
 // TODO: add a tag parameter
-func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
+func (r *Capability) ReadFrom(rd io.Reader) (N int64, err error) {
 	for {
 		var resi interface{}
-		resi, n, err = readResp(r)
+		var n int
+		resi, n, err = readResp(rd)
 		if err != nil {
 			return
 		}
@@ -44,7 +47,7 @@ func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
 
 			caps := res.Fields[1:]
 			r.Capabilities = make([]string, len(caps))
-			for i, c := caps {
+			for i, c := range caps {
 				r.Capabilities[i] = c.(string)
 			}
 		case *imap.StatusResp:
