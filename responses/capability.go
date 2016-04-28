@@ -27,18 +27,16 @@ func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 
 // TODO: add a tag parameter
 func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
-	res := &imap.Response{}
-
 	for {
-		// TODO: improve this, add a readResp() that returns an interface{},
-		// which can be an imap.Response or an imap.StatusResp.
-
-		_, err = res.ReadFrom(r)
+		var resi interface{}
+		resi, n, err = readResp(r)
 		if err != nil {
 			return
 		}
+		N += int64(n)
 
-		if res.Tag == "*" {
+		switch res := resi.(type) {
+		case *imap.Response:
 			name := res.Fields[0].(string)
 			if name != imap.Capability {
 				continue
@@ -49,9 +47,11 @@ func (r *Capability) ReadFrom(r io.Reader) (N int64, err error) {
 			for i, c := caps {
 				r.Capabilities[i] = c.(string)
 			}
-		}
-		if res.Tag == tag {
-			// TODO: handle res
+		case *imap.StatusResp:
+			// TODO: check tag
+			if res.Type != imap.OK {
+				err = res
+			}
 			return
 		}
 	}

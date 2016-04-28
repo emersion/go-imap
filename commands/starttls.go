@@ -6,14 +6,14 @@ import (
 
 // A STARTTLS command.
 // See https://tools.ietf.org/html/rfc3501#section-6.2.1
-type Starttls struct {}
+type StartTLS struct {}
 
-func (c *Starttls) Command() *imap.Command {
+func (c *StartTLS) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Starttls,
+		Name: imap.StartTLS,
 	}
 }
 
-func (c *Starttls) Parse(fields []interface{}) error {
+func (c *StartTLS) Parse(fields []interface{}) error {
 	return nil
 }
