@@ -28,15 +28,9 @@ func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 }
 
 // TODO: add a tag parameter
-func (r *Capability) ReadFrom(rd io.Reader) (N int64, err error) {
+func (r *Capability) ReadFrom(c <-chan interface{}, h chan<- bool) (err error) {
 	for {
-		var resi interface{}
-		var n int
-		resi, n, err = readResp(rd)
-		if err != nil {
-			return
-		}
-		N += int64(n)
+		resi := <-c
 
 		switch res := resi.(type) {
 		case *imap.Response:
@@ -57,5 +51,7 @@ func (r *Capability) ReadFrom(rd io.Reader) (N int64, err error) {
 			}
 			return
 		}
+
+		h <- true
 	}
 }

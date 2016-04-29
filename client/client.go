@@ -13,25 +13,31 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
+type RespHandler func(res interface{}) bool
+
 type Client struct {
 	conn net.Conn
+	handlers []RespHandler
 }
 
 func (c *Client) read() error {
 	scanner := bufio.NewScanner(c.conn)
-	r := bufio.NewReader(nil)
 
 	for scanner.Scan() {
 		line := scanner.Text() + "\n"
-		rd := strings.NewReader(line)
-		r.Reset(rd)
+		r := strings.NewReader(line)
 
-		fields, err := imap.parseLine(r)
+		var res interface{}
+		res, _, err = imap.ReadResp(r)
 		if err != nil {
-			return err
+			return
 		}
 
-		// TODO: handle fields
+		for _, h := range c.handlers {
+			if h(res) {
+				break
+			}
+		}
 	}
 
 	return scanner.Err()
