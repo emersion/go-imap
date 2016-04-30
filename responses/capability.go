@@ -29,14 +29,11 @@ func (r *Capability) WriteTo(w io.Writer) (N int64, err error) {
 
 func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
 	for h := range hdlr {
-		res, ok := h.Resp.(*imap.Resp)
-		if !ok || getRespName(res) != imap.Capability {
-			h.Reject()
+		caps := h.AcceptNamedResp(imap.Capability)
+		if caps == nil {
 			continue
 		}
-		h.Accept()
 
-		caps := res.Fields[1:]
 		r.Caps = make([]string, len(caps))
 		for i, c := range caps {
 			r.Caps[i] = c.(string)

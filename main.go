@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/emersion/imap/client"
-	//imap "github.com/emersion/imap/common"
+	imap "github.com/emersion/imap/common"
 )
 
 func main() {
@@ -27,15 +27,14 @@ func main() {
 	}
 	log.Println("Logged in")
 
-	/*mailboxes := make(chan *imap.MailboxInfo)
-	defer close(mailboxes)
+	mailboxes := make(chan *imap.MailboxInfo)
+	go (func () {
+		err = c.List("", "%", mailboxes)
+	})()
 
-	go (func() {
-		for m := range mailboxes {
-			log.Println(m)
-		}
-	})()*/
+	for m := range mailboxes {
+		log.Println(m)
+	}
 
-	mailboxes, err := c.List("", "%")
-	log.Println(mailboxes)
+	log.Println(err)
 }

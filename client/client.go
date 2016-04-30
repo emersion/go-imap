@@ -111,7 +111,6 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		})()
 	}
 
-
 	for h := range statusHdlr {
 		if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
 			h.Accept()
@@ -249,7 +248,9 @@ func (c *Client) Login(username, password string) (err error) {
 	return
 }
 
-func (c *Client) List(ref, mbox string) (mailboxes []*imap.MailboxInfo, err error) {
+func (c *Client) List(ref, mbox string, ch chan *imap.MailboxInfo) (err error) {
+	defer close(ch)
+
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		err = errors.New("Not logged in")
 		return
@@ -259,7 +260,7 @@ func (c *Client) List(ref, mbox string) (mailboxes []*imap.MailboxInfo, err erro
 		Reference: ref,
 		Mailbox: mbox,
 	}
-	res := &responses.List{}
+	res := &responses.List{Mailboxes: ch}
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
@@ -268,8 +269,6 @@ func (c *Client) List(ref, mbox string) (mailboxes []*imap.MailboxInfo, err erro
 	if err = status.Err(); err != nil {
 		return
 	}
-
-	mailboxes = res.Mailboxes
 	return
 }
 
