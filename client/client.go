@@ -3,7 +3,6 @@ package client
 import (
 	"bufio"
 	"errors"
-	"io"
 	"net"
 	"crypto/tls"
 	"strings"
@@ -13,14 +12,12 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
-type RespHandler func(res interface{}) bool
-
 type Client struct {
 	conn net.Conn
-	handlers []RespHandler
+	handlers []imap.RespHandler
 }
 
-func (c *Client) read() error {
+func (c *Client) read() (err error) {
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
@@ -28,13 +25,20 @@ func (c *Client) read() error {
 		r := strings.NewReader(line)
 
 		var res interface{}
-		res, _, err = imap.ReadResp(r)
+		res, err = imap.ReadResp(imap.NewReader(bufio.NewReader(r)))
 		if err != nil {
 			return
 		}
 
-		for _, h := range c.handlers {
-			if h(res) {
+		for _, hdlr := range c.handlers {
+			h := &imap.RespHandling{
+				Resp: res,
+				Accepts: make(chan bool),
+			}
+
+			hdlr <- h
+
+			if <-h.Accepts {
 				break
 			}
 		}
@@ -43,15 +47,46 @@ func (c *Client) read() error {
 	return scanner.Err()
 }
 
-func (c *Client) execute(cmdr imap.Commander, r io.ReaderFrom) (err error) {
+func (c *Client) execute(cmdr imap.Commander, r imap.RespHandlerFrom) (err error) {
 	cmd := cmdr.Command()
 
-	_, err := cmd.WriteTo(c.conn)
+	_, err = cmd.WriteTo(c.conn)
 	if err != nil {
-		return err
+		return
 	}
 
-	_, err = r.ReadFrom(c.conn)
+	statusHdlr := make(imap.RespHandler)
+	defer close(statusHdlr)
+	c.handlers = append(c.handlers, statusHdlr)
+
+	var hdlr imap.RespHandler
+	done := make(chan bool)
+	if r != nil {
+		hdlr := make(imap.RespHandler)
+		defer close(hdlr)
+
+		go (func() {
+			err = r.HandleFrom(hdlr)
+			done <- true
+		})()
+	}
+
+	for {
+		select {
+		case h := <-statusHdlr:
+			if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
+				h.Accept()
+				err = status
+				return
+			} else if hdlr != nil {
+				hdlr <- h
+			} else {
+				h.Reject()
+			}
+		case <-done:
+			return
+		}
+	}
 	return
 }
 
@@ -70,9 +105,8 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	}
 
 	cmd := &commands.StartTLS{}
-	res := &responses.StartTLS{}
 
-	err = c.execute(cmd, res)
+	err = c.execute(cmd, nil)
 	if err != nil {
 		return
 	}

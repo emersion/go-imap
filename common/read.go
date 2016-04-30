@@ -15,36 +15,26 @@ const (
 	listEnd = ')'
 )
 
-type Literal struct {
-	Len int
-	Str string
-}
-
-func (l *Literal) Field() string {
-	return string(literalStart) + strconv.Itoa(l.Len) + string(literalEnd)
-}
-
-func (l *Literal) WriteTo(w io.Writer) (N int64, err error) {
-	n, err := io.WriteString(w, l.Str)
-	return int64(n), err
-}
-
 type StringReader interface {
 	ReadString(delim byte) (line string, err error)
 }
 
-type Reader interface {
+type reader interface {
 	io.RuneScanner
 	StringReader
+}
+
+type Reader struct {
+	reader
 }
 
 func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
 
-func parseAtom(r Reader) (interface{}, error) {
+func (r *Reader) ReadAtom() (interface{}, error) {
 	atom, err := r.ReadString(byte(delim))
-	if err != nil && err != io.EOF {
+	if err != nil {
 		return nil, err
 	}
 	atom = trimSuffix(atom, delim)
@@ -55,7 +45,7 @@ func parseAtom(r Reader) (interface{}, error) {
 	return atom, nil
 }
 
-func parseLiteral(r Reader) (literal *Literal, err error) {
+func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -80,7 +70,7 @@ func parseLiteral(r Reader) (literal *Literal, err error) {
 	return
 }
 
-func parseQuotedString(r Reader) (str string, err error) {
+func (r *Reader) ReadQuotedString() (str string, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -98,7 +88,7 @@ func parseQuotedString(r Reader) (str string, err error) {
 	return
 }
 
-func parseFields(r Reader) (fields []interface{}, err error) {
+func (r *Reader) ReadFields() (fields []interface{}, err error) {
 	var char rune
 	for {
 		if char, _, err = r.ReadRune(); err != nil {
@@ -113,13 +103,13 @@ func parseFields(r Reader) (fields []interface{}, err error) {
 		case '\n', ')', ']': // TODO: more generic check
 			return
 		case literalStart:
-			field, err = parseLiteral(r)
+			field, err = r.ReadLiteral()
 		case quote:
-			field, err = parseQuotedString(r)
+			field, err = r.ReadQuotedString()
 		case listStart:
-			field, err = parseList(r)
+			field, err = r.ReadList()
 		default:
-			field, err = parseAtom(r)
+			field, err = r.ReadAtom()
 		}
 
 		if err != nil {
@@ -130,7 +120,7 @@ func parseFields(r Reader) (fields []interface{}, err error) {
 	}
 }
 
-func parseList(r Reader) (fields []interface{}, err error) {
+func (r *Reader) ReadList() (fields []interface{}, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -140,7 +130,7 @@ func parseList(r Reader) (fields []interface{}, err error) {
 		return
 	}
 
-	fields, err = parseFields(r)
+	fields, err = r.ReadFields()
 	if err != nil {
 		return
 	}
@@ -155,8 +145,8 @@ func parseList(r Reader) (fields []interface{}, err error) {
 	return
 }
 
-func parseLine(r Reader) (fields []interface{}, err error) {
-	fields, err = parseFields(r)
+func (r *Reader) ReadLine() (fields []interface{}, err error) {
+	fields, err = r.ReadFields()
 	if err != nil {
 		return
 	}
@@ -169,4 +159,21 @@ func parseLine(r Reader) (fields []interface{}, err error) {
 		err = errors.New("Line doesn't end with a newline character")
 	}
 	return
+}
+
+func (r *Reader) ReadInfo() (info string, err error) {
+	info, err = r.ReadString(byte('\n'))
+	if err != nil {
+		return
+	}
+	info = trimSuffix(info, '\n')
+	return
+}
+
+func NewReader(r reader) *Reader {
+	return &Reader{r}
+}
+
+type ReaderFrom interface {
+	ReadFrom(r Reader) error
 }

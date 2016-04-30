@@ -65,43 +65,10 @@ func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
 		fields = append(fields, r.Info)
 	}
 
-	res := &Response{
+	res := &Resp{
 		Tag: r.Tag,
 		Fields: fields,
 	}
 
 	return res.WriteTo(w)
-}
-
-func ParseStatusResp(res *Response) *StatusResp {
-	status := &StatusResp{
-		Tag: res.Tag,
-		Type: res.Fields[0].(StatusRespType),
-	}
-
-	// TODO: parse Code, Arguments, Info
-
-	return status
-}
-
-func StatusRespFromError(tag string, err error) *StatusResp {
-	res := &StatusResp{
-		Tag: tag,
-	}
-
-	if err == nil {
-		res.Type = OK
-		res.Info = tag + " completed"
-		return res
-	}
-
-	res.Info = err.Error()
-
-	//if imapErr, ok := err.(Error); ok {
-	//	res.Type = imapErr.Completion()
-	//} else {
-	res.Type = BAD
-	//}
-
-	return res
 }
