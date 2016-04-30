@@ -50,6 +50,7 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 	}
 	N += int64(n)
 
+	var literals []*Literal
 	if len(c.Arguments) > 0 {
 		var args string
 		args, err = formatFields(c.Arguments)
@@ -63,16 +64,21 @@ func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
 		}
 		N += int64(n)
 
-		var literals []*Literal
 		for _, f := range c.Arguments {
 			if literal, ok := f.(*Literal); ok {
 				literals = append(literals, literal)
 			}
 		}
+	}
 
-		if len(literals) > 0 {
-			// TODO: send literals
-		}
+	n, err = w.Write([]byte("\n"))
+	if err != nil {
+		return
+	}
+	N += int64(n)
+
+	if len(literals) > 0 {
+		// TODO: send literals
 	}
 
 	return

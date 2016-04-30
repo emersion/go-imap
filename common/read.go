@@ -208,26 +208,24 @@ func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err 
 		return
 	}
 
-	atom, err := r.ReadAtom()
-	if err != nil {
-		return
-	}
-	codeStr, ok := atom.(string)
-	if !ok {
-		err = errors.New("Response code doesn't start with a string atom")
-		return
-	}
-	code = StatusRespCode(codeStr)
-
-	r.UnreadRune()
-	if err = r.ReadSp(); err != nil {
-		return
-	}
-
 	fields, err = r.ReadFields()
 	if err != nil {
 		return
 	}
+
+	if len(fields) == 0 {
+		err = errors.New("Response code doesn't contain any field")
+		return
+	}
+
+	codeStr, ok := fields[0].(string)
+	if !ok {
+		err = errors.New("Response code doesn't start with a string atom")
+		return
+	}
+
+	code = StatusRespCode(codeStr)
+	fields = fields[1:]
 
 	r.UnreadRune()
 	char, _, err = r.ReadRune()

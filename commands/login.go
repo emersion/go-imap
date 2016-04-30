@@ -17,9 +17,3 @@ func (c *Login) Command() *imap.Command {
 		Arguments: []interface{}{c.Username, c.Password},
 	}
 }
-
-func (c *Login) Parse(fields []interface{}) error {
-	c.Username = fields[0].(string)
-	c.Password = fields[1].(string)
-	return nil
-}

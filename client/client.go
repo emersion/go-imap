@@ -18,6 +18,7 @@ type Client struct {
 	handlers []imap.RespHandler
 
 	Caps map[string]bool
+	State imap.ConnState
 }
 
 func (c *Client) read() (err error) {
@@ -25,8 +26,10 @@ func (c *Client) read() (err error) {
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
-		line := scanner.Text() + "\n"
-		r := strings.NewReader(line)
+		line := scanner.Text()
+		r := strings.NewReader(line + "\n")
+
+		log.Println("S:", line)
 
 		var res interface{}
 		res, err = imap.ReadResp(imap.NewReader(bufio.NewReader(r)))
@@ -56,8 +59,27 @@ func (c *Client) read() (err error) {
 	return scanner.Err()
 }
 
-func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err error) {
+func (c *Client) addHandler(hdlr imap.RespHandler) {
+	// TODO: needs locker
+	c.handlers = append(c.handlers, hdlr)
+}
+
+func (c *Client) removeHandler(hdlr imap.RespHandler) {
+	close(hdlr)
+
+	// TODO: really remove handler from array? (needs locker)
+	for i, h := range c.handlers {
+		if h == hdlr {
+			c.handlers[i] = nil
+		}
+	}
+}
+
+func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
 	cmd := cmdr.Command()
+	cmd.Tag = generateTag()
+
+	log.Println(cmd)
 
 	_, err = cmd.WriteTo(c.conn)
 	if err != nil {
@@ -65,18 +87,8 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err err
 	}
 
 	statusHdlr := make(imap.RespHandler)
-	c.handlers = append(c.handlers, statusHdlr)
-
-	defer (func() {
-		close(statusHdlr)
-
-		// TODO: really remove handler from array? (needs locker)
-		for i, h := range c.handlers {
-			if h == statusHdlr {
-				c.handlers[i] = nil
-			}
-		}
-	})()
+	c.addHandler(statusHdlr)
+	defer c.removeHandler(statusHdlr)
 
 	var hdlr imap.RespHandler
 	if res != nil {
@@ -91,8 +103,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err err
 	for h := range statusHdlr {
 		if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
 			h.Accept()
-			err = status
-			return
+			return status, nil
 		} else if hdlr != nil {
 			hdlr <- h
 		} else {
@@ -105,8 +116,8 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err err
 
 func (c *Client) handleGreeting() *imap.StatusResp {
 	hdlr := make(imap.RespHandler)
-	c.handlers = append(c.handlers, hdlr)
-	defer close(hdlr)
+	c.addHandler(hdlr)
+	defer c.removeHandler(hdlr)
 
 	for h := range hdlr {
 		status, ok := h.Resp.(*imap.StatusResp)
@@ -114,6 +125,8 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 			h.Reject()
 			continue
 		}
+
+		h.Accept()
 
 		if status.Code == imap.CAPABILITY {
 			c.Caps = map[string]bool{}
@@ -132,8 +145,8 @@ func (c *Client) handleCaps() (err error) {
 	res := &responses.Capability{}
 
 	hdlr := make(imap.RespHandler)
-	c.handlers = append(c.handlers, hdlr)
-	defer close(hdlr)
+	c.addHandler(hdlr)
+	defer c.removeHandler(hdlr)
 
 	for {
 		err = res.HandleFrom(hdlr)
@@ -153,7 +166,7 @@ func (c *Client) handleCaps() (err error) {
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
 
-	err = c.execute(cmd, nil)
+	_, err = c.execute(cmd, nil)
 	caps = c.Caps
 	return
 }
@@ -166,9 +179,12 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 
 	cmd := &commands.StartTLS{}
 
-	err = c.execute(cmd, nil)
+	status, err := c.execute(cmd, nil)
 	if err != nil {
 		return
+	}
+	if status.Type != imap.OK {
+		return status
 	}
 
 	tlsConn := tls.Client(c.conn, tlsConfig)
@@ -181,9 +197,38 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	return
 }
 
+func (c *Client) Login(username, password string) (err error) {
+	if c.State != imap.NotAuthenticatedState {
+		err = errors.New("Already logged in")
+		return
+	}
+	if c.Caps["LOGINDISABLED"] {
+		err = errors.New("Login is disabled in current state")
+		return
+	}
+
+	cmd := &commands.Login{
+		Username: username,
+		Password: password,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+	if status.Type != imap.OK {
+		return status
+	}
+
+	c.State = imap.AuthenticatedState
+
+	return
+}
+
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
+		State: imap.NotAuthenticatedState,
 	}
 
 	go c.read()
