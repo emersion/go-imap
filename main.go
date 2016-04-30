@@ -33,8 +33,12 @@ func main() {
 	})()
 
 	for m := range mailboxes {
-		log.Println(m)
+		log.Println(m.Name)
 	}
 
-	log.Println(err)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Listed folders")
 }
