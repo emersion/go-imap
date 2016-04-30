@@ -54,8 +54,8 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 			return nil, err
 		}
 
-		// TODO: list-wildcards
-		if char == listStart || char == literalStart || char == dquote || char == '\\' {
+		// TODO: list-wildcards and \
+		if char == listStart || char == literalStart || char == dquote {
 			return nil, errors.New("Atom contains forbidden char: " + string(char))
 		}
 		if char == sp || char == listEnd || char == respCodeEnd || char == '\n' {
@@ -134,6 +134,7 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 			field, err = r.ReadList()
 		default:
 			field, err = r.ReadAtom()
+			r.UnreadRune()
 		}
 
 		if err != nil {
@@ -141,7 +142,6 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		}
 		fields = append(fields, field)
 
-		r.UnreadRune()
 		if char, _, err = r.ReadRune(); err != nil {
 			return
 		}
@@ -175,7 +175,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 	if err != nil {
 		return
 	}
-	if char != listStart {
+	if char != listEnd {
 		err = errors.New("List doesn't end with a close parenthesis")
 	}
 	return

@@ -3,13 +3,14 @@ package main
 import (
 	"log"
 
-	imap "github.com/emersion/imap/client"
+	"github.com/emersion/imap/client"
+	//imap "github.com/emersion/imap/common"
 )
 
 func main() {
 	log.Println("Connecting to server...")
 
-	c, err := imap.DialTLS("mail.gandi.net:993", nil)
+	c, err := client.DialTLS("mail.gandi.net:993", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,4 +26,16 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println("Logged in")
+
+	/*mailboxes := make(chan *imap.MailboxInfo)
+	defer close(mailboxes)
+
+	go (func() {
+		for m := range mailboxes {
+			log.Println(m)
+		}
+	})()*/
+
+	mailboxes, err := c.List("", "%")
+	log.Println(mailboxes)
 }

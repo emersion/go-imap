@@ -38,6 +38,7 @@ func (c *Client) read() (err error) {
 			continue
 		}
 
+		var accepted bool
 		for _, hdlr := range c.handlers {
 			if hdlr == nil {
 				continue
@@ -50,9 +51,14 @@ func (c *Client) read() (err error) {
 
 			hdlr <- h
 
-			if <-h.Accepts {
+			accepted = <-h.Accepts
+			if accepted {
 				break
 			}
+		}
+
+		if !accepted {
+			log.Println("Response has not been handled", res)
 		}
 	}
 
@@ -91,14 +97,20 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	defer c.removeHandler(statusHdlr)
 
 	var hdlr imap.RespHandler
+	defer (func () {
+		if hdlr != nil {
+			close(hdlr)
+		}
+	})()
+
 	if res != nil {
-		hdlr := make(imap.RespHandler)
-		defer close(hdlr)
+		hdlr = make(imap.RespHandler)
 
 		go (func() {
 			err = res.HandleFrom(hdlr)
 		})()
 	}
+
 
 	for h := range statusHdlr {
 		if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
@@ -114,6 +126,13 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	return
 }
 
+func (c *Client) gotStatusCaps(args []interface{}) {
+	c.Caps = map[string]bool{}
+	for _, cap := range args {
+		c.Caps[cap.(string)] = true
+	}
+}
+
 func (c *Client) handleGreeting() *imap.StatusResp {
 	hdlr := make(imap.RespHandler)
 	c.addHandler(hdlr)
@@ -121,7 +140,7 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 
 	for h := range hdlr {
 		status, ok := h.Resp.(*imap.StatusResp)
-		if !ok || (status.Type != imap.OK && status.Type != imap.PREAUTH && status.Type != imap.BYE) {
+		if !ok || status.Tag != "*" || (status.Type != imap.OK && status.Type != imap.PREAUTH && status.Type != imap.BYE) {
 			h.Reject()
 			continue
 		}
@@ -129,10 +148,11 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 		h.Accept()
 
 		if status.Code == imap.CAPABILITY {
-			c.Caps = map[string]bool{}
-			for _, cap := range status.Arguments {
-				c.Caps[cap.(string)] = true
-			}
+			c.gotStatusCaps(status.Arguments)
+		}
+
+		if status.Type == imap.PREAUTH {
+			c.State = imap.AuthenticatedState
 		}
 
 		return status
@@ -183,8 +203,8 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	if err != nil {
 		return
 	}
-	if status.Type != imap.OK {
-		return status
+	if err = status.Err(); err != nil {
+		return
 	}
 
 	tlsConn := tls.Client(c.conn, tlsConfig)
@@ -216,12 +236,40 @@ func (c *Client) Login(username, password string) (err error) {
 	if err != nil {
 		return
 	}
-	if status.Type != imap.OK {
-		return status
+	if err = status.Err(); err != nil {
+		return
+	}
+
+	if status.Code == imap.CAPABILITY {
+		c.gotStatusCaps(status.Arguments)
 	}
 
 	c.State = imap.AuthenticatedState
 
+	return
+}
+
+func (c *Client) List(ref, mbox string) (mailboxes []*imap.MailboxInfo, err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.List{
+		Reference: ref,
+		Mailbox: mbox,
+	}
+	res := &responses.List{}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+	if err = status.Err(); err != nil {
+		return
+	}
+
+	mailboxes = res.Mailboxes
 	return
 }
 
@@ -235,9 +283,7 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	go c.handleCaps()
 
 	greeting := c.handleGreeting()
-	if greeting.Type != imap.OK {
-		err = greeting
-	}
+	greeting.Err()
 	return
 }
 

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"io"
 )
 
@@ -42,9 +43,11 @@ type StatusResp struct {
 	Info string
 }
 
-// Implements error.
-func (r *StatusResp) Error() string {
-	return r.Info
+func (r *StatusResp) Err() error {
+	if r.Type == NO || r.Type == BAD {
+		return errors.New(r.Info)
+	}
+	return nil
 }
 
 func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
