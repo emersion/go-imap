@@ -96,7 +96,19 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 					Type: status,
 				}
 
-				// TODO: parse Code, Arguments
+				var char rune
+				if char, _, err = r.ReadRune(); err != nil {
+					return
+				}
+				r.UnreadRune()
+
+				if char == '[' {
+					// Contains code & arguments
+					res.Code, res.Arguments, err = r.ReadRespCode()
+					if err != nil {
+						return
+					}
+				}
 
 				res.Info, err = r.ReadInfo()
 				if err != nil {

@@ -4,15 +4,18 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 )
 
 const (
-	delim = ' '
-	quote = '"'
+	sp = ' '
+	dquote = '"'
 	literalStart = '{'
 	literalEnd = '}'
 	listStart = '('
 	listEnd = ')'
+	respCodeStart = '['
+	respCodeEnd = ']'
 )
 
 type StringReader interface {
@@ -32,12 +35,35 @@ func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
 
-func (r *Reader) ReadAtom() (interface{}, error) {
-	atom, err := r.ReadString(byte(delim))
+func (r *Reader) ReadSp() error {
+	char, _, err := r.ReadRune()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	atom = trimSuffix(atom, delim)
+	if char != sp {
+		return errors.New("Not a space")
+	}
+	return nil
+}
+
+func (r *Reader) ReadAtom() (interface{}, error) {
+	var atom string
+	for {
+		char, _, err := r.ReadRune()
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: list-wildcards
+		if char == listStart || char == literalStart || char == dquote || char == '\\' {
+			return nil, errors.New("Atom contains forbidden char: " + string(char))
+		}
+		if char == sp || char == listEnd || char == respCodeEnd || char == '\n' {
+			break
+		}
+
+		atom += string(char)
+	}
 
 	if atom == "NIL" {
 		return nil, nil
@@ -75,16 +101,16 @@ func (r *Reader) ReadQuotedString() (str string, err error) {
 	if err != nil {
 		return
 	}
-	if char != quote {
-		err = errors.New("Quoted string doesn't start with a quote")
+	if char != dquote {
+		err = errors.New("Quoted string doesn't start with a double quote")
 		return
 	}
 
-	str, err = r.ReadString(byte(quote))
+	str, err = r.ReadString(byte(dquote))
 	if err != nil {
 		return
 	}
-	str = trimSuffix(str, quote)
+	str = trimSuffix(str, dquote)
 	return
 }
 
@@ -100,11 +126,9 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 
 		var field interface{}
 		switch char {
-		case '\n', ')', ']': // TODO: more generic check
-			return
 		case literalStart:
 			field, err = r.ReadLiteral()
-		case quote:
+		case dquote:
 			field, err = r.ReadQuotedString()
 		case listStart:
 			field, err = r.ReadList()
@@ -115,8 +139,19 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		if err != nil {
 			return
 		}
-
 		fields = append(fields, field)
+
+		r.UnreadRune()
+		if char, _, err = r.ReadRune(); err != nil {
+			return
+		}
+		if char == '\n' || char == listEnd || char == respCodeEnd {
+			return
+		}
+		if char != sp {
+			err = errors.New("Fields are not separated by a space")
+			return
+		}
 	}
 }
 
@@ -135,6 +170,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 		return
 	}
 
+	r.UnreadRune()
 	char, _, err = r.ReadRune()
 	if err != nil {
 		return
@@ -151,6 +187,7 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 		return
 	}
 
+	r.UnreadRune()
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -161,12 +198,55 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 	return
 }
 
+func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err error) {
+	char, _, err := r.ReadRune()
+	if err != nil {
+		return
+	}
+	if char != respCodeStart {
+		err = errors.New("Response code doesn't start with an open bracket")
+		return
+	}
+
+	atom, err := r.ReadAtom()
+	if err != nil {
+		return
+	}
+	codeStr, ok := atom.(string)
+	if !ok {
+		err = errors.New("Response code doesn't start with a string atom")
+		return
+	}
+	code = StatusRespCode(codeStr)
+
+	r.UnreadRune()
+	if err = r.ReadSp(); err != nil {
+		return
+	}
+
+	fields, err = r.ReadFields()
+	if err != nil {
+		return
+	}
+
+	r.UnreadRune()
+	char, _, err = r.ReadRune()
+	if err != nil {
+		return
+	}
+	if char != respCodeEnd {
+		err = errors.New("Response code doesn't end with a close bracket")
+	}
+	return
+}
+
 func (r *Reader) ReadInfo() (info string, err error) {
 	info, err = r.ReadString(byte('\n'))
 	if err != nil {
 		return
 	}
-	info = trimSuffix(info, '\n')
+	info = strings.TrimSuffix(info, "\n")
+	info = strings.TrimLeft(info, " ")
 	return
 }
 

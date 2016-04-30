@@ -1,6 +1,7 @@
 package client
 
 import (
+	"log"
 	"bufio"
 	"errors"
 	"net"
@@ -30,7 +31,8 @@ func (c *Client) read() (err error) {
 		var res interface{}
 		res, err = imap.ReadResp(imap.NewReader(bufio.NewReader(r)))
 		if err != nil {
-			return
+			log.Println("Error reading response:", err)
+			continue
 		}
 
 		for _, hdlr := range c.handlers {
@@ -101,6 +103,31 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err err
 	return
 }
 
+func (c *Client) handleGreeting() *imap.StatusResp {
+	hdlr := make(imap.RespHandler)
+	c.handlers = append(c.handlers, hdlr)
+	defer close(hdlr)
+
+	for h := range hdlr {
+		status, ok := h.Resp.(*imap.StatusResp)
+		if !ok || (status.Type != imap.OK && status.Type != imap.PREAUTH && status.Type != imap.BYE) {
+			h.Reject()
+			continue
+		}
+
+		if status.Code == imap.CAPABILITY {
+			c.Caps = map[string]bool{}
+			for _, cap := range status.Arguments {
+				c.Caps[cap.(string)] = true
+			}
+		}
+
+		return status
+	}
+
+	return nil
+}
+
 func (c *Client) handleCaps() (err error) {
 	res := &responses.Capability{}
 
@@ -154,15 +181,19 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	return
 }
 
-func NewClient(conn net.Conn) *Client {
-	c := &Client{
+func NewClient(conn net.Conn) (c *Client, err error) {
+	c = &Client{
 		conn: conn,
 	}
 
 	go c.read()
 	go c.handleCaps()
 
-	return c
+	greeting := c.handleGreeting()
+	if greeting.Type != imap.OK {
+		err = greeting
+	}
+	return
 }
 
 func Dial(addr string) (c *Client, err error) {
@@ -171,7 +202,7 @@ func Dial(addr string) (c *Client, err error) {
 		return
 	}
 
-	c = NewClient(conn)
+	c, err = NewClient(conn)
 	return
 }
 
@@ -181,6 +212,6 @@ func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 		return
 	}
 
-	c = NewClient(conn)
+	c, err = NewClient(conn)
 	return
 }
