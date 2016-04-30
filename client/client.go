@@ -18,6 +18,7 @@ type Client struct {
 }
 
 func (c *Client) read() (err error) {
+	// TODO: optimize readers, do not create new ones for each response
 	scanner := bufio.NewScanner(c.conn)
 
 	for scanner.Scan() {
