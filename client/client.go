@@ -15,6 +15,8 @@ import (
 type Client struct {
 	conn net.Conn
 	handlers []imap.RespHandler
+
+	Caps map[string]bool
 }
 
 func (c *Client) read() (err error) {
@@ -32,6 +34,10 @@ func (c *Client) read() (err error) {
 		}
 
 		for _, hdlr := range c.handlers {
+			if hdlr == nil {
+				continue
+			}
+
 			h := &imap.RespHandling{
 				Resp: res,
 				Accepts: make(chan bool),
@@ -48,7 +54,7 @@ func (c *Client) read() (err error) {
 	return scanner.Err()
 }
 
-func (c *Client) execute(cmdr imap.Commander, r imap.RespHandlerFrom) (err error) {
+func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (err error) {
 	cmd := cmdr.Command()
 
 	_, err = cmd.WriteTo(c.conn)
@@ -57,45 +63,71 @@ func (c *Client) execute(cmdr imap.Commander, r imap.RespHandlerFrom) (err error
 	}
 
 	statusHdlr := make(imap.RespHandler)
-	defer close(statusHdlr)
 	c.handlers = append(c.handlers, statusHdlr)
 
+	defer (func() {
+		close(statusHdlr)
+
+		// TODO: really remove handler from array? (needs locker)
+		for i, h := range c.handlers {
+			if h == statusHdlr {
+				c.handlers[i] = nil
+			}
+		}
+	})()
+
 	var hdlr imap.RespHandler
-	done := make(chan bool)
-	if r != nil {
+	if res != nil {
 		hdlr := make(imap.RespHandler)
 		defer close(hdlr)
 
 		go (func() {
-			err = r.HandleFrom(hdlr)
-			done <- true
+			err = res.HandleFrom(hdlr)
 		})()
 	}
 
-	for {
-		select {
-		case h := <-statusHdlr:
-			if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
-				h.Accept()
-				err = status
-				return
-			} else if hdlr != nil {
-				hdlr <- h
-			} else {
-				h.Reject()
-			}
-		case <-done:
+	for h := range statusHdlr {
+		if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
+			h.Accept()
+			err = status
 			return
+		} else if hdlr != nil {
+			hdlr <- h
+		} else {
+			h.Reject()
 		}
 	}
+
 	return
 }
 
-func (c *Client) Capability() (res *responses.Capability, err error) {
-	cmd := &commands.Capability{}
-	res = &responses.Capability{}
+func (c *Client) handleCaps() (err error) {
+	res := &responses.Capability{}
 
-	err = c.execute(cmd, res)
+	hdlr := make(imap.RespHandler)
+	c.handlers = append(c.handlers, hdlr)
+	defer close(hdlr)
+
+	for {
+		err = res.HandleFrom(hdlr)
+		if err != nil {
+			return
+		}
+
+		c.Caps = map[string]bool{}
+		for _, name := range res.Caps {
+			c.Caps[name] = true
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) Capability() (caps map[string]bool, err error) {
+	cmd := &commands.Capability{}
+
+	err = c.execute(cmd, nil)
+	caps = c.Caps
 	return
 }
 
@@ -128,6 +160,7 @@ func NewClient(conn net.Conn) *Client {
 	}
 
 	go c.read()
+	go c.handleCaps()
 
 	return c
 }
