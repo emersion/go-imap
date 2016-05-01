@@ -76,7 +76,7 @@ func main() {
 	}
 
 	for msg := range messages {
-		log.Println(msg.Envelope().Subject)
+		log.Println(msg.Envelope.Subject)
 	}
 
 	log.Println("Done!")

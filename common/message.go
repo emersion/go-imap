@@ -43,56 +43,100 @@ func ParseDate(date string) (*time.Time, error) {
 	return nil, errors.New("Cannot parse date")
 }
 
-// Parse an address from fields.
-func ParseAddress(fields []interface{}) *Address {
-	if len(fields) < 4 {
-		return nil
-	}
-
-	addr := &Address{}
-
-	if f, ok := fields[0].(string); ok {
-		addr.PersonalName = f
-	}
-	if f, ok := fields[1].(string); ok {
-		addr.AtDomainList = f
-	}
-	if f, ok := fields[2].(string); ok {
-		addr.MailboxName = f
-	}
-	if f, ok := fields[3].(string); ok {
-		addr.HostName = f
-	}
-
-	return addr
+// A message.
+type Message struct {
+	// The message identifier. Can be either a sequence number or a UID, depending
+	// of how this message has been retrieved.
+	Id uint32
+	// The message envelope.
+	Envelope *Envelope
+	// The message body parts.
+	Body map[string]*Literal
+	// The message body structure.
+	BodyStructure *BodyStructure
+	// The message flags.
+	Flags []string
+	// The date the message was received by th server.
+	InternalDate *time.Time
+	// The message size.
+	Size uint32
+	// The message UID.
+	Uid uint32
 }
 
-// Parse an address list from fields.
-func ParseAddressList(fields []interface{}) (addrs []*Address) {
-	for _, f := range fields {
-		if addrFields, ok := f.([]interface{}); ok {
-			if addr := ParseAddress(addrFields); addr != nil {
-				addrs = append(addrs, addr)
+func (m *Message) Parse(fields []interface{}) error {
+	var key string
+	for i, f := range fields {
+		if i % 2 == 0 { // It's a key
+			var ok bool
+			if key, ok = f.(string); !ok {
+				return errors.New("Key is not a string")
+			}
+		} else { // It's a value
+			switch key {
+			case "ENVELOPE":
+				env, ok := f.([]interface{})
+				if !ok {
+					return errors.New("ENVELOPE is not a list")
+				}
+
+				m.Envelope = &Envelope{}
+				if err := m.Envelope.Parse(env); err != nil {
+					return err
+				}
+			case "BODY": // TODO
+			case "BODYSTRUCTURE": // TODO
+			case "FLAGS":
+				flags, ok := f.([]interface{})
+				if !ok {
+					return errors.New("FLAGS is not a list")
+				}
+
+				m.Flags = make([]string, len(flags))
+				for i, flag := range flags {
+					m.Flags[i], _ = flag.(string)
+				}
+			case "INTERNALDATE":
+				date, _ := f.(string)
+				m.InternalDate, _ = ParseDate(date)
+			case "SIZE":
+				m.Size = ParseNumber(f)
+			case "UID":
+				m.Uid = ParseNumber(f)
 			}
 		}
 	}
-	return
+	return nil
 }
 
-// A message.
-type Message struct {
-	// The message identifier. Can be either a sequence number or a UID.
-	Id uint32
-	Fields map[string]interface{}
+// A message envelope, ie. message metadata from its headers.
+type Envelope struct {
+	// The message date.
+	Date *time.Time
+	// The message subject.
+	Subject string
+	// The From header addresses.
+	From []*Address
+	// The message senders.
+	Sender []*Address
+	// The Reply-To header addresses.
+	ReplyTo []*Address
+	// The To header addresses.
+	To []*Address
+	// The Cc header addresses.
+	Cc []*Address
+	// The Bcc header addresses.
+	Bcc []*Address
+	// The In-Reply-To header. Contains the parent Message-Id.
+	InReplyTo string
+	// The Message-Id header.
+	MessageId string
 }
 
-func (m *Message) Envelope() *Envelope {
-	fields, ok := m.Fields["ENVELOPE"].([]interface{})
-	if !ok || len(fields) < 10 {
-		return nil
+func (e *Envelope) Parse(fields []interface{}) error {
+	if len(fields) < 10 {
+		return errors.New("ENVELOPE doesn't contain 10 fields")
 	}
-
-	e := &Envelope{}
 
 	if date, ok := fields[0].(string); ok {
 		e.Date, _ = ParseDate(date)
@@ -125,39 +169,7 @@ func (m *Message) Envelope() *Envelope {
 		e.MessageId = msgId
 	}
 
-	return e
-}
-
-// TODO
-func (m *Message) Body() (lit *Literal) { return }
-func (m *Message) BodyStructure() (s *BodyStructure) { return }
-func (m *Message) Flags() (flags []string) { return }
-func (m *Message) InternalDate() (t *time.Time) { return }
-func (m *Message) Size() (size int) { return }
-func (m *Message) Uid() (uid int) { return }
-
-// A message envelope, ie. message metadata from its headers.
-type Envelope struct {
-	// The message date.
-	Date *time.Time
-	// The message subject.
-	Subject string
-	// The From header addresses.
-	From []*Address
-	// The message senders.
-	Sender []*Address
-	// The Reply-To header addresses.
-	ReplyTo []*Address
-	// The To header addresses.
-	To []*Address
-	// The Cc header addresses.
-	Cc []*Address
-	// The Bcc header addresses.
-	Bcc []*Address
-	// The In-Reply-To header. Contains the parent Message-Id.
-	InReplyTo string
-	// The Message-Id header.
-	MessageId string
+	return nil
 }
 
 // An address.
@@ -168,8 +180,43 @@ type Address struct {
 	HostName string
 }
 
-func (a *Address) String() string {
-	return a.MailboxName + "@" + a.HostName
+func (addr *Address) String() string {
+	return addr.MailboxName + "@" + addr.HostName
+}
+
+// Parse an address from fields.
+func (addr *Address) Parse(fields []interface{}) error {
+	if len(fields) < 4 {
+		return errors.New("Address doesn't contain 4 fields")
+	}
+
+	if f, ok := fields[0].(string); ok {
+		addr.PersonalName = f
+	}
+	if f, ok := fields[1].(string); ok {
+		addr.AtDomainList = f
+	}
+	if f, ok := fields[2].(string); ok {
+		addr.MailboxName = f
+	}
+	if f, ok := fields[3].(string); ok {
+		addr.HostName = f
+	}
+
+	return nil
+}
+
+// Parse an address list from fields.
+func ParseAddressList(fields []interface{}) (addrs []*Address) {
+	for _, f := range fields {
+		if addrFields, ok := f.([]interface{}); ok {
+			addr := &Address{}
+			if err := addr.Parse(addrFields); err == nil {
+				addrs = append(addrs, addr)
+			}
+		}
+	}
+	return
 }
 
 type BodyStructure struct {

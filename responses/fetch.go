@@ -28,16 +28,10 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 
 		msg := &imap.Message{
 			Id: id,
-			Fields: map[string]interface{}{},
 		}
 
-		var key string
-		for i, f := range fields {
-			if i % 2 == 0 {// It's a key
-				key = f.(string)
-			} else { // It's a value
-				msg.Fields[key] = f
-			}
+		if err = msg.Parse(fields); err != nil {
+			return
 		}
 
 		r.Messages <- msg
