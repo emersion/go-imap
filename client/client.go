@@ -85,7 +85,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
-	log.Println(cmd)
+	log.Println("C:", cmd)
 
 	_, err = cmd.WriteTo(c.conn)
 	if err != nil {
@@ -97,24 +97,31 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	defer c.removeHandler(statusHdlr)
 
 	var hdlr imap.RespHandler
+	var done chan error
 	defer (func () {
-		if hdlr != nil {
-			close(hdlr)
-		}
+		if hdlr != nil { close(hdlr) }
+		if done != nil { close(done) }
 	})()
 
 	if res != nil {
 		hdlr = make(imap.RespHandler)
+		done = make(chan error)
 
 		go (func() {
-			err = res.HandleFrom(hdlr)
+			err := res.HandleFrom(hdlr)
+			done <- err
 		})()
 	}
 
 	for h := range statusHdlr {
-		if status, ok := h.Resp.(*imap.StatusResp); ok && status.Tag == cmd.Tag {
+		if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
 			h.Accept()
-			return status, nil
+			status = s
+			if hdlr != nil {
+				close(hdlr)
+				hdlr = nil
+			}
+			break
 		} else if hdlr != nil {
 			hdlr <- h
 		} else {
@@ -122,6 +129,9 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		}
 	}
 
+	if done != nil {
+		err = <-done
+	}
 	return
 }
 
@@ -266,9 +276,61 @@ func (c *Client) List(ref, mbox string, ch chan<- *imap.MailboxInfo) (err error)
 	if err != nil {
 		return
 	}
-	if err = status.Err(); err != nil {
+
+	err = status.Err()
+	return
+}
+
+func (c *Client) Select(name string) (mbox *imap.MailboxStatus, err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
 		return
 	}
+
+	mbox = &imap.MailboxStatus{Name: name}
+
+	cmd := &commands.Select{
+		Mailbox: name,
+	}
+	res := &responses.Select{
+		Mailbox: mbox,
+	}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	if err != nil {
+		return
+	}
+
+	c.State = imap.SelectedState
+	mbox.ReadOnly = (status.Code == "READ-ONLY")
+	return
+}
+
+func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
+	defer close(ch)
+
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	cmd := &commands.Fetch{
+		SeqSet: seqset,
+		Items: items,
+	}
+	res := &responses.Fetch{Messages: ch}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
 	return
 }
 

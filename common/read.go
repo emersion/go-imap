@@ -31,6 +31,20 @@ type Reader struct {
 	reader
 }
 
+func ParseNumber(input interface{}) uint32 {
+	str, ok := input.(string)
+	if !ok {
+		return 0
+	}
+
+	nbr, err := strconv.Atoi(str)
+	if err != nil {
+		return 0
+	}
+
+	return uint32(nbr)
+}
+
 func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
@@ -147,6 +161,10 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		}
 		if char == '\n' || char == listEnd || char == respCodeEnd {
 			return
+		}
+		if char == listStart {
+			r.UnreadRune()
+			continue
 		}
 		if char != sp {
 			err = errors.New("Fields are not separated by a space")

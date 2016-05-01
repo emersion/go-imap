@@ -21,17 +21,20 @@ import (
 func main() {
 	log.Println("Connecting to server...")
 
+	// Connect to server
 	c, err := client.DialTLS("mail.example.org:993", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Connected")
 
+	// Login
 	if err := c.Login("username", "password"); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Logged in")
 
+	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo)
 	go (func () {
 		err = c.List("", "%", mailboxes)
@@ -46,7 +49,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Done")
+	// Select INBOX
+	mbox, err := c.Select("INBOX")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Flags for INBOX:", mbox.Flags)
+
+	// Get the last 4 messages
+	seqset, _ := imap.NewSeqSet("")
+	seqset.AddRange(mbox.Total - 3, mbox.Total)
+
+	messages := make(chan *imap.Message, 4)
+	err = c.Fetch(seqset, []string{"ENVELOPE"}, messages)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for msg := range messages {
+		log.Println(msg.Envelope().Subject)
+	}
+
+	log.Println("Done!")
 }
 ```
 

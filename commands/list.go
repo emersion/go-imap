@@ -4,7 +4,7 @@ import (
 	imap "github.com/emersion/imap/common"
 )
 
-// An LIST command.
+// A LIST command.
 // See https://tools.ietf.org/html/rfc3501#section-6.3.8
 type List struct {
 	Reference string
