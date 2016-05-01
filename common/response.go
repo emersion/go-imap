@@ -8,7 +8,10 @@ import (
 // A response.
 // See https://tools.ietf.org/html/rfc3501#section-2.2.2
 type Resp struct {
+	// The response tag. Can be either * for untagged responses, + for continuation
+	// requests or a previous command's tag.
 	Tag string
+	// The parsed response fields.
 	Fields []interface{}
 }
 
@@ -37,8 +40,9 @@ func (r *Resp) WriteTo(w io.Writer) (N int64, err error) {
 	return
 }
 
-// A continuation response.
+// A continuation request.
 type ContinuationResp struct {
+	// The info message sent with the continuation request.
 	Info string
 }
 
@@ -56,6 +60,8 @@ func (r *ContinuationResp) WriteTo(w io.Writer) (int64, error) {
 	return r.Resp().WriteTo(w)
 }
 
+// Read a single response from a Reader. Returns either a continuation request,
+// a status response or a raw response.
 func ReadResp(r *Reader) (out interface{}, err error) {
 	atom, err := r.ReadAtom()
 	if err != nil {
