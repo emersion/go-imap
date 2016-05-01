@@ -2,6 +2,10 @@
 
 An IMAP library written in Go.
 
+```bash
+go get gopkg.in/emersion/imap.v0
+```
+
 ## Why?
 
 Other IMAP implementations in Go:
