@@ -2,7 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/emersion/imap?status.svg)](https://godoc.org/github.com/emersion/imap)
 
-An IMAP library written in Go.
+An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go.
 
 ```bash
 go get gopkg.in/emersion/imap.v0
