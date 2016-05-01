@@ -18,7 +18,11 @@ const (
 	respCodeEnd = ']'
 )
 
+// A string reader.
 type StringReader interface {
+	// ReadString reads until the first occurrence of delim in the input,
+	// returning a string containing the data up to and including the delimiter.
+	// See https://golang.org/pkg/bufio/#Reader.ReadString
 	ReadString(delim byte) (line string, err error)
 }
 
@@ -27,10 +31,12 @@ type reader interface {
 	StringReader
 }
 
+// An IMAP reader.
 type Reader struct {
 	reader
 }
 
+// Convert a field to a number.
 func ParseNumber(input interface{}) uint32 {
 	str, ok := input.(string)
 	if !ok {

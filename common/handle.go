@@ -35,7 +35,6 @@ func (h *RespHandling) AcceptNamedResp(name string) (fields []interface{}) {
 	return res.Fields[1:]
 }
 
-// A response handler.
 // Delivers responses to handlers.
 type RespHandler chan *RespHandling
 

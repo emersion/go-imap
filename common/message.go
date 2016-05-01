@@ -43,6 +43,7 @@ func ParseDate(date string) (*time.Time, error) {
 	return nil, errors.New("Cannot parse date")
 }
 
+// Parse an address from fields.
 func ParseAddress(fields []interface{}) *Address {
 	if len(fields) < 4 {
 		return nil
@@ -66,6 +67,7 @@ func ParseAddress(fields []interface{}) *Address {
 	return addr
 }
 
+// Parse an address list from fields.
 func ParseAddressList(fields []interface{}) (addrs []*Address) {
 	for _, f := range fields {
 		if addrFields, ok := f.([]interface{}); ok {
@@ -77,7 +79,9 @@ func ParseAddressList(fields []interface{}) (addrs []*Address) {
 	return
 }
 
+// A message.
 type Message struct {
+	// The message identifier. Can be either a sequence number or a UID.
 	Id uint32
 	Fields map[string]interface{}
 }
@@ -132,24 +136,40 @@ func (m *Message) InternalDate() (t *time.Time) { return }
 func (m *Message) Size() (size int) { return }
 func (m *Message) Uid() (uid int) { return }
 
+// A message envelope, ie. message metadata from its headers.
 type Envelope struct {
+	// The message date.
 	Date *time.Time
+	// The message subject.
 	Subject string
+	// The From header addresses.
 	From []*Address
+	// The message senders.
 	Sender []*Address
+	// The Reply-To header addresses.
 	ReplyTo []*Address
+	// The To header addresses.
 	To []*Address
+	// The Cc header addresses.
 	Cc []*Address
+	// The Bcc header addresses.
 	Bcc []*Address
+	// The In-Reply-To header. Contains the parent Message-Id.
 	InReplyTo string
+	// The Message-Id header.
 	MessageId string
 }
 
+// An address.
 type Address struct {
 	PersonalName string
 	AtDomainList string
 	MailboxName string
 	HostName string
+}
+
+func (a *Address) String() string {
+	return a.MailboxName + "@" + a.HostName
 }
 
 type BodyStructure struct {
