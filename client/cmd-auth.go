@@ -8,7 +8,7 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
-func (c *Client) Select(name string) (mbox *imap.MailboxStatus, err error) {
+func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		err = errors.New("Not logged in")
 		return
@@ -18,6 +18,7 @@ func (c *Client) Select(name string) (mbox *imap.MailboxStatus, err error) {
 
 	cmd := &commands.Select{
 		Mailbox: name,
+		ReadOnly: readOnly,
 	}
 	res := &responses.Select{
 		Mailbox: mbox,
@@ -38,7 +39,7 @@ func (c *Client) Select(name string) (mbox *imap.MailboxStatus, err error) {
 	return
 }
 
-// TODO: EXAMINE, CREATE, DELETE, RENAME, SUBSCRIBE, UNSUBSCRIBE
+// TODO: CREATE, DELETE, RENAME, SUBSCRIBE, UNSUBSCRIBE
 
 func (c *Client) List(ref, mbox string, ch chan<- *imap.MailboxInfo) (err error) {
 	defer close(ch)

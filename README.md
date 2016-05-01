@@ -59,7 +59,7 @@ func main() {
 	}
 
 	// Select INBOX
-	mbox, err := c.Select("INBOX")
+	mbox, err := c.Select("INBOX", false)
 	if err != nil {
 		log.Fatal(err)
 	}
