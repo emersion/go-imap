@@ -1,5 +1,7 @@
 # imap
 
+[![GoDoc](https://godoc.org/github.com/emersion/imap?status.svg)](https://godoc.org/github.com/emersion/imap)
+
 An IMAP library written in Go.
 
 ```bash
