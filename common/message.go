@@ -64,6 +64,7 @@ type Message struct {
 	Uid uint32
 }
 
+// Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
 	var key string
 	for i, f := range fields {
@@ -133,6 +134,7 @@ type Envelope struct {
 	MessageId string
 }
 
+// Parse an envelope from fields.
 func (e *Envelope) Parse(fields []interface{}) error {
 	if len(fields) < 10 {
 		return errors.New("ENVELOPE doesn't contain 10 fields")
@@ -174,9 +176,13 @@ func (e *Envelope) Parse(fields []interface{}) error {
 
 // An address.
 type Address struct {
+	// The personal name.
 	PersonalName string
+	// The SMTP at-domain-list (source route).
 	AtDomainList string
+	// The mailbox name.
 	MailboxName string
+	// The host name.
 	HostName string
 }
 
