@@ -235,6 +235,8 @@ func ParseAddressList(fields []interface{}) (addrs []*Address) {
 
 // A body structure.
 type BodyStructure struct {
+	// Basic fields
+
 	// The MIME type.
 	MimeType string
 	// The MIME subtype.
@@ -251,11 +253,63 @@ type BodyStructure struct {
 	// The Content-Length header.
 	Size uint32
 
+	// Type-specific fields
+
 	// The children parts, if multipart.
 	Parts []*BodyStructure
+	// The envelope, if message/rfc822.
+	Envelope *Envelope
+	// The body structure, if message/rfc822.
+	BodyStructure *BodyStructure
+	// The number of lines, if text or message/rfc822.
+	Lines uint32
+
+	// Extension data
+
+	// The Content-Disposition header.
+	Disposition string
+	// The Content-Language header, if multipart.
+	Language []string
+	// The content URI, if multipart.
+	Location []string
+
+	// The MD5 checksum.
+	Md5 string
 }
 
 // (("text" "plain" ("charset" "UTF-8") NIL NIL "quoted-printable" 2215 74)("text" "html" ("charset" "UTF-8") NIL NIL "quoted-printable" 4062 53) "alternative")
+
+func ParseParameters(fields []interface{}) (params map[string]string, err error) {
+	params = map[string]string{}
+
+	var key string
+	for i, f := range fields {
+		p, ok := f.(string)
+		if !ok {
+			err = errors.New("Parameter list contains a non-string")
+			return
+		}
+
+		if i % 2 == 0 {
+			key = p
+		} else {
+			params[key] = p
+		}
+	}
+
+	return
+}
+
+func ParseStringList(fields []interface{}) ([]string, error) {
+	list := make([]string, len(fields))
+	for i, f := range fields {
+		var ok bool
+		if list[i], ok = f.(string); !ok {
+			return nil, errors.New("String list contains a non-string")
+		}
+	}
+	return list, nil
+}
 
 func (bs *BodyStructure) Parse(fields []interface{}) error {
 	if len(fields) == 0 {
@@ -286,7 +340,22 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 		bs.MimeSubType, _ = fields[end].(string)
 
-		// TODO: extension data
+		if len(fields) - end + 1 >= 4 { // Contains extension data
+			params, _ := fields[end].([]interface{})
+			bs.Params, _ = ParseParameters(params)
+
+			bs.Disposition, _ = fields[end+1].(string)
+
+			switch langs := fields[end+2].(type) {
+			case string:
+				bs.Language = []string{langs}
+			case []interface{}:
+				bs.Language, _ = ParseStringList(langs)
+			}
+
+			location, _ := fields[end+3].([]interface{})
+			bs.Location, _ = ParseStringList(location)
+		}
 	case string: // A non-multipart body part
 		if len(fields) < 7 {
 			return errors.New("Non-multipart body part doesn't have 7 fields")
@@ -296,28 +365,48 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[1].(string)
 
 		params, _ := fields[2].([]interface{})
-		bs.Params = map[string]string{}
-
-		var key string
-		for i, f := range params {
-			p, ok := f.(string)
-			if !ok {
-				return errors.New("Parameter list contains a non-string")
-			}
-
-			if i % 2 == 0 {
-				key = p
-			} else {
-				bs.Params[key] = p
-			}
-		}
+		bs.Params, _ = ParseParameters(params)
 
 		bs.Id, _ = fields[3].(string)
 		bs.Description, _ = fields[4].(string)
 		bs.Encoding, _ = fields[5].(string)
 		bs.Size = ParseNumber(fields[6])
 
-		// TODO: extension data
+		end := 7
+
+		// Type-specific fields
+		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
+			envelope, _ := fields[end].([]interface{})
+			bs.Envelope = &Envelope{}
+			bs.Envelope.Parse(envelope)
+
+			structure, _ := fields[end+1].([]interface{})
+			bs.BodyStructure = &BodyStructure{}
+			bs.BodyStructure.Parse(structure)
+
+			bs.Lines = ParseNumber(fields[end+2])
+
+			end += 3
+		}
+		if bs.MimeType == "text" {
+			bs.Lines = ParseNumber(fields[end])
+			end++
+		}
+
+		if len(fields) - end + 1 >= 4 { // Contains extension data
+			bs.Md5, _ = fields[end].(string)
+			bs.Disposition, _ = fields[end+1].(string)
+
+			switch langs := fields[end+2].(type) {
+			case string:
+				bs.Language = []string{langs}
+			case []interface{}:
+				bs.Language, _ = ParseStringList(langs)
+			}
+
+			location, _ := fields[end+3].([]interface{})
+			bs.Location, _ = ParseStringList(location)
+		}
 	}
 
 	return nil
