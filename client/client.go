@@ -164,6 +164,34 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 		if status.Type == imap.PREAUTH {
 			c.State = imap.AuthenticatedState
 		}
+		if status.Type == imap.BYE {
+			c.State = imap.LogoutState
+		}
+
+		go c.handleBye()
+
+		return status
+	}
+
+	return nil
+}
+
+func (c *Client) handleBye() *imap.StatusResp {
+	hdlr := make(imap.RespHandler)
+	c.addHandler(hdlr)
+	defer c.removeHandler(hdlr)
+
+	for h := range hdlr {
+		status, ok := h.Resp.(*imap.StatusResp)
+		if !ok || status.Tag != "*" || status.Type != imap.BYE {
+			h.Reject()
+			continue
+		}
+
+		h.Accept()
+
+		c.State = imap.LogoutState
+		c.conn.Close()
 
 		return status
 	}
@@ -327,6 +355,23 @@ func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Mess
 	res := &responses.Fetch{Messages: ch}
 
 	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+func (c *Client) Logout() (err error) {
+	if c.State == imap.LogoutState {
+		err = errors.New("Already logged out")
+		return
+	}
+
+	cmd := &commands.Logout{}
+
+	status, err := c.execute(cmd, nil)
 	if err != nil {
 		return
 	}

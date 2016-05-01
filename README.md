@@ -34,6 +34,9 @@ func main() {
 	}
 	log.Println("Connected")
 
+	// Don't forget to logout
+	defer c.Logout()
+
 	// Login
 	if err := c.Login("username", "password"); err != nil {
 		log.Fatal(err)
