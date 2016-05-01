@@ -52,7 +52,7 @@ type Message struct {
 	Envelope *Envelope
 	// The message body parts.
 	Body map[string]*Literal
-	// The message body structure.
+	// The message body structure (either BODYSTRUCTURE or BODY).
 	BodyStructure *BodyStructure
 	// The message flags.
 	Flags []string
@@ -66,6 +66,8 @@ type Message struct {
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
+	m.Body = map[string]*Literal{}
+
 	var key string
 	for i, f := range fields {
 		if i % 2 == 0 { // It's a key
@@ -108,10 +110,17 @@ func (m *Message) Parse(fields []interface{}) error {
 			case "INTERNALDATE":
 				date, _ := f.(string)
 				m.InternalDate, _ = ParseDate(date)
-			case "SIZE":
+			case "RFC822.SIZE":
 				m.Size = ParseNumber(f)
 			case "UID":
 				m.Uid = ParseNumber(f)
+			default:
+				// Likely to be a section of the body contents
+				literal, ok := f.(*Literal)
+				if !ok {
+					break
+				}
+				m.Body[key] = literal
 			}
 		}
 	}
