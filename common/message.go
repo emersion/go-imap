@@ -85,8 +85,16 @@ func (m *Message) Parse(fields []interface{}) error {
 				if err := m.Envelope.Parse(env); err != nil {
 					return err
 				}
-			case "BODY": // TODO
-			case "BODYSTRUCTURE": // TODO
+			case "BODYSTRUCTURE", "BODY":
+				bs, ok := f.([]interface{})
+				if !ok {
+					return errors.New("BODYSTRUCTURE is not a list")
+				}
+
+				m.BodyStructure = &BodyStructure{}
+				if err := m.BodyStructure.Parse(bs); err != nil {
+					return err
+				}
 			case "FLAGS":
 				flags, ok := f.([]interface{})
 				if !ok {
@@ -225,12 +233,92 @@ func ParseAddressList(fields []interface{}) (addrs []*Address) {
 	return
 }
 
+// A body structure.
 type BodyStructure struct {
+	// The MIME type.
 	MimeType string
+	// The MIME subtype.
 	MimeSubType string
+	// The MIME parameters.
 	Params map[string]string
+
+	// The Content-Id header.
 	Id string
+	// The Content-Description header.
 	Description string
+	// The Content-Encoding header.
 	Encoding string
-	Size int
+	// The Content-Length header.
+	Size uint32
+
+	// The children parts, if multipart.
+	Parts []*BodyStructure
+}
+
+// (("text" "plain" ("charset" "UTF-8") NIL NIL "quoted-printable" 2215 74)("text" "html" ("charset" "UTF-8") NIL NIL "quoted-printable" 4062 53) "alternative")
+
+func (bs *BodyStructure) Parse(fields []interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	switch fields[0].(type) {
+	case []interface{}: // A multipart body part
+		bs.MimeType = "multipart"
+
+		end := 0
+		for i, fi := range fields {
+			switch f := fi.(type) {
+			case []interface{}: // A part
+				part := &BodyStructure{}
+				if err := part.Parse(f); err != nil {
+					return err
+				}
+				bs.Parts = append(bs.Parts, part)
+			case string:
+				end = i
+			}
+
+			if end > 0 {
+				break
+			}
+		}
+
+		bs.MimeSubType, _ = fields[end].(string)
+
+		// TODO: extension data
+	case string: // A non-multipart body part
+		if len(fields) < 7 {
+			return errors.New("Non-multipart body part doesn't have 7 fields")
+		}
+
+		bs.MimeType, _ = fields[0].(string)
+		bs.MimeSubType, _ = fields[1].(string)
+
+		params, _ := fields[2].([]interface{})
+		bs.Params = map[string]string{}
+
+		var key string
+		for i, f := range params {
+			p, ok := f.(string)
+			if !ok {
+				return errors.New("Parameter list contains a non-string")
+			}
+
+			if i % 2 == 0 {
+				key = p
+			} else {
+				bs.Params[key] = p
+			}
+		}
+
+		bs.Id, _ = fields[3].(string)
+		bs.Description, _ = fields[4].(string)
+		bs.Encoding, _ = fields[5].(string)
+		bs.Size = ParseNumber(fields[6])
+
+		// TODO: extension data
+	}
+
+	return nil
 }
