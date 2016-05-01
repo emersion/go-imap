@@ -1,3 +1,4 @@
+// An IMAP client.
 package client
 
 import (
@@ -156,7 +157,7 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 
 		h.Accept()
 
-		if status.Code == imap.CAPABILITY {
+		if status.Code == "CAPABILITY" {
 			c.gotStatusCaps(status.Arguments)
 		}
 
@@ -249,7 +250,7 @@ func (c *Client) Login(username, password string) (err error) {
 		return
 	}
 
-	if status.Code == imap.CAPABILITY {
+	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
 

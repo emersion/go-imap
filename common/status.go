@@ -16,33 +16,27 @@ const (
 	BYE = "BYE"
 )
 
-// A status response code.
-type StatusRespCode string
-
-const (
-	ALERT StatusRespCode = "ALERT"
-	BADCHARSET = "BADCHARSET"
-	CAPABILITY = "CAPABILITY"
-	PARSE = "PARSE"
-	PERMANENTFLAGS = "PERMANENTFLAGS"
-	READ_ONLY = "READ-ONLY"
-	READ_WRITE = "READ-WRITE"
-	TRYCREATE = "TRYCREATE"
-	UIDNEXT = "UIDNEXT"
-	UIDVALIDITY = "UIDVALIDITY"
-	UNSEEN = "UNSEEN"
-)
-
 // A status response.
 // See https://tools.ietf.org/html/rfc3501#section-7.1
 type StatusResp struct {
+	// The response tag.
 	Tag string
+
+	// The status type.
 	Type StatusRespType
-	Code StatusRespCode
+
+	// The status code.
+	Code string
+
+	// Arguments provided with the status code.
 	Arguments []interface{}
+
+	// The status info.
 	Info string
 }
 
+// If this status is NO or BAD, returns an error with the status info.
+// Otherwise, returns nil.
 func (r *StatusResp) Err() error {
 	if r.Type == NO || r.Type == BAD {
 		return errors.New(r.Info)
@@ -50,6 +44,7 @@ func (r *StatusResp) Err() error {
 	return nil
 }
 
+// Implements io.WriterTo.
 func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
 	fields := []interface{}{r.Type}
 

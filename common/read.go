@@ -216,7 +216,7 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 	return
 }
 
-func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err error) {
+func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -236,13 +236,12 @@ func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err 
 		return
 	}
 
-	codeStr, ok := fields[0].(string)
+	code, ok := fields[0].(string)
 	if !ok {
 		err = errors.New("Response code doesn't start with a string atom")
 		return
 	}
 
-	code = StatusRespCode(codeStr)
 	fields = fields[1:]
 
 	r.UnreadRune()
