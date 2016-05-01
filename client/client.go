@@ -4,13 +4,11 @@ package client
 import (
 	"log"
 	"bufio"
-	"errors"
 	"net"
 	"crypto/tls"
 	"strings"
 
 	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/commands"
 	"github.com/emersion/imap/responses"
 )
 
@@ -219,165 +217,6 @@ func (c *Client) handleCaps() (err error) {
 	}
 
 	return nil
-}
-
-func (c *Client) Capability() (caps map[string]bool, err error) {
-	cmd := &commands.Capability{}
-
-	_, err = c.execute(cmd, nil)
-	caps = c.Caps
-	return
-}
-
-func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
-	if _, ok := c.conn.(*tls.Conn); ok {
-		err = errors.New("TLS is already enabled")
-		return
-	}
-
-	cmd := &commands.StartTLS{}
-
-	status, err := c.execute(cmd, nil)
-	if err != nil {
-		return
-	}
-	if err = status.Err(); err != nil {
-		return
-	}
-
-	tlsConn := tls.Client(c.conn, tlsConfig)
-	err = tlsConn.Handshake()
-	if err != nil {
-		return
-	}
-
-	c.conn = tlsConn
-	return
-}
-
-func (c *Client) Login(username, password string) (err error) {
-	if c.State != imap.NotAuthenticatedState {
-		err = errors.New("Already logged in")
-		return
-	}
-	if c.Caps["LOGINDISABLED"] {
-		err = errors.New("Login is disabled in current state")
-		return
-	}
-
-	cmd := &commands.Login{
-		Username: username,
-		Password: password,
-	}
-
-	status, err := c.execute(cmd, nil)
-	if err != nil {
-		return
-	}
-	if err = status.Err(); err != nil {
-		return
-	}
-
-	if status.Code == "CAPABILITY" {
-		c.gotStatusCaps(status.Arguments)
-	}
-
-	c.State = imap.AuthenticatedState
-
-	return
-}
-
-func (c *Client) List(ref, mbox string, ch chan<- *imap.MailboxInfo) (err error) {
-	defer close(ch)
-
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
-		return
-	}
-
-	cmd := &commands.List{
-		Reference: ref,
-		Mailbox: mbox,
-	}
-	res := &responses.List{Mailboxes: ch}
-
-	status, err := c.execute(cmd, res)
-	if err != nil {
-		return
-	}
-
-	err = status.Err()
-	return
-}
-
-func (c *Client) Select(name string) (mbox *imap.MailboxStatus, err error) {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
-		return
-	}
-
-	mbox = &imap.MailboxStatus{Name: name}
-
-	cmd := &commands.Select{
-		Mailbox: name,
-	}
-	res := &responses.Select{
-		Mailbox: mbox,
-	}
-
-	status, err := c.execute(cmd, res)
-	if err != nil {
-		return
-	}
-
-	err = status.Err()
-	if err != nil {
-		return
-	}
-
-	c.State = imap.SelectedState
-	mbox.ReadOnly = (status.Code == "READ-ONLY")
-	return
-}
-
-func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
-	defer close(ch)
-
-	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
-		return
-	}
-
-	cmd := &commands.Fetch{
-		SeqSet: seqset,
-		Items: items,
-	}
-	res := &responses.Fetch{Messages: ch}
-
-	status, err := c.execute(cmd, res)
-	if err != nil {
-		return
-	}
-
-	err = status.Err()
-	return
-}
-
-func (c *Client) Logout() (err error) {
-	if c.State == imap.LogoutState {
-		err = errors.New("Already logged out")
-		return
-	}
-
-	cmd := &commands.Logout{}
-
-	status, err := c.execute(cmd, nil)
-	if err != nil {
-		return
-	}
-
-	err = status.Err()
-	return
 }
 
 func NewClient(conn net.Conn) (c *Client, err error) {
