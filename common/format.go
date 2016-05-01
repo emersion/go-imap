@@ -25,7 +25,6 @@ func formatFields(fields []interface{}) (string, error) {
 
 	for i, field := range fields {
 		var str string
-		var err error
 		switch f := field.(type) {
 		case string:
 			str = formatString(f)
@@ -34,15 +33,15 @@ func formatFields(fields []interface{}) (string, error) {
 		case *Literal:
 			str = f.Field()
 		case []interface{}:
-			str, err = formatFields(f)
+			var err error
+			str, err = formatList(f)
+			if err != nil {
+				return "", err
+			}
 		case *SeqSet:
 			str = f.String()
 		default:
 			return "", errors.New("Cannot format argument #" + strconv.Itoa(i))
-		}
-
-		if err != nil {
-			return "", err
 		}
 
 		formatted[i] = str

@@ -67,7 +67,7 @@ func main() {
 
 	// Get the last 4 messages
 	seqset, _ := imap.NewSeqSet("")
-	seqset.AddRange(mbox.Total - 3, mbox.Total)
+	seqset.AddRange(mbox.Messages - 3, mbox.Messages)
 
 	messages := make(chan *imap.Message, 4)
 	err = c.Fetch(seqset, []string{"ENVELOPE"}, messages)

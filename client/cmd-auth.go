@@ -64,4 +64,31 @@ func (c *Client) List(ref, mbox string, ch chan<- *imap.MailboxInfo) (err error)
 	return
 }
 
-// TODO: LSUB, STATUS, APPEND
+// TODO: LSUB
+
+func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	mbox = &imap.MailboxStatus{}
+
+	cmd := &commands.Status{
+		Mailbox: name,
+		Items: items,
+	}
+	res := &responses.Status{
+		Mailbox: mbox,
+	}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: APPEND

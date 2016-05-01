@@ -11,7 +11,7 @@ type MailboxStatus struct {
 	ReadOnly bool
 	Flags []string
 	PermanentFlags []string
-	Total uint32
+	Messages uint32
 	Recent uint32
 	Unseen uint32
 	UidNext uint32

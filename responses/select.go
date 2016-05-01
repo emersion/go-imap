@@ -37,7 +37,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 				seqid := imap.ParseNumber(res.Fields[0])
 				switch name {
 				case "EXISTS":
-					mbox.Total = seqid
+					mbox.Messages = seqid
 				case "RECENT":
 					mbox.Recent = seqid
 				}
