@@ -48,6 +48,7 @@ type StatusResp struct {
 	Type StatusRespType
 
 	// The status code.
+	// See https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml
 	Code string
 
 	// Arguments provided with the status code.

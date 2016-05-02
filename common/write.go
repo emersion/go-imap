@@ -57,7 +57,7 @@ func (w *Writer) writeQuotedString(s string) (int, error) {
 }
 
 func (w *Writer) WriteString(s string) (int, error) {
-	if s == "NIL" || strings.ContainsAny(s, " \"(") {
+	if s == "NIL" || s == "" || strings.ContainsAny(s, " \"(") {
 		return w.writeQuotedString(s)
 	}
 	return w.writeAtomString(s)
