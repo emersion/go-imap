@@ -4,7 +4,7 @@ import (
 	imap "github.com/emersion/imap/common"
 )
 
-// An LOGIN command.
+// A LOGIN command.
 // See https://tools.ietf.org/html/rfc3501#section-6.2.2
 type Login struct {
 	Username string
