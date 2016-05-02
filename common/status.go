@@ -2,7 +2,6 @@ package common
 
 import (
 	"errors"
-	"io"
 )
 
 // A status response type.
@@ -65,31 +64,4 @@ func (r *StatusResp) Err() error {
 		return errors.New(r.Info)
 	}
 	return nil
-}
-
-// Implements io.WriterTo.
-func (r *StatusResp) WriteTo(w io.Writer) (int64, error) {
-	fields := []interface{}{r.Type}
-
-	if r.Code != "" {
-		code := r.Code
-
-		if len(r.Arguments) > 0 {
-			// TODO: convert Arguments to []string
-			//code += " " + strings.Join(" ", r.Arguments)
-		}
-
-		fields = append(fields, "[" + code + "]")
-	}
-
-	if r.Info != "" {
-		fields = append(fields, r.Info)
-	}
-
-	res := &Resp{
-		Tag: r.Tag,
-		Fields: fields,
-	}
-
-	return res.WriteTo(w)
 }

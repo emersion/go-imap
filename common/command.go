@@ -1,9 +1,5 @@
 package common
 
-import (
-	"io"
-)
-
 // IMAP4rev1 commands.
 const (
 	Capability string = "CAPABILITY"
@@ -46,45 +42,29 @@ type Command struct {
 	Arguments []interface{}
 }
 
-// Implements io.WriterTo interface.
-func (c *Command) WriteTo(w io.Writer) (N int64, err error) {
-	n, err := w.Write([]byte(c.Tag + " " + c.Name))
+func (c *Command) WriteTo(w *Writer) (N int64, err error) {
+	n, err := w.writeString(c.Tag + string(sp) + c.Name)
+	N += int64(n)
 	if err != nil {
 		return
 	}
-	N += int64(n)
 
-	var literals []*Literal
 	if len(c.Arguments) > 0 {
-		var args string
-		args, err = formatFields(c.Arguments)
-		if err != nil {
-			return
-		}
-
-		n, err = w.Write([]byte(" " + args))
-		if err != nil {
-			return
-		}
+		n, err = w.WriteSp()
 		N += int64(n)
+		if err != nil {
+			return
+		}
 
-		for _, f := range c.Arguments {
-			if literal, ok := f.(*Literal); ok {
-				literals = append(literals, literal)
-			}
+		n, err = w.WriteFields(c.Arguments)
+		N += int64(n)
+		if err != nil {
+			return
 		}
 	}
 
-	n, err = w.Write([]byte("\n"))
-	if err != nil {
-		return
-	}
+	n, err = w.WriteCrlf()
 	N += int64(n)
-
-	if len(literals) > 0 {
-		// TODO: send literals
-	}
-
 	return
 }
 

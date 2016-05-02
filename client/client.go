@@ -13,6 +13,7 @@ import (
 
 type Client struct {
 	conn net.Conn
+	writer *imap.Writer
 	handlers []imap.RespHandler
 
 	Caps map[string]bool
@@ -79,7 +80,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	log.Println("C:", cmd)
 
-	_, err = cmd.WriteTo(c.conn)
+	_, err = cmd.WriteTo(c.writer)
 	if err != nil {
 		return
 	}
@@ -215,6 +216,7 @@ func (c *Client) handleCaps() (err error) {
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
+		writer: imap.NewWriter(conn),
 		State: imap.NotAuthenticatedState,
 	}
 

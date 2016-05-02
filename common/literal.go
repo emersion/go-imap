@@ -1,24 +1,34 @@
 package common
 
 import (
-	"io"
 	"strconv"
 )
 
 // A literal.
 type Literal struct {
 	// The literal length.
-	Len int
+	len int
 	// The literal contents.
-	Str string
+	contents []byte
 }
 
-func (l *Literal) Field() string {
-	return string(literalStart) + strconv.Itoa(l.Len) + string(literalEnd)
+func (l *Literal) field() string {
+	return string(literalStart) + strconv.Itoa(l.len) + string(literalEnd)
 }
 
-// Implements io.WriterTo interface.
-func (l *Literal) WriteTo(w io.Writer) (N int64, err error) {
-	n, err := io.WriteString(w, l.Str)
-	return int64(n), err
+func (l *Literal) Len() int {
+	return l.len
+}
+
+func (l *Literal) Bytes() []byte {
+	return l.contents
+}
+
+func (l *Literal) String() string {
+	return string(l.contents)
+}
+
+// Create a new literal.
+func NewLiteral(b []byte) *Literal {
+	return &Literal{len: len(b), contents: b}
 }

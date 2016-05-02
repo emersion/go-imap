@@ -140,8 +140,6 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 		return
 	}
 
-	literal = &Literal{Len: l}
-
 	if err = r.ReadCrlf(); err != nil {
 		return
 	}
@@ -151,7 +149,7 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 		return
 	}
 
-	literal.Str = string(b)
+	literal = NewLiteral(b)
 	return
 }
 
@@ -316,8 +314,4 @@ func (r *Reader) ReadInfo() (info string, err error) {
 
 func NewReader(r reader) *Reader {
 	return &Reader{reader: r}
-}
-
-type ReaderFrom interface {
-	ReadFrom(r Reader) error
 }

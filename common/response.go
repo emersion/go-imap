@@ -2,7 +2,6 @@ package common
 
 import (
 	"errors"
-	"io"
 )
 
 // A response.
@@ -13,31 +12,6 @@ type Resp struct {
 	Tag string
 	// The parsed response fields.
 	Fields []interface{}
-}
-
-// Implements io.WriterTo interface.
-func (r *Resp) WriteTo(w io.Writer) (N int64, err error) {
-	n, err := w.Write([]byte(r.Tag))
-	if err != nil {
-		return
-	}
-	N += int64(n)
-
-	if len(r.Fields) > 0 {
-		var fields string
-		fields, err = formatList(r.Fields)
-		if err != nil {
-			return
-		}
-
-		n, err = w.Write([]byte(" " + fields))
-		if err != nil {
-			return
-		}
-		N += int64(n)
-	}
-
-	return
 }
 
 // A continuation request.
@@ -54,10 +28,6 @@ func (r *ContinuationResp) Resp() *Resp {
 	}
 
 	return res
-}
-
-func (r *ContinuationResp) WriteTo(w io.Writer) (int64, error) {
-	return r.Resp().WriteTo(w)
 }
 
 // Read a single response from a Reader. Returns either a continuation request,
