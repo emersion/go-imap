@@ -20,7 +20,7 @@ func TestCommand_WriteTo_NoArgs(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "A001 NOOP\r\n" {
-		t.Error("Not the excepted command")
+		t.Error("Not the expected command")
 	}
 }
 
@@ -38,6 +38,6 @@ func TestCommand_WriteTo_WithArgs(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "A002 LOGIN username password\r\n" {
-		t.Error("Not the excepted command")
+		t.Error("Not the expected command")
 	}
 }

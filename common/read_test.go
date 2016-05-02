@@ -113,7 +113,7 @@ func TestReader_ReadFields(t *testing.T) {
 		t.Error(err)
 	}
 	if len(fields) != 2 {
-		t.Error("Excepted 2 fields, but got", len(fields))
+		t.Error("Expected 2 fields, but got", len(fields))
 	}
 	if s, ok := fields[0].(string); !ok || s != "field1" {
 		t.Error("Field 1 has not the expected value:", fields[0])
@@ -137,7 +137,7 @@ func TestReader_ReadList(t *testing.T) {
 		t.Error(err)
 	}
 	if len(fields) != 4 {
-		t.Error("Excepted 2 fields, but got", len(fields))
+		t.Error("Expected 2 fields, but got", len(fields))
 	}
 	if s, ok := fields[0].(string); !ok || s != "field1" {
 		t.Error("Field 1 has not the expected value:", fields[0])
@@ -164,7 +164,7 @@ func TestReader_ReadLine(t *testing.T) {
 		t.Error(err)
 	}
 	if len(fields) != 2 {
-		t.Error("Excepted 2 fields, but got", len(fields))
+		t.Error("Expected 2 fields, but got", len(fields))
 	}
 	if s, ok := fields[0].(string); !ok || s != "field1" {
 		t.Error("Field 1 has not the expected value:", fields[0])
@@ -188,7 +188,7 @@ func TestReader_ReadRespCode(t *testing.T) {
 		t.Error("Response code has not the expected value:", code)
 	}
 	if len(fields) != 2 {
-		t.Error("Excepted 2 fields, but got", len(fields))
+		t.Error("Expected 2 fields, but got", len(fields))
 	}
 	if s, ok := fields[0].(string); !ok || s != "NOOP" {
 		t.Error("Field 1 has not the expected value:", fields[0])

@@ -53,7 +53,7 @@ func TestWriter_WriteNumber(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "42" {
-		t.Error("Not the excepted number")
+		t.Error("Not the Expected number")
 	}
 }
 
@@ -64,7 +64,7 @@ func TestWriter_WriteString_Atom(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "BODY[]" {
-		t.Error("Not the excepted atom")
+		t.Error("Not the Expected atom")
 	}
 }
 
@@ -75,7 +75,7 @@ func TestWriter_WriteString_Quoted(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "\"I love potatoes!\"" {
-		t.Error("Not the excepted quoted string")
+		t.Error("Not the Expected quoted string")
 	}
 }
 
@@ -86,7 +86,7 @@ func TestWriter_WriteString_Nil(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "\"NIL\"" {
-		t.Error("Not the excepted quoted string")
+		t.Error("Not the Expected quoted string")
 	}
 }
 
@@ -97,7 +97,7 @@ func TestWriter_WriteFields(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "hey 42" {
-		t.Error("Not the excepted fields")
+		t.Error("Not the Expected fields")
 	}
 }
 
@@ -108,7 +108,7 @@ func TestWriter_WriteList_Simple(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "(hey 42)" {
-		t.Error("Not the excepted list")
+		t.Error("Not the Expected list")
 	}
 }
 
@@ -128,7 +128,7 @@ func TestWriter_WriteList_Nested(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "(toplevel (nested 0) 22)" {
-		t.Error("Not the excepted list")
+		t.Error("Not the Expected list")
 	}
 }
 
@@ -141,6 +141,6 @@ func TestWriter_WriteLiteral(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "{11}\r\nhello world" {
-		t.Error("Not the excepted literal")
+		t.Error("Not the Expected literal")
 	}
 }
