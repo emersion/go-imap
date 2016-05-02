@@ -33,7 +33,31 @@ func (c *Client) Close() (err error) {
 	return
 }
 
-// TODO: EXPUNGE, SEARCH
+func (c *Client) Expunge(ch chan<- uint32) (err error) {
+	defer close(ch)
+
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	cmd := &commands.Expunge{}
+
+	var res *responses.Expunge
+	if ch != nil {
+		res = &responses.Expunge{SeqIds: ch}
+	}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: SEARCH
 
 func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
 	defer close(ch)
