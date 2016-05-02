@@ -17,15 +17,17 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 			continue
 		}
 
-		mbox := &imap.MailboxInfo{
-			Delimiter: fields[1].(string),
-			Name: fields[2].(string),
+		mbox := &imap.MailboxInfo{}
+
+		flags, _ := fields[0].([]interface{})
+		for _, f := range flags {
+			if s, ok := f.(string); ok {
+				mbox.Flags = append(mbox.Flags, s)
+			}
 		}
 
-		flags := fields[0].([]interface{})
-		for _, f := range flags {
-			mbox.Flags = append(mbox.Flags, f.(string))
-		}
+		mbox.Delimiter, _ = fields[1].(string)
+		mbox.Name, _ = fields[2].(string)
 
 		r.Mailboxes <- mbox
 	}

@@ -24,7 +24,7 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 		h.Accept()
 
 		id := imap.ParseNumber(res.Fields[0])
-		fields := res.Fields[2].([]interface{})
+		fields, _ := res.Fields[2].([]interface{})
 
 		msg := &imap.Message{
 			Id: id,

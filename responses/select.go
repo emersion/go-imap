@@ -26,10 +26,12 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 			if name, ok := res.Fields[0].(string); ok && name == "FLAGS" {
 				h.Accept()
 
-				flags := res.Fields[1].([]interface{})
+				flags, _ := res.Fields[1].([]interface{})
 				mbox.Flags = make([]string, len(flags))
 				for i, f := range flags {
-					mbox.Flags[i] = f.(string)
+					if s, ok := f.(string) {
+						mbox.Flags[i] = s
+					}
 				}
 			} else if name, ok := res.Fields[1].(string); ok && (name == "EXISTS" || name == "RECENT") {
 				h.Accept()
@@ -50,10 +52,12 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 			case "UNSEEN":
 				mbox.Unseen = imap.ParseNumber(res.Arguments[0])
 			case "PERMANENTFLAGS":
-				flags := res.Arguments[0].([]interface{})
+				flags, _ := res.Arguments[0].([]interface{})
 				mbox.PermanentFlags = make([]string, len(flags))
 				for i, f := range flags {
-					mbox.PermanentFlags[i] = f.(string)
+					if s, ok := f.(string); ok {
+						mbox.PermanentFlags[i] = s
+					}
 				}
 			case "UIDNEXT":
 				mbox.UidNext = imap.ParseNumber(res.Arguments[0])

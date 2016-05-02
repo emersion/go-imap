@@ -32,7 +32,7 @@ func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
 
 		r.Caps = make([]string, len(caps))
 		for i, c := range caps {
-			r.Caps[i] = c.(string)
+			r.Caps[i], _ = c.(string)
 		}
 
 		return

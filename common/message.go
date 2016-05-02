@@ -286,8 +286,6 @@ type BodyStructure struct {
 	Md5 string
 }
 
-// (("text" "plain" ("charset" "UTF-8") NIL NIL "quoted-printable" 2215 74)("text" "html" ("charset" "UTF-8") NIL NIL "quoted-printable" 4062 53) "alternative")
-
 func ParseParameters(fields []interface{}) (params map[string]string, err error) {
 	params = map[string]string{}
 
