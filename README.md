@@ -1,6 +1,7 @@
 # imap
 
 [![GoDoc](https://godoc.org/github.com/emersion/imap?status.svg)](https://godoc.org/github.com/emersion/imap)
+[![Build Status](https://travis-ci.org/emersion/imap.svg?branch=master)](https://travis-ci.org/emersion/imap)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go.
 
