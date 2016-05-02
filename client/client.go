@@ -11,13 +11,18 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
+// An IMAP client.
 type Client struct {
 	conn net.Conn
 	writer *imap.Writer
 	handlers []imap.RespHandler
 
+	// The server capabilities.
 	Caps map[string]bool
+	// The current connection state.
 	State imap.ConnState
+	// The selected mailbox, if there is one.
+	Selected *imap.MailboxStatus
 }
 
 func (c *Client) read() (err error) {
@@ -183,6 +188,7 @@ func (c *Client) handleBye() *imap.StatusResp {
 		h.Accept()
 
 		c.State = imap.LogoutState
+		c.Selected = nil
 		c.conn.Close()
 
 		return status
@@ -213,6 +219,7 @@ func (c *Client) handleCaps() (err error) {
 	return nil
 }
 
+// Create a new client from an existing connection.
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
@@ -228,6 +235,8 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	return
 }
 
+// Connect to an IMAP server using an unencrypted connection. Use STARTTLS when
+// possible.
 func Dial(addr string) (c *Client, err error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -238,6 +247,7 @@ func Dial(addr string) (c *Client, err error) {
 	return
 }
 
+// Connect to an IMAP server using an encrypted connection.
 func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 	conn, err := tls.Dial("tcp", addr, tlsConfig)
 	if err != nil {

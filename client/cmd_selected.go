@@ -8,7 +8,32 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
-// TODO: CHECK, CLOSE, EXPUNGE, SEARCH
+// TODO: CHECK
+
+func (c *Client) Close() (err error) {
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	cmd := &commands.Close{}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	if err != nil {
+		return
+	}
+
+	c.State = imap.AuthenticatedState
+	c.Selected = nil
+	return
+}
+
+// TODO: EXPUNGE, SEARCH
 
 func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
 	defer close(ch)

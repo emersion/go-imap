@@ -34,8 +34,10 @@ func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, e
 		return
 	}
 
-	c.State = imap.SelectedState
 	mbox.ReadOnly = (status.Code == "READ-ONLY")
+
+	c.State = imap.SelectedState
+	c.Selected = mbox
 	return
 }
 
