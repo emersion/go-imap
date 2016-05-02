@@ -17,8 +17,7 @@ func (h *RespHandling) Reject() {
 }
 
 // Accept this response if it has the specified name. If not, reject it.
-// Returns the response fields only if it has been accepted.
-func (h *RespHandling) AcceptNamedResp(name string) (fields []interface{}) {
+func (h *RespHandling) AcceptNamedResp(name string) (fields []interface{}, accepted bool) {
 	res, ok := h.Resp.(*Resp)
 	if !ok || len(res.Fields) == 0 {
 		h.Reject()
@@ -32,7 +31,10 @@ func (h *RespHandling) AcceptNamedResp(name string) (fields []interface{}) {
 	}
 
 	h.Accept()
-	return res.Fields[1:]
+
+	fields = res.Fields[1:]
+	accepted = true
+	return
 }
 
 // Delivers responses to handlers.

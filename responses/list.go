@@ -12,8 +12,8 @@ type List struct {
 
 func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 	for h := range hdlr {
-		fields := h.AcceptNamedResp(imap.List)
-		if fields == nil {
+		fields, ok := h.AcceptNamedResp(imap.List)
+		if !ok {
 			continue
 		}
 

@@ -19,15 +19,14 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 	mbox := r.Mailbox
 
 	for h := range hdlr {
-		fields := h.AcceptNamedResp(imap.Status)
-		if fields == nil {
+		fields, ok := h.AcceptNamedResp(imap.Status)
+		if !ok {
 			continue
 		}
 		if len(fields) < 2 {
 			return errors.New("STATUS response excepts two fields")
 		}
 
-		var ok bool
 		if mbox.Name, ok = fields[0].(string); !ok {
 			return errors.New("STATUS response excepts a string as first argument")
 		}

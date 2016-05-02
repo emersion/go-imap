@@ -25,8 +25,8 @@ func (r *Capability) Resp() *imap.Resp {
 
 func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
 	for h := range hdlr {
-		caps := h.AcceptNamedResp(imap.Capability)
-		if caps == nil {
+		caps, ok := h.AcceptNamedResp(imap.Capability)
+		if !ok {
 			continue
 		}
 
