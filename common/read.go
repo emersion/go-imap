@@ -9,6 +9,8 @@ import (
 
 const (
 	sp = ' '
+	cr = '\r'
+	lf = '\n'
 	dquote = '"'
 	literalStart = '{'
 	literalEnd = '}'
@@ -27,13 +29,9 @@ type StringReader interface {
 }
 
 type reader interface {
+	io.Reader
 	io.RuneScanner
 	StringReader
-}
-
-// An IMAP reader.
-type Reader struct {
-	reader
 }
 
 // Convert a field to a number.
@@ -55,6 +53,13 @@ func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
 
+// An IMAP reader.
+type Reader struct {
+	reader
+
+	inRespCode bool
+}
+
 func (r *Reader) ReadSp() error {
 	char, _, err := r.ReadRune()
 	if err != nil {
@@ -64,6 +69,26 @@ func (r *Reader) ReadSp() error {
 		return errors.New("Not a space")
 	}
 	return nil
+}
+
+func (r *Reader) ReadCrlf() (err error) {
+	var char rune
+
+	if char, _, err = r.ReadRune(); err != nil {
+		return
+	}
+	if char != cr {
+		err = errors.New("Line doesn't end with a CR")
+	}
+
+	if char, _, err = r.ReadRune(); err != nil {
+		return
+	}
+	if char != lf {
+		err = errors.New("Line doesn't end with a LF")
+	}
+
+	return
 }
 
 func (r *Reader) ReadAtom() (interface{}, error) {
@@ -78,7 +103,10 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 		if char == listStart || char == literalStart || char == dquote {
 			return nil, errors.New("Atom contains forbidden char: " + string(char))
 		}
-		if char == sp || char == listEnd || char == respCodeEnd || char == '\n' {
+		if char == sp || char == listEnd || char == cr {
+			break
+		}
+		if char == respCodeEnd && r.inRespCode {
 			break
 		}
 
@@ -113,6 +141,17 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 	}
 
 	literal = &Literal{Len: l}
+
+	if err = r.ReadCrlf(); err != nil {
+		return
+	}
+
+	b := make([]byte, l)
+	if _, err = io.ReadFull(r, b); err != nil {
+		return
+	}
+
+	literal.Str = string(b)
 	return
 }
 
@@ -165,7 +204,7 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		if char, _, err = r.ReadRune(); err != nil {
 			return
 		}
-		if char == '\n' || char == listEnd || char == respCodeEnd {
+		if char == cr || char == listEnd || char == respCodeEnd {
 			return
 		}
 		if char == listStart {
@@ -195,8 +234,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 	}
 
 	r.UnreadRune()
-	char, _, err = r.ReadRune()
-	if err != nil {
+	if char, _, err = r.ReadRune(); err != nil {
 		return
 	}
 	if char != listEnd {
@@ -212,13 +250,7 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 	}
 
 	r.UnreadRune()
-	char, _, err := r.ReadRune()
-	if err != nil {
-		return
-	}
-	if char != '\n' {
-		err = errors.New("Line doesn't end with a newline character")
-	}
+	err = r.ReadCrlf()
 	return
 }
 
@@ -232,7 +264,10 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 		return
 	}
 
+	r.inRespCode = true
+
 	fields, err = r.ReadFields()
+	r.inRespCode = false
 	if err != nil {
 		return
 	}
@@ -262,17 +297,25 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 }
 
 func (r *Reader) ReadInfo() (info string, err error) {
-	info, err = r.ReadString(byte('\n'))
+	info, err = r.ReadString(byte(cr))
 	if err != nil {
 		return
 	}
-	info = strings.TrimSuffix(info, "\n")
+	info = strings.TrimSuffix(info, string(cr))
 	info = strings.TrimLeft(info, " ")
+
+	var char rune
+	if char, _, err = r.ReadRune(); err != nil {
+		return
+	}
+	if char != lf {
+		err = errors.New("Line doesn't end with a LF")
+	}
 	return
 }
 
 func NewReader(r reader) *Reader {
-	return &Reader{r}
+	return &Reader{reader: r}
 }
 
 type ReaderFrom interface {

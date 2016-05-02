@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"net"
 	"crypto/tls"
-	"strings"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/responses"
@@ -21,17 +20,11 @@ type Client struct {
 }
 
 func (c *Client) read() (err error) {
-	// TODO: optimize readers, do not create new ones for each response
-	scanner := bufio.NewScanner(c.conn)
+	r := imap.NewReader(bufio.NewReader(c.conn))
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		r := strings.NewReader(line + "\n")
-
-		log.Println("S:", line)
-
+	for {
 		var res interface{}
-		res, err = imap.ReadResp(imap.NewReader(bufio.NewReader(r)))
+		res, err = imap.ReadResp(r)
 		if err != nil {
 			log.Println("Error reading response:", err)
 			continue
@@ -61,7 +54,7 @@ func (c *Client) read() (err error) {
 		}
 	}
 
-	return scanner.Err()
+	return
 }
 
 func (c *Client) addHandler(hdlr imap.RespHandler) {
