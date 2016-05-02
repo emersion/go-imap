@@ -29,7 +29,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 				flags, _ := res.Fields[1].([]interface{})
 				mbox.Flags = make([]string, len(flags))
 				for i, f := range flags {
-					if s, ok := f.(string) {
+					if s, ok := f.(string); ok {
 						mbox.Flags[i] = s
 					}
 				}
