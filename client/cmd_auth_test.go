@@ -180,7 +180,7 @@ func TestClient_Append(t *testing.T) {
 		io.WriteString(c, "+ send literal\r\n")
 
 		b := make([]byte, 30)
-		if _, err := c.Read(b); err != nil {
+		if _, err := io.ReadFull(c, b); err != nil {
 			t.Fatal(err)
 		}
 
