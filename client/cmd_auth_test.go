@@ -69,3 +69,44 @@ func TestClient_Select(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_List(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		mailboxes := make(chan *common.MailboxInfo, 3)
+		err = c.List("", "%", mailboxes)
+		if err != nil {
+			return
+		}
+
+		expected := []string{"INBOX", "Drafts", "Sent"}
+
+		i := 0
+		for mbox := range mailboxes {
+			if mbox.Name != expected[i] {
+				return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
+			}
+
+			i++
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "LIST \"\" %" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* LIST () \"/\" INBOX\r\n")
+		io.WriteString(c, "* LIST () \"/\" Drafts\r\n")
+		io.WriteString(c, "* LIST () \"/\" Sent\r\n")
+		io.WriteString(c, tag + " OK LIST completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
