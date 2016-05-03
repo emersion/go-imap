@@ -80,12 +80,23 @@ func TestClient_List(t *testing.T) {
 			return
 		}
 
-		expected := []string{"INBOX", "Drafts", "Sent"}
+		expected := []struct{
+			name string
+			flags []string
+		}{
+			{"INBOX", []string{"flag1"}},
+			{"Drafts", []string{"flag2", "flag3"}},
+			{"Sent", nil},
+		}
 
 		i := 0
 		for mbox := range mailboxes {
-			if mbox.Name != expected[i] {
+			if mbox.Name != expected[i].name {
 				return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
+			}
+
+			if fmt.Sprint(mbox.Flags) != fmt.Sprint(expected[i].flags) {
+				return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
 			}
 
 			i++
@@ -102,8 +113,8 @@ func TestClient_List(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, "* LIST () \"/\" INBOX\r\n")
-		io.WriteString(c, "* LIST () \"/\" Drafts\r\n")
+		io.WriteString(c, "* LIST (flag1) \"/\" INBOX\r\n")
+		io.WriteString(c, "* LIST (flag2 flag3) \"/\" Drafts\r\n")
 		io.WriteString(c, "* LIST () \"/\" Sent\r\n")
 		io.WriteString(c, tag + " OK LIST completed\r\n")
 	}
