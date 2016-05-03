@@ -34,6 +34,8 @@ func (c *Client) Logout() (err error) {
 		return
 	}
 
-	err = status.Err()
+	if status != nil {
+		err = status.Err()
+	}
 	return
 }

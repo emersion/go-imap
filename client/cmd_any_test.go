@@ -34,3 +34,27 @@ func TestClient_Capability(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Logout(t *testing.T) {
+	ct := func(c *client.Client) {
+		err := c.Logout()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "LOGOUT" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* BYE Client asked to close connection.\r\n")
+		io.WriteString(c, tag + " OK LOGOUT completed.\r\n")
+		//c.Close()
+	}
+
+	testClient(t, ct, st)
+}

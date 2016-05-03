@@ -29,6 +29,17 @@ type Client struct {
 func (c *Client) read() error {
 	r := imap.NewReader(bufio.NewReader(c.conn))
 
+	defer (func () {
+		for _, hdlr := range c.handlers {
+			if hdlr == nil {
+				continue
+			}
+
+			close(hdlr)
+		}
+		c.handlers = nil
+	})()
+
 	for {
 		if c.State == imap.LogoutState {
 			return nil
@@ -76,11 +87,10 @@ func (c *Client) addHandler(hdlr imap.RespHandler) {
 }
 
 func (c *Client) removeHandler(hdlr imap.RespHandler) {
-	close(hdlr)
-
 	// TODO: really remove handler from array? (needs locker)
 	for i, h := range c.handlers {
 		if h == hdlr {
+			close(hdlr)
 			c.handlers[i] = nil
 		}
 	}
@@ -89,8 +99,6 @@ func (c *Client) removeHandler(hdlr imap.RespHandler) {
 func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
-
-	log.Println("C:", cmd)
 
 	_, err = cmd.WriteTo(c.writer)
 	if err != nil {
