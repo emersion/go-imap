@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/responses"
@@ -16,6 +17,8 @@ import (
 type Client struct {
 	conn net.Conn
 	writer *imap.Writer
+
+	handlersLock sync.Locker
 	handlers []imap.RespHandler
 
 	// The server capabilities.
@@ -30,13 +33,13 @@ func (c *Client) read() error {
 	r := imap.NewReader(bufio.NewReader(c.conn))
 
 	defer (func () {
-		for _, hdlr := range c.handlers {
-			if hdlr == nil {
-				continue
-			}
+		c.handlersLock.Lock()
+		defer c.handlersLock.Unlock()
 
-			c.removeHandler(hdlr)
+		for _, hdlr := range c.handlers {
+			close(hdlr)
 		}
+		c.handlers = nil
 	})()
 
 	for {
@@ -52,6 +55,8 @@ func (c *Client) read() error {
 			log.Println("Error reading response:", err)
 			continue
 		}
+
+		c.handlersLock.Lock()
 
 		var accepted bool
 		for _, hdlr := range c.handlers {
@@ -72,6 +77,8 @@ func (c *Client) read() error {
 			}
 		}
 
+		c.handlersLock.Unlock()
+
 		if !accepted {
 			log.Println("Response has not been handled", res)
 		}
@@ -81,16 +88,20 @@ func (c *Client) read() error {
 }
 
 func (c *Client) addHandler(hdlr imap.RespHandler) {
-	// TODO: needs locker
+	c.handlersLock.Lock()
+	defer c.handlersLock.Unlock()
+
 	c.handlers = append(c.handlers, hdlr)
 }
 
 func (c *Client) removeHandler(hdlr imap.RespHandler) {
-	// TODO: really remove handler from array? (needs locker)
+	c.handlersLock.Lock()
+	defer c.handlersLock.Unlock()
+
 	for i, h := range c.handlers {
 		if h == hdlr {
-			c.handlers[i] = nil
 			close(hdlr)
+			c.handlers = append(c.handlers[:i], c.handlers[i+1:]...)
 		}
 	}
 }
@@ -258,6 +269,7 @@ func (c *Client) handleCaps() (err error) {
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
+		handlersLock: &sync.Mutex{},
 		State: imap.NotAuthenticatedState,
 	}
 
