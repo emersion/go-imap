@@ -35,9 +35,8 @@ func (c *Client) read() error {
 				continue
 			}
 
-			close(hdlr)
+			c.removeHandler(hdlr)
 		}
-		c.handlers = nil
 	})()
 
 	for {
@@ -90,8 +89,8 @@ func (c *Client) removeHandler(hdlr imap.RespHandler) {
 	// TODO: really remove handler from array? (needs locker)
 	for i, h := range c.handlers {
 		if h == hdlr {
-			close(hdlr)
 			c.handlers[i] = nil
+			close(hdlr)
 		}
 	}
 }
