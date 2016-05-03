@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"io"
+	"fmt"
 	"net"
 	"testing"
 
@@ -10,15 +11,17 @@ import (
 )
 
 func TestClient_Login_Success(t *testing.T) {
-	ct := func(c *client.Client) {
-		err := c.Login("username", "password")
+	ct := func(c *client.Client) (err error) {
+		err = c.Login("username", "password")
 		if err != nil {
-			t.Fatal(err)
+			return
 		}
 
 		if c.State != common.AuthenticatedState {
-			t.Fatal("Client is not in authenticated state after login")
+			return fmt.Errorf("Client is not in authenticated state after login")
 		}
+
+		return
 	}
 
 	st := func(c net.Conn) {
@@ -36,15 +39,17 @@ func TestClient_Login_Success(t *testing.T) {
 }
 
 func TestClient_Login_Error(t *testing.T) {
-	ct := func(c *client.Client) {
+	ct := func(c *client.Client) error {
 		err := c.Login("username", "password")
 		if err == nil {
-			t.Fatal("Failed login didn't returned an error")
+			return fmt.Errorf("Failed login didn't returned an error: %v", err)
 		}
 
 		if c.State != common.NotAuthenticatedState {
-			t.Fatal("Client state must be NotAuthenticated after failed login")
+			return fmt.Errorf("Client state must be NotAuthenticated after failed login")
 		}
+
+		return nil
 	}
 
 	st := func(c net.Conn) {

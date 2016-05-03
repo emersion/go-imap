@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"errors"
 	"io"
 	"net"
 	"testing"
@@ -9,15 +10,16 @@ import (
 )
 
 func TestClient_Capability(t *testing.T) {
-	ct := func(c *client.Client) {
+	ct := func(c *client.Client) (err error) {
 		caps, err := c.Capability()
 		if err != nil {
-			t.Fatal(err)
+			return
 		}
 
 		if !caps["XTEST"] {
-			t.Fatal("Client hasn't advertised capability")
+			err = errors.New("Client hasn't advertised capability")
 		}
+		return
 	}
 
 	st := func(c net.Conn) {
@@ -36,11 +38,9 @@ func TestClient_Capability(t *testing.T) {
 }
 
 func TestClient_Logout(t *testing.T) {
-	ct := func(c *client.Client) {
-		err := c.Logout()
-		if err != nil {
-			t.Fatal(err)
-		}
+	ct := func(c *client.Client) (err error) {
+		err = c.Logout()
+		return
 	}
 
 	st := func(c net.Conn) {

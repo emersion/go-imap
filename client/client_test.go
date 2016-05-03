@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"net"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/emersion/imap/client"
 )
 
-type ClientTester func(c *client.Client)
+type ClientTester func(c *client.Client) error
 type ServerTester func(c net.Conn)
 
 func testClient(t *testing.T, ct ClientTester, st ServerTester) {
@@ -22,17 +23,22 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 	}
 	defer l.Close()
 
-	done := make(chan bool)
+	done := make(chan error)
 	go (func () {
 		c, err := client.Dial(addr)
 		if err != nil {
-			t.Fatal(err)
+			done <- err
+			return
 		}
 
-		ct(c)
+		err = ct(c)
+		if err != nil {
+			done <- err
+			return
+		}
 
 		c.Logout()
-		done <- true
+		done <- nil
 	})()
 
 	conn, err := l.Accept()
@@ -50,7 +56,10 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 	io.WriteString(conn, "* BYE Shutting down.\r\n")
 	conn.Close()
 
-	<-done
+	err = <-done
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 type CmdScanner struct {
@@ -76,10 +85,11 @@ func removeCmdTag(cmd string) string {
 }
 
 func TestClient(t *testing.T) {
-	ct := func(c *client.Client) {
+	ct := func(c *client.Client) (err error) {
 		if !c.Caps["IMAP4rev1"] {
-			t.Fatal("Server hasn't IMAP4rev1 capability")
+			err = errors.New("Server hasn't IMAP4rev1 capability")
 		}
+		return
 	}
 
 	st := func(c net.Conn) {}

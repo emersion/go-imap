@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"testing"
@@ -10,41 +11,42 @@ import (
 )
 
 func TestClient_Select(t *testing.T) {
-	ct := func(c *client.Client) {
+	ct := func(c *client.Client) (err error) {
 		c.State = common.AuthenticatedState
 
 		mbox, err := c.Select("INBOX", false)
 		if err != nil {
-			t.Fatal(err)
+			return
 		}
 
 		if mbox.Name != "INBOX" {
-			t.Fatal("Bad mailbox name:", mbox.Name)
+			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
 		}
 		if mbox.ReadOnly {
-			t.Fatal("Bad mailbox read-only:", mbox.ReadOnly)
+			return fmt.Errorf("Bad mailbox read-only: %v", mbox.ReadOnly)
 		}
 		if len(mbox.Flags) != 5 {
-			t.Fatal("Bad mailbox flags:", mbox.Flags)
+			return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
 		}
 		if len(mbox.PermanentFlags) != 3 {
-			t.Fatal("Bad mailbox permanent flags:", mbox.PermanentFlags)
+			return fmt.Errorf("Bad mailbox permanent flags: %v", mbox.PermanentFlags)
 		}
 		if mbox.Messages != 172 {
-			t.Fatal("Bad mailbox messages:", mbox.Messages)
+			return fmt.Errorf("Bad mailbox messages: %v", mbox.Messages)
 		}
 		if mbox.Recent != 1 {
-			t.Fatal("Bad mailbox recent:", mbox.Recent)
+			return fmt.Errorf("Bad mailbox recent: %v", mbox.Recent)
 		}
 		if mbox.Unseen != 12 {
-			t.Fatal("Bad mailbox unseen:", mbox.Unseen)
+			return fmt.Errorf("Bad mailbox unseen: %v", mbox.Unseen)
 		}
 		if mbox.UidNext != 4392 {
-			t.Fatal("Bad mailbox UIDNEXT:", mbox.UidNext)
+			return fmt.Errorf("Bad mailbox UIDNEXT: %v", mbox.UidNext)
 		}
 		if mbox.UidValidity != 3857529045 {
-			t.Fatal("Bad mailbox UIDVALIDITY:", mbox.UidValidity)
+			return fmt.Errorf("Bad mailbox UIDVALIDITY: %v", mbox.UidValidity)
 		}
+		return
 	}
 
 	st := func(c net.Conn) {
