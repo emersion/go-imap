@@ -157,4 +157,26 @@ func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch c
 	return
 }
 
-// TODO: COPY, UID
+// Copies the specified message(s) to the end of the specified destination
+// mailbox.
+func (c *Client) Copy(seqset *imap.SeqSet, dest string) (err error) {
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	cmd := &commands.Copy{
+		SeqSet: seqset,
+		Mailbox: dest,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: UID
