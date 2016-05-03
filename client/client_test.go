@@ -37,8 +37,9 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 			return
 		}
 
-		c.Logout()
 		done <- nil
+
+		c.Logout()
 	})()
 
 	conn, err := l.Accept()
@@ -53,13 +54,13 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 
 	st(conn)
 
-	io.WriteString(conn, "* BYE Shutting down.\r\n")
-	conn.Close()
-
 	err = <-done
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	io.WriteString(conn, "* BYE Shutting down.\r\n")
+	conn.Close()
 }
 
 type CmdScanner struct {
@@ -85,11 +86,11 @@ func removeCmdTag(cmd string) string {
 }
 
 func TestClient(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
+	ct := func(c *client.Client) error {
 		if !c.Caps["IMAP4rev1"] {
-			err = errors.New("Server hasn't IMAP4rev1 capability")
+			return errors.New("Server hasn't IMAP4rev1 capability")
 		}
-		return
+		return nil
 	}
 
 	st := func(c net.Conn) {}

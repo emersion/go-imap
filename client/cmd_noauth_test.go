@@ -46,7 +46,7 @@ func TestClient_Login_Error(t *testing.T) {
 		}
 
 		if c.State != common.NotAuthenticatedState {
-			return fmt.Errorf("Client state must be NotAuthenticated after failed login")
+			return fmt.Errorf("Client state must be NotAuthenticated after failed login, but is: %v", c.State)
 		}
 
 		return nil

@@ -121,3 +121,37 @@ func TestClient_List(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Status(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		mbox, err := c.Status("INBOX", []string{"MESSAGES", "RECENT"})
+		if err != nil {
+			return
+		}
+
+		if mbox.Messages != 42 {
+			return fmt.Errorf("Bad mailbox messages: %v", mbox.Messages)
+		}
+		if mbox.Recent != 1 {
+			return fmt.Errorf("Bad mailbox recent: %v", mbox.Recent)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "STATUS INBOX (MESSAGES RECENT)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
+		io.WriteString(c, tag + " OK STATUS completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
