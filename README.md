@@ -15,6 +15,38 @@ Other IMAP implementations in Go:
 * Require to make many type assertions
 * Are not idiomatic
 
+## Implemented commands
+
+This package will implement all commands specified in the RFC. Additional
+commands will be available in other packages.
+
+Command       | Client      | Tests
+------------- | ----------- | -----
+CAPABILITY    | ✓           | ✓
+NOOP          | ✗           | ✗
+LOGOUT        | ✓           | ✓
+AUTHENTICATE  | ✗           | ✗
+LOGIN         | ✓           | ✓
+STARTTLS      | ✓           | ✗
+EXAMINE       | ✓           | ✗
+CREATE        | ✗           | ✗
+DELETE        | ✗           | ✗
+RENAME        | ✗           | ✗
+SUBSCRIBE     | ✗           | ✗
+UNSUBSCRIBE   | ✗           | ✗
+LIST          | ✓           | ✓
+LSUB          | ✗           | ✗
+STATUS        | ✓           | ✓
+APPEND        | ✓           | ✓
+CHECK         | ✗           | ✗
+CLOSE         | ✓           | ✗
+EXPUNGE       | ✓           | ✗
+SEARCH        | ✓           | ✗
+FETCH         | ✓           | ✗
+STORE         | ✓           | ✗
+COPY          | ✓           | ✗
+UID           | ✗           | ✗
+
 ## Usage
 
 ```go
