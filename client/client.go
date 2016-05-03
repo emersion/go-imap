@@ -2,10 +2,11 @@
 package client
 
 import (
-	"log"
 	"bufio"
-	"net"
 	"crypto/tls"
+	"io"
+	"log"
+	"net"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/responses"
@@ -25,12 +26,18 @@ type Client struct {
 	Selected *imap.MailboxStatus
 }
 
-func (c *Client) read() (err error) {
+func (c *Client) read() error {
 	r := imap.NewReader(bufio.NewReader(c.conn))
 
 	for {
-		var res interface{}
-		res, err = imap.ReadResp(r)
+		if c.State == imap.LogoutState {
+			return nil
+		}
+
+		res, err := imap.ReadResp(r)
+		if err == io.EOF {
+			return nil
+		}
 		if err != nil {
 			log.Println("Error reading response:", err)
 			continue
@@ -60,7 +67,7 @@ func (c *Client) read() (err error) {
 		}
 	}
 
-	return
+	return nil
 }
 
 func (c *Client) addHandler(hdlr imap.RespHandler) {
