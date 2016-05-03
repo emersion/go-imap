@@ -235,8 +235,7 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	return
 }
 
-// Connect to an IMAP server using an unencrypted connection. Use STARTTLS when
-// possible.
+// Connect to an IMAP server using an unencrypted connection.
 func Dial(addr string) (c *Client, err error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
