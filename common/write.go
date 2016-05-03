@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // A string writer.
@@ -65,6 +66,10 @@ func (w *Writer) WriteString(s string) (int, error) {
 	return w.writeAtomString(s)
 }
 
+func (w *Writer) WriteDate(date *time.Time) (int, error) {
+	return w.writeQuotedString(date.Format("Mon, 2 Jan 2006 15:04:05 -0700"))
+}
+
 func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
 	var n int
 
@@ -93,6 +98,8 @@ func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
 				n, err = w.WriteList(f)
 			case *SeqSet:
 				n, err = w.writeString(f.String())
+			case *time.Time:
+				n, err = w.WriteDate(f)
 			default:
 				err = errors.New("Cannot format argument #" + strconv.Itoa(i))
 			}

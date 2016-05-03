@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/client"
@@ -151,6 +152,43 @@ func TestClient_Status(t *testing.T) {
 
 		io.WriteString(c, "* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
 		io.WriteString(c, tag + " OK STATUS completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Append(t *testing.T) {
+	msg := "Hello World!\r\nHello Gophers!\r\n"
+
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		date := time.Unix(1462292515, 0)
+		literal := common.NewLiteral([]byte(msg))
+		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, &date, literal)
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "APPEND INBOX (\\Seen \\Draft) \"Tue, 3 May 2016 18:21:55 +0200\" {30}" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "+ send literal\r\n")
+
+		b := make([]byte, 30)
+		if _, err := c.Read(b); err != nil {
+			t.Fatal(err)
+		}
+
+		if string(b) != msg {
+			t.Fatal("Bad literal:", string(b))
+		}
+
+		io.WriteString(c, tag + " OK APPEND completed\r\n")
 	}
 
 	testClient(t, ct, st)

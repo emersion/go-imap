@@ -176,6 +176,10 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 	c.addHandler(hdlr)
 	defer c.removeHandler(hdlr)
 
+	// Make sure to start reading after we have set up the base handlers,
+	// otherwise some messages will be lost.
+	go c.read()
+
 	for h := range hdlr {
 		status, ok := h.Resp.(*imap.StatusResp)
 		if !ok || status.Tag != "*" || (status.Type != imap.OK && status.Type != imap.PREAUTH && status.Type != imap.BYE) {
@@ -260,7 +264,6 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
 	c.writer = imap.NewClientWriter(c.conn, continues)
 
-	go c.read()
 	go c.handleContinuationReqs(continues)
 	go c.handleCaps()
 
