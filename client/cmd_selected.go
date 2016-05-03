@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"strings"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
@@ -119,4 +120,41 @@ func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Mess
 	return
 }
 
-// TODO: STORE, COPY, UID
+// Alters data associated with a message in the mailbox. If ch is not nil, the
+// updated value of the data will be sent to this channel.
+// See RFC 3501 section 6.4.6 for a list of items that can be updated.
+func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch chan<- *imap.Message) (err error) {
+	defer close(ch)
+
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	// If ch is nil, the updated values are data which will be lost, so don't
+	// retrieve it.
+	if ch == nil && !strings.HasSuffix(item, ".SILENT") {
+		item += ".SILENT"
+	}
+
+	cmd := &commands.Store{
+		SeqSet: seqset,
+		Item: item,
+		Value: value,
+	}
+
+	var res *responses.Fetch
+	if ch != nil {
+		res = &responses.Fetch{Messages: ch}
+	}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: COPY, UID
