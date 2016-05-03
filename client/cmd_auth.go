@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"time"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
@@ -80,8 +81,8 @@ func (c *Client) List(ref, name string, ch chan<- *imap.MailboxInfo) (err error)
 
 // Requests the status of the indicated mailbox. It does not change the
 // currently selected mailbox, nor does it affect the state of any messages in
-// the queried mailbox. See RFC 2501 section 6.3.10 for a list of items that can
-// be requested.
+// the queried mailbox.
+// See RFC 2501 section 6.3.10 for a list of items that can be requested.
 func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		err = errors.New("Not logged in")
@@ -107,4 +108,28 @@ func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, 
 	return
 }
 
-// TODO: APPEND
+// Appends the literal argument as a new message to the end of the specified
+// destination mailbox. This argument SHOULD be in the format of an RFC 2822
+// message.
+// flags and date are optional arguments and can be set to nil.
+func (c *Client) Append(mbox string, flags []string, date *time.Time, msg *imap.Literal) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Append{
+		Mailbox: mbox,
+		Flags: flags,
+		Date: date,
+		Message: msg,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
