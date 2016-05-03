@@ -41,9 +41,9 @@ func ParseNumber(input interface{}) uint32 {
 		return 0
 	}
 
-	nbr, err := strconv.Atoi(str)
+	nbr, err := strconv.ParseUint(str, 10, 32)
 	if err != nil {
-		return 0
+		panic(err)
 	}
 
 	return uint32(nbr)
