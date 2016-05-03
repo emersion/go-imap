@@ -1,19 +1,11 @@
 package common
 
-import (
-	"strconv"
-)
-
 // A literal.
 type Literal struct {
 	// The literal length.
 	len int
 	// The literal contents.
 	contents []byte
-}
-
-func (l *Literal) field() string {
-	return string(literalStart) + strconv.Itoa(l.len) + string(literalEnd)
 }
 
 func (l *Literal) Len() int {

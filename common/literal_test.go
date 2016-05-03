@@ -16,8 +16,4 @@ func TestLiteral(t *testing.T) {
 	if literal.Len() != 11 {
 		t.Error("Invalid literal length")
 	}
-
-	if literal.field() != "{11}" {
-		t.Error("Invalid literal field")
-	}
 }

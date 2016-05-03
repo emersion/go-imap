@@ -148,6 +148,23 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	return
 }
 
+func (c *Client) handleContinuationReqs(continues chan bool) {
+	hdlr := make(imap.RespHandler)
+	c.addHandler(hdlr)
+	defer c.removeHandler(hdlr)
+
+	defer close(continues)
+
+	for h := range hdlr {
+		if _, ok := h.Resp.(*imap.ContinuationResp); ok {
+			h.Accept()
+			continues <- true
+		} else {
+			h.Reject()
+		}
+	}
+}
+
 func (c *Client) gotStatusCaps(args []interface{}) {
 	c.Caps = map[string]bool{}
 	for _, cap := range args {
@@ -238,11 +255,14 @@ func (c *Client) handleCaps() (err error) {
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
-		writer: imap.NewWriter(conn),
 		State: imap.NotAuthenticatedState,
 	}
 
+	continues := make(chan bool)
+	c.writer = imap.NewClientWriter(c.conn, continues)
+
 	go c.read()
+	go c.handleContinuationReqs(continues)
 	go c.handleCaps()
 
 	greeting := c.handleGreeting()

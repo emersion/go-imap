@@ -23,6 +23,8 @@ type writer interface {
 // An IMAP writer.
 type Writer struct {
 	writer
+
+	continues <-chan bool
 }
 
 func (w *Writer) writeString(s string) (int, error) {
@@ -123,8 +125,10 @@ func (w *Writer) WriteList(fields []interface{}) (N int, err error) {
 	return
 }
 
-func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
-	n, err := w.writeString(literal.field())
+func (w *Writer) writeLiteralField(literal *Literal) (N int, err error) {
+	field := string(literalStart) + strconv.Itoa(literal.Len()) + string(literalEnd)
+
+	n, err := w.writeString(field)
 	N += n
 	if err != nil {
 		return
@@ -132,14 +136,33 @@ func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
 
 	n, err = w.WriteCrlf()
 	N += n
+	return
+}
+
+func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
+	n, err := w.writeLiteralField(literal)
+	N += n
 	if err != nil {
 		return
 	}
 
-	_, err = w.writer.Write(literal.Bytes())
+	// If a channel is available, wait for a continuation request before sending data
+	if w.continues != nil {
+		if !<-w.continues {
+			err = errors.New("Cannot send literal: no continuation request received")
+			return
+		}
+	}
+
+	n, err = w.Write(literal.Bytes())
+	N += n
 	return
 }
 
 func NewWriter(w writer) *Writer {
 	return &Writer{writer: w}
+}
+
+func NewClientWriter(w writer, continues <-chan bool) *Writer {
+	return &Writer{writer: w, continues: continues}
 }
