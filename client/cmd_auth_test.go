@@ -163,7 +163,7 @@ func TestClient_Append(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.AuthenticatedState
 
-		date := time.Unix(1462292515, 0)
+		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 		literal := common.NewLiteral([]byte(msg))
 		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, &date, literal)
 		return
@@ -173,7 +173,7 @@ func TestClient_Append(t *testing.T) {
 		scanner := NewCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
-		if cmd != "APPEND INBOX (\\Seen \\Draft) \"Tue, 3 May 2016 18:21:55 +0200\" {30}" {
+		if cmd != "APPEND INBOX (\\Seen \\Draft) \"Tue, 10 Nov 2009 23:00:00 +0000\" {30}" {
 			t.Fatal("Bad command:", cmd)
 		}
 
