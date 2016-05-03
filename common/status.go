@@ -61,6 +61,11 @@ type StatusResp struct {
 // If this status is NO or BAD, returns an error with the status info.
 // Otherwise, returns nil.
 func (r *StatusResp) Err() error {
+	if r == nil {
+		// No status response, connection closed before we get one
+		return errors.New("Connection closed during command execution")
+	}
+
 	if r.Type == NO || r.Type == BAD {
 		return errors.New(r.Info)
 	}
