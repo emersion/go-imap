@@ -7,6 +7,9 @@ import (
 	"github.com/emersion/imap/commands"
 )
 
+// Request a listing of capabilities that the server supports. Capabilities are
+// often returned by the server with the greeting or with the STARTTLS and LOGIN
+// responses, so usally explicitely requesting capabilities isn't needed.
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
 
@@ -17,6 +20,7 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 
 // TODO: NOOP
 
+// Close the connection.
 func (c *Client) Logout() (err error) {
 	if c.State == imap.LogoutState {
 		err = errors.New("Already logged out")

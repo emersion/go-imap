@@ -8,6 +8,7 @@ import (
 	"github.com/emersion/imap/commands"
 )
 
+// If the connection to the IMAP server isn't secure, starts TLS negociation.
 func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	if _, ok := c.conn.(*tls.Conn); ok {
 		err = errors.New("TLS is already enabled")
@@ -31,11 +32,14 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	}
 
 	c.conn = tlsConn
+	c.Caps = nil
 	return
 }
 
 // TODO: AUTHENTICATE
 
+// Identifies the client to the server and carries the plaintext password
+// authenticating this user.
 func (c *Client) Login(username, password string) (err error) {
 	if c.State != imap.NotAuthenticatedState {
 		err = errors.New("Already logged in")
@@ -59,11 +63,12 @@ func (c *Client) Login(username, password string) (err error) {
 		return
 	}
 
+	c.State = imap.AuthenticatedState
+	c.Caps = nil
+
 	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
-
-	c.State = imap.AuthenticatedState
 
 	return
 }

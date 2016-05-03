@@ -10,6 +10,9 @@ import (
 
 // TODO: CHECK
 
+// Permanently removes all messages that have the \Deleted flag set from the
+// currently selected mailbox, and returns to the authenticated state from the
+// selected state.
 func (c *Client) Close() (err error) {
 	if c.State != imap.SelectedState {
 		err = errors.New("No mailbox selected")
@@ -33,6 +36,9 @@ func (c *Client) Close() (err error) {
 	return
 }
 
+// Permanently removes all messages that have the \Deleted flag set from the
+// currently selected mailbox.
+// If ch is not nil, sends sequence IDs of each deleted message to this channel.
 func (c *Client) Expunge(ch chan<- uint32) (err error) {
 	defer close(ch)
 
@@ -57,6 +63,14 @@ func (c *Client) Expunge(ch chan<- uint32) (err error) {
 	return
 }
 
+// Searches the mailbox for messages that match the given searching criteria.
+// Searching criteria consist of one or more search keys. The response contains
+// a list of message sequence IDs corresponding to those messages that match the
+// searching criteria.
+// When multiple keys are specified, the result is the intersection (AND
+// function) of all the messages that match those keys.
+// Criteria must be UTF-8 encoded.
+// See RFC 3501 section 6.4.4 for a list of searching criteria.
 func (c *Client) Search(criteria []interface{}) (ids []uint32, err error) {
 	if c.State != imap.SelectedState {
 		err = errors.New("No mailbox selected")
@@ -80,8 +94,8 @@ func (c *Client) Search(criteria []interface{}) (ids []uint32, err error) {
 	return
 }
 
-// TODO: SEARCH
-
+// Retrieves data associated with a message in the mailbox.
+// See RFC 3501 section 6.4.5 for a list of items that can be requested.
 func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
 	defer close(ch)
 
