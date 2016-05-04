@@ -25,7 +25,24 @@ type Client struct {
 	// The current connection state.
 	State imap.ConnState
 	// The selected mailbox, if there is one.
-	Selected *imap.MailboxStatus
+	Mailbox *imap.MailboxStatus
+
+	// A channel where info messages from the server will be sent.
+	Infos chan *imap.StatusResp
+	// A channel where warning messages from the server will be sent.
+	Warnings chan *imap.StatusResp
+	// A channel where error messages from the server will be sent.
+	Errors chan *imap.StatusResp
+	// A channel where bye messages from the server will be sent.
+	Byes chan *imap.StatusResp
+	// A channel where mailbox updates from the server will be sent.
+	MailboxUpdates chan *imap.MailboxStatus
+	// A channel where deleted message IDs will be sent.
+	Expunges chan uint32
+
+	// TODO: support unilateral message updates
+	// A channel where messages updates from the server will be sent.
+	//MessageUpdates chan *imap.Message
 }
 
 func (c *Client) read() error {
@@ -210,7 +227,7 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 			c.State = imap.LogoutState
 		}
 
-		go c.handleBye()
+		go c.handleUnilateral()
 
 		return status
 	}
@@ -218,28 +235,93 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 	return nil
 }
 
-func (c *Client) handleBye() *imap.StatusResp {
+// The server can send unilateral data. This function handles it.
+func (c *Client) handleUnilateral() {
 	hdlr := make(imap.RespHandler)
 	c.addHandler(hdlr)
 	defer c.removeHandler(hdlr)
 
 	for h := range hdlr {
-		status, ok := h.Resp.(*imap.StatusResp)
-		if !ok || status.Tag != "*" || status.Type != imap.BYE {
+		switch res := h.Resp.(type) {
+		case *imap.StatusResp:
+			if res.Tag != "*" || (res.Type != imap.OK && res.Type != imap.NO && res.Type != imap.BAD && res.Type != imap.BYE) {
+				h.Reject()
+				break
+			}
+			h.Accept()
+
+			switch res.Type {
+			case imap.OK:
+				select {
+				case c.Infos <- res:
+				default:
+				}
+			case imap.NO:
+				select {
+				case c.Warnings <- res:
+				default:
+				}
+			case imap.BAD:
+				select {
+				case c.Errors <- res:
+				default:
+				}
+			case imap.BYE:
+				c.State = imap.LogoutState
+				c.Mailbox = nil
+				c.conn.Close()
+
+				select {
+				case c.Byes <- res:
+				default:
+				}
+			}
+		case *imap.Resp:
+			if len(res.Fields) < 2 {
+				h.Reject()
+				break
+			}
+
+			name, ok := res.Fields[1].(string)
+			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE") {
+				h.Reject()
+				break
+			}
+			h.Accept()
+
+			switch name {
+			case "EXISTS":
+				if c.Mailbox == nil {
+					break
+				}
+				c.Mailbox.Messages = imap.ParseNumber(res.Fields[0])
+
+				select {
+				case c.MailboxUpdates <- c.Mailbox:
+				default:
+				}
+			case "RECENT":
+				if c.Mailbox == nil {
+					break
+				}
+				c.Mailbox.Recent = imap.ParseNumber(res.Fields[0])
+
+				select {
+				case c.MailboxUpdates <- c.Mailbox:
+				default:
+				}
+			case "EXPUNGE":
+				seqid := imap.ParseNumber(res.Fields[0])
+
+				select {
+				case c.Expunges <- seqid:
+				default:
+				}
+			}
+		default:
 			h.Reject()
-			continue
 		}
-
-		h.Accept()
-
-		c.State = imap.LogoutState
-		c.Selected = nil
-		c.conn.Close()
-
-		return status
 	}
-
-	return nil
 }
 
 // Create a new client from an existing connection.

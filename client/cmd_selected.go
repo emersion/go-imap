@@ -51,7 +51,7 @@ func (c *Client) Close() (err error) {
 	}
 
 	c.State = imap.AuthenticatedState
-	c.Selected = nil
+	c.Mailbox = nil
 	return
 }
 

@@ -18,33 +18,15 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 	for h := range hdlr {
 		switch res := h.Resp.(type) {
 		case *imap.Resp:
-			if len(res.Fields) < 2 {
-				h.Reject()
+			fields, ok := h.AcceptNamedResp("FLAGS")
+			if !ok {
 				break
 			}
 
-			if name, ok := res.Fields[0].(string); ok && name == "FLAGS" {
-				h.Accept()
-
-				flags, _ := res.Fields[1].([]interface{})
-				mbox.Flags = make([]string, len(flags))
-				for i, f := range flags {
-					if s, ok := f.(string); ok {
-						mbox.Flags[i] = s
-					}
-				}
-			} else if name, ok := res.Fields[1].(string); ok && (name == "EXISTS" || name == "RECENT") {
-				h.Accept()
-
-				seqid := imap.ParseNumber(res.Fields[0])
-				switch name {
-				case "EXISTS":
-					mbox.Messages = seqid
-				case "RECENT":
-					mbox.Recent = seqid
-				}
-			} else {
-				h.Reject()
+			flags, _ := fields[0].([]interface{})
+			mbox.Flags = make([]string, len(flags))
+			for i, f := range flags {
+				mbox.Flags[i], _ = f.(string)
 			}
 		case *imap.StatusResp:
 			accepted := true
@@ -55,9 +37,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 				flags, _ := res.Arguments[0].([]interface{})
 				mbox.PermanentFlags = make([]string, len(flags))
 				for i, f := range flags {
-					if s, ok := f.(string); ok {
-						mbox.PermanentFlags[i] = s
-					}
+					mbox.PermanentFlags[i], _ = f.(string)
 				}
 			case "UIDNEXT":
 				mbox.UidNext = imap.ParseNumber(res.Arguments[0])
