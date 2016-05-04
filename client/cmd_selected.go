@@ -9,7 +9,25 @@ import (
 	"github.com/emersion/imap/responses"
 )
 
-// TODO: CHECK
+// Requests a checkpoint of the currently selected mailbox. A checkpoint refers
+// to any implementation-dependent housekeeping associated with the mailbox that
+// is not normally executed as part of each command.
+func (c *Client) Check() (err error) {
+	if c.State != imap.SelectedState {
+		err = errors.New("No mailbox selected")
+		return
+	}
+
+	cmd := &commands.Check{}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
 
 // Permanently removes all messages that have the \Deleted flag set from the
 // currently selected mailbox, and returns to the authenticated state from the
