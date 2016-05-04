@@ -29,7 +29,7 @@ AUTHENTICATE  | ✗                     | ✗
 LOGIN         | ✓                     | ✓
 STARTTLS      | ✓                     | ✗
 EXAMINE       | ✓                     | ✗
-CREATE        | ✗                     | ✗
+CREATE        | ✓                     | ✗
 DELETE        | ✗                     | ✗
 RENAME        | ✗                     | ✗
 SUBSCRIBE     | ✗                     | ✗

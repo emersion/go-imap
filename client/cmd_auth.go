@@ -48,6 +48,26 @@ func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, e
 	return
 }
 
+// Creates a mailbox with the given name.
+func (c *Client) Create(name string) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Create{
+		Mailbox: name,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
 // TODO: CREATE, DELETE, RENAME, SUBSCRIBE, UNSUBSCRIBE
 
 // Returns a subset of names from the complete set of all names available to the
