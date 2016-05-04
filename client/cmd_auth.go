@@ -88,7 +88,28 @@ func (c *Client) Delete(name string) (err error) {
 	return
 }
 
-// TODO: RENAME, SUBSCRIBE, UNSUBSCRIBE
+// Changes the name of a mailbox.
+func (c *Client) Rename(existingName, newName string) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Rename{
+		Existing: existingName,
+		New: newName,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: SUBSCRIBE, UNSUBSCRIBE
 
 // Returns a subset of names from the complete set of all names available to the
 // client.
