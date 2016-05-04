@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/responses"
 )
 
 // An IMAP client.
@@ -243,28 +242,6 @@ func (c *Client) handleBye() *imap.StatusResp {
 	return nil
 }
 
-func (c *Client) handleCaps() (err error) {
-	res := &responses.Capability{}
-
-	hdlr := make(imap.RespHandler)
-	c.addHandler(hdlr)
-	defer c.removeHandler(hdlr)
-
-	for {
-		err = res.HandleFrom(hdlr)
-		if err != nil {
-			return
-		}
-
-		c.Caps = map[string]bool{}
-		for _, name := range res.Caps {
-			c.Caps[name] = true
-		}
-	}
-
-	return nil
-}
-
 // Create a new client from an existing connection.
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
@@ -277,7 +254,6 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	c.writer = imap.NewClientWriter(c.conn, continues)
 
 	go c.handleContinuationReqs(continues)
-	go c.handleCaps()
 
 	greeting := c.handleGreeting()
 	greeting.Err()

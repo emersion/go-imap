@@ -5,6 +5,7 @@ import (
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
+	"github.com/emersion/imap/responses"
 )
 
 // Request a listing of capabilities that the server supports. Capabilities are
@@ -12,14 +13,24 @@ import (
 // responses, so usually explicitely requesting capabilities isn't needed.
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
+	res := &responses.Capability{}
 
-	status, err := c.execute(cmd, nil)
+	status, err := c.execute(cmd, res)
 	if err != nil {
 		return
 	}
 
-	caps = c.Caps
 	err = status.Err()
+	if err != nil {
+		return
+	}
+
+	caps = map[string]bool{}
+	for _, name := range res.Caps {
+		caps[name] = true
+	}
+
+	c.Caps = caps
 	return
 }
 
