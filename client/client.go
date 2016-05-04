@@ -18,8 +18,8 @@ type Client struct {
 	conn net.Conn
 	writer *imap.Writer
 
-	handlersLock sync.Locker
 	handlers []imap.RespHandler
+	handlersLocker sync.Locker
 
 	// The server capabilities.
 	Caps map[string]bool
@@ -33,8 +33,8 @@ func (c *Client) read() error {
 	r := imap.NewReader(bufio.NewReader(c.conn))
 
 	defer (func () {
-		c.handlersLock.Lock()
-		defer c.handlersLock.Unlock()
+		c.handlersLocker.Lock()
+		defer c.handlersLocker.Unlock()
 
 		for _, hdlr := range c.handlers {
 			close(hdlr)
@@ -56,7 +56,7 @@ func (c *Client) read() error {
 			continue
 		}
 
-		c.handlersLock.Lock()
+		c.handlersLocker.Lock()
 
 		var accepted bool
 		for _, hdlr := range c.handlers {
@@ -77,7 +77,7 @@ func (c *Client) read() error {
 			}
 		}
 
-		c.handlersLock.Unlock()
+		c.handlersLocker.Unlock()
 
 		if !accepted {
 			log.Println("Response has not been handled", res)
@@ -88,15 +88,15 @@ func (c *Client) read() error {
 }
 
 func (c *Client) addHandler(hdlr imap.RespHandler) {
-	c.handlersLock.Lock()
-	defer c.handlersLock.Unlock()
+	c.handlersLocker.Lock()
+	defer c.handlersLocker.Unlock()
 
 	c.handlers = append(c.handlers, hdlr)
 }
 
 func (c *Client) removeHandler(hdlr imap.RespHandler) {
-	c.handlersLock.Lock()
-	defer c.handlersLock.Unlock()
+	c.handlersLocker.Lock()
+	defer c.handlersLocker.Unlock()
 
 	for i, h := range c.handlers {
 		if h == hdlr {
@@ -269,7 +269,7 @@ func (c *Client) handleCaps() (err error) {
 func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: conn,
-		handlersLock: &sync.Mutex{},
+		handlersLocker: &sync.Mutex{},
 		State: imap.NotAuthenticatedState,
 	}
 
