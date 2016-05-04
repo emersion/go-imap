@@ -30,7 +30,7 @@ LOGIN         | ✓                     | ✓
 STARTTLS      | ✓                     | ✗
 EXAMINE       | ✓                     | ✗
 CREATE        | ✓                     | ✗
-DELETE        | ✗                     | ✗
+DELETE        | ✓                     | ✗
 RENAME        | ✗                     | ✗
 SUBSCRIBE     | ✗                     | ✗
 UNSUBSCRIBE   | ✗                     | ✗

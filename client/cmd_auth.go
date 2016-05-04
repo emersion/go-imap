@@ -68,7 +68,27 @@ func (c *Client) Create(name string) (err error) {
 	return
 }
 
-// TODO: CREATE, DELETE, RENAME, SUBSCRIBE, UNSUBSCRIBE
+// Permanently removes the mailbox with the given name.
+func (c *Client) Delete(name string) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Delete{
+		Mailbox: name,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// TODO: RENAME, SUBSCRIBE, UNSUBSCRIBE
 
 // Returns a subset of names from the complete set of all names available to the
 // client.
