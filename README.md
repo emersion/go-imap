@@ -45,7 +45,7 @@ SEARCH        | ✓                     | ✗
 FETCH         | ✓                     | ✗
 STORE         | ✓                     | ✗
 COPY          | ✓                     | ✗
-UID           | ✗                     | ✗
+UID           | ✓                     | ✗
 
 ## Usage
 
