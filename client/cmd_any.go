@@ -13,12 +13,31 @@ import (
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
 
-	_, err = c.execute(cmd, nil)
+	status, err = c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
 	caps = c.Caps
+	err = status.Err()
 	return
 }
 
-// TODO: NOOP
+// This command always succeeds. It does nothing.
+// Can be used as a periodic poll for new messages or message status updates
+// during a period of inactivity. Can also be used to reset any inactivity
+// autologout timer on the server.
+func (c *Client) Noop() (err error) {
+	cmd := &commands.Noop{}
+
+	status, err = c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
 
 // Close the connection.
 func (c *Client) Logout() (err error) {

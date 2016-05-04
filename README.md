@@ -23,7 +23,7 @@ commands will be available in other packages.
 Command       | Client implementation | Client tests
 ------------- | --------------------- | ------------
 CAPABILITY    | ✓                     | ✓
-NOOP          | ✗                     | ✗
+NOOP          | ✓                     | ✗
 LOGOUT        | ✓                     | ✓
 AUTHENTICATE  | ✗                     | ✗
 LOGIN         | ✓                     | ✓
