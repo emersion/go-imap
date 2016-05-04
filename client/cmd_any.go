@@ -13,7 +13,7 @@ import (
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
 
-	status, err = c.execute(cmd, nil)
+	status, err := c.execute(cmd, nil)
 	if err != nil {
 		return
 	}
@@ -30,7 +30,7 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 func (c *Client) Noop() (err error) {
 	cmd := &commands.Noop{}
 
-	status, err = c.execute(cmd, nil)
+	status, err := c.execute(cmd, nil)
 	if err != nil {
 		return
 	}
