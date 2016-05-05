@@ -228,7 +228,6 @@ func TestClient_Store(t *testing.T) {
 	testClient(t, ct, st)
 }
 
-
 func TestClient_Store_Silent(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.SelectedState
@@ -247,6 +246,29 @@ func TestClient_Store_Silent(t *testing.T) {
 		}
 
 		io.WriteString(c, tag + " OK STORE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Copy(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("2:4")
+		err = c.Copy(seqset, "Sent")
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "COPY 2:4 Sent" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)
