@@ -38,8 +38,8 @@ LIST          | ✓                     | ✓
 LSUB          | ✓                     | ✗
 STATUS        | ✓                     | ✓
 APPEND        | ✓                     | ✓
-CHECK         | ✓                     | ✗
-CLOSE         | ✓                     | ✗
+CHECK         | ✓                     | ✓
+CLOSE         | ✓                     | ✓
 EXPUNGE       | ✓                     | ✗
 SEARCH        | ✓                     | ✗
 FETCH         | ✓                     | ✗

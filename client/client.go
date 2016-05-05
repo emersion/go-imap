@@ -156,6 +156,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
 			h.Accept()
 			status = s
+
 			if hdlr != nil {
 				close(hdlr)
 				hdlr = nil
