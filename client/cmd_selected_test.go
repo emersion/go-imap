@@ -104,3 +104,36 @@ func TestClient_Expunge(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Search(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		criteria := []interface{}{"FLAGGED", "SINCE", "1-Feb-1994", "NOT", "FROM", "Smith"}
+
+		results, err := c.Search(criteria)
+		if err != nil {
+			return
+		}
+
+		expected := []uint32{2, 84, 882}
+		if fmt.Sprint(results) != fmt.Sprint(expected) {
+			return fmt.Errorf("Bad results: %v", results)
+		}
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "SEARCH CHARSET UTF-8 FLAGGED SINCE 1-Feb-1994 NOT FROM Smith" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* SEARCH 2 84 882\r\n")
+		io.WriteString(c, tag + " OK SEARCH completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
