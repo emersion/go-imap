@@ -15,7 +15,7 @@ Other IMAP implementations in Go:
 * Require to make many type assertions
 * Are not idiomatic
 * Are not pleasant to use
-* Implements a server _xor_ a client, not both
+* Implement a server _xor_ a client, not both
 
 ## Implemented commands
 
