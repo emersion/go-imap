@@ -14,6 +14,8 @@ go get gopkg.in/emersion/imap.v0
 Other IMAP implementations in Go:
 * Require to make many type assertions
 * Are not idiomatic
+* Are not pleasant to use
+* Implements a server _xor_ a client, not both
 
 ## Implemented commands
 
