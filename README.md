@@ -40,7 +40,7 @@ STATUS        | ✓                     | ✓
 APPEND        | ✓                     | ✓
 CHECK         | ✓                     | ✓
 CLOSE         | ✓                     | ✓
-EXPUNGE       | ✓                     | ✗
+EXPUNGE       | ✓                     | ✓
 SEARCH        | ✓                     | ✗
 FETCH         | ✓                     | ✗
 STORE         | ✓                     | ✗

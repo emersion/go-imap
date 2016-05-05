@@ -64,3 +64,43 @@ func TestClient_Close(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Expunge(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		expunged := make(chan uint32, 4)
+		err = c.Expunge(expunged)
+		if err != nil {
+			return
+		}
+
+		expected := []uint32{3, 3, 5, 8}
+
+		i := 0
+		for id := range expunged {
+			if id != expected[i] {
+				return fmt.Errorf("Bad expunged sequence number: got %v instead of %v", id, expected[i])
+			}
+			i++
+		}
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "EXPUNGE" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* 3 EXPUNGE\r\n")
+		io.WriteString(c, "* 3 EXPUNGE\r\n")
+		io.WriteString(c, "* 5 EXPUNGE\r\n")
+		io.WriteString(c, "* 8 EXPUNGE\r\n")
+		io.WriteString(c, tag + " OK EXPUNGE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
