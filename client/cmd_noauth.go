@@ -40,7 +40,7 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 // Indicates a SASL authentication mechanism to the server. If the server
 // supports the requested authentication mechanism, it performs an
 // authentication protocol exchange to authenticate and identify the client.
-func (c *Client) Authenticate(auth imap.Sasl) (err error) {
+func (c *Client) Authenticate(auth imap.SaslClient) (err error) {
 	if c.State != imap.NotAuthenticatedState {
 		err = errors.New("Already logged in")
 		return

@@ -8,7 +8,7 @@ import (
 
 // An AUTHENTICATE response.
 type Authenticate struct {
-	Mechanism imap.Sasl
+	Mechanism imap.SaslClient
 	InitialResponse []byte
 	Writer *imap.Writer
 }

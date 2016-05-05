@@ -5,8 +5,8 @@ package common
 //   would be better if Go provided a standard package (e.g. crypto/sasl) that
 //   could be shared by SMTP, IMAP, and other packages.
 
-// Interface for performing challenge-response authentication.
-type Sasl interface {
+// Client interface for performing challenge-response authentication.
+type SaslClient interface {
 	// Start begins SASL authentication with the server. It returns the
 	// authentication mechanism name and "initial response" data (if required by
 	// the selected mechanism). A non-nil error causes the client to abort the
