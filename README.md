@@ -28,7 +28,7 @@ LOGOUT        | ✓                     | ✓
 AUTHENTICATE  | ✓                     | ✗
 LOGIN         | ✓                     | ✓
 STARTTLS      | ✓                     | ✗
-EXAMINE       | ✓                     | ✗
+EXAMINE       | ✓                     | ✓
 CREATE        | ✓                     | ✗
 DELETE        | ✓                     | ✗
 RENAME        | ✓                     | ✗
