@@ -137,3 +137,59 @@ func TestClient_Search(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Fetch(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("2:3")
+		fields := []string{"UID", "BODY[]"}
+		messages := make(chan *common.Message, 2)
+
+		err = c.Fetch(seqset, fields, messages)
+		if err != nil {
+			return
+		}
+
+		msg := <-messages
+		body := msg.Body["BODY[]"].String()
+		if msg.Uid != 42 {
+			return fmt.Errorf("First message has bad UID: %v", msg.Uid)
+		}
+		if body != "I love potatoes." {
+			return fmt.Errorf("First message has bad body: %v", body)
+		}
+
+		msg = <-messages
+		body = msg.Body["BODY[]"].String()
+		if msg.Uid != 28 {
+			return fmt.Errorf("Second message has bad UID: %v", msg.Uid)
+		}
+		if body != "Hello World!" {
+			return fmt.Errorf("Second message has bad body: %v", body)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "FETCH 2:3 (UID BODY[])" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* 2 FETCH (UID 42 BODY[] {16}\r\n")
+		io.WriteString(c, "I love potatoes.")
+		io.WriteString(c, ")\r\n")
+
+		io.WriteString(c, "* 3 FETCH (UID 28 BODY[] {12}\r\n")
+		io.WriteString(c, "Hello World!")
+		io.WriteString(c, ")\r\n")
+
+		io.WriteString(c, tag + " OK FETCH completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
