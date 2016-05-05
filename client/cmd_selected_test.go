@@ -193,3 +193,61 @@ func TestClient_Fetch(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_Store(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		updates := make(chan *common.Message, 1)
+		seqset, _ := common.NewSeqSet("2")
+		err = c.Store(seqset, "+FLAGS", []interface{}{"\\Seen"}, updates)
+		if err != nil {
+			return
+		}
+
+		msg := <-updates
+		if len(msg.Flags) != 1 || msg.Flags[0] != "\\Seen" {
+			return fmt.Errorf("Bad message flags: %v", msg.Flags)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "STORE 2 +FLAGS (\\Seen)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* 2 FETCH (FLAGS (\\Seen))\r\n")
+		io.WriteString(c, tag + " OK STORE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+
+func TestClient_Store_Silent(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("2:3")
+		err = c.Store(seqset, "+FLAGS", []interface{}{"\\Seen"}, nil)
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "STORE 2:3 +FLAGS.SILENT (\\Seen)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK STORE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}

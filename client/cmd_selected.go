@@ -168,7 +168,11 @@ func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.M
 }
 
 func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interface{}, ch chan<- *imap.Message) (err error) {
-	defer close(ch)
+	defer (func () {
+		if ch != nil {
+			close(ch)
+		}
+	})()
 
 	if c.State != imap.SelectedState {
 		err = errors.New("No mailbox selected")

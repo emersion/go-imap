@@ -45,7 +45,7 @@ CLOSE         | ✓      | ✓            | ✗      | ✗
 EXPUNGE       | ✓      | ✓            | ✗      | ✗
 SEARCH        | ✓      | ✓            | ✗      | ✗
 FETCH         | ✓      | ✓            | ✗      | ✗
-STORE         | ✓      | ✗            | ✗      | ✗
+STORE         | ✓      | ✓            | ✗      | ✗
 COPY          | ✓      | ✗            | ✗      | ✗
 UID           | ✓      | ✗            | ✗      | ✗
 
