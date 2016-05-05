@@ -5,14 +5,21 @@ import (
 )
 
 // A LIST response.
+// If Subscribed is set to true, LSUB will be used instead.
 // See https://tools.ietf.org/html/rfc3501#section-7.2.2
 type List struct {
 	Mailboxes chan<- *imap.MailboxInfo
+	Subscribed bool
 }
 
 func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
+	name := imap.List
+	if r.Subscribed {
+		name = imap.Lsub
+	}
+
 	for h := range hdlr {
-		fields, ok := h.AcceptNamedResp(imap.List)
+		fields, ok := h.AcceptNamedResp(name)
 		if !ok {
 			continue
 		}

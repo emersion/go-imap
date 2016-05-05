@@ -109,7 +109,47 @@ func (c *Client) Rename(existingName, newName string) (err error) {
 	return
 }
 
-// TODO: SUBSCRIBE, UNSUBSCRIBE
+// Adds the specified mailbox name to the server's set of "active" or
+// "subscribed" mailboxes.
+func (c *Client) Subscribe(name string) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Subscribe{
+		Mailbox: name,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
+
+// Removes the specified mailbox name from the server's set of "active" or
+// "subscribed" mailboxes.
+func (c *Client) Unsubscribe(name string) (err error) {
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.Unsubscribe{
+		Mailbox: name,
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
 
 // Returns a subset of names from the complete set of all names available to the
 // client.
@@ -140,7 +180,34 @@ func (c *Client) List(ref, name string, ch chan<- *imap.MailboxInfo) (err error)
 	return
 }
 
-// TODO: LSUB
+// Returns a subset of names from the set of names that the user has declared as
+// being "active" or "subscribed".
+func (c *Client) Lsub(ref, name string, ch chan<- *imap.MailboxInfo) (err error) {
+	defer close(ch)
+
+	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
+		err = errors.New("Not logged in")
+		return
+	}
+
+	cmd := &commands.List{
+		Reference: ref,
+		Mailbox: name,
+		Subscribed: true,
+	}
+	res := &responses.List{
+		Mailboxes: ch,
+		Subscribed: true,
+	}
+
+	status, err := c.execute(cmd, res)
+	if err != nil {
+		return
+	}
+
+	err = status.Err()
+	return
+}
 
 // Requests the status of the indicated mailbox. It does not change the
 // currently selected mailbox, nor does it affect the state of any messages in
