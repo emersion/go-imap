@@ -16,8 +16,3 @@ func (c *Authenticate) Command() *imap.Command {
 		Arguments: []interface{}{c.Mechanism},
 	}
 }
-
-func (c *Authenticate) Parse(fields []interface{}) error {
-	c.Mechanism = fields[0].(string)
-	return nil
-}

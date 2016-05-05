@@ -25,7 +25,7 @@ Command       | Client implementation | Client tests
 CAPABILITY    | ✓                     | ✓
 NOOP          | ✓                     | ✗
 LOGOUT        | ✓                     | ✓
-AUTHENTICATE  | ✗                     | ✗
+AUTHENTICATE  | ✓                     | ✗
 LOGIN         | ✓                     | ✓
 STARTTLS      | ✓                     | ✗
 EXAMINE       | ✓                     | ✗

@@ -183,8 +183,13 @@ func (c *Client) handleContinuationReqs(continues chan bool) {
 
 	for h := range hdlr {
 		if _, ok := h.Resp.(*imap.ContinuationResp); ok {
-			h.Accept()
-			continues <- true
+			// Only accept if waiting for a continuation request
+			select {
+			case continues <- true:
+				h.Accept()
+			default:
+				h.Reject()
+			}
 		} else {
 			h.Reject()
 		}
