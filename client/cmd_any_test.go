@@ -37,6 +37,26 @@ func TestClient_Capability(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Noop(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		err = c.Noop()
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "NOOP" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK NOOP completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_Logout(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		err = c.Logout()
