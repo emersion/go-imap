@@ -265,6 +265,42 @@ func TestClient_List(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Lsub(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		mailboxes := make(chan *common.MailboxInfo, 1)
+		err = c.Lsub("", "%", mailboxes)
+		if err != nil {
+			return
+		}
+
+		mbox := <-mailboxes
+		if mbox.Name != "INBOX" {
+			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
+		}
+		if len(mbox.Flags) != 0 {
+			return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "LSUB \"\" %" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* LSUB () \"/\" INBOX\r\n")
+		io.WriteString(c, tag + " OK LIST completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_Status(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.AuthenticatedState

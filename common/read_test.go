@@ -156,6 +156,21 @@ func TestReader_ReadList(t *testing.T) {
 	}
 }
 
+func TestReader_ReadList_Empty(t *testing.T) {
+	b, r := newReader("()")
+
+	fields, err := r.ReadList()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(fields) != 0 {
+		t.Error("Expected 0 fields, but got", len(fields))
+	}
+	if len(b.Bytes()) > 0 {
+		t.Error("Buffer is not empty after read")
+	}
+}
+
 func TestReader_ReadLine(t *testing.T) {
 	b, r := newReader("field1 field2\r\n")
 

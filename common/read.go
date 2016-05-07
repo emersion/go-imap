@@ -182,6 +182,7 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		}
 
 		var field interface{}
+		ok := true
 		switch char {
 		case literalStart:
 			field, err = r.ReadLiteral()
@@ -189,6 +190,8 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 			field, err = r.ReadQuotedString()
 		case listStart:
 			field, err = r.ReadList()
+		case listEnd:
+			ok = false
 		default:
 			field, err = r.ReadAtom()
 			r.UnreadRune()
@@ -197,7 +200,9 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		if err != nil {
 			return
 		}
-		fields = append(fields, field)
+		if ok {
+			fields = append(fields, field)
+		}
 
 		if char, _, err = r.ReadRune(); err != nil {
 			return
