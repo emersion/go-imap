@@ -13,7 +13,7 @@ go get gopkg.in/emersion/imap.v0
 
 Other IMAP implementations in Go:
 * Require to make many type assertions
-* Are not idiomatic
+* Are not idiomatic or are [ugly](https://github.com/jordwest/imap-server/blob/master/conn/commands.go#L53)
 * Are not pleasant to use
 * Implement a server _xor_ a client, not both
 
