@@ -34,8 +34,8 @@ EXAMINE       | ✓      | ✓            | ✗      | ✗
 CREATE        | ✓      | ✓            | ✗      | ✗
 DELETE        | ✓      | ✓            | ✗      | ✗
 RENAME        | ✓      | ✓            | ✗      | ✗
-SUBSCRIBE     | ✓      | ✗            | ✗      | ✗
-UNSUBSCRIBE   | ✓      | ✗            | ✗      | ✗
+SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
+UNSUBSCRIBE   | ✓      | ✓            | ✗      | ✗
 LIST          | ✓      | ✓            | ✗      | ✗
 LSUB          | ✓      | ✗            | ✗      | ✗
 STATUS        | ✓      | ✓            | ✗      | ✗

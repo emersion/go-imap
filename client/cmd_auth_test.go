@@ -169,6 +169,50 @@ func TestClient_Rename(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Subscribe(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		err = c.Subscribe("Mailbox")
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "SUBSCRIBE Mailbox" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK SUBSCRIBE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Unsubscribe(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		err = c.Unsubscribe("Mailbox")
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "UNSUBSCRIBE Mailbox" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK UNSUBSCRIBE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_List(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.AuthenticatedState
