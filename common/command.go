@@ -1,5 +1,9 @@
 package common
 
+import (
+	"errors"
+)
+
 // IMAP4rev1 commands.
 const (
 	Capability string = "CAPABILITY"
@@ -66,6 +70,26 @@ func (c *Command) WriteTo(w *Writer) (N int64, err error) {
 	n, err = w.WriteCrlf()
 	N += int64(n)
 	return
+}
+
+func (c *Command) Parse(fields []interface{}) error {
+	if len(fields) < 2 {
+		return errors.New("Cannot parse command")
+	}
+
+	var ok bool
+
+	if c.Tag, ok = fields[0].(string); !ok {
+		return errors.New("Cannot parse command tag")
+	}
+
+	if c.Name, ok = fields[1].(string); !ok {
+		return errors.New("Cannot parse command name")
+	}
+
+	c.Arguments = fields[2:]
+
+	return nil
 }
 
 // A value that can be converted to a command.

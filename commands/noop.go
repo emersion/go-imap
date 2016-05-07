@@ -13,3 +13,7 @@ func (c *Noop) Command() *imap.Command {
 		Name: imap.Noop,
 	}
 }
+
+func (c *Noop) Parse(fields []interface{}) error {
+	return nil
+}

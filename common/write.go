@@ -134,7 +134,6 @@ func (w *Writer) WriteList(fields []interface{}) (N int, err error) {
 
 func (w *Writer) writeLiteralField(literal *Literal) (N int, err error) {
 	field := string(literalStart) + strconv.Itoa(literal.Len()) + string(literalEnd)
-
 	n, err := w.writeString(field)
 	N += n
 	if err != nil {
@@ -166,10 +165,50 @@ func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
 	return
 }
 
+func (w *Writer) WriteRespCode(code string, args []interface{}) (N int, err error) {
+	n, err := w.writeString(string(respCodeStart))
+	if err != nil {
+		return
+	}
+	N += n
+
+	fields := []interface{}{code}
+	fields = append(fields, args...)
+
+	if n, err = w.WriteFields(fields); err != nil {
+		return
+	}
+	N += n
+
+	n, err = w.writeString(string(respCodeEnd))
+	N += n
+	return
+}
+
+func (w *Writer) WriteInfo(info string) (N int, err error) {
+	n, err := w.writeString(info)
+	if err != nil {
+		return
+	}
+	N += n
+
+	n, err = w.WriteCrlf()
+	if err != nil {
+		return
+	}
+	N += n
+
+	return
+}
+
 func NewWriter(w writer) *Writer {
 	return &Writer{writer: w}
 }
 
 func NewClientWriter(w writer, continues <-chan bool) *Writer {
 	return &Writer{writer: w, continues: continues}
+}
+
+type WriterTo interface {
+	WriteTo(w *Writer) error
 }

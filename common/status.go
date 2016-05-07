@@ -71,3 +71,26 @@ func (r *StatusResp) Err() error {
 	}
 	return nil
 }
+
+func (r *StatusResp) WriteTo(w *Writer) (err error) {
+	if _, err = w.WriteFields([]interface{}{r.Tag, string(r.Type)}); err != nil {
+		return
+	}
+
+	if _, err = w.WriteSp(); err != nil {
+		return
+	}
+
+	if r.Code != "" {
+		if _, err = w.WriteRespCode(r.Code, r.Arguments); err != nil {
+			return
+		}
+
+		if _, err = w.WriteSp(); err != nil {
+			return
+		}
+	}
+
+	_, err = w.WriteInfo(r.Info)
+	return
+}

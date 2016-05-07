@@ -14,20 +14,44 @@ type Resp struct {
 	Fields []interface{}
 }
 
+func (r *Resp) WriteTo(w *Writer) (err error) {
+	fields := []interface{}{r.Tag}
+	fields = append(fields, r.Fields...)
+
+	if _, err = w.WriteFields(fields); err != nil {
+		return
+	}
+
+	_, err = w.WriteCrlf()
+	return
+}
+
 // A continuation request.
 type ContinuationResp struct {
 	// The info message sent with the continuation request.
 	Info string
 }
 
-func (r *ContinuationResp) Resp() *Resp {
-	res := &Resp{Tag: "+"}
-
-	if r.Info != "" {
-		res.Fields = append(res.Fields, r.Info)
+func (r *ContinuationResp) WriteTo(w *Writer) (err error) {
+	if _, err = w.WriteString("+"); err != nil {
+		return
 	}
 
-	return res
+	if r.Info != "" {
+		if _, err = w.WriteSp(); err != nil {
+			return
+		}
+
+		_, err = w.WriteInfo(r.Info)
+	} else {
+		_, err = w.WriteCrlf()
+	}
+	return
+}
+
+// A value that can be converted to a Resp.
+type Responser interface {
+	Response() *Resp
 }
 
 // Read a single response from a Reader. Returns either a continuation request,

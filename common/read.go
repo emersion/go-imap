@@ -320,3 +320,7 @@ func (r *Reader) ReadInfo() (info string, err error) {
 func NewReader(r reader) *Reader {
 	return &Reader{reader: r}
 }
+
+type Parser interface {
+	Parse(fields []interface{}) error
+}
