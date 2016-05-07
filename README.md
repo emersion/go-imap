@@ -24,7 +24,7 @@ commands will be available in other packages.
 
 Command       | Client | Client tests | Server | Server tests
 ------------- | ------ | ------------ | ------ | ------------
-CAPABILITY    | ✓      | ✓            | ✗      | ✗
+CAPABILITY    | ✓      | ✓            | ✓      | ✗
 NOOP          | ✓      | ✓            | ✓      | ✗
 LOGOUT        | ✓      | ✓            | ✗      | ✗
 AUTHENTICATE  | ✓      | ✗            | ✗      | ✗

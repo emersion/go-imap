@@ -122,7 +122,8 @@ func NewServer(l net.Listener) *Server {
 	s := &Server{
 		listener: l,
 		commands: map[string]HandlerFactory{
-			"NOOP": func () Handler { return &Noop{} },
+			imap.Noop: func () Handler { return &Noop{} },
+			imap.Capability: func () Handler { return &Capability{} },
 		},
 	}
 

@@ -10,16 +10,15 @@ type Capability struct {
 	Caps []string
 }
 
-func (r *Capability) Resp() *imap.Resp {
-	// Insert IMAP4rev1 at the begining of capabilities list
-	caps := []interface{}{"IMAP4rev1"}
-	for _, c := range r.Caps {
-		caps = append(caps, c)
+func (r *Capability) Response() *imap.Resp {
+	fields := []interface{}{imap.Capability}
+	for _, cap := range r.Caps {
+		fields = append(fields, cap)
 	}
 
 	return &imap.Resp{
-		Tag: imap.Capability,
-		Fields: caps,
+		Tag: "*",
+		Fields: fields,
 	}
 }
 
