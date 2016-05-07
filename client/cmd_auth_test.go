@@ -125,6 +125,28 @@ func TestClient_Create(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Delete(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.AuthenticatedState
+
+		err = c.Delete("Old Mailbox")
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "DELETE \"Old Mailbox\"" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK DELETE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_List(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.AuthenticatedState
