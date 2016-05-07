@@ -47,6 +47,11 @@ func (s *Server) listen() error {
 }
 
 func (s *Server) handleConn(conn *Conn) error {
+	// Send greeting
+	if err := conn.greet(); err != nil {
+		return err
+	}
+
 	for {
 		fields, err := conn.ReadLine()
 		if err == io.EOF {
