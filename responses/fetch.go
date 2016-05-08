@@ -7,7 +7,7 @@ import (
 // A FETCH response.
 // See https://tools.ietf.org/html/rfc3501#section-7.4.2
 type Fetch struct {
-	Messages chan<- *imap.Message
+	Messages chan *imap.Message
 }
 
 func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
@@ -38,4 +38,16 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 	}
 
 	return
+}
+
+func (r *Fetch) WriteTo(w *imap.Writer) error {
+	for msg := range r.Messages {
+		res := imap.NewUntaggedResp([]interface{}{msg.Id, imap.Fetch, msg.Fields()})
+
+		if err := res.WriteTo(w); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

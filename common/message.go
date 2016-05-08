@@ -133,6 +133,32 @@ func (m *Message) Parse(fields []interface{}) error {
 	return nil
 }
 
+func (m *Message) Fields() (fields []interface{}) {
+	for _, item := range m.Items {
+		var value interface{}
+		switch item {
+		//case "ENVELOPE":
+		//case "BODYSTRUCTURE", "BODY":
+		case "FLAGS":
+			flags := make([]interface{}, len(m.Flags))
+			for i, v := range m.Flags {
+				flags[i] = v
+			}
+			value = flags
+		case "INTERNALDATE":
+			value = m.InternalDate
+		case "RFC822.SIZE":
+			value = m.Size
+		case "UID":
+			value = m.Uid
+		}
+
+		fields = append(fields, item, value)
+	}
+
+	return
+}
+
 // A message envelope, ie. message metadata from its headers.
 type Envelope struct {
 	// The message date.

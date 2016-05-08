@@ -10,4 +10,6 @@ type Mailbox interface {
 	Info() (*common.MailboxInfo, error)
 	// Get this mailbox status.
 	Status(items []string) (*common.MailboxStatus, error)
+	// Fetch some messages.
+	Fetch(seqset *common.SeqSet, items []string) ([]*common.Message, error)
 }

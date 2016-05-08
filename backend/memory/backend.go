@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/emersion/imap/backend"
+	"github.com/emersion/imap/common"
 )
 
 type Backend struct {}
@@ -21,9 +22,9 @@ func (bkd *Backend) Login(username, password string) (user backend.User, err err
 			"INBOX": &Mailbox{
 				name: "INBOX",
 				messages: []*Message{
-					&Message{uid: 1},
-					&Message{uid: 2},
-					&Message{uid: 3},
+					&Message{&common.Message{
+						Uid: 1,
+					}},
 				},
 			},
 		},

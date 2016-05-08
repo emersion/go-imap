@@ -67,6 +67,9 @@ func (w *Writer) WriteString(s string) (int, error) {
 }
 
 func (w *Writer) WriteDate(date *time.Time) (int, error) {
+	if date == nil {
+		return w.WriteNil()
+	}
 	return w.writeQuotedString(date.Format("Mon, 2 Jan 2006 15:04:05 -0700"))
 }
 
