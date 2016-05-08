@@ -24,6 +24,9 @@ func (bkd *Backend) Login(username, password string) (user backend.User, err err
 				messages: []*Message{
 					&Message{&common.Message{
 						Uid: 1,
+						Envelope: &common.Envelope{Subject: "Hello World!"},
+						BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
+						Size: 42,
 					}},
 				},
 			},

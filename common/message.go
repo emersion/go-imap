@@ -133,12 +133,14 @@ func (m *Message) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (m *Message) Fields() (fields []interface{}) {
+func (m *Message) Format() (fields []interface{}) {
 	for _, item := range m.Items {
 		var value interface{}
 		switch item {
-		//case "ENVELOPE":
-		//case "BODYSTRUCTURE", "BODY":
+		case "ENVELOPE":
+			value = m.Envelope.Format()
+		case "BODYSTRUCTURE", "BODY":
+			value = m.BodyStructure.Format()
 		case "FLAGS":
 			flags := make([]interface{}, len(m.Flags))
 			for i, v := range m.Flags {
@@ -223,6 +225,22 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	return nil
 }
 
+// Format an envelope to fields.
+func (e *Envelope) Format() (fields []interface{}) {
+	return []interface{}{
+		e.Date,
+		e.Subject,
+		FormatAddressList(e.From),
+		FormatAddressList(e.Sender),
+		FormatAddressList(e.ReplyTo),
+		FormatAddressList(e.To),
+		FormatAddressList(e.Cc),
+		FormatAddressList(e.Bcc),
+		e.InReplyTo,
+		e.MessageId,
+	}
+}
+
 // An address.
 type Address struct {
 	// The personal name.
@@ -261,16 +279,40 @@ func (addr *Address) Parse(fields []interface{}) error {
 	return nil
 }
 
+// Format an address to fields.
+func (addr *Address) Format() []interface{} {
+	return []interface{}{
+		addr.PersonalName,
+		addr.AtDomainList,
+		addr.MailboxName,
+		addr.HostName,
+	}
+}
+
 // Parse an address list from fields.
 func ParseAddressList(fields []interface{}) (addrs []*Address) {
-	for _, f := range fields {
+	addrs = make([]*Address, len(fields))
+
+	for i, f := range fields {
 		if addrFields, ok := f.([]interface{}); ok {
 			addr := &Address{}
 			if err := addr.Parse(addrFields); err == nil {
-				addrs = append(addrs, addr)
+				addrs[i] = addr
 			}
 		}
 	}
+
+	return
+}
+
+// Format an address list to fields.
+func FormatAddressList(addrs []*Address) (fields []interface{}) {
+	fields = make([]interface{}, len(addrs))
+
+	for i, addr := range addrs {
+		fields[i] = addr.Format()
+	}
+
 	return
 }
 
@@ -318,7 +360,7 @@ type BodyStructure struct {
 	Md5 string
 }
 
-func ParseParameters(fields []interface{}) (params map[string]string, err error) {
+func ParseParamList(fields []interface{}) (params map[string]string, err error) {
 	params = map[string]string{}
 
 	var key string
@@ -339,6 +381,13 @@ func ParseParameters(fields []interface{}) (params map[string]string, err error)
 	return
 }
 
+func FormatParamList(params map[string]string) (fields []interface{}) {
+	for key, value := range params {
+		fields = append(fields, key, value)
+	}
+	return
+}
+
 func ParseStringList(fields []interface{}) ([]string, error) {
 	list := make([]string, len(fields))
 	for i, f := range fields {
@@ -348,6 +397,14 @@ func ParseStringList(fields []interface{}) ([]string, error) {
 		}
 	}
 	return list, nil
+}
+
+func FormatStringList(list []string) (fields []interface{}) {
+	fields = make([]interface{}, len(list))
+	for i, v := range list {
+		fields[i] = v
+	}
+	return
 }
 
 func (bs *BodyStructure) Parse(fields []interface{}) error {
@@ -381,7 +438,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 		if len(fields) - end + 1 >= 4 { // Contains extension data
 			params, _ := fields[end].([]interface{})
-			bs.Params, _ = ParseParameters(params)
+			bs.Params, _ = ParseParamList(params)
 
 			bs.Disposition, _ = fields[end+1].(string)
 
@@ -404,7 +461,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[1].(string)
 
 		params, _ := fields[2].([]interface{})
-		bs.Params, _ = ParseParameters(params)
+		bs.Params, _ = ParseParamList(params)
 
 		bs.Id, _ = fields[3].(string)
 		bs.Description, _ = fields[4].(string)
@@ -449,4 +506,45 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 	}
 
 	return nil
+}
+
+func (bs *BodyStructure) Format() (fields []interface{}) {
+	if bs.MimeType == "multipart" {
+		for _, part := range bs.Parts {
+			fields = append(fields, part.Format())
+		}
+
+		fields = append(fields, bs.MimeSubType)
+
+		if bs.Params != nil || bs.Disposition != "" || len(bs.Language) > 0 || len(bs.Location) > 0 {
+			fields = append(fields, FormatParamList(bs.Params), bs.Disposition,
+				FormatStringList(bs.Language), FormatStringList(bs.Location))
+		}
+	} else {
+		fields = []interface{}{
+			bs.MimeType,
+			bs.MimeSubType,
+			FormatParamList(bs.Params),
+			bs.Id,
+			bs.Description,
+			bs.Encoding,
+			bs.Size,
+		}
+
+		// Type-specific fields
+		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
+			fields = append(fields, bs.Envelope, bs.BodyStructure, bs.Lines)
+		}
+		if bs.MimeType == "text" {
+			fields = append(fields, bs.Lines)
+		}
+
+		// Extension data
+		if bs.Md5 != "" || bs.Disposition != "" || len(bs.Language) > 0 || len(bs.Location) > 0 {
+			fields = append(fields, bs.Md5, bs.Disposition,
+				FormatStringList(bs.Language), FormatStringList(bs.Location))
+		}
+	}
+
+	return
 }

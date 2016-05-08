@@ -1,3 +1,4 @@
+// IMAP server backend interface.
 package backend
 
 // An IMAP server backend.

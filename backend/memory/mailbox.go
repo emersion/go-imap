@@ -47,11 +47,15 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 
 func (mbox *Mailbox) Fetch(seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
 	for i, msg := range mbox.messages {
-		if !seqset.Contains(uint32(i+1)) {
+		id := uint32(i+1)
+
+		if !seqset.Contains(id) {
 			continue
 		}
 
-		msgs = append(msgs, msg.Metadata(items))
+		m := msg.Metadata(items)
+		m.Id = id
+		msgs = append(msgs, m)
 	}
 
 	return
