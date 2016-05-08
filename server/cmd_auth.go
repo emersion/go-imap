@@ -29,7 +29,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 	}
 
 	conn.Mailbox = mbox
-	conn.MailboxReadOnly = cmd.ReadOnly
+	conn.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	flags := make([]interface{}, len(status.Flags))
 	for i, f := range status.Flags {
