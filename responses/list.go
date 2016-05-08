@@ -8,15 +8,20 @@ import (
 // If Subscribed is set to true, LSUB will be used instead.
 // See https://tools.ietf.org/html/rfc3501#section-7.2.2
 type List struct {
-	Mailboxes chan<- *imap.MailboxInfo
+	Mailboxes chan *imap.MailboxInfo
 	Subscribed bool
 }
 
-func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
-	name := imap.List
+func (r *List) Name() (name string) {
+	name = imap.List
 	if r.Subscribed {
 		name = imap.Lsub
 	}
+	return
+}
+
+func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
+	name := r.Name()
 
 	for h := range hdlr {
 		fields, ok := h.AcceptNamedResp(name)
@@ -37,6 +42,25 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 		mbox.Name, _ = fields[2].(string)
 
 		r.Mailboxes <- mbox
+	}
+
+	return
+}
+
+func (r *List) WriteTo(w *imap.Writer) (err error) {
+	name := r.Name()
+
+	for mbox := range r.Mailboxes {
+		flags := make([]interface{}, len(mbox.Flags))
+		for i, f := range mbox.Flags {
+			flags[i] = f
+		}
+
+		fields := []interface{}{name, flags, mbox.Delimiter, mbox.Name}
+		res := imap.NewUntaggedResp(fields)
+		if err = res.WriteTo(w); err != nil {
+			return
+		}
 	}
 
 	return

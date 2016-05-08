@@ -31,13 +31,13 @@ AUTHENTICATE  | ✓      | ✓            | ✓      | ✗
 LOGIN         | ✓      | ✓            | ✓      | ✗
 STARTTLS      | ✓      | ✗            | ✗      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✗
-EXAMINE       | ✓      | ✓            | ✗      | ✗
+EXAMINE       | ✓      | ✓            | ✓      | ✗
 CREATE        | ✓      | ✓            | ✗      | ✗
 DELETE        | ✓      | ✓            | ✗      | ✗
 RENAME        | ✓      | ✓            | ✗      | ✗
 SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
 UNSUBSCRIBE   | ✓      | ✓            | ✗      | ✗
-LIST          | ✓      | ✓            | ✗      | ✗
+LIST          | ✓      | ✓            | ✓      | ✗
 LSUB          | ✓      | ✓            | ✗      | ✗
 STATUS        | ✓      | ✓            | ✗      | ✗
 APPEND        | ✓      | ✓            | ✗      | ✗

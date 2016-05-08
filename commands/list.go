@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"errors"
+
 	imap "github.com/emersion/imap/common"
 )
 
@@ -14,14 +16,30 @@ type List struct {
 	Subscribed bool
 }
 
-func (c *List) Command() *imap.Command {
+func (cmd *List) Command() *imap.Command {
 	name := imap.List
-	if c.Subscribed {
+	if cmd.Subscribed {
 		name = imap.Lsub
 	}
 
 	return &imap.Command{
 		Name: name,
-		Arguments: []interface{}{c.Reference, c.Mailbox},
+		Arguments: []interface{}{cmd.Reference, cmd.Mailbox},
 	}
+}
+
+func (cmd *List) Parse(fields []interface{}) error {
+	if len(fields) < 2 {
+		return errors.New("No enough arguments")
+	}
+
+	var ok bool
+	if cmd.Reference, ok = fields[0].(string); !ok {
+		return errors.New("Reference must be a string")
+	}
+	if cmd.Mailbox, ok = fields[1].(string); !ok {
+		return errors.New("Mailbox must be a string")
+	}
+
+	return nil
 }

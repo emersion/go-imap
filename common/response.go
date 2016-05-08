@@ -26,6 +26,14 @@ func (r *Resp) WriteTo(w *Writer) (err error) {
 	return
 }
 
+// Create a new untagged response.
+func NewUntaggedResp(fields []interface{}) *Resp {
+	return &Resp{
+		Tag: "*",
+		Fields: fields,
+	}
+}
+
 // A continuation request.
 type ContinuationResp struct {
 	// The info message sent with the continuation request.

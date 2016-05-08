@@ -161,6 +161,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 			hdlr.ReadOnly = true
 			return hdlr
 		},
+		common.List: func () Handler { return &List{} },
 	}
 
 	go s.listen()
