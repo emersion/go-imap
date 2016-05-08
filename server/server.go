@@ -17,7 +17,7 @@ type Handler interface {
 	common.Parser
 
 	// Handle this command for a given connection.
-	Handle(conn *Conn, bkd backend.Backend) error
+	Handle(conn *Conn) error
 }
 
 // A function that creates handlers.
@@ -28,8 +28,9 @@ type Server struct {
 	listener net.Listener
 	commands map[string]HandlerFactory
 	auths map[string]sasl.Server
-	backend backend.Backend
 
+	// This server's backend.
+	Backend backend.Backend
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 }
@@ -118,7 +119,7 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 		return
 	}
 
-	if err := handler.Handle(conn, s.backend); err != nil {
+	if err := handler.Handle(conn); err != nil {
 		res = &common.StatusResp{
 			Tag: cmd.Tag,
 			Type: common.NO,
@@ -139,7 +140,7 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 func NewServer(l net.Listener, bkd backend.Backend) *Server {
 	s := &Server{
 		listener: l,
-		backend: bkd,
+		Backend: bkd,
 	}
 
 	s.auths = map[string]sasl.Server{

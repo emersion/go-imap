@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/emersion/imap/common"
-	"github.com/emersion/imap/backend"
 	"github.com/emersion/imap/commands"
 	"github.com/emersion/imap/sasl"
 )
@@ -13,7 +12,7 @@ type Login struct {
 	commands.Login
 }
 
-func (cmd *Login) Handle(conn *Conn, bkd backend.Backend) error {
+func (cmd *Login) Handle(conn *Conn) error {
 	if conn.State != common.NotAuthenticatedState {
 		return errors.New("Already authenticated")
 	}
@@ -21,7 +20,7 @@ func (cmd *Login) Handle(conn *Conn, bkd backend.Backend) error {
 		return errors.New("Authentication disabled")
 	}
 
-	user, err := bkd.Login(cmd.Username, cmd.Password)
+	user, err := conn.Server.Backend.Login(cmd.Username, cmd.Password)
 	if err != nil {
 		return err
 	}
@@ -37,7 +36,7 @@ type Authenticate struct {
 	Mechanisms map[string]sasl.Server
 }
 
-func (cmd *Authenticate) Handle(conn *Conn, bkd backend.Backend) error {
+func (cmd *Authenticate) Handle(conn *Conn) error {
 	if conn.State != common.NotAuthenticatedState {
 		return errors.New("Already authenticated")
 	}
