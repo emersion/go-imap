@@ -23,6 +23,8 @@ type Conn struct {
 	User backend.User
 	// If the client has selected a mailbox, the mailbox.
 	Mailbox backend.Mailbox
+	// True if the currently selected mailbox has been opened in read-only mode.
+	MailboxReadOnly bool
 }
 
 // Close this connection.

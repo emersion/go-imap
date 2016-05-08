@@ -151,8 +151,16 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		common.Noop: func () Handler { return &Noop{} },
 		common.Capability: func () Handler { return &Capability{} },
 		common.Logout: func () Handler { return &Logout{} },
+
 		common.Login: func () Handler { return &Login{} },
 		common.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
+
+		common.Select: func () Handler { return &Select{} },
+		common.Examine: func () Handler {
+			hdlr := &Select{}
+			hdlr.ReadOnly = true
+			return hdlr
+		},
 	}
 
 	go s.listen()

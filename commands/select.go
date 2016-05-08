@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"errors"
+
 	imap "github.com/emersion/imap/common"
 )
 
@@ -12,14 +14,27 @@ type Select struct {
 	ReadOnly bool
 }
 
-func (c *Select) Command() *imap.Command {
+func (cmd *Select) Command() *imap.Command {
 	name := imap.Select
-	if c.ReadOnly {
+	if cmd.ReadOnly {
 		name = imap.Examine
 	}
 
 	return &imap.Command{
 		Name: name,
-		Arguments: []interface{}{c.Mailbox},
+		Arguments: []interface{}{cmd.Mailbox},
 	}
+}
+
+func (cmd *Select) Parse(fields []interface{}) error {
+	if len(fields) < 1 {
+		return errors.New("No enough arguments")
+	}
+
+	var ok bool
+	if cmd.Mailbox, ok = fields[0].(string); !ok {
+		return errors.New("Mailbox name is not a string")
+	}
+
+	return nil
 }
