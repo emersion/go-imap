@@ -53,6 +53,10 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 
 	for {
+		if conn.State == imap.LogoutState {
+			return conn.Close()
+		}
+
 		fields, err := conn.ReadLine()
 		if err == io.EOF {
 			return nil
@@ -124,6 +128,7 @@ func NewServer(l net.Listener) *Server {
 		commands: map[string]HandlerFactory{
 			imap.Noop: func () Handler { return &Noop{} },
 			imap.Capability: func () Handler { return &Capability{} },
+			imap.Logout: func () Handler { return &Logout{} },
 		},
 	}
 

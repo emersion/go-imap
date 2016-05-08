@@ -13,3 +13,7 @@ func (c *Logout) Command() *imap.Command {
 		Name: imap.Logout,
 	}
 }
+
+func (c *Logout) Parse(fields []interface{}) error {
+	return nil
+}

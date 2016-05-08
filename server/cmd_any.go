@@ -1,6 +1,7 @@
 package server
 
 import (
+	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
 	"github.com/emersion/imap/responses"
 )
@@ -22,5 +23,25 @@ type Noop struct {
 }
 
 func (cmd *Noop) Handle(conn *Conn) error {
+	return nil
+}
+
+type Logout struct {
+	commands.Logout
+}
+
+func (cmd *Logout) Handle(conn *Conn) error {
+	res := &imap.StatusResp{
+		Tag: "*",
+		Type: imap.BYE,
+		Info: "Closing connection",
+	}
+
+	if err := res.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	// Request to close the connection
+	conn.State = imap.LogoutState
 	return nil
 }

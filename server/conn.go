@@ -18,6 +18,16 @@ type Conn struct {
 	State imap.ConnState
 }
 
+func (c *Conn) Close() error {
+	if err := c.conn.Close(); err != nil {
+		return err
+	}
+
+	c.State = imap.LogoutState
+
+	return nil
+}
+
 func (c *Conn) getCaps() (caps []string) {
 	caps = []string{"IMAP4rev1"}
 
