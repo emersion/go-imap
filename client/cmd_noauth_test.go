@@ -10,11 +10,12 @@ import (
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/client"
+	"github.com/emersion/imap/sasl"
 )
 
 func TestClient_Authenticate(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		sasl := client.NewPlainSasl("username", "password", "")
+		sasl := sasl.NewPlainClient("username", "password", "")
 
 		err = c.Authenticate(sasl)
 		if err != nil {

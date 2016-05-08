@@ -7,6 +7,7 @@ import (
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
 	"github.com/emersion/imap/responses"
+	"github.com/emersion/imap/sasl"
 )
 
 // If the connection to the IMAP server isn't secure, starts TLS negociation.
@@ -40,7 +41,7 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 // Indicates a SASL authentication mechanism to the server. If the server
 // supports the requested authentication mechanism, it performs an
 // authentication protocol exchange to authenticate and identify the client.
-func (c *Client) Authenticate(auth imap.SaslClient) (err error) {
+func (c *Client) Authenticate(auth sasl.Client) (err error) {
 	if c.State != imap.NotAuthenticatedState {
 		err = errors.New("Already logged in")
 		return

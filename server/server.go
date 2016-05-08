@@ -7,15 +7,17 @@ import (
 	"log"
 	"net"
 
-	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/common"
+	"github.com/emersion/imap/backend"
+	"github.com/emersion/imap/sasl"
 )
 
 // A command handler.
 type Handler interface {
-	imap.Parser
+	common.Parser
 
 	// Handle this command for a given connection.
-	Handle(conn *Conn, bkd Backend) error
+	Handle(conn *Conn, bkd backend.Backend) error
 }
 
 // A function that creates handlers.
@@ -25,8 +27,8 @@ type HandlerFactory func () Handler
 type Server struct {
 	listener net.Listener
 	commands map[string]HandlerFactory
-	auths map[string]imap.SaslServer
-	backend Backend
+	auths map[string]sasl.Server
+	backend backend.Backend
 
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
@@ -64,7 +66,7 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 
 	for {
-		if conn.State == imap.LogoutState {
+		if conn.State == common.LogoutState {
 			return conn.Close()
 		}
 
@@ -77,21 +79,21 @@ func (s *Server) handleConn(conn *Conn) error {
 			continue
 		}
 
-		var res imap.WriterTo
+		var res common.WriterTo
 
-		cmd := &imap.Command{}
+		cmd := &common.Command{}
 		if err := cmd.Parse(fields); err != nil {
-			res = &imap.StatusResp{
+			res = &common.StatusResp{
 				Tag: "*",
-				Type: imap.BAD,
+				Type: common.BAD,
 				Info: err.Error(),
 			}
 		} else {
 			res, err = s.handleCommand(cmd, conn)
 			if err != nil {
-				res = &imap.StatusResp{
+				res = &common.StatusResp{
 					Tag: cmd.Tag,
-					Type: imap.BAD,
+					Type: common.BAD,
 					Info: err.Error(),
 				}
 			}
@@ -104,7 +106,7 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 }
 
-func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo, err error) {
+func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.WriterTo, err error) {
 	newHandler, ok := s.commands[cmd.Name]
 	if !ok {
 		err = errors.New("Unknown command")
@@ -117,15 +119,15 @@ func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo
 	}
 
 	if err := handler.Handle(conn, s.backend); err != nil {
-		res = &imap.StatusResp{
+		res = &common.StatusResp{
 			Tag: cmd.Tag,
-			Type: imap.NO,
+			Type: common.NO,
 			Info: err.Error(),
 		}
 	} else {
-		res = &imap.StatusResp{
+		res = &common.StatusResp{
 			Tag: cmd.Tag,
-			Type: imap.OK,
+			Type: common.OK,
 			Info: cmd.Name + " completed",
 		}
 	}
@@ -134,29 +136,29 @@ func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo
 }
 
 // Create a new IMAP server from an existing listener.
-func NewServer(l net.Listener, bkd Backend) *Server {
+func NewServer(l net.Listener, bkd backend.Backend) *Server {
 	s := &Server{
 		listener: l,
 		backend: bkd,
 	}
 
-	s.auths = map[string]imap.SaslServer{
-		"PLAIN": &PlainSasl{backend: bkd},
+	s.auths = map[string]sasl.Server{
+		"PLAIN": sasl.NewPlainServer(bkd),
 	}
 
 	s.commands = map[string]HandlerFactory{
-		imap.Noop: func () Handler { return &Noop{} },
-		imap.Capability: func () Handler { return &Capability{} },
-		imap.Logout: func () Handler { return &Logout{} },
-		imap.Login: func () Handler { return &Login{} },
-		imap.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
+		common.Noop: func () Handler { return &Noop{} },
+		common.Capability: func () Handler { return &Capability{} },
+		common.Logout: func () Handler { return &Logout{} },
+		common.Login: func () Handler { return &Login{} },
+		common.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
 	}
 
 	go s.listen()
 	return s
 }
 
-func Listen(addr string, bkd Backend) (s *Server, err error) {
+func Listen(addr string, bkd backend.Backend) (s *Server, err error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return

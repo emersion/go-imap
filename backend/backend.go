@@ -1,7 +1,7 @@
-package server
+package backend
 
 // An IMAP server backend.
 type Backend interface {
 	// Authenticate a user.
-	Login(username, password string) error
+	Login(username, password string) (User, error)
 }

@@ -5,26 +5,33 @@ import (
 	"crypto/tls"
 	"net"
 
-	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/common"
+	"github.com/emersion/imap/backend"
 )
 
 type Conn struct {
-	*imap.Reader
-	*imap.Writer
+	*common.Reader
+	*common.Writer
 
 	conn net.Conn
 
+	// This connection's server.
 	Server *Server
-	State imap.ConnState
+	// This connection's current state.
+	State common.ConnState
+	// If the client is logged in, the user.
+	User backend.User
+	// If the client has selected a mailbox, the mailbox.
+	Mailbox backend.Mailbox
 }
 
+// Close this connection.
 func (c *Conn) Close() error {
 	if err := c.conn.Close(); err != nil {
 		return err
 	}
 
-	c.State = imap.LogoutState
-
+	c.State = common.LogoutState
 	return nil
 }
 
@@ -32,14 +39,14 @@ func (c *Conn) getCaps() (caps []string) {
 	caps = []string{"IMAP4rev1"}
 
 	switch c.State {
-	case imap.NotAuthenticatedState:
+	case common.NotAuthenticatedState:
 		if !c.CanAuth() {
-			caps = append(caps, imap.StartTLS, "LOGINDISABLED")
+			caps = append(caps, common.StartTLS, "LOGINDISABLED")
 			return
 		}
 
 		caps = append(caps, "AUTH=PLAIN")
-	case imap.AuthenticatedState, imap.SelectedState:
+	case common.AuthenticatedState, common.SelectedState:
 	}
 
 	return
@@ -52,10 +59,10 @@ func (c *Conn) greet() error {
 		args[i] = cap
 	}
 
-	greeting := &imap.StatusResp{
+	greeting := &common.StatusResp{
 		Tag: "*",
-		Type: imap.OK,
-		Code: imap.Capability,
+		Type: common.OK,
+		Code: common.Capability,
 		Arguments: args,
 		Info: "IMAP4rev1 Service Ready",
 	}
@@ -63,18 +70,20 @@ func (c *Conn) greet() error {
 	return greeting.WriteTo(c.Writer)
 }
 
+// Check if this connection is encrypted.
 func (c *Conn) IsTLS() bool {
 	_, ok := c.conn.(*tls.Conn)
 	return ok
 }
 
+// Check if the client can use plain text authentication.
 func (c *Conn) CanAuth() bool {
 	return c.IsTLS() || c.Server.AllowInsecureAuth
 }
 
 func newConn(s *Server, c net.Conn) *Conn {
-	r := imap.NewReader(bufio.NewReader(c))
-	w := imap.NewWriter(c)
+	r := common.NewReader(bufio.NewReader(c))
+	w := common.NewWriter(c)
 
 	return &Conn{
 		Reader: r,
@@ -83,6 +92,6 @@ func newConn(s *Server, c net.Conn) *Conn {
 		conn: c,
 
 		Server: s,
-		State: imap.NotAuthenticatedState,
+		State: common.NotAuthenticatedState,
 	}
 }

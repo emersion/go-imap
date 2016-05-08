@@ -1,4 +1,9 @@
-package common
+// Library for Simple Authentication and Security Layer (SASL).
+package sasl
+
+import (
+	"github.com/emersion/imap/backend"
+)
 
 // Note:
 //   Most of this code was copied, with some modifications, from net/smtp. It
@@ -6,7 +11,7 @@ package common
 //   could be shared by SMTP, IMAP, and other packages.
 
 // Client interface to perform challenge-response authentication.
-type SaslClient interface {
+type Client interface {
 	// Start begins SASL authentication with the server. It returns the
 	// authentication mechanism name and "initial response" data (if required by
 	// the selected mechanism). A non-nil error causes the client to abort the
@@ -24,7 +29,8 @@ type SaslClient interface {
 }
 
 // Server interface to perform challenge-response authentication.
-type SaslServer interface {
+type Server interface {
 	Start() (ir []byte, err error)
 	Next(challenge []byte) (response []byte, err error)
+	User() backend.User
 }

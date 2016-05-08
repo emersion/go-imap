@@ -4,11 +4,12 @@ import (
 	"encoding/base64"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/sasl"
 )
 
 // An AUTHENTICATE response.
 type Authenticate struct {
-	Mechanism imap.SaslClient
+	Mechanism sasl.Client
 	InitialResponse []byte
 	Writer *imap.Writer
 }
