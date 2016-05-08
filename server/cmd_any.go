@@ -10,7 +10,7 @@ type Capability struct {
 	commands.Capability
 }
 
-func (cmd *Capability) Handle(conn *Conn) error {
+func (cmd *Capability) Handle(conn *Conn, bkd Backend) error {
 	res := &responses.Capability{
 		Caps: conn.getCaps(),
 	}
@@ -22,7 +22,7 @@ type Noop struct {
 	commands.Noop
 }
 
-func (cmd *Noop) Handle(conn *Conn) error {
+func (cmd *Noop) Handle(conn *Conn, bkd Backend) error {
 	return nil
 }
 
@@ -30,7 +30,7 @@ type Logout struct {
 	commands.Logout
 }
 
-func (cmd *Logout) Handle(conn *Conn) error {
+func (cmd *Logout) Handle(conn *Conn, bkd Backend) error {
 	res := &imap.StatusResp{
 		Tag: "*",
 		Type: imap.BYE,

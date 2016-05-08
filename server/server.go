@@ -1,3 +1,4 @@
+// An IMAP server.
 package server
 
 import (
@@ -9,19 +10,25 @@ import (
 	imap "github.com/emersion/imap/common"
 )
 
+// A command handler.
 type Handler interface {
 	imap.Parser
 
-	Handle(conn *Conn) error
+	// Handle this command for a given connection.
+	Handle(conn *Conn, bkd Backend) error
 }
 
+// A function that creates handlers.
 type HandlerFactory func () Handler
 
+// An IMAP server.
 type Server struct {
 	listener net.Listener
 	commands map[string]HandlerFactory
+	backend Backend
 }
 
+// Get this server's address.
 func (s *Server) Addr() net.Addr {
 	return s.listener.Addr()
 }
@@ -105,7 +112,7 @@ func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo
 		return
 	}
 
-	if err := handler.Handle(conn); err != nil {
+	if err := handler.Handle(conn, s.backend); err != nil {
 		res = &imap.StatusResp{
 			Tag: cmd.Tag,
 			Type: imap.NO,
@@ -122,26 +129,29 @@ func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo
 	return
 }
 
-func NewServer(l net.Listener) *Server {
+// Create a new IMAP server from an existing listener.
+func NewServer(l net.Listener, bkd Backend) *Server {
 	s := &Server{
 		listener: l,
 		commands: map[string]HandlerFactory{
 			imap.Noop: func () Handler { return &Noop{} },
 			imap.Capability: func () Handler { return &Capability{} },
 			imap.Logout: func () Handler { return &Logout{} },
+			imap.Login: func () Handler { return &Login{} },
 		},
+		backend: bkd,
 	}
 
 	go s.listen()
 	return s
 }
 
-func Listen(addr string) (s *Server, err error) {
+func Listen(addr string, bkd Backend) (s *Server, err error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return
 	}
 
-	s = NewServer(l)
+	s = NewServer(l, bkd)
 	return
 }

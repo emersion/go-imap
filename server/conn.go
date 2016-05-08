@@ -31,12 +31,17 @@ func (c *Conn) Close() error {
 func (c *Conn) getCaps() (caps []string) {
 	caps = []string{"IMAP4rev1"}
 
-	if !c.IsTLS() {
-		caps = append(caps, imap.StartTLS, "LOGINDISABLED")
-		return
+	switch c.State {
+	case imap.NotAuthenticatedState:
+		if !c.IsTLS() {
+			caps = append(caps, imap.StartTLS, "LOGINDISABLED")
+			return
+		}
+
+		caps = append(caps, "AUTH=PLAIN")
+	case imap.AuthenticatedState, imap.SelectedState:
 	}
 
-	caps = append(caps, "AUTH=PLAIN")
 	return
 }
 
