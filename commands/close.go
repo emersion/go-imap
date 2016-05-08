@@ -8,8 +8,12 @@ import (
 // See https://tools.ietf.org/html/rfc3501#section-6.4.2
 type Close struct {}
 
-func (c *Close) Command() *imap.Command {
+func (cmd *Close) Command() *imap.Command {
 	return &imap.Command{
 		Name: imap.Close,
 	}
+}
+
+func (cmd *Close) Parse(fields []interface{}) error {
+	return nil
 }
