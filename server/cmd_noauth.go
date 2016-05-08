@@ -15,6 +15,9 @@ func (cmd *Login) Handle(conn *Conn, bkd Backend) error {
 	if conn.State != imap.NotAuthenticatedState {
 		return errors.New("Already authenticated")
 	}
+	if !conn.CanAuth() {
+		return errors.New("Authentication disabled")
+	}
 
 	if err := bkd.Login(cmd.Username, cmd.Password); err != nil {
 		return err
@@ -34,6 +37,14 @@ func (cmd *Authenticate) Handle(conn *Conn, bkd Backend) error {
 	if conn.State != imap.NotAuthenticatedState {
 		return errors.New("Already authenticated")
 	}
+	if !conn.CanAuth() {
+		return errors.New("Authentication disabled")
+	}
 
-	return cmd.Authenticate.Handle(cmd.Mechanisms, conn.Reader, conn.Writer)
+	if err := cmd.Authenticate.Handle(cmd.Mechanisms, conn.Reader, conn.Writer); err != nil {
+		return err
+	}
+
+	conn.State = imap.AuthenticatedState
+	return nil
 }

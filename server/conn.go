@@ -33,7 +33,7 @@ func (c *Conn) getCaps() (caps []string) {
 
 	switch c.State {
 	case imap.NotAuthenticatedState:
-		if !c.IsTLS() {
+		if !c.CanAuth() {
 			caps = append(caps, imap.StartTLS, "LOGINDISABLED")
 			return
 		}
@@ -66,6 +66,10 @@ func (c *Conn) greet() error {
 func (c *Conn) IsTLS() bool {
 	_, ok := c.conn.(*tls.Conn)
 	return ok
+}
+
+func (c *Conn) CanAuth() bool {
+	return c.IsTLS() || c.Server.AllowInsecureAuth
 }
 
 func newConn(s *Server, c net.Conn) *Conn {

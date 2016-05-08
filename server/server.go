@@ -27,6 +27,9 @@ type Server struct {
 	commands map[string]HandlerFactory
 	auths map[string]imap.SaslServer
 	backend Backend
+
+	// Allow authentication over unencrypted connections.
+	AllowInsecureAuth bool
 }
 
 // Get this server's address.
