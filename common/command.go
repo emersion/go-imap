@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"strings"
 )
 
 // IMAP4rev1 commands.
@@ -86,6 +87,9 @@ func (c *Command) Parse(fields []interface{}) error {
 	if c.Name, ok = fields[1].(string); !ok {
 		return errors.New("Cannot parse command name")
 	}
+
+	// Command names are case-insensitive
+	c.Name = strings.ToUpper(c.Name)
 
 	c.Arguments = fields[2:]
 
