@@ -48,6 +48,9 @@ type Message struct {
 	// The message identifier. Can be either a sequence number or a UID, depending
 	// of how this message has been retrieved.
 	Id uint32
+	// The message items that are currently filled in.
+	Items []string
+
 	// The message envelope.
 	Envelope *Envelope
 	// The message body parts.
@@ -66,6 +69,7 @@ type Message struct {
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
+	m.Items = nil
 	m.Body = map[string]*Literal{}
 
 	var key string
@@ -76,6 +80,8 @@ func (m *Message) Parse(fields []interface{}) error {
 				return errors.New("Key is not a string")
 			}
 		} else { // It's a value
+			m.Items = append(m.Items, key)
+
 			switch key {
 			case "ENVELOPE":
 				env, ok := f.([]interface{})

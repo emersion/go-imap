@@ -2,6 +2,7 @@ package responses
 
 import (
 	"errors"
+	"strings"
 
 	imap "github.com/emersion/imap/common"
 )
@@ -17,6 +18,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 		r.Mailbox = &imap.MailboxStatus{}
 	}
 	mbox := r.Mailbox
+	mbox.Items = nil
 
 	for h := range hdlr {
 		fields, ok := h.AcceptNamedResp(imap.Status)
@@ -44,6 +46,9 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 					return errors.New("Key is not a string")
 				}
 			} else {
+				key = strings.ToUpper(key)
+				mbox.Items = append(mbox.Items, key)
+
 				switch key {
 				case "MESSAGES":
 					mbox.Messages = imap.ParseNumber(f)
@@ -57,6 +62,38 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 					mbox.Unseen = imap.ParseNumber(f)
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Status) WriteTo(w *imap.Writer) error {
+	mbox := r.Mailbox
+
+	for _, name := range mbox.Items {
+		var fields []interface{}
+		switch name {
+		case "MESSAGES":
+			fields = []interface{}{mbox.Messages}
+		case "RECENT":
+			fields = []interface{}{mbox.Recent}
+		case "UIDNEXT":
+			fields = []interface{}{mbox.UidNext}
+		case "UIDVALIDITY":
+			fields = []interface{}{mbox.UidValidity}
+		case "UNSEEN":
+			fields = []interface{}{mbox.Unseen}
+		}
+
+		if fields == nil {
+			continue
+		}
+
+		fields = append([]interface{}{imap.Status, name}, fields...)
+		res := imap.NewUntaggedResp(fields)
+		if err := res.WriteTo(w); err != nil {
+			return err
 		}
 	}
 

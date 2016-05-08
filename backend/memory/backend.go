@@ -18,7 +18,14 @@ func (bkd *Backend) Login(username, password string) (user backend.User, err err
 	user = &User{
 		username: username,
 		mailboxes: map[string]backend.Mailbox{
-			"INBOX": &Mailbox{name: "INBOX"},
+			"INBOX": &Mailbox{
+				name: "INBOX",
+				messages: []*Message{
+					&Message{uid: 1},
+					&Message{uid: 2},
+					&Message{uid: 3},
+				},
+			},
 		},
 	}
 	return

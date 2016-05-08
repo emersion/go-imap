@@ -20,6 +20,9 @@ type MailboxStatus struct {
 	Flags []string
 	// The mailbox permanent flags.
 	PermanentFlags []string
+	// The mailbox items that are currently filled in.
+	Items []string
+
 	// The number of messages in this mailbox.
 	Messages uint32
 	// The number of messages not seen since the last time the mailbox was opened.

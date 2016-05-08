@@ -17,12 +17,12 @@ func (cmd *Select) Handle(conn *Conn) error {
 		return errors.New("Not authenticated")
 	}
 
-	mailbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
 
-	conn.Mailbox = mailbox
+	conn.Mailbox = mbox
 	conn.MailboxReadOnly = cmd.ReadOnly
 	return nil
 }
@@ -40,7 +40,6 @@ func (cmd *List) Handle(conn *Conn) error {
 	defer close(done)
 
 	ch := make(chan *common.MailboxInfo)
-
 	res := responses.List{Mailboxes: ch}
 
 	go (func () {
@@ -68,4 +67,27 @@ func (cmd *List) Handle(conn *Conn) error {
 	close(ch)
 
 	return <-done
+}
+
+type Status struct {
+	commands.Status
+}
+
+func (cmd *Status) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	if err != nil {
+		return err
+	}
+
+	status, err := mbox.Status(cmd.Items)
+	if err != nil {
+		return err
+	}
+
+	res := responses.Status{Mailbox: status}
+	return res.WriteTo(conn.Writer)
 }

@@ -39,7 +39,7 @@ SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
 UNSUBSCRIBE   | ✓      | ✓            | ✗      | ✗
 LIST          | ✓      | ✓            | ✓      | ✗
 LSUB          | ✓      | ✓            | ✗      | ✗
-STATUS        | ✓      | ✓            | ✗      | ✗
+STATUS        | ✓      | ✓            | ✓      | ✗
 APPEND        | ✓      | ✓            | ✗      | ✗
 CHECK         | ✓      | ✓            | ✗      | ✗
 CLOSE         | ✓      | ✓            | ✗      | ✗

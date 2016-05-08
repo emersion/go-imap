@@ -162,6 +162,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 			return hdlr
 		},
 		common.List: func () Handler { return &List{} },
+		common.Status: func () Handler { return &Status{} },
 	}
 
 	go s.listen()
