@@ -25,6 +25,7 @@ type HandlerFactory func () Handler
 type Server struct {
 	listener net.Listener
 	commands map[string]HandlerFactory
+	auths map[string]imap.SaslServer
 	backend Backend
 }
 
@@ -133,13 +134,19 @@ func (s *Server) handleCommand(cmd *imap.Command, conn *Conn) (res imap.WriterTo
 func NewServer(l net.Listener, bkd Backend) *Server {
 	s := &Server{
 		listener: l,
-		commands: map[string]HandlerFactory{
-			imap.Noop: func () Handler { return &Noop{} },
-			imap.Capability: func () Handler { return &Capability{} },
-			imap.Logout: func () Handler { return &Logout{} },
-			imap.Login: func () Handler { return &Login{} },
-		},
 		backend: bkd,
+	}
+
+	s.auths = map[string]imap.SaslServer{
+		"PLAIN": &PlainSasl{backend: bkd},
+	}
+
+	s.commands = map[string]HandlerFactory{
+		imap.Noop: func () Handler { return &Noop{} },
+		imap.Capability: func () Handler { return &Capability{} },
+		imap.Logout: func () Handler { return &Logout{} },
+		imap.Login: func () Handler { return &Login{} },
+		imap.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
 	}
 
 	go s.listen()

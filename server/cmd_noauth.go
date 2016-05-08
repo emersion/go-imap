@@ -23,3 +23,17 @@ func (cmd *Login) Handle(conn *Conn, bkd Backend) error {
 	conn.State = imap.AuthenticatedState
 	return nil
 }
+
+type Authenticate struct {
+	commands.Authenticate
+
+	Mechanisms map[string]imap.SaslServer
+}
+
+func (cmd *Authenticate) Handle(conn *Conn, bkd Backend) error {
+	if conn.State != imap.NotAuthenticatedState {
+		return errors.New("Already authenticated")
+	}
+
+	return cmd.Authenticate.Handle(cmd.Mechanisms, conn.Reader, conn.Writer)
+}
