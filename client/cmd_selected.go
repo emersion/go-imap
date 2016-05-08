@@ -127,7 +127,7 @@ func (c *Client) UidSearch(criteria []interface{}) (uids []uint32, err error) {
 	return c.search(true, criteria)
 }
 
-func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
+func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *imap.Message) (err error) {
 	defer close(ch)
 
 	if c.State != imap.SelectedState {
@@ -157,17 +157,17 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan<- 
 
 // Retrieves data associated with a message in the mailbox.
 // See RFC 3501 section 6.4.5 for a list of items that can be requested.
-func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
+func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) (err error) {
 	return c.fetch(false, seqset, items, ch)
 }
 
 // Identical to Fetch, but seqset is interpreted as containing unique
 // identifiers instead of message sequence numbers.
-func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
+func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) (err error) {
 	return c.fetch(true, seqset, items, ch)
 }
 
-func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interface{}, ch chan<- *imap.Message) (err error) {
+func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
 	defer (func () {
 		if ch != nil {
 			close(ch)
@@ -212,13 +212,13 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 // Alters data associated with a message in the mailbox. If ch is not nil, the
 // updated value of the data will be sent to this channel.
 // See RFC 3501 section 6.4.6 for a list of items that can be updated.
-func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch chan<- *imap.Message) (err error) {
+func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
 	return c.store(false, seqset, item, value, ch)
 }
 
 // Identical to Store, but seqset is interpreted as containing unique
 // identifiers instead of message sequence numbers.
-func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, ch chan<- *imap.Message) (err error) {
+func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
 	return c.store(true, seqset, item, value, ch)
 }
 
