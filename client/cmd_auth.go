@@ -157,7 +157,7 @@ func (c *Client) Unsubscribe(name string) (err error) {
 // and the root name of the name given in the reference. The character "*" is a
 // wildcard, and matches zero or more characters at this position. The
 // character "%" is similar to "*", but it does not match a hierarchy delimiter.
-func (c *Client) List(ref, name string, ch chan<- *imap.MailboxInfo) (err error) {
+func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 	defer close(ch)
 
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
@@ -182,7 +182,7 @@ func (c *Client) List(ref, name string, ch chan<- *imap.MailboxInfo) (err error)
 
 // Returns a subset of names from the set of names that the user has declared as
 // being "active" or "subscribed".
-func (c *Client) Lsub(ref, name string, ch chan<- *imap.MailboxInfo) (err error) {
+func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 	defer close(ch)
 
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
