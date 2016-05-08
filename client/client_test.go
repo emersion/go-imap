@@ -67,10 +67,13 @@ type CmdScanner struct {
 	scanner *bufio.Scanner
 }
 
-func (s *CmdScanner) Scan() (tag string, cmd string) {
+func (s *CmdScanner) ScanLine() string {
 	s.scanner.Scan()
+	return s.scanner.Text()
+}
 
-	parts := strings.SplitN(s.scanner.Text(), " ", 2)
+func (s *CmdScanner) Scan() (tag string, cmd string) {
+	parts := strings.SplitN(s.ScanLine(), " ", 2)
 	return parts[0], parts[1]
 }
 
