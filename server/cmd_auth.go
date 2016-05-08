@@ -22,8 +22,78 @@ func (cmd *Select) Handle(conn *Conn) error {
 		return err
 	}
 
+	items := []string{"MESSAGES", "RECENT", "UNSEEN", "UIDNEXT", "UIDVALIDITY"}
+	status, err := mbox.Status(items)
+	if err != nil {
+		return err
+	}
+
 	conn.Mailbox = mbox
 	conn.MailboxReadOnly = cmd.ReadOnly
+
+	flags := make([]interface{}, len(status.Flags))
+	for i, f := range status.Flags {
+		flags[i] = f
+	}
+	res := common.NewUntaggedResp([]interface{}{"FLAGS", flags})
+	if err := res.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	res = common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
+	if err := res.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	res = common.NewUntaggedResp([]interface{}{status.Recent, "RECENT"})
+	if err := res.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	statusRes := &common.StatusResp{
+		Tag: "*",
+		Type: common.OK,
+		Code: "UNSEEN",
+		Arguments: []interface{}{status.Unseen},
+	}
+	if err := statusRes.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	flags = make([]interface{}, len(status.PermanentFlags))
+	for i, f := range status.PermanentFlags {
+		flags[i] = f
+	}
+	statusRes = &common.StatusResp{
+		Tag: "*",
+		Type: common.OK,
+		Code: "PERMANENTFLAGS",
+		Arguments: []interface{}{flags},
+	}
+	if err := statusRes.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	statusRes = &common.StatusResp{
+		Tag: "*",
+		Type: common.OK,
+		Code: "UIDNEXT",
+		Arguments: []interface{}{status.UidNext},
+	}
+	if err := statusRes.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
+	statusRes = &common.StatusResp{
+		Tag: "*",
+		Type: common.OK,
+		Code: "UIDVALIDITY",
+		Arguments: []interface{}{status.UidValidity},
+	}
+	if err := statusRes.WriteTo(conn.Writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
