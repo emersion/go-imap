@@ -149,6 +149,10 @@ func (w *Writer) writeLiteralField(literal *Literal) (N int, err error) {
 }
 
 func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
+	if literal == nil {
+		return w.WriteNil()
+	}
+
 	n, err := w.writeLiteralField(literal)
 	N += n
 	if err != nil {

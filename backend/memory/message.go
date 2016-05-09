@@ -9,7 +9,10 @@ type Message struct {
 }
 
 func (m *Message) Metadata(items []string) (metadata *common.Message) {
-	metadata = &common.Message{Items: items}
+	metadata = &common.Message{
+		Items: items,
+		Body: map[string]*common.Literal{},
+	}
 
 	for _, item := range items {
 		switch item {
@@ -25,6 +28,8 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 			metadata.Size = m.metadata.Size
 		case "UID":
 			metadata.Uid = m.metadata.Uid
+		default:
+			metadata.Body[item] = m.metadata.Body[item]
 		}
 	}
 

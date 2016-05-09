@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -80,6 +81,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				return errors.New("Key is not a string")
 			}
 		} else { // It's a value
+			key = strings.ToUpper(key)
 			m.Items = append(m.Items, key)
 
 			switch key {
@@ -136,7 +138,7 @@ func (m *Message) Parse(fields []interface{}) error {
 func (m *Message) Format() (fields []interface{}) {
 	for _, item := range m.Items {
 		var value interface{}
-		switch item {
+		switch strings.ToUpper(item) {
 		case "ENVELOPE":
 			value = m.Envelope.Format()
 		case "BODYSTRUCTURE", "BODY":
@@ -153,6 +155,8 @@ func (m *Message) Format() (fields []interface{}) {
 			value = m.Size
 		case "UID":
 			value = m.Uid
+		default:
+			value = m.Body[item]
 		}
 
 		fields = append(fields, item, value)
