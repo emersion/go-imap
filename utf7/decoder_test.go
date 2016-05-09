@@ -87,7 +87,7 @@ var decode = []struct {
 	{"&3ADYAA-", "", false}, // U+DC00 U+D800
 }
 
-func TestDecode(t *testing.T) {
+func TestDecoder(t *testing.T) {
 	for _, test := range decode {
 		out, err := utf7.Decoder.String(test.in)
 		if out != test.out {
