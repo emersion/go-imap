@@ -155,3 +155,37 @@ func TestWriter_WriteLiteral(t *testing.T) {
 		t.Error("Not the expected literal")
 	}
 }
+
+func TestWriter_WriteRespCode_NoArgs(t *testing.T) {
+	w, b := newWriter()
+
+	if _, err := w.WriteRespCode("READ-ONLY", nil); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "[READ-ONLY]" {
+		t.Error("Not the expected response code")
+	}
+}
+
+func TestWriter_WriteRespCode_WithArgs(t *testing.T) {
+	w, b := newWriter()
+
+	args := []interface{}{"IMAP4rev1", "STARTTLS", "LOGINDISABLED"}
+	if _, err := w.WriteRespCode("CAPABILITY", args); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "[CAPABILITY IMAP4rev1 STARTTLS LOGINDISABLED]" {
+		t.Error("Not the expected response code")
+	}
+}
+
+func TestWriter_WriteInfo(t *testing.T) {
+	w, b := newWriter()
+
+	if _, err := w.WriteInfo("NOOP completed"); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "NOOP completed\r\n" {
+		t.Error("Not the expected info")
+	}
+}
