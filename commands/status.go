@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A STATUS command.
@@ -30,9 +31,14 @@ func (cmd *Status) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	var ok bool
-	if cmd.Mailbox, ok = fields[0].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	mailbox, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Mailbox name is not a string")
+	}
+
+	var err error
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
 	}
 
 	items, ok := fields[1].([]interface{})

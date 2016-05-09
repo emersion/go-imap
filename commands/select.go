@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A SELECT command.
@@ -31,9 +32,14 @@ func (cmd *Select) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	var ok bool
-	if cmd.Mailbox, ok = fields[0].(string); !ok {
+	mailbox, ok := fields[0].(string)
+	if !ok {
 		return errors.New("Mailbox name is not a string")
+	}
+
+	var err error
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
 	}
 
 	return nil

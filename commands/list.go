@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A LIST command.
@@ -33,12 +34,22 @@ func (cmd *List) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	var ok bool
-	if cmd.Reference, ok = fields[0].(string); !ok {
+	ref, ok := fields[0].(string)
+	if !ok {
 		return errors.New("Reference must be a string")
 	}
-	if cmd.Mailbox, ok = fields[1].(string); !ok {
+
+	mailbox, ok := fields[1].(string)
+	if !ok {
 		return errors.New("Mailbox must be a string")
+	}
+
+	var err error
+	if cmd.Reference, err = utf7.Decoder.String(ref); err != nil {
+		return err
+	}
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
 	}
 
 	return nil

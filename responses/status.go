@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A STATUS response.
@@ -26,16 +27,18 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 			continue
 		}
 		if len(fields) < 2 {
-			return errors.New("STATUS response excepts two fields")
+			return errors.New("STATUS response expects two fields")
 		}
 
-		if mbox.Name, ok = fields[0].(string); !ok {
-			return errors.New("STATUS response excepts a string as first argument")
+		name, ok := fields[0].(string)
+		if !ok {
+			return errors.New("STATUS response expects a string as first argument")
 		}
+		mbox.Name, _ = utf7.Decoder.String(name)
 
 		var items []interface{}
 		if items, ok = fields[1].([]interface{}); !ok {
-			return errors.New("STATUS response excepts a list as second argument")
+			return errors.New("STATUS response expects a list as second argument")
 		}
 
 		var key string
