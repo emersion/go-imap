@@ -30,16 +30,9 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 
 		mbox := &imap.MailboxInfo{}
-
-		flags, _ := fields[0].([]interface{})
-		for _, f := range flags {
-			if s, ok := f.(string); ok {
-				mbox.Flags = append(mbox.Flags, s)
-			}
+		if err = mbox.Parse(fields); err != nil {
+			return
 		}
-
-		mbox.Delimiter, _ = fields[1].(string)
-		mbox.Name, _ = fields[2].(string)
 
 		r.Mailboxes <- mbox
 	}
@@ -51,12 +44,9 @@ func (r *List) WriteTo(w *imap.Writer) (err error) {
 	name := r.Name()
 
 	for mbox := range r.Mailboxes {
-		flags := make([]interface{}, len(mbox.Flags))
-		for i, f := range mbox.Flags {
-			flags[i] = f
-		}
+		fields := []interface{}{name}
+		fields = append(fields, mbox.Format()...)
 
-		fields := []interface{}{name, flags, mbox.Delimiter, mbox.Name}
 		res := imap.NewUntaggedResp(fields)
 		if err = res.WriteTo(w); err != nil {
 			return
