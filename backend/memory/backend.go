@@ -12,7 +12,7 @@ import (
 type Backend struct {}
 
 func (bkd *Backend) Login(username, password string) (user backend.User, err error) {
-	if username != "username" && password != "password" {
+	if username != "username" || password != "password" {
 		err = errors.New("Bad username or password")
 		return
 	}
