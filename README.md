@@ -87,7 +87,7 @@ func main() {
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
-		log.Println(m.Name)
+		log.Println("* " + m.Name)
 	}
 
 	if err != nil {

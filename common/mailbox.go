@@ -2,6 +2,8 @@ package common
 
 import (
 	"errors"
+
+	"github.com/emersion/imap/utf7"
 )
 
 // Basic mailbox info.
@@ -24,7 +26,9 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 	info.Flags, _ = ParseStringList(flags)
 
 	info.Delimiter, _ = fields[1].(string)
-	info.Name, _ = fields[2].(string)
+
+	name, _ := fields[2].(string)
+	info.Name, _ = utf7.Decoder.String(name)
 
 	return nil
 }
