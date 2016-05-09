@@ -35,7 +35,8 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
-	return []interface{}{FormatStringList(info.Flags), info.Delimiter, info.Name}
+	name, _ := utf7.Encoder.String(info.Name)
+	return []interface{}{FormatStringList(info.Flags), info.Delimiter, name}
 }
 
 // A mailbox status.

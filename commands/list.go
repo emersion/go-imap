@@ -23,9 +23,12 @@ func (cmd *List) Command() *imap.Command {
 		name = imap.Lsub
 	}
 
+	ref, _ := utf7.Encoder.String(cmd.Reference)
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	return &imap.Command{
 		Name: name,
-		Arguments: []interface{}{cmd.Reference, cmd.Mailbox},
+		Arguments: []interface{}{ref, mailbox},
 	}
 }
 

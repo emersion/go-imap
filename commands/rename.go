@@ -2,6 +2,7 @@ package commands
 
 import (
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A RENAME command.
@@ -11,9 +12,12 @@ type Rename struct {
 	New string
 }
 
-func (c *Rename) Command() *imap.Command {
+func (cmd *Rename) Command() *imap.Command {
+	existingName, _ := utf7.Encoder.String(cmd.Existing)
+	newName, _ := utf7.Encoder.String(cmd.New)
+
 	return &imap.Command{
 		Name: imap.Rename,
-		Arguments: []interface{}{c.Existing, c.New},
+		Arguments: []interface{}{existingName, newName},
 	}
 }

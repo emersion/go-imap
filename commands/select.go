@@ -21,9 +21,11 @@ func (cmd *Select) Command() *imap.Command {
 		name = imap.Examine
 	}
 
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	return &imap.Command{
 		Name: name,
-		Arguments: []interface{}{cmd.Mailbox},
+		Arguments: []interface{}{mailbox},
 	}
 }
 

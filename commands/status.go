@@ -15,6 +15,8 @@ type Status struct {
 }
 
 func (cmd *Status) Command() *imap.Command {
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	items := make([]interface{}, len(cmd.Items))
 	for i, f := range cmd.Items {
 		items[i] = f
@@ -22,7 +24,7 @@ func (cmd *Status) Command() *imap.Command {
 
 	return &imap.Command{
 		Name: imap.Status,
-		Arguments: []interface{}{cmd.Mailbox, items},
+		Arguments: []interface{}{mailbox, items},
 	}
 }
 

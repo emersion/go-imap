@@ -2,6 +2,7 @@ package commands
 
 import (
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A SUBSCRIBE command.
@@ -10,10 +11,12 @@ type Subscribe struct {
 	Mailbox string
 }
 
-func (c *Subscribe) Command() *imap.Command {
+func (cmd *Subscribe) Command() *imap.Command {
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	return &imap.Command{
 		Name: imap.Subscribe,
-		Arguments: []interface{}{c.Mailbox},
+		Arguments: []interface{}{mailbox},
 	}
 }
 
@@ -23,9 +26,11 @@ type Unsubscribe struct {
 	Mailbox string
 }
 
-func (c *Unsubscribe) Command() *imap.Command {
+func (cmd *Unsubscribe) Command() *imap.Command {
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	return &imap.Command{
 		Name: imap.Unsubscribe,
-		Arguments: []interface{}{c.Mailbox},
+		Arguments: []interface{}{mailbox},
 	}
 }

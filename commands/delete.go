@@ -2,6 +2,7 @@ package commands
 
 import (
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // A DELETE command.
@@ -10,9 +11,11 @@ type Delete struct {
 	Mailbox string
 }
 
-func (c *Delete) Command() *imap.Command {
+func (cmd *Delete) Command() *imap.Command {
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+
 	return &imap.Command{
 		Name: imap.Delete,
-		Arguments: []interface{}{c.Mailbox},
+		Arguments: []interface{}{mailbox},
 	}
 }

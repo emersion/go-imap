@@ -74,30 +74,31 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
 
-	for _, name := range mbox.Items {
-		var fields []interface{}
-		switch name {
+	var fields []interface{}
+	for _, item := range mbox.Items {
+		var value interface{}
+		switch strings.ToUpper(item) {
 		case "MESSAGES":
-			fields = []interface{}{mbox.Messages}
+			value = mbox.Messages
 		case "RECENT":
-			fields = []interface{}{mbox.Recent}
+			value = mbox.Recent
 		case "UIDNEXT":
-			fields = []interface{}{mbox.UidNext}
+			value = mbox.UidNext
 		case "UIDVALIDITY":
-			fields = []interface{}{mbox.UidValidity}
+			value = mbox.UidValidity
 		case "UNSEEN":
-			fields = []interface{}{mbox.Unseen}
+			value = mbox.Unseen
 		}
 
-		if fields == nil {
-			continue
-		}
+		fields = append(fields, item, value)
+	}
 
-		fields = append([]interface{}{imap.Status, name}, fields...)
-		res := imap.NewUntaggedResp(fields)
-		if err := res.WriteTo(w); err != nil {
-			return err
-		}
+	name, _ := utf7.Encoder.String(mbox.Name)
+
+	fields = append([]interface{}{imap.Status, name}, fields)
+	res := imap.NewUntaggedResp(fields)
+	if err := res.WriteTo(w); err != nil {
+		return err
 	}
 
 	return nil
