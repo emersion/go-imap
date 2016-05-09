@@ -82,7 +82,7 @@ func (c *Client) Expunge(ch chan<- uint32) (err error) {
 	return
 }
 
-func (c *Client) search(uid bool, criteria []interface{}) (ids []uint32, err error) {
+func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
 	if c.State != imap.SelectedState {
 		err = errors.New("No mailbox selected")
 		return
@@ -117,13 +117,13 @@ func (c *Client) search(uid bool, criteria []interface{}) (ids []uint32, err err
 // function) of all the messages that match those keys.
 // Criteria must be UTF-8 encoded.
 // See RFC 3501 section 6.4.4 for a list of searching criteria.
-func (c *Client) Search(criteria []interface{}) (seqids []uint32, err error) {
+func (c *Client) Search(criteria *imap.SearchCriteria) (seqids []uint32, err error) {
 	return c.search(false, criteria)
 }
 
 // Identical to Search, but unique identifiers are returned instead of message
 // sequence numbers.
-func (c *Client) UidSearch(criteria []interface{}) (uids []uint32, err error) {
+func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) {
 	return c.search(true, criteria)
 }
 

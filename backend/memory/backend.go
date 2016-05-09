@@ -3,6 +3,7 @@ package memory
 
 import (
 	"errors"
+	"time"
 
 	"github.com/emersion/imap/backend"
 	"github.com/emersion/imap/common"
@@ -16,6 +17,8 @@ func (bkd *Backend) Login(username, password string) (user backend.User, err err
 		return
 	}
 
+	now := time.Now()
+
 	user = &User{
 		username: username,
 		mailboxes: map[string]backend.Mailbox{
@@ -23,11 +26,12 @@ func (bkd *Backend) Login(username, password string) (user backend.User, err err
 				name: "INBOX",
 				messages: []*Message{
 					&Message{&common.Message{
-						Uid: 1,
+						Uid: 6,
 						Envelope: &common.Envelope{Subject: "Hello World!"},
 						BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
 						Body: map[string]*common.Literal{"BODY[]": common.NewLiteral([]byte("Hi there! How are you?"))},
 						Size: 22,
+						InternalDate: &now,
 					}},
 				},
 			},

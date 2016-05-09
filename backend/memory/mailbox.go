@@ -19,8 +19,8 @@ func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
 
 func (mbox *Mailbox) uidNext() (uid uint32) {
 	for _, msg := range mbox.messages {
-		if msg.metadata.Uid > uid {
-			uid = msg.metadata.Uid
+		if msg.Uid > uid {
+			uid = msg.Uid
 		}
 	}
 	uid++
@@ -49,7 +49,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []strin
 	for i, msg := range mbox.messages {
 		id := uint32(i+1)
 
-		if (uid && !seqset.Contains(msg.metadata.Uid)) || (!uid && !seqset.Contains(id)) {
+		if (uid && !seqset.Contains(msg.Uid)) || (!uid && !seqset.Contains(id)) {
 			continue
 		}
 
@@ -62,5 +62,19 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []strin
 }
 
 func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (ids []uint32, err error) {
+	for i, msg := range mbox.messages {
+		if !msg.Matches(criteria) {
+			continue
+		}
+
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i+1)
+		}
+		ids = append(ids, id)
+	}
+
 	return
 }

@@ -109,7 +109,13 @@ func TestClient_Search(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.SelectedState
 
-		criteria := []interface{}{"FLAGGED", "SINCE", "1-Feb-1994", "NOT", "FROM", "Smith"}
+		date, _ := common.ParseSearchDate("1-Feb-1994")
+		criteria := &common.SearchCriteria{
+			Deleted: true,
+			From: "Smith",
+			Since: date,
+			Not: &common.SearchCriteria{To: "Pauline"},
+		}
 
 		results, err := c.Search(criteria)
 		if err != nil {
@@ -127,7 +133,7 @@ func TestClient_Search(t *testing.T) {
 		scanner := NewCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
-		if cmd != "SEARCH CHARSET UTF-8 FLAGGED SINCE 1-Feb-1994 NOT FROM Smith" {
+		if cmd != "SEARCH CHARSET UTF-8 DELETED FROM Smith NOT (TO Pauline) SINCE 1-Feb-1994" {
 			t.Fatal("Bad command:", cmd)
 		}
 

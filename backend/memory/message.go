@@ -5,7 +5,7 @@ import (
 )
 
 type Message struct {
-	metadata *common.Message
+	*common.Message
 }
 
 func (m *Message) Metadata(items []string) (metadata *common.Message) {
@@ -17,21 +17,25 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 	for _, item := range items {
 		switch item {
 		case "ENVELOPE":
-			metadata.Envelope = m.metadata.Envelope
+			metadata.Envelope = m.Envelope
 		case "BODYSTRUCTURE", "BODY":
-			metadata.BodyStructure = m.metadata.BodyStructure
+			metadata.BodyStructure = m.BodyStructure
 		case "FLAGS":
-			metadata.Flags = m.metadata.Flags
+			metadata.Flags = m.Flags
 		case "INTERNALDATE":
-			metadata.InternalDate = m.metadata.InternalDate
+			metadata.InternalDate = m.InternalDate
 		case "RFC822.SIZE":
-			metadata.Size = m.metadata.Size
+			metadata.Size = m.Size
 		case "UID":
-			metadata.Uid = m.metadata.Uid
+			metadata.Uid = m.Uid
 		default:
-			metadata.Body[item] = m.metadata.Body[item]
+			metadata.Body[item] = m.Body[item]
 		}
 	}
 
 	return
+}
+
+func (m *Message) Matches(criteria *common.SearchCriteria) bool {
+	return true // TODO
 }

@@ -22,6 +22,24 @@ func (cmd *Close) Handle(conn *Conn) error {
 	return nil
 }
 
+type Search struct {
+	commands.Search
+}
+
+func (cmd *Search) Handle(conn *Conn) error {
+	if conn.Mailbox == nil {
+		return errors.New("No mailbox selected")
+	}
+
+	ids, err := conn.Mailbox.SearchMessages(false, cmd.Criteria)
+	if err != nil {
+		return err
+	}
+
+	res := responses.Search{Ids: ids}
+	return res.WriteTo(conn.Writer)
+}
+
 type Fetch struct {
 	commands.Fetch
 }
