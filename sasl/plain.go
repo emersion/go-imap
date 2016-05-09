@@ -23,6 +23,9 @@ func (a *plainClient) Next(challenge []byte) (response []byte, err error) {
 	return nil, errors.New("unexpected server challenge")
 }
 
+// An implementation of the PLAIN authentication mechanism, as described in
+// RFC 4616. Authorization identity may be left blank to indicate that it is the
+// same as the username.
 func NewPlainClient(username, password, identity string) Client {
 	return &plainClient{username, password, identity}
 }

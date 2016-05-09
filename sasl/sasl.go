@@ -12,7 +12,7 @@ import (
 
 // Client interface to perform challenge-response authentication.
 type Client interface {
-	// Start begins SASL authentication with the server. It returns the
+	// Begins SASL authentication with the server. It returns the
 	// authentication mechanism name and "initial response" data (if required by
 	// the selected mechanism). A non-nil error causes the client to abort the
 	// authentication attempt.
@@ -23,14 +23,17 @@ type Client interface {
 	// be sent to the server.
 	Start() (mech string, ir []byte, err error)
 
-	// Next continues challenge-response authentication. A non-nil error causes
+	// Continues challenge-response authentication. A non-nil error causes
 	// the client to abort the authentication attempt.
 	Next(challenge []byte) (response []byte, err error)
 }
 
 // Server interface to perform challenge-response authentication.
 type Server interface {
+	// Begins SASL authentication with the client.
 	Start() (ir []byte, err error)
+	// Continues challenge-response authentication.
 	Next(challenge []byte) (response []byte, err error)
+	// Get the authenticated user. Returns nil if no user has been authenticated.
 	User() backend.User
 }
