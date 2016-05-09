@@ -18,7 +18,8 @@ func (r *Search) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 
 		for _, f := range fields {
-			r.Ids = append(r.Ids, imap.ParseNumber(f))
+			id, _ := imap.ParseNumber(f)
+			r.Ids = append(r.Ids, id)
 		}
 	}
 

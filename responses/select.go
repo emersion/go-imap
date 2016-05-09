@@ -32,7 +32,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 			accepted := true
 			switch res.Code {
 			case "UNSEEN":
-				mbox.Unseen = imap.ParseNumber(res.Arguments[0])
+				mbox.Unseen, _ = imap.ParseNumber(res.Arguments[0])
 			case "PERMANENTFLAGS":
 				flags, _ := res.Arguments[0].([]interface{})
 				mbox.PermanentFlags = make([]string, len(flags))
@@ -40,9 +40,9 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 					mbox.PermanentFlags[i], _ = f.(string)
 				}
 			case "UIDNEXT":
-				mbox.UidNext = imap.ParseNumber(res.Arguments[0])
+				mbox.UidNext, _ = imap.ParseNumber(res.Arguments[0])
 			case "UIDVALIDITY":
-				mbox.UidValidity = imap.ParseNumber(res.Arguments[0])
+				mbox.UidValidity, _ = imap.ParseNumber(res.Arguments[0])
 			default:
 				accepted = false
 			}

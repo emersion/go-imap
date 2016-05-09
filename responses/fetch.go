@@ -23,7 +23,7 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 		h.Accept()
 
-		id := imap.ParseNumber(res.Fields[0])
+		id, _ := imap.ParseNumber(res.Fields[0])
 		fields, _ := res.Fields[2].([]interface{})
 
 		msg := &imap.Message{

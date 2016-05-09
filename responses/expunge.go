@@ -23,7 +23,7 @@ func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 		h.Accept()
 
-		seqid := imap.ParseNumber(res.Fields[0])
+		seqid, _ := imap.ParseNumber(res.Fields[0])
 		r.SeqIds <- seqid
 	}
 

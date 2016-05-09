@@ -51,15 +51,15 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 				switch key {
 				case "MESSAGES":
-					mbox.Messages = imap.ParseNumber(f)
+					mbox.Messages, _ = imap.ParseNumber(f)
 				case "RECENT":
-					mbox.Recent = imap.ParseNumber(f)
+					mbox.Recent, _ = imap.ParseNumber(f)
 				case "UIDNEXT":
-					mbox.UidNext = imap.ParseNumber(f)
+					mbox.UidNext, _ = imap.ParseNumber(f)
 				case "UIDVALIDITY":
-					mbox.UidValidity = imap.ParseNumber(f)
+					mbox.UidValidity, _ = imap.ParseNumber(f)
 				case "UNSEEN":
-					mbox.Unseen = imap.ParseNumber(f)
+					mbox.Unseen, _ = imap.ParseNumber(f)
 				}
 			}
 		}

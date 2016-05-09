@@ -119,9 +119,9 @@ func (m *Message) Parse(fields []interface{}) error {
 				date, _ := f.(string)
 				m.InternalDate, _ = ParseDate(date)
 			case "RFC822.SIZE":
-				m.Size = ParseNumber(f)
+				m.Size, _ = ParseNumber(f)
 			case "UID":
-				m.Uid = ParseNumber(f)
+				m.Uid, _ = ParseNumber(f)
 			default:
 				// Likely to be a section of the body contents
 				literal, ok := f.(*Literal)
@@ -470,7 +470,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.Id, _ = fields[3].(string)
 		bs.Description, _ = fields[4].(string)
 		bs.Encoding, _ = fields[5].(string)
-		bs.Size = ParseNumber(fields[6])
+		bs.Size, _ = ParseNumber(fields[6])
 
 		end := 7
 
@@ -484,12 +484,12 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			bs.BodyStructure = &BodyStructure{}
 			bs.BodyStructure.Parse(structure)
 
-			bs.Lines = ParseNumber(fields[end+2])
+			bs.Lines, _ = ParseNumber(fields[end+2])
 
 			end += 3
 		}
 		if bs.MimeType == "text" {
-			bs.Lines = ParseNumber(fields[end])
+			bs.Lines, _ = ParseNumber(fields[end])
 			end++
 		}
 

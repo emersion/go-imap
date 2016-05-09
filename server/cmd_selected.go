@@ -41,7 +41,7 @@ func (cmd *Fetch) Handle(conn *Conn) error {
 		done <- res.WriteTo(conn.Writer)
 	})()
 
-	messages, err := conn.Mailbox.Fetch(cmd.SeqSet, cmd.Items)
+	messages, err := conn.Mailbox.ListMessages(false, cmd.SeqSet, cmd.Items)
 	if err != nil {
 		close(ch)
 		return err

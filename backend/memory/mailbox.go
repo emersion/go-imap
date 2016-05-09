@@ -45,11 +45,11 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 	return status, nil
 }
 
-func (mbox *Mailbox) Fetch(seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
+func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
 	for i, msg := range mbox.messages {
 		id := uint32(i+1)
 
-		if !seqset.Contains(id) {
+		if (uid && !seqset.Contains(msg.metadata.Uid)) || (!uid && !seqset.Contains(id)) {
 			continue
 		}
 
@@ -58,5 +58,9 @@ func (mbox *Mailbox) Fetch(seqset *common.SeqSet, items []string) (msgs []*commo
 		msgs = append(msgs, m)
 	}
 
+	return
+}
+
+func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (ids []uint32, err error) {
 	return
 }

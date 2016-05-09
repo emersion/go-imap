@@ -300,7 +300,7 @@ func (c *Client) handleUnilateral() {
 				if c.Mailbox == nil {
 					break
 				}
-				c.Mailbox.Messages = imap.ParseNumber(res.Fields[0])
+				c.Mailbox.Messages, _ = imap.ParseNumber(res.Fields[0])
 
 				select {
 				case c.MailboxUpdates <- c.Mailbox:
@@ -310,14 +310,14 @@ func (c *Client) handleUnilateral() {
 				if c.Mailbox == nil {
 					break
 				}
-				c.Mailbox.Recent = imap.ParseNumber(res.Fields[0])
+				c.Mailbox.Recent, _ = imap.ParseNumber(res.Fields[0])
 
 				select {
 				case c.MailboxUpdates <- c.Mailbox:
 				default:
 				}
 			case "EXPUNGE":
-				seqid := imap.ParseNumber(res.Fields[0])
+				seqid, _ := imap.ParseNumber(res.Fields[0])
 
 				select {
 				case c.Expunges <- seqid:

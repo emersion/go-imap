@@ -35,18 +35,18 @@ type reader interface {
 }
 
 // Convert a field to a number.
-func ParseNumber(input interface{}) uint32 {
+func ParseNumber(input interface{}) (uint32, error) {
 	str, ok := input.(string)
 	if !ok {
-		return 0
+		return 0, errors.New("Number is not an atom")
 	}
 
 	nbr, err := strconv.ParseUint(str, 10, 32)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 
-	return uint32(nbr)
+	return uint32(nbr), nil
 }
 
 func trimSuffix(str string, suffix rune) string {
