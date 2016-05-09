@@ -107,19 +107,25 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 }
 
-func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.WriterTo, err error) {
+func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error) {
 	newHandler, ok := s.commands[cmd.Name]
 	if !ok {
 		err = errors.New("Unknown command")
 		return
 	}
 
-	handler := newHandler()
-	if err = handler.Parse(cmd.Arguments); err != nil {
+	hdlr = newHandler()
+	err = hdlr.Parse(cmd.Arguments)
+	return
+}
+
+func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.WriterTo, err error) {
+	hdlr, err := s.getCommandHandler(cmd)
+	if err != nil {
 		return
 	}
 
-	if err := handler.Handle(conn); err != nil {
+	if err := hdlr.Handle(conn); err != nil {
 		res = &common.StatusResp{
 			Tag: cmd.Tag,
 			Type: common.NO,
@@ -167,6 +173,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		common.Close: func () Handler { return &Close{} },
 		common.Search: func () Handler { return &Search{} },
 		common.Fetch: func () Handler { return &Fetch{} },
+		common.Uid: func () Handler { return &Uid{} },
 	}
 
 	go s.listen()

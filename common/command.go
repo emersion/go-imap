@@ -47,21 +47,26 @@ type Command struct {
 	Arguments []interface{}
 }
 
-func (c *Command) WriteTo(w *Writer) (N int64, err error) {
-	n, err := w.writeString(c.Tag + string(sp) + c.Name)
+// Implements the Commander interface.
+func (cmd *Command) Command() *Command {
+	return cmd
+}
+
+func (cmd *Command) WriteTo(w *Writer) (N int64, err error) {
+	n, err := w.writeString(cmd.Tag + string(sp) + cmd.Name)
 	N += int64(n)
 	if err != nil {
 		return
 	}
 
-	if len(c.Arguments) > 0 {
+	if len(cmd.Arguments) > 0 {
 		n, err = w.WriteSp()
 		N += int64(n)
 		if err != nil {
 			return
 		}
 
-		n, err = w.WriteFields(c.Arguments)
+		n, err = w.WriteFields(cmd.Arguments)
 		N += int64(n)
 		if err != nil {
 			return
@@ -73,25 +78,24 @@ func (c *Command) WriteTo(w *Writer) (N int64, err error) {
 	return
 }
 
-func (c *Command) Parse(fields []interface{}) error {
+// Parse a command from fields.
+func (cmd *Command) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
 		return errors.New("Cannot parse command")
 	}
 
 	var ok bool
-
-	if c.Tag, ok = fields[0].(string); !ok {
+	if cmd.Tag, ok = fields[0].(string); !ok {
 		return errors.New("Cannot parse command tag")
 	}
-
-	if c.Name, ok = fields[1].(string); !ok {
+	if cmd.Name, ok = fields[1].(string); !ok {
 		return errors.New("Cannot parse command name")
 	}
 
 	// Command names are case-insensitive
-	c.Name = strings.ToUpper(c.Name)
+	cmd.Name = strings.ToUpper(cmd.Name)
 
-	c.Arguments = fields[2:]
+	cmd.Arguments = fields[2:]
 
 	return nil
 }
