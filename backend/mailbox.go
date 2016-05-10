@@ -27,5 +27,5 @@ type Mailbox interface {
 	// Append a new message to this mailbox. The \Recent flag will be added no
 	// matter flags is empty or not. If date is nil, the current time will be
 	// used.
-	InsertMessage(flags []string, date *time.Time, body []byte) error
+	CreateMessage(flags []string, date *time.Time, body []byte) error
 }

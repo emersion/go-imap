@@ -93,6 +93,10 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		}
 	}
 
+	if atEOF {
+		d.ascii = true
+	}
+
 	return
 }
 

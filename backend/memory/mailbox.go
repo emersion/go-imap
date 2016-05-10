@@ -81,7 +81,7 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (
 	return
 }
 
-func (mbox *Mailbox) InsertMessage(flags []string, date *time.Time, body []byte) error {
+func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte) error {
 	if date == nil {
 		now := time.Now()
 		date = &now

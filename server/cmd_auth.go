@@ -97,6 +97,18 @@ func (cmd *Select) Handle(conn *Conn) error {
 	return nil
 }
 
+type Create struct {
+	commands.Create
+}
+
+func (cmd *Create) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	return conn.User.CreateMailbox(cmd.Mailbox)
+}
+
 type List struct {
 	commands.List
 }
@@ -177,5 +189,5 @@ func (cmd *Append) Handle(conn *Conn) error {
 		return err
 	}
 
-	return mbox.InsertMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes())
+	return mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes())
 }

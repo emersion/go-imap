@@ -178,6 +178,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 			hdlr.ReadOnly = true
 			return hdlr
 		},
+		common.Create: func () Handler { return &Create{} },
 		common.List: func () Handler { return &List{} },
 		common.Status: func () Handler { return &Status{} },
 		common.Append: func () Handler { return &Append{} },

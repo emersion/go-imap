@@ -33,7 +33,7 @@ LOGIN         | ✓      | ✓            | ✓      | ✗
 STARTTLS      | ✓      | ✗            | ✗      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✗
 EXAMINE       | ✓      | ✓            | ✓      | ✗
-CREATE        | ✓      | ✓            | ✗      | ✗
+CREATE        | ✓      | ✓            | ✓      | ✗
 DELETE        | ✓      | ✓            | ✗      | ✗
 RENAME        | ✓      | ✓            | ✗      | ✗
 SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
