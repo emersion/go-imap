@@ -29,6 +29,9 @@ func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 
 func TestServer_greeting(t *testing.T) {
 	s, conn := testServer(t)
+	defer conn.Close()
+	defer s.Close()
+
 	scanner := bufio.NewScanner(conn)
 
 	scanner.Scan() // Wait for greeting
@@ -37,6 +40,4 @@ func TestServer_greeting(t *testing.T) {
 	if greeting != "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN] IMAP4rev1 Service Ready" {
 		t.Fatal("Bad greeting:", greeting)
 	}
-
-	s.Close()
 }
