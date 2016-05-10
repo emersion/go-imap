@@ -31,7 +31,7 @@ func (u *User) CreateMailbox(name string) error {
 		return errors.New("Mailbox already exists")
 	}
 
-	u.mailboxes[name] = &Mailbox{name: name}
+	u.mailboxes[name] = &Mailbox{name: name, user: u}
 	return nil
 }
 
@@ -56,6 +56,7 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 	u.mailboxes[newName] = &Mailbox{
 		name: newName,
 		messages: mbox.messages,
+		user: u,
 	}
 
 	mbox.messages = nil

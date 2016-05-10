@@ -7,6 +7,7 @@ import (
 )
 
 // Mailbox represents a mailbox belonging to a user in the mail storage system.
+// A mailbox operation always deals with messages.
 type Mailbox interface {
 	// Get this mailbox info.
 	Info() (*common.MailboxInfo, error)
@@ -36,4 +37,12 @@ type Mailbox interface {
 	// matter flags is empty or not. If date is nil, the current time will be
 	// used.
 	CreateMessage(flags []string, date *time.Time, body []byte) error
+
+	// Copy the specified message(s) to the end of the specified destination
+	// mailbox. The flags and internal date of the message(s) SHOULD be preserved,
+	// and the Recent flag SHOULD be set, in the copy.
+	//
+	// If the destination mailbox does not exist, a server SHOULD return an error.
+	// It SHOULD NOT automatically create the mailbox.
+	CopyMessages(uid bool, seqset *common.SeqSet, dest string) error
 }

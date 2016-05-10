@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"errors"
 	"time"
 
 	"github.com/emersion/imap/common"
@@ -9,6 +10,7 @@ import (
 type Mailbox struct {
 	name string
 	messages []*Message
+	user *User
 }
 
 func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
@@ -100,6 +102,31 @@ func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte)
 		InternalDate: date,
 		Flags: flags,
 	}})
+
+	return nil
+}
+
+func (mbox *Mailbox) CopyMessages(uid bool, seqset *common.SeqSet, destName string) error {
+	dest, ok := mbox.user.mailboxes[destName]
+	if !ok {
+		return errors.New("Destination mailbox doesn't exist")
+	}
+
+	for i, msg := range mbox.messages {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i+1)
+		}
+		if !seqset.Contains(id) {
+			continue
+		}
+
+		msgCopy := *msg
+		msgCopy.Uid = dest.uidNext()
+		dest.messages = append(dest.messages, &msgCopy)
+	}
 
 	return nil
 }

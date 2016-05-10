@@ -48,7 +48,7 @@ EXPUNGE       | ✓      | ✓            | ✗      | ✗
 SEARCH        | ✓      | ✓            | ✓      | ✗
 FETCH         | ✓      | ✓            | ✓      | ✗
 STORE         | ✓      | ✓            | ✗      | ✗
-COPY          | ✓      | ✓            | ✗      | ✗
+COPY          | ✓      | ✓            | ✓      | ✗
 UID           | ✓      | ✗            | ✓      | ✗
 
 ## Usage

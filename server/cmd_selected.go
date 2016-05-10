@@ -122,6 +122,26 @@ func (cmd *Fetch) UidHandle(conn *Conn) error {
 	return cmd.handle(true, conn)
 }
 
+type Copy struct {
+	commands.Copy
+}
+
+func (cmd *Copy) handle(uid bool, conn *Conn) error {
+	if conn.Mailbox == nil {
+		return errors.New("No mailbox selected")
+	}
+
+	return conn.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
+}
+
+func (cmd *Copy) Handle(conn *Conn) error {
+	return cmd.handle(false, conn)
+}
+
+func (cmd *Copy) UidHandle(conn *Conn) error {
+	return cmd.handle(true, conn)
+}
+
 type Uid struct {
 	commands.Uid
 }
