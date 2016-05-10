@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	username string
-	mailboxes map[string]backend.Mailbox
+	mailboxes map[string]*Mailbox
 }
 
 func (u *User) ListMailboxes() (mailboxes []backend.Mailbox, err error) {
@@ -44,5 +44,25 @@ func (u *User) DeleteMailbox(name string) error {
 	}
 
 	delete(u.mailboxes, name)
+	return nil
+}
+
+func (u *User) RenameMailbox(existingName, newName string) error {
+	mbox, ok := u.mailboxes[existingName]
+	if !ok {
+		return errors.New("No such mailbox")
+	}
+
+	u.mailboxes[newName] = &Mailbox{
+		name: newName,
+		messages: mbox.messages,
+	}
+
+	mbox.messages = nil
+
+	if existingName != "INBOX" {
+		delete(u.mailboxes, existingName)
+	}
+
 	return nil
 }

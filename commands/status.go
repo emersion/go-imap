@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"strings"
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/utf7"
@@ -50,7 +51,8 @@ func (cmd *Status) Parse(fields []interface{}) error {
 
 	cmd.Items = make([]string, len(items))
 	for i, v := range items {
-		cmd.Items[i], _ = v.(string)
+		item, _ := v.(string)
+		cmd.Items[i] = strings.ToUpper(item)
 	}
 
 	return nil

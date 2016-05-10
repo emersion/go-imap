@@ -121,6 +121,18 @@ func (cmd *Delete) Handle(conn *Conn) error {
 	return conn.User.DeleteMailbox(cmd.Mailbox)
 }
 
+type Rename struct {
+	commands.Rename
+}
+
+func (cmd *Rename) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	return conn.User.RenameMailbox(cmd.Existing, cmd.New)
+}
+
 type List struct {
 	commands.List
 }

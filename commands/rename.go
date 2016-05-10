@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"errors"
+
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/utf7"
 )
@@ -20,4 +22,28 @@ func (cmd *Rename) Command() *imap.Command {
 		Name: imap.Rename,
 		Arguments: []interface{}{existingName, newName},
 	}
+}
+
+func (cmd *Rename) Parse(fields []interface{}) (err error) {
+	if len(fields) < 2 {
+		return errors.New("No enough arguments")
+	}
+
+	existingName, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Existing mailbox name must be a string")
+	}
+	if cmd.Existing, err = utf7.Decoder.String(existingName); err != nil {
+		return err
+	}
+
+	newName, ok := fields[1].(string)
+	if !ok {
+		return errors.New("Existing mailbox name must be a string")
+	}
+	if cmd.New, err = utf7.Decoder.String(newName); err != nil {
+		return err
+	}
+
+	return
 }
