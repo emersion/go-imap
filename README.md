@@ -3,7 +3,8 @@
 [![GoDoc](https://godoc.org/github.com/emersion/imap?status.svg)](https://godoc.org/github.com/emersion/imap)
 [![Build Status](https://travis-ci.org/emersion/imap.svg?branch=master)](https://travis-ci.org/emersion/imap)
 
-An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go.
+An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
+can be used to build a client and/or a server and supports UTF-7.
 
 ```bash
 go get gopkg.in/emersion/imap.v0
@@ -52,7 +53,11 @@ UID           | ✓      | ✗            | ✓      | ✗
 
 ## Usage
 
+### Client
+
 ```go
+package main
+
 import (
 	"log"
 
@@ -118,6 +123,42 @@ func main() {
 	log.Println("Done!")
 }
 ```
+
+### Server
+
+```go
+package main
+
+import (
+	"log"
+
+	"github.com/emersion/imap/server"
+	"github.com/emersion/imap/backend/memory"
+)
+
+func main() {
+	// Create a memory backend
+	bkd := memory.New()
+
+	// Create a new server
+	s, err := server.Listen(":3000", bkd)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Since we will use this server for testing only, we can allow plain text
+	// authentication over unencrypted connections
+	s.AllowInsecureAuth = true
+
+	log.Println("Server listening at", s.Addr())
+
+	// Do something else to keep the server alive
+	done := make(chan bool)
+	<-done
+}
+```
+
+You can now use `telnet localhost 3000` to manually connect to the server.
 
 ## License
 
