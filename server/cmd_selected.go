@@ -16,6 +16,18 @@ type UidHandler interface {
 	UidHandle(conn *Conn) error
 }
 
+type Check struct {
+	commands.Check
+}
+
+func (cmd *Check) Handle(conn *Conn) error {
+	if conn.Mailbox == nil {
+		return errors.New("No mailbox selected")
+	}
+
+	return conn.Mailbox.Check()
+}
+
 type Close struct {
 	commands.Close
 }

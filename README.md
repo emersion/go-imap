@@ -42,7 +42,7 @@ LIST          | ✓      | ✓            | ✓      | ✗
 LSUB          | ✓      | ✓            | ✗      | ✗
 STATUS        | ✓      | ✓            | ✓      | ✗
 APPEND        | ✓      | ✓            | ✓      | ✗
-CHECK         | ✓      | ✓            | ✗      | ✗
+CHECK         | ✓      | ✓            | ✓      | ✗
 CLOSE         | ✓      | ✓            | ✓      | ✗
 EXPUNGE       | ✓      | ✓            | ✗      | ✗
 SEARCH        | ✓      | ✓            | ✓      | ✗

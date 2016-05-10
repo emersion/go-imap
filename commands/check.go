@@ -8,8 +8,12 @@ import (
 // See https://tools.ietf.org/html/rfc3501#section-6.4.1
 type Check struct {}
 
-func (c *Check) Command() *imap.Command {
+func (cmd *Check) Command() *imap.Command {
 	return &imap.Command{
 		Name: imap.Check,
 	}
+}
+
+func (cmd *Check) Parse(fields []interface{}) error {
+	return nil
 }

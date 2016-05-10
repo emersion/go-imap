@@ -47,6 +47,10 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 	return status, nil
 }
 
+func (mbox *Mailbox) Check() error {
+	return nil
+}
+
 func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
 	for i, msg := range mbox.messages {
 		id := uint32(i+1)

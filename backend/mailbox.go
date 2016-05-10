@@ -15,6 +15,14 @@ type Mailbox interface {
 	// See RFC 3501 section 6.3.10 for a list of items that can be requested.
 	Status(items []string) (*common.MailboxStatus, error)
 
+	// Requests a checkpoint of the currently selected mailbox. A checkpoint
+	// refers to any implementation-dependent housekeeping associated with the
+	// mailbox (e.g., resolving the server's in-memory state of the mailbox with
+	// the state on its disk). A checkpoint MAY take a non-instantaneous amount of
+	// real time to complete. If a server implementation has no such housekeeping
+	// considerations, CHECK is equivalent to NOOP.
+	Check() error
+
 	// Get a list of messages.
 	// seqset must be interpreted as UIDs if uid is set to true and as message
 	// sequence numbers otherwise.
