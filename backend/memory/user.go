@@ -27,6 +27,22 @@ func (u *User) GetMailbox(name string) (mailbox backend.Mailbox, err error) {
 }
 
 func (u *User) CreateMailbox(name string) error {
+	if _, ok := u.mailboxes[name]; ok {
+		return errors.New("Mailbox already exists")
+	}
+
 	u.mailboxes[name] = &Mailbox{name: name}
+	return nil
+}
+
+func (u *User) DeleteMailbox(name string) error {
+	if name == "INBOX" {
+		return errors.New("Cannot delete INBOX")
+	}
+	if _, ok := u.mailboxes[name]; !ok {
+		return errors.New("No such mailbox")
+	}
+
+	delete(u.mailboxes, name)
 	return nil
 }

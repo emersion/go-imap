@@ -179,6 +179,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 			return hdlr
 		},
 		common.Create: func () Handler { return &Create{} },
+		common.Delete: func () Handler { return &Delete{} },
 		common.List: func () Handler { return &List{} },
 		common.Status: func () Handler { return &Status{} },
 		common.Append: func () Handler { return &Append{} },

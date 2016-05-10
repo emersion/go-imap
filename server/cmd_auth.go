@@ -109,6 +109,18 @@ func (cmd *Create) Handle(conn *Conn) error {
 	return conn.User.CreateMailbox(cmd.Mailbox)
 }
 
+type Delete struct {
+	commands.Delete
+}
+
+func (cmd *Delete) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	return conn.User.DeleteMailbox(cmd.Mailbox)
+}
+
 type List struct {
 	commands.List
 }

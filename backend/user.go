@@ -28,4 +28,19 @@ type User interface {
 	// UNLESS the new incarnation has a different unique identifier
 	// validity value.
 	CreateMailbox(name string) error
+
+	// Permanently remove the mailbox with the given name. It is an error to
+	// attempt to delete INBOX or a mailbox name that does not exist.
+	//
+	// The DELETE command MUST NOT remove inferior hierarchical names.
+	// For example, if a mailbox "foo" has an inferior "foo.bar"
+	// (assuming "." is the hierarchy delimiter character), removing
+	// "foo" MUST NOT remove "foo.bar".
+	//
+	// The value of the highest-used unique identifier of the deleted
+	// mailbox MUST be preserved so that a new mailbox created with the
+	// same name will not reuse the identifiers of the former
+	// incarnation, UNLESS the new incarnation has a different unique
+	// identifier validity value.
+	DeleteMailbox(name string) error
 }

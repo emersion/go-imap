@@ -34,7 +34,7 @@ STARTTLS      | ✓      | ✗            | ✗      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✗
 EXAMINE       | ✓      | ✓            | ✓      | ✗
 CREATE        | ✓      | ✓            | ✓      | ✗
-DELETE        | ✓      | ✓            | ✗      | ✗
+DELETE        | ✓      | ✓            | ✓      | ✗
 RENAME        | ✓      | ✓            | ✗      | ✗
 SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
 UNSUBSCRIBE   | ✓      | ✓            | ✗      | ✗
