@@ -26,6 +26,8 @@ type HandlerFactory func () Handler
 // An IMAP server.
 type Server struct {
 	listener net.Listener
+	conns []*Conn
+
 	commands map[string]HandlerFactory
 	auths map[string]sasl.Server
 
@@ -49,18 +51,14 @@ func (s *Server) listen() error {
 			return err
 		}
 
-		log.Println("New conn", c.RemoteAddr())
-
 		conn := newConn(s, c)
-
-		go (func () {
-			s.handleConn(conn)
-			log.Println("Connection closed")
-		})()
+		go s.handleConn(conn)
 	}
 }
 
 func (s *Server) handleConn(conn *Conn) error {
+	s.conns = append(s.conns, conn)
+
 	// Send greeting
 	if err := conn.greet(); err != nil {
 		return err
@@ -140,6 +138,19 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 	}
 
 	return
+}
+
+// Stops listening and closes all current connections.
+func (s *Server) Close() error {
+	if err := s.listener.Close(); err != nil {
+		return err
+	}
+
+	for _, conn := range s.conns {
+		conn.Close()
+	}
+
+	return nil
 }
 
 // Create a new IMAP server from an existing listener.
