@@ -193,7 +193,7 @@ type BodySectionName struct {
 	value string
 }
 
-func (section *BodySectionName) Parse(s string) (err error) {
+func (section *BodySectionName) parse(s string) (err error) {
 	section.value = s
 
 	if s == "RFC822" {
@@ -218,8 +218,7 @@ func (section *BodySectionName) Parse(s string) (err error) {
 
 	name := s[:partsStart]
 	parts := s[partsStart+1:partsEnd]
-
-	// TODO: parse partial
+	partial := s[partsEnd+1:]
 
 	if name == "BODY.PEEK" {
 		section.Peek = true
@@ -255,25 +254,43 @@ func (section *BodySectionName) Parse(s string) (err error) {
 		section.Parts[name] = value
 	}
 
+	if len(partial) > 0 {
+		if !strings.HasPrefix(partial, "<") || !strings.HasSuffix(partial, ">") {
+			return errors.New("Invalid body section name: invalid partial")
+		}
+		partial = partial[1:len(partial)-1]
+
+		partialParts := strings.SplitN(partial, ",", 2)
+		if len(partialParts) < 2 {
+			return errors.New("Invalid body section name: partial must have two fields")
+		}
+
+		var from, to uint64
+		if from, err = strconv.ParseUint(partialParts[0], 10, 32); err != nil {
+			return errors.New("Invalid body section name: " + err.Error())
+		}
+		if to, err = strconv.ParseUint(partialParts[1], 10, 32); err != nil {
+			return errors.New("Invalid body section name: " + err.Error())
+		}
+		section.Partial = []uint32{uint32(from), uint32(to)}
+	}
+
 	return nil
 }
 
-func (section *BodySectionName) WriteTo(w *Writer) (N int, err error) {
+func (section *BodySectionName) String() (s string) {
 	if section.value != "" {
-		return w.writeString(section.value)
+		return section.value
 	}
 
-	s := "BODY"
+	s = "BODY"
 	if section.Peek {
 		s += ".PEEK"
 	}
 	s += "["
 
-	var n int
-	if n, err = w.writeString(s); err != nil {
-		return
-	}
-	N += n
+	var b bytes.Buffer
+	w := NewWriter(&b)
 
 	first := true
 	for name, arg := range section.Parts {
@@ -282,22 +299,19 @@ func (section *BodySectionName) WriteTo(w *Writer) (N int, err error) {
 			fields = append(fields, arg)
 		}
 
-		if n, err = w.WriteFields(fields); err != nil {
-			return
-		}
-		N += n
+		w.WriteFields(fields)
+
+		s += b.String()
+		b.Reset()
 
 		if first {
 			first = false
 		} else {
-			if n, err = w.writeString(","); err != nil {
-				return
-			}
-			N += n
+			s += ","
 		}
 	}
 
-	s = "]"
+	s += "]"
 	if len(section.Partial) > 0 {
 		s += "<"
 		s += strconv.FormatUint(uint64(section.Partial[0]), 10)
@@ -310,11 +324,13 @@ func (section *BodySectionName) WriteTo(w *Writer) (N int, err error) {
 		s += ">"
 	}
 
-	if n, err = w.writeString(s); err != nil {
-		return
-	}
-	N += n
+	return
+}
 
+// Parse a body section name.
+func NewBodySectionName(s string) (section *BodySectionName, err error) {
+	section = &BodySectionName{}
+	err = section.parse(s)
 	return
 }
 

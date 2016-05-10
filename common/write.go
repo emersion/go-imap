@@ -104,7 +104,7 @@ func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
 			case *SeqSet:
 				n, err = w.writeString(f.String())
 			case *BodySectionName:
-				n, err = f.WriteTo(w)
+				n, err = w.writeString(f.String())
 			default:
 				err = errors.New("Cannot format argument #" + strconv.Itoa(i))
 			}
