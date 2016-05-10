@@ -15,9 +15,7 @@ type ClientTester func(c *client.Client) error
 type ServerTester func(c net.Conn)
 
 func testClient(t *testing.T, ct ClientTester, st ServerTester) {
-	addr := ":3000"
-
-	l, err := net.Listen("tcp", addr)
+	l, err := net.Listen("tcp", "127.0.0.1:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +23,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 
 	done := make(chan error)
 	go (func () {
-		c, err := client.Dial(addr)
+		c, err := client.Dial(l.Addr().String())
 		if err != nil {
 			done <- err
 			return

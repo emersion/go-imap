@@ -12,7 +12,7 @@ import (
 func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 	bkd := memory.New()
 
-	s, err := server.Listen(":3000", bkd)
+	s, err := server.Listen("127.0.0.1:0", bkd)
 	if err != nil {
 		t.Fatal("Cannot start server:", err)
 	}
