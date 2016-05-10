@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"time"
+
 	"github.com/emersion/imap/common"
 )
 
@@ -8,6 +10,7 @@ import (
 type Mailbox interface {
 	// Get this mailbox info.
 	Info() (*common.MailboxInfo, error)
+
 	// Get this mailbox status.
 	// See RFC 3501 section 6.3.10 for a list of items that can be requested.
 	Status(items []string) (*common.MailboxStatus, error)
@@ -20,4 +23,9 @@ type Mailbox interface {
 
 	// Search messages.
 	SearchMessages(uid bool, criteria *common.SearchCriteria) ([]uint32, error)
+
+	// Append a new message to this mailbox. The \Recent flag will be added no
+	// matter flags is empty or not. If date is nil, the current time will be
+	// used.
+	InsertMessage(flags []string, date *time.Time, body []byte) error
 }

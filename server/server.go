@@ -180,6 +180,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		},
 		common.List: func () Handler { return &List{} },
 		common.Status: func () Handler { return &Status{} },
+		common.Append: func () Handler { return &Append{} },
 
 		common.Close: func () Handler { return &Close{} },
 		common.Search: func () Handler { return &Search{} },

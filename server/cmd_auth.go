@@ -161,3 +161,21 @@ func (cmd *Status) Handle(conn *Conn) error {
 	res := responses.Status{Mailbox: status}
 	return res.WriteTo(conn.Writer)
 }
+
+type Append struct {
+	commands.Append
+}
+
+func (cmd *Append) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	if err != nil {
+		// TODO: add [TRYCREATE] to the NO response
+		return err
+	}
+
+	return mbox.InsertMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes())
+}

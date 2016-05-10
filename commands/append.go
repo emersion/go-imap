@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"errors"
 	"time"
 
 	imap "github.com/emersion/imap/common"
+	"github.com/emersion/imap/utf7"
 )
 
 // An APPEND command.
@@ -15,25 +17,75 @@ type Append struct {
 	Message *imap.Literal
 }
 
-func (c *Append) Command() *imap.Command {
-	args := []interface{}{c.Mailbox}
+func (cmd *Append) Command() *imap.Command {
+	var args []interface{}
 
-	if c.Flags != nil {
-		flags := make([]interface{}, len(c.Flags))
-		for i, flag := range c.Flags {
+	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	args = append(args, mailbox)
+
+	if cmd.Flags != nil {
+		flags := make([]interface{}, len(cmd.Flags))
+		for i, flag := range cmd.Flags {
 			flags[i] = flag
 		}
 		args = append(args, flags)
 	}
 
-	if c.Date != nil {
-		args = append(args, c.Date)
+	if cmd.Date != nil {
+		args = append(args, cmd.Date)
 	}
 
-	args = append(args, c.Message)
+	args = append(args, cmd.Message)
 
 	return &imap.Command{
 		Name: imap.Append,
 		Arguments: args,
 	}
+}
+
+func (cmd *Append) Parse(fields []interface{}) (err error) {
+	if len(fields) < 2 {
+		return errors.New("No enough arguments")
+	}
+
+	// Parse mailbox name
+	mailbox, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Mailbox name must be a string")
+	}
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
+	}
+
+	// Parse message literal
+	litIndex := len(fields) - 1
+	cmd.Message, ok = fields[litIndex].(*imap.Literal)
+	if !ok {
+		return errors.New("Message must be a literal")
+	}
+
+	// Remaining fields a optional
+	fields = fields[1:litIndex]
+	if len(fields) > 0 {
+		// Parse flags list
+		if flags, ok := fields[0].([]interface{}); ok {
+			if cmd.Flags, err = imap.ParseStringList(flags); err != nil {
+				return err
+			}
+			fields = fields[1:]
+		}
+
+		// Parse date
+		if len(fields) > 0 {
+			date, ok := fields[0].(string)
+			if !ok {
+				return errors.New("Date must be a string")
+			}
+			if cmd.Date, err = imap.ParseDate(date); err != nil {
+				return err
+			}
+		}
+	}
+
+	return
 }

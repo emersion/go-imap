@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"time"
+
 	"github.com/emersion/imap/common"
 )
 
@@ -77,4 +79,22 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (
 	}
 
 	return
+}
+
+func (mbox *Mailbox) InsertMessage(flags []string, date *time.Time, body []byte) error {
+	if date == nil {
+		now := time.Now()
+		date = &now
+	}
+
+	mbox.messages = append(mbox.messages, &Message{&common.Message{
+		Uid: mbox.uidNext(),
+		Envelope: &common.Envelope{},
+		BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
+		Body: map[string]*common.Literal{"BODY[]": common.NewLiteral(body)},
+		Size: uint32(len(body)),
+		InternalDate: date,
+	}})
+
+	return nil
 }
