@@ -57,6 +57,7 @@ func trimSuffix(str string, suffix rune) string {
 type Reader struct {
 	reader
 
+	brackets int
 	inRespCode bool
 	continues chan<- bool
 }
@@ -93,6 +94,8 @@ func (r *Reader) ReadCrlf() (err error) {
 }
 
 func (r *Reader) ReadAtom() (interface{}, error) {
+	r.brackets = 0
+
 	var atom string
 	for {
 		char, _, err := r.ReadRune()
@@ -101,14 +104,27 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 		}
 
 		// TODO: list-wildcards and \
-		if char == listStart || char == literalStart || char == dquote {
+		if r.brackets == 0 && (char == listStart || char == literalStart || char == dquote) {
 			return nil, errors.New("Atom contains forbidden char: " + string(char))
 		}
-		if char == sp || char == listEnd || char == cr {
+		if char == cr {
 			break
 		}
-		if char == respCodeEnd && r.inRespCode {
+		if r.brackets == 0 && (char == sp || char == listEnd) {
 			break
+		}
+		if char == respCodeEnd {
+			if r.brackets == 0 {
+				if r.inRespCode {
+					break
+				} else {
+					return nil, errors.New("Atom contains bad brackets nesting")
+				}
+			}
+			r.brackets--
+		}
+		if char == respCodeStart {
+			r.brackets++
 		}
 
 		atom += string(char)
