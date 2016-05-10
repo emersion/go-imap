@@ -14,6 +14,7 @@ type Conn struct {
 	*common.Writer
 
 	conn net.Conn
+	continues chan bool
 
 	// This connection's server.
 	Server *Server
@@ -32,6 +33,8 @@ func (c *Conn) Close() error {
 	if err := c.conn.Close(); err != nil {
 		return err
 	}
+
+	close(c.continues)
 
 	c.State = common.LogoutState
 	return nil
@@ -52,6 +55,13 @@ func (c *Conn) getCaps() (caps []string) {
 	}
 
 	return
+}
+
+func (c *Conn) sendContinuationReqs() {
+	for range c.continues {
+		cont := &common.ContinuationResp{Info: "send literal"}
+		cont.WriteTo(c.Writer)
+	}
 }
 
 func (c *Conn) greet() error {
@@ -84,16 +94,22 @@ func (c *Conn) CanAuth() bool {
 }
 
 func newConn(s *Server, c net.Conn) *Conn {
-	r := common.NewReader(bufio.NewReader(c))
+	continues := make(chan bool)
+	r := common.NewServerReader(bufio.NewReader(c), continues)
 	w := common.NewWriter(c)
 
-	return &Conn{
+	conn := &Conn{
 		Reader: r,
 		Writer: w,
 
 		conn: c,
+		continues: continues,
 
 		Server: s,
 		State: common.NotAuthenticatedState,
 	}
+
+	go conn.sendContinuationReqs()
+
+	return conn
 }

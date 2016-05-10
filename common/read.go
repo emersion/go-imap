@@ -58,6 +58,7 @@ type Reader struct {
 	reader
 
 	inRespCode bool
+	continues chan<- bool
 }
 
 func (r *Reader) ReadSp() error {
@@ -142,6 +143,11 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 
 	if err = r.ReadCrlf(); err != nil {
 		return
+	}
+
+	// Send continuation request
+	if r.continues != nil {
+		r.continues <- true
 	}
 
 	b := make([]byte, l)
@@ -319,6 +325,10 @@ func (r *Reader) ReadInfo() (info string, err error) {
 
 func NewReader(r reader) *Reader {
 	return &Reader{reader: r}
+}
+
+func NewServerReader(r reader, continues chan<- bool) *Reader {
+	return &Reader{reader: r, continues: continues}
 }
 
 type Parser interface {

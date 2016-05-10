@@ -94,6 +94,7 @@ func (mbox *Mailbox) InsertMessage(flags []string, date *time.Time, body []byte)
 		Body: map[string]*common.Literal{"BODY[]": common.NewLiteral(body)},
 		Size: uint32(len(body)),
 		InternalDate: date,
+		Flags: flags,
 	}})
 
 	return nil
