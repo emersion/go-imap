@@ -99,10 +99,12 @@ func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
 				n, err = w.WriteLiteral(f)
 			case []interface{}:
 				n, err = w.WriteList(f)
-			case *SeqSet:
-				n, err = w.writeString(f.String())
 			case *time.Time:
 				n, err = w.WriteDate(f)
+			case *SeqSet:
+				n, err = w.writeString(f.String())
+			case *BodySectionName:
+				n, err = f.WriteTo(w)
 			default:
 				err = errors.New("Cannot format argument #" + strconv.Itoa(i))
 			}

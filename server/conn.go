@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"crypto/tls"
 	"net"
+	"os"
+	"io"
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/backend"
@@ -97,7 +99,8 @@ func (c *Conn) CanAuth() bool {
 
 func newConn(s *Server, c net.Conn) *Conn {
 	continues := make(chan bool)
-	r := common.NewServerReader(bufio.NewReader(c), continues)
+	tee := io.TeeReader(c, os.Stdout)
+	r := common.NewServerReader(bufio.NewReader(tee), continues)
 	w := common.NewWriter(c)
 
 	conn := &Conn{

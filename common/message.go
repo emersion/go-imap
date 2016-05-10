@@ -1,7 +1,9 @@
 package common
 
 import (
+	"bytes"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -137,7 +139,9 @@ func (m *Message) Parse(fields []interface{}) error {
 
 func (m *Message) Format() (fields []interface{}) {
 	for _, item := range m.Items {
-		var value interface{}
+		var key, value interface{}
+		key = item
+
 		switch strings.ToUpper(item) {
 		case "ENVELOPE":
 			value = m.Envelope.Format()
@@ -156,16 +160,166 @@ func (m *Message) Format() (fields []interface{}) {
 		case "UID":
 			value = m.Uid
 		default:
-			value = m.Body[item]
+			var ok bool
+			if value, ok = m.Body[item]; ok {
+				key = &BodySectionName{value: item}
+			} else {
+				key = nil
+			}
 		}
 
-		fields = append(fields, item, value)
+		if key == nil {
+			continue
+		}
+
+		fields = append(fields, key, value)
 	}
 
 	return
 }
 
+// A body section name.
+// See RFC 3501 page 55.
+type BodySectionName struct {
+	// If set to true, do not implicitely set the \Seen flag.
+	Peek bool
+	// The list of parts requested in the section.
+	Parts map[string]interface{}
+	// The substring of the section requested. The first value is the position of
+	// the first desired octet and the second value is the maximum number of
+	// octets desired.
+	Partial []uint32
+
+	value string
+}
+
+func (section *BodySectionName) Parse(s string) (err error) {
+	section.value = s
+
+	if s == "RFC822" {
+		s = "BODY[]"
+	}
+	if s == "RFC822.HEADER" {
+		s = "BODY.PEEK[HEADER]"
+	}
+	if s == "RFC822.TEXT" {
+		s = "BODY[TEXT]"
+	}
+
+	partsStart := strings.Index(s, "[")
+	if partsStart == -1 {
+		return errors.New("Invalid body section name: must contain an open bracket")
+	}
+
+	partsEnd := strings.LastIndex(s, "]")
+	if partsEnd == -1 {
+		return errors.New("Invalid body section name: must contain a close bracket")
+	}
+
+	name := s[:partsStart]
+	parts := s[partsStart+1:partsEnd]
+
+	// TODO: parse partial
+
+	if name == "BODY.PEEK" {
+		section.Peek = true
+	} else if name != "BODY" {
+		return errors.New("Invalid body section name")
+	}
+
+	section.Parts = map[string]interface{}{}
+
+	var b *bytes.Buffer
+	for _, part := range strings.Split(parts, ",") {
+		b = bytes.NewBufferString(part)
+		r := NewReader(b)
+
+		var fields []interface{}
+		if fields, err = r.ReadFields(); err != nil {
+			return err
+		}
+		if len(fields) < 0 {
+			return errors.New("Invalid body section name: empty part")
+		}
+
+		name, ok := fields[0].(string)
+		if !ok {
+			return errors.New("Invalid body section name: part name must be a string")
+		}
+
+		var value interface{}
+		if len(fields) > 1 {
+			value = fields[1]
+		}
+
+		section.Parts[name] = value
+	}
+
+	return nil
+}
+
+func (section *BodySectionName) WriteTo(w *Writer) (N int, err error) {
+	if section.value != "" {
+		return w.writeString(section.value)
+	}
+
+	s := "BODY"
+	if section.Peek {
+		s += ".PEEK"
+	}
+	s += "["
+
+	var n int
+	if n, err = w.writeString(s); err != nil {
+		return
+	}
+	N += n
+
+	first := true
+	for name, arg := range section.Parts {
+		fields := []interface{}{name}
+		if arg != nil {
+			fields = append(fields, arg)
+		}
+
+		if n, err = w.WriteFields(fields); err != nil {
+			return
+		}
+		N += n
+
+		if first {
+			first = false
+		} else {
+			if n, err = w.writeString(","); err != nil {
+				return
+			}
+			N += n
+		}
+	}
+
+	s = "]"
+	if len(section.Partial) > 0 {
+		s += "<"
+		s += strconv.FormatUint(uint64(section.Partial[0]), 10)
+
+		if len(section.Partial) > 1 {
+			s += ","
+			s += strconv.FormatUint(uint64(section.Partial[0]), 10)
+		}
+
+		s += ">"
+	}
+
+	if n, err = w.writeString(s); err != nil {
+		return
+	}
+	N += n
+
+	return
+}
+
 // A message envelope, ie. message metadata from its headers.
+// See RFC 3501 page 77.
 type Envelope struct {
 	// The message date.
 	Date *time.Time
@@ -321,6 +475,7 @@ func FormatAddressList(addrs []*Address) (fields []interface{}) {
 }
 
 // A body structure.
+// See RFC 3501 page 74.
 type BodyStructure struct {
 	// Basic fields
 
