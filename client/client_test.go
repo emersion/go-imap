@@ -15,7 +15,7 @@ type ClientTester func(c *client.Client) error
 type ServerTester func(c net.Conn)
 
 func testClient(t *testing.T, ct ClientTester, st ServerTester) {
-	l, err := net.Listen("tcp", "127.0.0.1:3000")
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
