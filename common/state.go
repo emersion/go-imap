@@ -1,7 +1,7 @@
 package common
 
 // A connection state.
-// See https://tools.ietf.org/html/rfc3501#section-3
+// See RFC 3501 section 3.
 type ConnState int
 
 const (
@@ -9,7 +9,7 @@ const (
 	// authentication credentials before most commands will be
 	// permitted.  This state is entered when a connection starts
 	// unless the connection has been pre-authenticated.
-	NotAuthenticatedState ConnState = iota
+	NotAuthenticatedState ConnState = 1
 
 	// In the authenticated state, the client is authenticated and MUST
 	// select a mailbox to access before commands that affect messages
@@ -17,16 +17,16 @@ const (
 	// pre-authenticated connection starts, when acceptable
 	// authentication credentials have been provided, after an error in
 	// selecting a mailbox, or after a successful CLOSE command.
-	AuthenticatedState
+	AuthenticatedState = 1 << 1
 
 	// In a selected state, a mailbox has been selected to access.
 	// This state is entered when a mailbox has been successfully
 	// selected.
-	SelectedState
+	SelectedState = AuthenticatedState + 1 << 2
 
 	// In the logout state, the connection is being terminated. This
 	// state can be entered as a result of a client request (via the
 	// LOGOUT command) or by unilateral action on the part of either
 	// the client or server.
-	LogoutState
+	LogoutState = 0
 )

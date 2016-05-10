@@ -8,12 +8,12 @@ import (
 // See https://tools.ietf.org/html/rfc3501#section-6.2.1
 type StartTLS struct {}
 
-func (c *StartTLS) Command() *imap.Command {
+func (cmd *StartTLS) Command() *imap.Command {
 	return &imap.Command{
 		Name: imap.StartTLS,
 	}
 }
 
-func (c *StartTLS) Parse(fields []interface{}) error {
+func (cmd *StartTLS) Parse(fields []interface{}) error {
 	return nil
 }

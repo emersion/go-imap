@@ -43,17 +43,19 @@ func (c *Conn) Close() error {
 func (c *Conn) getCaps() (caps []string) {
 	caps = []string{"IMAP4rev1"}
 
-	switch c.State {
-	case common.NotAuthenticatedState:
-		if !c.CanAuth() {
-			caps = append(caps, common.StartTLS, "LOGINDISABLED")
-			return
+	if c.State == common.NotAuthenticatedState {
+		if !c.IsTLS() && c.Server.TLSConfig != nil {
+			caps = append(caps, "STARTTLS")
 		}
 
-		caps = append(caps, "AUTH=PLAIN")
-	case common.AuthenticatedState, common.SelectedState:
+		if !c.CanAuth() {
+			caps = append(caps, "LOGINDISABLED")
+		} else {
+			caps = append(caps, "AUTH=PLAIN")
+		}
 	}
 
+	caps = append(caps, c.Server.getCaps(c.State)...)
 	return
 }
 

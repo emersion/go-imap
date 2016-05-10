@@ -2,6 +2,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -28,11 +29,14 @@ type Server struct {
 	listener net.Listener
 	conns []*Conn
 
+	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
 	auths map[string]sasl.Server
 
 	// This server's backend.
 	Backend backend.Backend
+	// This server's TLS configuration.
+	TLSConfig *tls.Config
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 }
@@ -58,6 +62,7 @@ func (s *Server) listen() error {
 
 func (s *Server) handleConn(conn *Conn) error {
 	s.conns = append(s.conns, conn)
+	defer conn.Close()
 
 	// Send greeting
 	if err := conn.greet(); err != nil {
@@ -66,7 +71,7 @@ func (s *Server) handleConn(conn *Conn) error {
 
 	for {
 		if conn.State == common.LogoutState {
-			return conn.Close()
+			return nil
 		}
 
 		fields, err := conn.ReadLine()
@@ -140,6 +145,15 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 	return
 }
 
+func (s *Server) getCaps(currentState common.ConnState) (caps []string) {
+	for name, state := range s.caps {
+		if currentState & state != 0 {
+			caps = append(caps, name)
+		}
+	}
+	return
+}
+
 // Stops listening and closes all current connections.
 func (s *Server) Close() error {
 	if err := s.listener.Close(); err != nil {
@@ -157,6 +171,7 @@ func (s *Server) Close() error {
 func NewServer(l net.Listener, bkd backend.Backend) *Server {
 	s := &Server{
 		listener: l,
+		caps: map[string]common.ConnState{},
 		Backend: bkd,
 	}
 
@@ -169,6 +184,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		common.Capability: func () Handler { return &Capability{} },
 		common.Logout: func () Handler { return &Logout{} },
 
+		common.StartTLS: func () Handler { return &StartTLS{} },
 		common.Login: func () Handler { return &Login{} },
 		common.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
 
@@ -196,6 +212,16 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 
 func Listen(addr string, bkd backend.Backend) (s *Server, err error) {
 	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return
+	}
+
+	s = NewServer(l, bkd)
+	return
+}
+
+func ListenTLS(addr string, bkd backend.Backend, tlsConfig *tls.Config) (s *Server, err error) {
+	l, err := tls.Listen("tcp", addr, tlsConfig)
 	if err != nil {
 		return
 	}
