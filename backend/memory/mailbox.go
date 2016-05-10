@@ -106,6 +106,44 @@ func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte)
 	return nil
 }
 
+func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *common.SeqSet, op common.FlagsOp, flags []string) error {
+	for i, msg := range mbox.messages {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i+1)
+		}
+		if !seqset.Contains(id) {
+			continue
+		}
+
+		switch op {
+		case common.SetFlags:
+			// TODO: keep \Recent if it is present
+			msg.Flags = flags
+		case common.AddFlags:
+			// TODO: check for duplicates
+			msg.Flags = append(msg.Flags, flags...)
+		case common.RemoveFlags:
+			// Iterate through flags from the last one to the first one, to be able to
+			// delete some of them.
+			for i := len(msg.Flags) - 1; i >= 0; i-- {
+				flag := msg.Flags[i]
+
+				for _, removeFlag := range flags {
+					if removeFlag == flag {
+						msg.Flags = append(msg.Flags[:i], msg.Flags[i+1:]...)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (mbox *Mailbox) CopyMessages(uid bool, seqset *common.SeqSet, destName string) error {
 	dest, ok := mbox.user.mailboxes[destName]
 	if !ok {

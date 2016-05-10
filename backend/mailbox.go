@@ -38,6 +38,9 @@ type Mailbox interface {
 	// used.
 	CreateMessage(flags []string, date *time.Time, body []byte) error
 
+	// Alter flags for the specified message(s).
+	UpdateMessagesFlags(uid bool, seqset *common.SeqSet, operation common.FlagsOp, flags []string) error
+
 	// Copy the specified message(s) to the end of the specified destination
 	// mailbox. The flags and internal date of the message(s) SHOULD be preserved,
 	// and the Recent flag SHOULD be set, in the copy.

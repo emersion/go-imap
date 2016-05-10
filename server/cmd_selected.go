@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
@@ -120,6 +121,52 @@ func (cmd *Fetch) UidHandle(conn *Conn) error {
 	}
 
 	return cmd.handle(true, conn)
+}
+
+type Store struct {
+	commands.Store
+}
+
+func (cmd *Store) Handle(conn *Conn) error {
+	if conn.Mailbox == nil {
+		return errors.New("No mailbox selected")
+	}
+
+	itemStr := cmd.Item
+	silent := strings.HasSuffix(itemStr, common.SilentOp)
+	if silent {
+		itemStr = strings.TrimSuffix(itemStr, common.SilentOp)
+	}
+	item := common.FlagsOp(itemStr)
+
+	if item != common.SetFlags && item != common.AddFlags && item != common.RemoveFlags {
+		return errors.New("Unsupported STORE operation")
+	}
+
+	flagsList, ok := cmd.Value.([]interface{})
+	if !ok {
+		return errors.New("Flags must be a list")
+	}
+	flags, err := common.ParseStringList(flagsList)
+	if err != nil {
+		return err
+	}
+
+	if err := conn.Mailbox.UpdateMessagesFlags(false, cmd.SeqSet, item, flags); err != nil {
+		return err
+	}
+
+	if !silent { // Not silent: send FETCH updates
+		inner := &Fetch{}
+		inner.SeqSet = cmd.SeqSet
+		inner.Items = []string{"FLAGS"}
+
+		if err := inner.handle(false, conn); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type Copy struct {

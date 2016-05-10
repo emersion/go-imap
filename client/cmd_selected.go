@@ -181,8 +181,8 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 
 	// If ch is nil, the updated values are data which will be lost, so don't
 	// retrieve it.
-	if ch == nil && !strings.HasSuffix(item, ".SILENT") {
-		item += ".SILENT"
+	if ch == nil && !strings.HasSuffix(item, common.SilentOp) {
+		item += common.SilentOp
 	}
 
 	var cmd imap.Commander
