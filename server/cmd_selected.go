@@ -170,7 +170,7 @@ type Store struct {
 	commands.Store
 }
 
-func (cmd *Store) Handle(conn *Conn) error {
+func (cmd *Store) handle(uid bool, conn *Conn) error {
 	if conn.Mailbox == nil {
 		return errors.New("No mailbox selected")
 	}
@@ -195,7 +195,7 @@ func (cmd *Store) Handle(conn *Conn) error {
 		return err
 	}
 
-	if err := conn.Mailbox.UpdateMessagesFlags(false, cmd.SeqSet, item, flags); err != nil {
+	if err := conn.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags); err != nil {
 		return err
 	}
 
@@ -204,12 +204,20 @@ func (cmd *Store) Handle(conn *Conn) error {
 		inner.SeqSet = cmd.SeqSet
 		inner.Items = []string{"FLAGS"}
 
-		if err := inner.handle(false, conn); err != nil {
+		if err := inner.handle(uid, conn); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (cmd *Store) Handle(conn *Conn) error {
+	return cmd.handle(false, conn)
+}
+
+func (cmd *Store) UidHandle(conn *Conn) error {
+	return cmd.handle(true, conn)
 }
 
 type Copy struct {
