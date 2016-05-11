@@ -158,7 +158,7 @@ func TestClient_Fetch(t *testing.T) {
 		}
 
 		msg := <-messages
-		body := msg.Body["BODY[]"].String()
+		body := msg.GetBody("BODY[]").String()
 		if msg.Uid != 42 {
 			return fmt.Errorf("First message has bad UID: %v", msg.Uid)
 		}
@@ -167,7 +167,7 @@ func TestClient_Fetch(t *testing.T) {
 		}
 
 		msg = <-messages
-		body = msg.Body["BODY[]"].String()
+		body = msg.GetBody("BODY[]").String()
 		if msg.Uid != 28 {
 			return fmt.Errorf("Second message has bad UID: %v", msg.Uid)
 		}

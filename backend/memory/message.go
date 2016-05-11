@@ -12,11 +12,10 @@ type Message struct {
 
 func (m *Message) Metadata(items []string) (metadata *common.Message) {
 	metadata = &common.Message{
-		Body: map[string]*common.Literal{},
+		Body: map[*common.BodySectionName]*common.Literal{},
 	}
 
 	for _, item := range items {
-		ok := true
 		switch item {
 		case "ENVELOPE":
 			metadata.Envelope = m.Envelope
@@ -32,16 +31,15 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 			metadata.Uid = m.Uid
 		default:
 			section, err := common.NewBodySectionName(item)
+			item = ""
 			if err != nil {
-				ok = false
 				break
 			}
 
-			//metadata.Body[item] = m.Body[item]
-			metadata.Body[section.Resp().String()] = common.NewLiteral(m.body)
+			metadata.Body[section] = common.NewLiteral(m.body)
 		}
 
-		if ok {
+		if item != "" {
 			metadata.Items = append(metadata.Items, item)
 		}
 	}

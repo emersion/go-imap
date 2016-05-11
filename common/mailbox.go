@@ -61,5 +61,6 @@ type MailboxStatus struct {
 	// The next UID.
 	UidNext uint32
 	// Together with a UID, it is a unique identifier for a message.
+	// Must be greater than or equal to 1.
 	UidValidity uint32
 }

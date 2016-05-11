@@ -19,16 +19,15 @@ func ParseDate(date string) (*time.Time, error) {
 
 // A message.
 type Message struct {
-	// The message identifier. Can be either a sequence number or a UID, depending
-	// of how this message has been retrieved.
+	// The message sequence number.
 	Id uint32
 	// The message items that are currently filled in.
 	Items []string
+	// The message body sections.
+	Body map[*BodySectionName]*Literal
 
 	// The message envelope.
 	Envelope *Envelope
-	// The message body parts.
-	Body map[string]*Literal
 	// The message body structure (either BODYSTRUCTURE or BODY).
 	BodyStructure *BodyStructure
 	// The message flags.
@@ -37,14 +36,15 @@ type Message struct {
 	InternalDate *time.Time
 	// The message size.
 	Size uint32
-	// The message UID.
+	// The message unique identifier.
+	// Must be greater than or equal to 1.
 	Uid uint32
 }
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
 	m.Items = nil
-	m.Body = map[string]*Literal{}
+	m.Body = map[*BodySectionName]*Literal{}
 
 	var key string
 	for i, f := range fields {
@@ -95,17 +95,28 @@ func (m *Message) Parse(fields []interface{}) error {
 			case "UID":
 				m.Uid, _ = ParseNumber(f)
 			default:
-				// Likely to be a section of the body contents
+				// Likely to be a section of the body
+				// First check that the section name is correct
+				section, err := NewBodySectionName(item)
+				if err != nil {
+					break
+				}
+
+				// Then check that the value is a correct literal
 				literal, ok := f.(*Literal)
 				if !ok {
 					break
 				}
 
-				item = key // Do not uppercase
-				m.Body[key] = literal
+				m.Body[section] = literal
+
+				// Do not include this in the list of items
+				item = ""
 			}
 
-			m.Items = append(m.Items, item)
+			if item != "" {
+				m.Items = append(m.Items, item)
+			}
 		}
 	}
 	return nil
@@ -143,11 +154,20 @@ func (m *Message) Format() (fields []interface{}) {
 		}
 	}
 
-	for name, lit := range m.Body {
-		fields = append(fields, &BodySectionName{value: name}, lit)
+	for section, literal := range m.Body {
+		fields = append(fields, section.Resp(), literal)
 	}
 
 	return
+}
+
+func (m *Message) GetBody(s string) *Literal {
+	for section, body := range m.Body {
+		if section.value == s {
+			return body
+		}
+	}
+	return nil
 }
 
 // A body section name.
@@ -170,12 +190,12 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 	if s == "RFC822" {
 		s = "BODY[]"
-	} else if s == "RFC822.HEADER" {
+	}
+	if s == "RFC822.HEADER" {
 		s = "BODY.PEEK[HEADER]"
-	} else if s == "RFC822.TEXT" {
+	}
+	if s == "RFC822.TEXT" {
 		s = "BODY[TEXT]"
-	} else {
-		section.value = ""
 	}
 
 	partsStart := strings.Index(s, "[")
@@ -303,6 +323,7 @@ func (section *BodySectionName) String() (s string) {
 
 func (section *BodySectionName) Resp() *BodySectionName {
 	// TODO: clone section
+	section.value = "" // Reset cached value
 	section.Peek = false
 	if len(section.Partial) == 2 {
 		section.Partial = []uint32{section.Partial[0]}
