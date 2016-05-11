@@ -36,10 +36,10 @@ EXAMINE       | ✓      | ✓            | ✓      | ✗
 CREATE        | ✓      | ✓            | ✓      | ✗
 DELETE        | ✓      | ✓            | ✓      | ✗
 RENAME        | ✓      | ✓            | ✓      | ✗
-SUBSCRIBE     | ✓      | ✓            | ✗      | ✗
-UNSUBSCRIBE   | ✓      | ✓            | ✗      | ✗
+SUBSCRIBE     | ✓      | ✓            | ✓      | ✗
+UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✗
 LIST          | ✓      | ✓            | ✓      | ✗
-LSUB          | ✓      | ✓            | ✗      | ✗
+LSUB          | ✓      | ✓            | ✓      | ✗
 STATUS        | ✓      | ✓            | ✓      | ✗
 APPEND        | ✓      | ✓            | ✓      | ✗
 CHECK         | ✓      | ✓            | ✓      | ✗

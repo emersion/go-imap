@@ -197,7 +197,14 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		common.Create: func () Handler { return &Create{} },
 		common.Delete: func () Handler { return &Delete{} },
 		common.Rename: func () Handler { return &Rename{} },
+		common.Subscribe: func () Handler { return &Subscribe{} },
+		common.Unsubscribe: func () Handler { return &Unsubscribe{} },
 		common.List: func () Handler { return &List{} },
+		common.Lsub: func () Handler {
+			hdlr := &List{}
+			hdlr.Subscribed = true
+			return hdlr
+		},
 		common.Status: func () Handler { return &Status{} },
 		common.Append: func () Handler { return &Append{} },
 

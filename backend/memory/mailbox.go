@@ -9,6 +9,7 @@ import (
 
 type Mailbox struct {
 	name string
+	subscribed bool
 	messages []*Message
 	user *User
 }
@@ -47,6 +48,16 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 	}
 
 	return status, nil
+}
+
+func (mbox *Mailbox) Subscribe() error {
+	mbox.subscribed = true
+	return nil
+}
+
+func (mbox *Mailbox) Unsubscribe() error {
+	mbox.subscribed = false
+	return nil
 }
 
 func (mbox *Mailbox) Check() error {

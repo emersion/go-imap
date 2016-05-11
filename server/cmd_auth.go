@@ -133,6 +133,40 @@ func (cmd *Rename) Handle(conn *Conn) error {
 	return conn.User.RenameMailbox(cmd.Existing, cmd.New)
 }
 
+type Subscribe struct {
+	commands.Subscribe
+}
+
+func (cmd *Subscribe) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	if err != nil {
+		return err
+	}
+
+	return mbox.Subscribe()
+}
+
+type Unsubscribe struct {
+	commands.Unsubscribe
+}
+
+func (cmd *Unsubscribe) Handle(conn *Conn) error {
+	if conn.User == nil {
+		return errors.New("Not authenticated")
+	}
+
+	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	if err != nil {
+		return err
+	}
+
+	return mbox.Unsubscribe()
+}
+
 type List struct {
 	commands.List
 }
@@ -146,13 +180,13 @@ func (cmd *List) Handle(conn *Conn) error {
 	defer close(done)
 
 	ch := make(chan *common.MailboxInfo)
-	res := responses.List{Mailboxes: ch}
+	res := responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
 	go (func () {
 		done <- res.WriteTo(conn.Writer)
 	})()
 
-	mailboxes, err := conn.User.ListMailboxes()
+	mailboxes, err := conn.User.ListMailboxes(cmd.Subscribed)
 	if err != nil {
 		close(ch)
 		return err

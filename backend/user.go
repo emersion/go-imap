@@ -4,7 +4,8 @@ package backend
 // A user operation always deals with mailboxes.
 type User interface {
 	// Returns a list of mailboxes belonging to this user.
-	ListMailboxes() ([]Mailbox, error)
+	// If subscribed is set to true, only returns subscribed mailboxes.
+	ListMailboxes(subscribed bool) ([]Mailbox, error)
 
 	// Get a mailbox.
 	GetMailbox(name string) (Mailbox, error)

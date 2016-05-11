@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"errors"
+
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/utf7"
 )
@@ -20,6 +22,23 @@ func (cmd *Subscribe) Command() *imap.Command {
 	}
 }
 
+func (cmd *Subscribe) Parse(fields []interface{}) (err error) {
+	if len(fields) < 0 {
+		return errors.New("No enogh arguments")
+	}
+
+	mailbox, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Mailbox name must be a string")
+	}
+
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
+	}
+
+	return
+}
+
 // An UNSUBSCRIBE command.
 // See https://tools.ietf.org/html/rfc3501#section-6.3.7
 type Unsubscribe struct {
@@ -33,4 +52,21 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 		Name: imap.Unsubscribe,
 		Arguments: []interface{}{mailbox},
 	}
+}
+
+func (cmd *Unsubscribe) Parse(fields []interface{}) (err error) {
+	if len(fields) < 0 {
+		return errors.New("No enogh arguments")
+	}
+
+	mailbox, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Mailbox name must be a string")
+	}
+
+	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+		return err
+	}
+
+	return
 }

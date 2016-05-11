@@ -8,11 +8,16 @@ import (
 
 type User struct {
 	username string
+	password string
 	mailboxes map[string]*Mailbox
 }
 
-func (u *User) ListMailboxes() (mailboxes []backend.Mailbox, err error) {
+func (u *User) ListMailboxes(subscribed bool) (mailboxes []backend.Mailbox, err error) {
 	for _, mailbox := range u.mailboxes {
+		if subscribed && !mailbox.subscribed {
+			continue
+		}
+
 		mailboxes = append(mailboxes, mailbox)
 	}
 	return

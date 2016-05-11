@@ -16,6 +16,13 @@ type Mailbox interface {
 	// See RFC 3501 section 6.3.10 for a list of items that can be requested.
 	Status(items []string) (*common.MailboxStatus, error)
 
+	// Add the mailbox to the server's set of "active" or "subscribed" mailboxes.
+	Subscribe() error
+
+	// Remove the mailbox to the server's set of "active" or "subscribed"
+	// mailboxes.
+	Unsubscribe() error
+
 	// Requests a checkpoint of the currently selected mailbox. A checkpoint
 	// refers to any implementation-dependent housekeeping associated with the
 	// mailbox (e.g., resolving the server's in-memory state of the mailbox with

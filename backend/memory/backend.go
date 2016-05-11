@@ -9,14 +9,21 @@ import (
 	"github.com/emersion/imap/common"
 )
 
-type Backend struct {}
+type Backend struct {
+	users map[string]*User
+}
 
 func (bkd *Backend) Login(username, password string) (backend.User, error) {
-	if username != "username" || password != "password" {
-		return nil, errors.New("Bad username or password")
+	user, ok := bkd.users[username]
+	if ok && user.password == password {
+		return user, nil
 	}
 
-	user := &User{username: username}
+	return nil, errors.New("Bad username or password")
+}
+
+func New() *Backend {
+	user := &User{username: "username", password: "password"}
 
 	now := time.Now()
 	user.mailboxes = map[string]*Mailbox{
@@ -36,9 +43,7 @@ func (bkd *Backend) Login(username, password string) (backend.User, error) {
 		},
 	}
 
-	return user, nil
-}
-
-func New() *Backend {
-	return &Backend{}
+	return &Backend{
+		users: map[string]*User{user.username: user},
+	}
 }
