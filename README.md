@@ -29,7 +29,7 @@ CAPABILITY    | ✓      | ✓            | ✓      | ✓
 NOOP          | ✓      | ✓            | ✓      | ✓
 LOGOUT        | ✓      | ✓            | ✓      | ✓
 AUTHENTICATE  | ✓      | ✓            | ✓      | ✗
-LOGIN         | ✓      | ✓            | ✓      | ✗
+LOGIN         | ✓      | ✓            | ✓      | ✓
 STARTTLS      | ✓      | ✗            | ✓      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✗
 EXAMINE       | ✓      | ✓            | ✓      | ✗
