@@ -38,9 +38,52 @@ func (cmd *Close) Handle(conn *Conn) error {
 		return errors.New("No mailbox selected")
 	}
 
+	if err := conn.Mailbox.Expunge(); err != nil {
+		return err
+	}
+
 	conn.Mailbox = nil
 	conn.MailboxReadOnly = false
 	return nil
+}
+
+type Expunge struct {
+	commands.Expunge
+}
+
+func (cmd *Expunge) Handle(conn *Conn) error {
+	if conn.Mailbox == nil {
+		return errors.New("No mailbox selected")
+	}
+
+	// Get a list of messages that will be deleted
+	seqids, err := conn.Mailbox.SearchMessages(false, &common.SearchCriteria{Deleted: true})
+	if err != nil {
+		return err
+	}
+
+	if err := conn.Mailbox.Expunge(); err != nil {
+		return err
+	}
+
+	done := make(chan error)
+	defer close(done)
+
+	ch := make(chan uint32)
+	res := responses.Expunge{SeqIds: ch}
+
+	go (func () {
+		done <- res.WriteTo(conn.Writer)
+	})()
+
+	// Iterate sequence numbers from the last one to the first one, as deleting
+	// messages changes their respective numbers
+	for i := len(seqids) - 1; i >= 0; i-- {
+		ch <- seqids[i]
+	}
+	close(ch)
+
+	return <-done
 }
 
 type Search struct {

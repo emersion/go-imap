@@ -168,3 +168,23 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *common.SeqSet, destName stri
 
 	return nil
 }
+
+func (mbox *Mailbox) Expunge() error {
+	for i := len(mbox.messages) - 1; i >= 0; i-- {
+		msg := mbox.messages[i]
+
+		deleted := false
+		for _, flag := range msg.Flags {
+			if flag == "\\Deleted" {
+				deleted = true
+				break
+			}
+		}
+
+		if deleted {
+			mbox.messages = append(mbox.messages[:i], mbox.messages[i+1:]...)
+		}
+	}
+
+	return nil
+}

@@ -48,4 +48,8 @@ type Mailbox interface {
 	// If the destination mailbox does not exist, a server SHOULD return an error.
 	// It SHOULD NOT automatically create the mailbox.
 	CopyMessages(uid bool, seqset *common.SeqSet, dest string) error
+
+	// Permanently removes all messages that have the \Deleted flag set from the
+	// currently selected mailbox.
+	Expunge() error
 }

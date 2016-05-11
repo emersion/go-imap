@@ -203,6 +203,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 
 		common.Check: func () Handler { return &Check{} },
 		common.Close: func () Handler { return &Close{} },
+		common.Expunge: func () Handler { return &Expunge{} },
 		common.Search: func () Handler { return &Search{} },
 		common.Fetch: func () Handler { return &Fetch{} },
 		common.Store: func () Handler { return &Store{} },

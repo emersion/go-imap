@@ -7,7 +7,7 @@ import (
 // An EXPUNGE response.
 // See https://tools.ietf.org/html/rfc3501#section-7.4.1
 type Expunge struct {
-	SeqIds chan<- uint32
+	SeqIds chan uint32
 }
 
 func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
@@ -28,4 +28,16 @@ func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
 	}
 
 	return
+}
+
+func (r *Expunge) WriteTo(w *imap.Writer) error {
+	for seqid := range r.SeqIds {
+		res := imap.NewUntaggedResp([]interface{}{seqid, imap.Expunge})
+
+		if err := res.WriteTo(w); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
