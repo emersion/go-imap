@@ -99,9 +99,10 @@ func (c *Conn) CanAuth() bool {
 
 func newConn(s *Server, c net.Conn) *Conn {
 	continues := make(chan bool)
-	tee := io.TeeReader(c, os.Stdout)
-	r := common.NewServerReader(bufio.NewReader(tee), continues)
-	w := common.NewWriter(c)
+	rtee := io.TeeReader(c, os.Stdout)
+	wtee := io.MultiWriter(c, os.Stdout)
+	r := common.NewServerReader(bufio.NewReader(rtee), continues)
+	w := common.NewWriter(wtee)
 
 	conn := &Conn{
 		Reader: r,

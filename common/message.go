@@ -8,42 +8,13 @@ import (
 	"time"
 )
 
-// Layouts suitable for passing to time.Parse.
-var dateLayouts []string
-
-func init() {
-	// Generate layouts based on RFC 5322, section 3.3.
-	dows := []string{"", "Mon, "}   // day-of-week
-	days := []string{"2", "02"}     // day = 1*2DIGIT
-	years := []string{"2006", "06"} // year = 4*DIGIT / 2*DIGIT
-	seconds := []string{":05", ""}  // second
-	// "-0700 (MST)" is not in RFC 5322, but is common.
-	zones := []string{"-0700", "MST", "-0700 (MST)"} // zone = (("+" / "-") 4DIGIT) / "GMT" / ...
-
-	for _, dow := range dows {
-		for _, day := range days {
-			for _, year := range years {
-				for _, second := range seconds {
-					for _, zone := range zones {
-						s := dow + day + " Jan " + year + " 15:04" + second + " " + zone
-						dateLayouts = append(dateLayouts, s)
-					}
-				}
-			}
-		}
-	}
-}
-
 // Parse an IMAP date.
-// Borrowed from https://golang.org/pkg/net/mail/#Header.Date
 func ParseDate(date string) (*time.Time, error) {
-	for _, layout := range dateLayouts {
-		t, err := time.Parse(layout, date)
-		if err == nil {
-			return &t, nil
-		}
+	t, err := time.Parse("2-Jan-2006 15:04:05 -0700", date)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("Cannot parse date")
+	return &t, nil
 }
 
 // A message.
@@ -83,10 +54,9 @@ func (m *Message) Parse(fields []interface{}) error {
 				return errors.New("Key is not a string")
 			}
 		} else { // It's a value
-			key = strings.ToUpper(key)
-			m.Items = append(m.Items, key)
+			item := strings.ToUpper(key)
 
-			switch key {
+			switch item {
 			case "ENVELOPE":
 				env, ok := f.([]interface{})
 				if !ok {
@@ -130,8 +100,12 @@ func (m *Message) Parse(fields []interface{}) error {
 				if !ok {
 					break
 				}
+
+				item = key // Do not uppercase
 				m.Body[key] = literal
 			}
+
+			m.Items = append(m.Items, item)
 		}
 	}
 	return nil
@@ -139,10 +113,11 @@ func (m *Message) Parse(fields []interface{}) error {
 
 func (m *Message) Format() (fields []interface{}) {
 	for _, item := range m.Items {
-		var key, value interface{}
-		key = item
+		item = strings.ToUpper(item)
 
-		switch strings.ToUpper(item) {
+		ok := true
+		var value interface{}
+		switch item {
 		case "ENVELOPE":
 			value = m.Envelope.Format()
 		case "BODYSTRUCTURE", "BODY":
@@ -160,19 +135,16 @@ func (m *Message) Format() (fields []interface{}) {
 		case "UID":
 			value = m.Uid
 		default:
-			var ok bool
-			if value, ok = m.Body[item]; ok {
-				key = &BodySectionName{value: item}
-			} else {
-				key = nil
-			}
+			ok = false
 		}
 
-		if key == nil {
-			continue
+		if ok {
+			fields = append(fields, item, value)
 		}
+	}
 
-		fields = append(fields, key, value)
+	for name, lit := range m.Body {
+		fields = append(fields, &BodySectionName{value: name}, lit)
 	}
 
 	return
@@ -198,12 +170,12 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 	if s == "RFC822" {
 		s = "BODY[]"
-	}
-	if s == "RFC822.HEADER" {
+	} else if s == "RFC822.HEADER" {
 		s = "BODY.PEEK[HEADER]"
-	}
-	if s == "RFC822.TEXT" {
+	} else if s == "RFC822.TEXT" {
 		s = "BODY[TEXT]"
+	} else {
+		section.value = ""
 	}
 
 	partsStart := strings.Index(s, "[")
@@ -228,30 +200,32 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 	section.Parts = map[string]interface{}{}
 
-	var b *bytes.Buffer
-	for _, part := range strings.Split(parts, ",") {
-		b = bytes.NewBufferString(part)
-		r := NewReader(b)
+	if len(parts) > 0 {
+		var b *bytes.Buffer
+		for _, part := range strings.Split(parts, ",") {
+			b = bytes.NewBufferString(part + string(cr) + string(lf))
+			r := NewReader(b)
 
-		var fields []interface{}
-		if fields, err = r.ReadFields(); err != nil {
-			return err
-		}
-		if len(fields) < 0 {
-			return errors.New("Invalid body section name: empty part")
-		}
+			var fields []interface{}
+			if fields, err = r.ReadFields(); err != nil {
+				return err
+			}
+			if len(fields) < 0 {
+				return errors.New("Invalid body section name: empty part")
+			}
 
-		name, ok := fields[0].(string)
-		if !ok {
-			return errors.New("Invalid body section name: part name must be a string")
-		}
+			name, ok := fields[0].(string)
+			if !ok {
+				return errors.New("Invalid body section name: part name must be a string")
+			}
 
-		var value interface{}
-		if len(fields) > 1 {
-			value = fields[1]
-		}
+			var value interface{}
+			if len(fields) > 1 {
+				value = fields[1]
+			}
 
-		section.Parts[name] = value
+			section.Parts[name] = value
+		}
 	}
 
 	if len(partial) > 0 {
@@ -260,7 +234,7 @@ func (section *BodySectionName) parse(s string) (err error) {
 		}
 		partial = partial[1:len(partial)-1]
 
-		partialParts := strings.SplitN(partial, ",", 2)
+		partialParts := strings.SplitN(partial, ".", 2)
 		if len(partialParts) < 2 {
 			return errors.New("Invalid body section name: partial must have two fields")
 		}
@@ -317,7 +291,7 @@ func (section *BodySectionName) String() (s string) {
 		s += strconv.FormatUint(uint64(section.Partial[0]), 10)
 
 		if len(section.Partial) > 1 {
-			s += ","
+			s += "."
 			s += strconv.FormatUint(uint64(section.Partial[0]), 10)
 		}
 
@@ -325,6 +299,15 @@ func (section *BodySectionName) String() (s string) {
 	}
 
 	return
+}
+
+func (section *BodySectionName) Resp() *BodySectionName {
+	// TODO: clone section
+	section.Peek = false
+	if len(section.Partial) == 2 {
+		section.Partial = []uint32{section.Partial[0]}
+	}
+	return section
 }
 
 // Parse a body section name.

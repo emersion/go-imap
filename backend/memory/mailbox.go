@@ -18,6 +18,7 @@ func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
 	info := &common.MailboxInfo{
 		Delimiter: "/",
 		Name: mbox.name,
+		Flags: []string{"\\Noinferiors"},
 	}
 	return info, nil
 }
@@ -36,6 +37,8 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 	status := &common.MailboxStatus{
 		Items: items,
 		Name: mbox.name,
+		Flags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"},
+		PermanentFlags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"},
 	}
 
 	for _, name := range items {
@@ -44,6 +47,12 @@ func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
 			status.Messages = uint32(len(mbox.messages))
 		case "UIDNEXT":
 			status.UidNext = mbox.uidNext()
+		case "UIDVALIDITY":
+			status.UidValidity = 1
+		case "RECENT":
+			status.Recent = 0
+		case "UNSEEN":
+			status.Unseen = 0
 		}
 	}
 
@@ -66,14 +75,20 @@ func (mbox *Mailbox) Check() error {
 
 func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
 	for i, msg := range mbox.messages {
-		id := uint32(i+1)
+		seqid := uint32(i+1)
 
-		if (uid && !seqset.Contains(msg.Uid)) || (!uid && !seqset.Contains(id)) {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = seqid
+		}
+		if !seqset.Contains(id) {
 			continue
 		}
 
 		m := msg.Metadata(items)
-		m.Id = id
+		m.Id = seqid
 		msgs = append(msgs, m)
 	}
 
@@ -108,11 +123,10 @@ func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte)
 		Uid: mbox.uidNext(),
 		Envelope: &common.Envelope{},
 		BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-		Body: map[string]*common.Literal{"BODY[]": common.NewLiteral(body)},
 		Size: uint32(len(body)),
 		InternalDate: date,
 		Flags: flags,
-	}})
+	}, body})
 
 	return nil
 }

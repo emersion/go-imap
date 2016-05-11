@@ -69,6 +69,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Type: common.OK,
 		Code: "PERMANENTFLAGS",
 		Arguments: []interface{}{flags},
+		Info: "Flags permitted.",
 	}
 	if err := statusRes.WriteTo(conn.Writer); err != nil {
 		return err
@@ -79,6 +80,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Type: common.OK,
 		Code: "UIDNEXT",
 		Arguments: []interface{}{status.UidNext},
+		Info: "Predicted next UID",
 	}
 	if err := statusRes.WriteTo(conn.Writer); err != nil {
 		return err
@@ -89,6 +91,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Type: common.OK,
 		Code: "UIDVALIDITY",
 		Arguments: []interface{}{status.UidValidity},
+		Info: "UIDs valid",
 	}
 	if err := statusRes.WriteTo(conn.Writer); err != nil {
 		return err
@@ -193,12 +196,15 @@ func (cmd *List) Handle(conn *Conn) error {
 	}
 
 	for _, mbox := range mailboxes {
-		// TODO: filter mailboxes with cmd.Reference and cmd.Mailbox
-
 		info, err := mbox.Info()
 		if err != nil {
 			close(ch)
 			return err
+		}
+
+		// TODO: filter mailboxes with cmd.Reference and cmd.Mailbox
+		if cmd.Reference != "" || (cmd.Mailbox != "*" && cmd.Mailbox != "%" && cmd.Mailbox != info.Name) {
+			continue
 		}
 
 		ch <- info

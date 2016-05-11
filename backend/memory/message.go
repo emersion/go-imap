@@ -6,15 +6,17 @@ import (
 
 type Message struct {
 	*common.Message
+
+	body []byte
 }
 
 func (m *Message) Metadata(items []string) (metadata *common.Message) {
 	metadata = &common.Message{
-		Items: items,
 		Body: map[string]*common.Literal{},
 	}
 
 	for _, item := range items {
+		ok := true
 		switch item {
 		case "ENVELOPE":
 			metadata.Envelope = m.Envelope
@@ -29,7 +31,18 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 		case "UID":
 			metadata.Uid = m.Uid
 		default:
-			metadata.Body[item] = m.Body[item]
+			section, err := common.NewBodySectionName(item)
+			if err != nil {
+				ok = false
+				break
+			}
+
+			//metadata.Body[item] = m.Body[item]
+			metadata.Body[section.Resp().String()] = common.NewLiteral(m.body)
+		}
+
+		if ok {
+			metadata.Items = append(metadata.Items, item)
 		}
 	}
 

@@ -351,7 +351,7 @@ func TestClient_Append(t *testing.T) {
 		scanner := NewCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
-		if cmd != "APPEND INBOX (\\Seen \\Draft) \"Tue, 10 Nov 2009 23:00:00 +0000\" {30}" {
+		if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
 			t.Fatal("Bad command:", cmd)
 		}
 

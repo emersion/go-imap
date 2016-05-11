@@ -42,7 +42,7 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 	}
 
 	switch items := fields[1].(type) {
-	case string: // A macro
+	case string: // A macro or a single item
 		switch strings.ToUpper(items) {
 		case "ALL":
 			cmd.Items = []string{"FLAGS", "INTERNALDATE", "RFC822.SIZE", "ENVELOPE"}
@@ -51,7 +51,7 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 		case "FULL":
 			cmd.Items = []string{"FLAGS", "INTERNALDATE", "RFC822.SIZE", "ENVELOPE", "BODY"}
 		default:
-			return errors.New("Unknown macro")
+			cmd.Items = []string{strings.ToUpper(items)}
 		}
 	case []interface{}: // A list of items
 		cmd.Items = make([]string, len(items))

@@ -203,6 +203,9 @@ func (cmd *Store) handle(uid bool, conn *Conn) error {
 		inner := &Fetch{}
 		inner.SeqSet = cmd.SeqSet
 		inner.Items = []string{"FLAGS"}
+		if uid {
+			inner.Items = append(inner.Items, "UID")
+		}
 
 		if err := inner.handle(uid, conn); err != nil {
 			return err
