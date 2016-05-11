@@ -3,6 +3,7 @@ package common_test
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/emersion/imap/common"
 )
@@ -98,6 +99,29 @@ func TestWriter_WriteString_Empty(t *testing.T) {
 	}
 	if b.String() != "\"\"" {
 		t.Error("Not the expected quoted string")
+	}
+}
+
+func TestWriter_WriteDate(t *testing.T) {
+	w, b := newWriter()
+
+	date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+	if _, err := w.WriteDate(&date); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "\"10-Nov-2009 23:00:00 +0000\"" {
+		t.Error("Invalid date:", b.String())
+	}
+}
+
+func TestWriter_WriteDate_Nil(t *testing.T) {
+	w, b := newWriter()
+
+	if _, err := w.WriteDate(nil); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "NIL" {
+		t.Error("Invalid nil date:", b.String())
 	}
 }
 
