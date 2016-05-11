@@ -32,8 +32,13 @@ type Client interface {
 type Server interface {
 	// Begins SASL authentication with the client.
 	Start() (ir []byte, err error)
+
 	// Continues challenge-response authentication.
 	Next(challenge []byte) (response []byte, err error)
+
 	// Get the authenticated user. Returns nil if no user has been authenticated.
 	User() backend.User
 }
+
+// A function that creates SASL servers.
+type ServerFactory func() Server

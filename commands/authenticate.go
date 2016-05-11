@@ -37,13 +37,14 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w *imap.Writer) (user backend.User, err error) {
-	sasl, ok := mechanisms[cmd.Mechanism]
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.ServerFactory, r *imap.Reader, w *imap.Writer) (user backend.User, err error) {
+	newSasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
 		err = errors.New("Unsupported mechanism")
 		return
 	}
 
+	sasl := newSasl()
 	ir, err := sasl.Start()
 	if err != nil {
 		return

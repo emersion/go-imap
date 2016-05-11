@@ -37,7 +37,8 @@ type plainServer struct {
 }
 
 func (a *plainServer) Start() (ir []byte, err error) {
-	return []byte{}, nil
+	ir = []byte{}
+	return
 }
 
 func (a *plainServer) Next(challenge []byte) (response []byte, err error) {
@@ -45,7 +46,6 @@ func (a *plainServer) Next(challenge []byte) (response []byte, err error) {
 		err = errors.New("unexpected client challenge")
 		return
 	}
-
 	a.done = true
 
 	parts := bytes.Split(challenge, []byte("\x00"))

@@ -59,7 +59,7 @@ func (cmd *Login) Handle(conn *Conn) error {
 type Authenticate struct {
 	commands.Authenticate
 
-	Mechanisms map[string]sasl.Server
+	Mechanisms map[string]sasl.ServerFactory
 }
 
 func (cmd *Authenticate) Handle(conn *Conn) error {

@@ -22,7 +22,7 @@ type Handler interface {
 }
 
 // A function that creates handlers.
-type HandlerFactory func () Handler
+type HandlerFactory func() Handler
 
 // An IMAP server.
 type Server struct {
@@ -31,7 +31,7 @@ type Server struct {
 
 	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
-	auths map[string]sasl.Server
+	auths map[string]sasl.ServerFactory
 
 	// This server's backend.
 	Backend backend.Backend
@@ -175,47 +175,47 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		Backend: bkd,
 	}
 
-	s.auths = map[string]sasl.Server{
-		"PLAIN": sasl.NewPlainServer(bkd),
+	s.auths = map[string]sasl.ServerFactory{
+		"PLAIN": func() sasl.Server { return sasl.NewPlainServer(bkd) },
 	}
 
 	s.commands = map[string]HandlerFactory{
-		common.Noop: func () Handler { return &Noop{} },
-		common.Capability: func () Handler { return &Capability{} },
-		common.Logout: func () Handler { return &Logout{} },
+		common.Noop: func() Handler { return &Noop{} },
+		common.Capability: func() Handler { return &Capability{} },
+		common.Logout: func() Handler { return &Logout{} },
 
-		common.StartTLS: func () Handler { return &StartTLS{} },
-		common.Login: func () Handler { return &Login{} },
-		common.Authenticate: func () Handler { return &Authenticate{Mechanisms: s.auths} },
+		common.StartTLS: func() Handler { return &StartTLS{} },
+		common.Login: func() Handler { return &Login{} },
+		common.Authenticate: func() Handler { return &Authenticate{Mechanisms: s.auths} },
 
-		common.Select: func () Handler { return &Select{} },
-		common.Examine: func () Handler {
+		common.Select: func() Handler { return &Select{} },
+		common.Examine: func() Handler {
 			hdlr := &Select{}
 			hdlr.ReadOnly = true
 			return hdlr
 		},
-		common.Create: func () Handler { return &Create{} },
-		common.Delete: func () Handler { return &Delete{} },
-		common.Rename: func () Handler { return &Rename{} },
-		common.Subscribe: func () Handler { return &Subscribe{} },
-		common.Unsubscribe: func () Handler { return &Unsubscribe{} },
-		common.List: func () Handler { return &List{} },
-		common.Lsub: func () Handler {
+		common.Create: func() Handler { return &Create{} },
+		common.Delete: func() Handler { return &Delete{} },
+		common.Rename: func() Handler { return &Rename{} },
+		common.Subscribe: func() Handler { return &Subscribe{} },
+		common.Unsubscribe: func() Handler { return &Unsubscribe{} },
+		common.List: func() Handler { return &List{} },
+		common.Lsub: func() Handler {
 			hdlr := &List{}
 			hdlr.Subscribed = true
 			return hdlr
 		},
-		common.Status: func () Handler { return &Status{} },
-		common.Append: func () Handler { return &Append{} },
+		common.Status: func() Handler { return &Status{} },
+		common.Append: func() Handler { return &Append{} },
 
-		common.Check: func () Handler { return &Check{} },
-		common.Close: func () Handler { return &Close{} },
-		common.Expunge: func () Handler { return &Expunge{} },
-		common.Search: func () Handler { return &Search{} },
-		common.Fetch: func () Handler { return &Fetch{} },
-		common.Store: func () Handler { return &Store{} },
-		common.Copy: func () Handler { return &Copy{} },
-		common.Uid: func () Handler { return &Uid{} },
+		common.Check: func() Handler { return &Check{} },
+		common.Close: func() Handler { return &Close{} },
+		common.Expunge: func() Handler { return &Expunge{} },
+		common.Search: func() Handler { return &Search{} },
+		common.Fetch: func() Handler { return &Fetch{} },
+		common.Store: func() Handler { return &Store{} },
+		common.Copy: func() Handler { return &Copy{} },
+		common.Uid: func() Handler { return &Uid{} },
 	}
 
 	go s.listen()
