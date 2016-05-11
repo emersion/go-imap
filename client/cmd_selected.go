@@ -58,7 +58,7 @@ func (c *Client) Close() (err error) {
 // Permanently removes all messages that have the \Deleted flag set from the
 // currently selected mailbox.
 // If ch is not nil, sends sequence IDs of each deleted message to this channel.
-func (c *Client) Expunge(ch chan<- uint32) (err error) {
+func (c *Client) Expunge(ch chan uint32) (err error) {
 	defer close(ch)
 
 	if c.State != imap.SelectedState {
