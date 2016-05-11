@@ -43,3 +43,24 @@ func TestNoop(t *testing.T) {
 		t.Fatal("Bad status response:", scanner.Text())
 	}
 }
+
+func TestLogout(t *testing.T) {
+	s, c := testServer(t)
+	defer c.Close()
+	defer s.Close()
+
+	scanner := bufio.NewScanner(c)
+	scanner.Scan() // Greeting
+
+	io.WriteString(c, "a001 LOGOUT\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "* BYE ") {
+		t.Fatal("Bad BYE response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
