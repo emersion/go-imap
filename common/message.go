@@ -161,6 +161,7 @@ func (m *Message) Format() (fields []interface{}) {
 	return
 }
 
+// Get the body section with the specified name. Returns nil if it's not found.
 func (m *Message) GetBody(s string) *Literal {
 	for section, body := range m.Body {
 		if section.value == s {
