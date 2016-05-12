@@ -31,7 +31,7 @@ LOGOUT        | ✓      | ✓            | ✓      | ✓
 AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
 LOGIN         | ✓      | ✓            | ✓      | ✓
 STARTTLS      | ✓      | ✗            | ✓      | ✗
-SELECT        | ✓      | ✓            | ✓      | ✗
+SELECT        | ✓      | ✓            | ✓      | ✓
 EXAMINE       | ✓      | ✓            | ✓      | ✗
 CREATE        | ✓      | ✓            | ✓      | ✗
 DELETE        | ✓      | ✓            | ✓      | ✗

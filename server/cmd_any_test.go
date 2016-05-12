@@ -3,17 +3,25 @@ package server_test
 import (
 	"bufio"
 	"io"
+	"net"
 	"strings"
 	"testing"
+
+	"github.com/emersion/imap/server"
 )
 
+func testServerGreeted(t *testing.T) (s *server.Server, c net.Conn, scanner *bufio.Scanner) {
+	s, c = testServer(t)
+	scanner = bufio.NewScanner(c)
+
+	scanner.Scan() // Greeting
+	return
+}
+
 func TestCapability(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 
@@ -29,12 +37,9 @@ func TestCapability(t *testing.T) {
 }
 
 func TestNoop(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 NOOP\r\n")
 
@@ -45,12 +50,9 @@ func TestNoop(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 LOGOUT\r\n")
 

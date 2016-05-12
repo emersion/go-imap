@@ -1,19 +1,15 @@
 package server_test
 
 import (
-	"bufio"
 	"io"
 	"strings"
 	"testing"
 )
 
 func TestLogin_Ok(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 LOGIN username password\r\n")
 
@@ -24,12 +20,9 @@ func TestLogin_Ok(t *testing.T) {
 }
 
 func TestLogin_No(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 LOGIN username wrongpassword\r\n")
 
@@ -40,12 +33,9 @@ func TestLogin_No(t *testing.T) {
 }
 
 func TestAuthenticate_Plain_Ok(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 AUTHENTICATE PLAIN\r\n")
 
@@ -64,12 +54,9 @@ func TestAuthenticate_Plain_Ok(t *testing.T) {
 }
 
 func TestAuthenticate_Plain_No(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 AUTHENTICATE PLAIN\r\n")
 
@@ -88,12 +75,9 @@ func TestAuthenticate_Plain_No(t *testing.T) {
 }
 
 func TestAuthenticate_No(t *testing.T) {
-	s, c := testServer(t)
+	s, c, scanner := testServerGreeted(t)
 	defer c.Close()
 	defer s.Close()
-
-	scanner := bufio.NewScanner(c)
-	scanner.Scan() // Greeting
 
 	io.WriteString(c, "a001 AUTHENTICATE XIDONTEXIST\r\n")
 
