@@ -539,12 +539,22 @@ func (addr *Address) Parse(fields []interface{}) error {
 
 // Format an address to fields.
 func (addr *Address) Format() []interface{} {
-	return []interface{}{
-		addr.PersonalName,
-		addr.AtDomainList,
-		addr.MailboxName,
-		addr.HostName,
+	fields := make([]interface{}, 4)
+
+	if addr.PersonalName != "" {
+		fields[0] = addr.PersonalName
 	}
+	if addr.AtDomainList != "" {
+		fields[1] = addr.AtDomainList
+	}
+	if addr.MailboxName != "" {
+		fields[2] = addr.MailboxName
+	}
+	if addr.HostName != "" {
+		fields[3] = addr.HostName
+	}
+
+	return fields
 }
 
 // Parse an address list from fields.
