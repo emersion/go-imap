@@ -28,7 +28,7 @@ Command       | Client | Client tests | Server | Server tests
 CAPABILITY    | ✓      | ✓            | ✓      | ✓
 NOOP          | ✓      | ✓            | ✓      | ✓
 LOGOUT        | ✓      | ✓            | ✓      | ✓
-AUTHENTICATE  | ✓      | ✓            | ✓      | ✗
+AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
 LOGIN         | ✓      | ✓            | ✓      | ✓
 STARTTLS      | ✓      | ✗            | ✓      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✗
