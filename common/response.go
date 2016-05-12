@@ -5,7 +5,7 @@ import (
 )
 
 // A response.
-// See https://tools.ietf.org/html/rfc3501#section-2.2.2
+// See RFC 3501 section 2.2.2
 type Resp struct {
 	// The response tag. Can be either * for untagged responses, + for continuation
 	// requests or a previous command's tag.

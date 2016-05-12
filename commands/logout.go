@@ -5,7 +5,7 @@ import (
 )
 
 // A LOGOUT command.
-// See https://tools.ietf.org/html/rfc3501#section-6.1.3
+// See RFC 3501 section 6.1.3
 type Logout struct {}
 
 func (c *Logout) Command() *imap.Command {

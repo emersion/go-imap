@@ -8,7 +8,7 @@ import (
 )
 
 // A RENAME command.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.5
+// See RFC 3501 section 6.3.5
 type Rename struct {
 	Existing string
 	New string

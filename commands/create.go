@@ -8,7 +8,7 @@ import (
 )
 
 // A CREATE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.3
+// See RFC 3501 section 6.3.3
 type Create struct {
 	Mailbox string
 }

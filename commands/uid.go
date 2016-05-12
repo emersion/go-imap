@@ -8,7 +8,7 @@ import (
 )
 
 // A UID command.
-// See https://tools.ietf.org/html/rfc3501#section-6.4.8
+// See RFC 3501 section 6.4.8
 type Uid struct {
 	Cmd imap.Commander
 }

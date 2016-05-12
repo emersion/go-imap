@@ -5,7 +5,7 @@ import (
 )
 
 // A FETCH response.
-// See https://tools.ietf.org/html/rfc3501#section-7.4.2
+// See RFC 3501 section 7.4.2
 type Fetch struct {
 	Messages chan *imap.Message
 }

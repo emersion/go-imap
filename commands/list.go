@@ -9,7 +9,7 @@ import (
 
 // A LIST command.
 // If Subscribed is set to true, LSUB will be used instead.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.8
+// See RFC 3501 section 6.3.8
 type List struct {
 	Reference string
 	Mailbox string

@@ -5,7 +5,7 @@ import (
 )
 
 // A CLOSE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.4.2
+// See RFC 3501 section 6.4.2
 type Close struct {}
 
 func (cmd *Close) Command() *imap.Command {

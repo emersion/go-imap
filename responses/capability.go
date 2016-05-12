@@ -5,7 +5,7 @@ import (
 )
 
 // A CAPABILITY response.
-// See https://tools.ietf.org/html/rfc3501#section-7.2.1
+// See RFC 3501 section 7.2.1
 type Capability struct {
 	Caps []string
 }

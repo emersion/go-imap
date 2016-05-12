@@ -8,7 +8,7 @@ import (
 )
 
 // A SUBSCRIBE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.6
+// See RFC 3501 section 6.3.6
 type Subscribe struct {
 	Mailbox string
 }
@@ -40,7 +40,7 @@ func (cmd *Subscribe) Parse(fields []interface{}) (err error) {
 }
 
 // An UNSUBSCRIBE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.7
+// See RFC 3501 section 6.3.7
 type Unsubscribe struct {
 	Mailbox string
 }

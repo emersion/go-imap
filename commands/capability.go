@@ -5,7 +5,7 @@ import (
 )
 
 // A CAPABILITY command.
-// See https://tools.ietf.org/html/rfc3501#section-6.1.1
+// See RFC 3501 section 6.1.1
 type Capability struct {}
 
 func (c *Capability) Command() *imap.Command {

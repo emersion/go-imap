@@ -9,7 +9,7 @@ import (
 )
 
 // A STATUS command.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.10
+// See RFC 3501 section 6.3.10
 type Status struct {
 	Mailbox string
 	Items []string

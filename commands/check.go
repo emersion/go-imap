@@ -5,7 +5,7 @@ import (
 )
 
 // A CHECK command.
-// See https://tools.ietf.org/html/rfc3501#section-6.4.1
+// See RFC 3501 section 6.4.1
 type Check struct {}
 
 func (cmd *Check) Command() *imap.Command {

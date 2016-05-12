@@ -9,7 +9,7 @@ import (
 )
 
 // A STATUS response.
-// See https://tools.ietf.org/html/rfc3501#section-7.2.4
+// See RFC 3501 section 7.2.4
 type Status struct {
 	Mailbox *imap.MailboxStatus
 }

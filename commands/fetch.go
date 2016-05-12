@@ -8,7 +8,7 @@ import (
 )
 
 // A FETCH command.
-// See https://tools.ietf.org/html/rfc3501#section-6.4.5
+// See RFC 3501 section 6.4.5
 type Fetch struct {
 	SeqSet *imap.SeqSet
 	Items []string

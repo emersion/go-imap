@@ -5,7 +5,7 @@ import (
 )
 
 // An EXPUNGE response.
-// See https://tools.ietf.org/html/rfc3501#section-7.4.1
+// See RFC 3501 section 7.4.1
 type Expunge struct {
 	SeqIds chan uint32
 }

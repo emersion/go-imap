@@ -9,7 +9,7 @@ import (
 
 // A SELECT command.
 // If ReadOnly is set to true, the EXAMINE command will be used instead.
-// See https://tools.ietf.org/html/rfc3501#section-6.3.1
+// See RFC 3501 section 6.3.1
 type Select struct {
 	Mailbox string
 	ReadOnly bool

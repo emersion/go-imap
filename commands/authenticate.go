@@ -11,7 +11,7 @@ import (
 )
 
 // An AUTHENTICATE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.2.2
+// See RFC 3501 section 6.2.2
 type Authenticate struct {
 	Mechanism string
 }

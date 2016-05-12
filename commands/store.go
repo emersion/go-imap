@@ -8,7 +8,7 @@ import (
 )
 
 // A STORE command.
-// See https://tools.ietf.org/html/rfc3501#section-6.4.6
+// See RFC 3501 section 6.4.6
 type Store struct {
 	SeqSet *imap.SeqSet
 	Item string

@@ -6,7 +6,7 @@ import (
 
 // A LIST response.
 // If Subscribed is set to true, LSUB will be used instead.
-// See https://tools.ietf.org/html/rfc3501#section-7.2.2
+// See RFC 3501 section 7.2.2
 type List struct {
 	Mailboxes chan *imap.MailboxInfo
 	Subscribed bool
