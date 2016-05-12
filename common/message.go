@@ -155,7 +155,7 @@ func (m *Message) Format() (fields []interface{}) {
 	}
 
 	for section, literal := range m.Body {
-		fields = append(fields, section.Resp(), literal)
+		fields = append(fields, section.resp(), literal)
 	}
 
 	return
@@ -177,7 +177,7 @@ type BodySectionName struct {
 	// If set to true, do not implicitely set the \Seen flag.
 	Peek bool
 	// The list of parts requested in the section.
-	Parts map[string]interface{}
+	Parts []*BodyPartName
 	// The substring of the section requested. The first value is the position of
 	// the first desired octet and the second value is the maximum number of
 	// octets desired.
@@ -219,8 +219,6 @@ func (section *BodySectionName) parse(s string) (err error) {
 		return errors.New("Invalid body section name")
 	}
 
-	section.Parts = map[string]interface{}{}
-
 	if len(parts) > 0 {
 		var b *bytes.Buffer
 		for _, part := range strings.Split(parts, ",") {
@@ -229,23 +227,15 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 			var fields []interface{}
 			if fields, err = r.ReadFields(); err != nil {
-				return err
-			}
-			if len(fields) < 0 {
-				return errors.New("Invalid body section name: empty part")
+				return
 			}
 
-			name, ok := fields[0].(string)
-			if !ok {
-				return errors.New("Invalid body section name: part name must be a string")
+			part := &BodyPartName{}
+			if err = part.parse(fields); err != nil {
+				return
 			}
 
-			var value interface{}
-			if len(fields) > 1 {
-				value = fields[1]
-			}
-
-			section.Parts[name] = value
+			section.Parts = append(section.Parts, part)
 		}
 	}
 
@@ -284,20 +274,9 @@ func (section *BodySectionName) String() (s string) {
 	}
 	s += "["
 
-	var b bytes.Buffer
-	w := NewWriter(&b)
-
 	first := true
-	for name, arg := range section.Parts {
-		fields := []interface{}{name}
-		if arg != nil {
-			fields = append(fields, arg)
-		}
-
-		w.WriteFields(fields)
-
-		s += b.String()
-		b.Reset()
+	for _, part := range section.Parts {
+		s += part.String()
 
 		if first {
 			first = false
@@ -322,8 +301,7 @@ func (section *BodySectionName) String() (s string) {
 	return
 }
 
-func (section *BodySectionName) Resp() *BodySectionName {
-	// TODO: clone section
+func (section *BodySectionName) resp() *BodySectionName {
 	section.value = "" // Reset cached value
 	section.Peek = false
 	if len(section.Partial) == 2 {
@@ -336,6 +314,101 @@ func (section *BodySectionName) Resp() *BodySectionName {
 func NewBodySectionName(s string) (section *BodySectionName, err error) {
 	section = &BodySectionName{}
 	err = section.parse(s)
+	return
+}
+
+// A body part name.
+type BodyPartName struct {
+	// The specifier of the requested part.
+	// Can be either HEADER, TEXT or an empty string (to get the whole part).
+	Specifier string
+	// The part path. Parts indexes start at 1.
+	Path []int
+	// If Specifier is HEADER, contains header fields that will/won't be returned,
+	// depending of the value of NotFields.
+	Fields []string
+	// If set to true, Fields is a blacklist of fields instead of a whitelist.
+	NotFields bool
+}
+
+func (part *BodyPartName) parse(fields []interface{}) error {
+	if len(fields) == 0 {
+		return errors.New("Invalid body section name: empty part")
+	}
+
+	name, ok := fields[0].(string)
+	if !ok {
+		return errors.New("Invalid body section name: part name must be a string")
+	}
+
+	args := fields[1:]
+
+	path := strings.Split(strings.ToUpper(name), ".")
+
+	end := 0
+	for i, node := range path {
+		if node == "HEADER" || node == "MIME" || node == "TEXT" {
+			part.Specifier = node
+			end = i + 1
+			break
+		}
+
+		index, err := strconv.Atoi(node)
+		if err != nil {
+			return errors.New("Invalid body part name: " + err.Error())
+		}
+		if index <= 0 {
+			return errors.New("Invalid body part name: index <= 0")
+		}
+
+		part.Path = append(part.Path, index)
+	}
+
+	if part.Specifier == "HEADER" && len(path) > end && path[end] == "FIELDS" && len(args) > 0 {
+		end++
+		if len(path) > end && path[end] == "NOT" {
+			part.NotFields = true
+		}
+
+		names, ok := args[0].([]interface{})
+		if !ok {
+			return errors.New("Invalid body part name: HEADER.FIELDS must have a list argument")
+		}
+
+		for _, namei := range names {
+			if name, ok := namei.(string); ok {
+				part.Fields = append(part.Fields, name)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (part *BodyPartName) String() (s string) {
+	path := make([]string, len(part.Path))
+	for i, index := range part.Path {
+		path[i] = strconv.Itoa(index)
+	}
+
+	if part.Specifier != "" {
+		path = append(path, part.Specifier)
+	}
+
+	if part.Specifier == "HEADER" && len(part.Fields) > 0 {
+		path = append(path, "FIELDS")
+
+		if part.NotFields {
+			path = append(path, "NOT")
+		}
+	}
+
+	s = strings.Join(path, ".")
+
+	if len(part.Fields) > 0 {
+		s += " (" + strings.Join(part.Fields, " ") + ")"
+	}
+
 	return
 }
 
