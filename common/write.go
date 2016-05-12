@@ -17,6 +17,15 @@ type StringWriter interface {
 	WriteString(s string) (int, error)
 }
 
+// Convert a string list to a field list.
+func FormatStringList(list []string) (fields []interface{}) {
+	fields = make([]interface{}, len(list))
+	for i, v := range list {
+		fields[i] = v
+	}
+	return
+}
+
 type writer interface {
 	io.Writer
 }

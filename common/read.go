@@ -49,6 +49,18 @@ func ParseNumber(input interface{}) (uint32, error) {
 	return uint32(nbr), nil
 }
 
+// Convert a field list to a string list.
+func ParseStringList(fields []interface{}) ([]string, error) {
+	list := make([]string, len(fields))
+	for i, f := range fields {
+		var ok bool
+		if list[i], ok = f.(string); !ok {
+			return nil, errors.New("String list contains a non-string")
+		}
+	}
+	return list, nil
+}
+
 func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }

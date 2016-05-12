@@ -647,25 +647,6 @@ func FormatParamList(params map[string]string) (fields []interface{}) {
 	return
 }
 
-func ParseStringList(fields []interface{}) ([]string, error) {
-	list := make([]string, len(fields))
-	for i, f := range fields {
-		var ok bool
-		if list[i], ok = f.(string); !ok {
-			return nil, errors.New("String list contains a non-string")
-		}
-	}
-	return list, nil
-}
-
-func FormatStringList(list []string) (fields []interface{}) {
-	fields = make([]interface{}, len(list))
-	for i, v := range list {
-		fields[i] = v
-	}
-	return
-}
-
 func (bs *BodyStructure) Parse(fields []interface{}) error {
 	if len(fields) == 0 {
 		return nil
