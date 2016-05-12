@@ -176,8 +176,8 @@ func (m *Message) GetBody(s string) *Literal {
 type BodySectionName struct {
 	// If set to true, do not implicitely set the \Seen flag.
 	Peek bool
-	// The list of parts requested in the section.
-	Parts []*BodyPartName
+	// The part requested in the section.
+	Part *BodyPartName
 	// The substring of the section requested. The first value is the position of
 	// the first desired octet and the second value is the maximum number of
 	// octets desired.
@@ -199,19 +199,19 @@ func (section *BodySectionName) parse(s string) (err error) {
 		s = "BODY[TEXT]"
 	}
 
-	partsStart := strings.Index(s, "[")
-	if partsStart == -1 {
+	partStart := strings.Index(s, "[")
+	if partStart == -1 {
 		return errors.New("Invalid body section name: must contain an open bracket")
 	}
 
-	partsEnd := strings.LastIndex(s, "]")
-	if partsEnd == -1 {
+	partEnd := strings.LastIndex(s, "]")
+	if partEnd == -1 {
 		return errors.New("Invalid body section name: must contain a close bracket")
 	}
 
-	name := s[:partsStart]
-	parts := s[partsStart+1:partsEnd]
-	partial := s[partsEnd+1:]
+	name := s[:partStart]
+	part := s[partStart+1:partEnd]
+	partial := s[partEnd+1:]
 
 	if name == "BODY.PEEK" {
 		section.Peek = true
@@ -219,24 +219,16 @@ func (section *BodySectionName) parse(s string) (err error) {
 		return errors.New("Invalid body section name")
 	}
 
-	if len(parts) > 0 {
-		var b *bytes.Buffer
-		for _, part := range strings.Split(parts, ",") {
-			b = bytes.NewBufferString(part + string(cr) + string(lf))
-			r := NewReader(b)
+	b := bytes.NewBufferString(part + string(cr) + string(lf))
+	r := NewReader(b)
+	var fields []interface{}
+	if fields, err = r.ReadFields(); err != nil {
+		return
+	}
 
-			var fields []interface{}
-			if fields, err = r.ReadFields(); err != nil {
-				return
-			}
-
-			part := &BodyPartName{}
-			if err = part.parse(fields); err != nil {
-				return
-			}
-
-			section.Parts = append(section.Parts, part)
-		}
+	section.Part = &BodyPartName{}
+	if err = section.Part.parse(fields); err != nil {
+		return
 	}
 
 	if len(partial) > 0 {
@@ -275,20 +267,9 @@ func (section *BodySectionName) String() (s string) {
 	if section.Peek {
 		s += ".PEEK"
 	}
-	s += "["
 
-	first := true
-	for _, part := range section.Parts {
-		s += part.String()
+	s += "[" + section.Part.String() + "]"
 
-		if first {
-			first = false
-		} else {
-			s += ","
-		}
-	}
-
-	s += "]"
 	if len(section.Partial) > 0 {
 		s += "<"
 		s += strconv.Itoa(section.Partial[0])
