@@ -181,7 +181,7 @@ type BodySectionName struct {
 	// The substring of the section requested. The first value is the position of
 	// the first desired octet and the second value is the maximum number of
 	// octets desired.
-	Partial []uint32
+	Partial []int
 
 	value string
 }
@@ -250,14 +250,17 @@ func (section *BodySectionName) parse(s string) (err error) {
 			return errors.New("Invalid body section name: partial must have two fields")
 		}
 
-		var from, to uint64
-		if from, err = strconv.ParseUint(partialParts[0], 10, 32); err != nil {
-			return errors.New("Invalid body section name: " + err.Error())
+		var from, length int
+		if from, err = strconv.Atoi(partialParts[0]); err != nil {
+			return errors.New("Invalid body section name: invalid partial: " + err.Error())
 		}
-		if to, err = strconv.ParseUint(partialParts[1], 10, 32); err != nil {
-			return errors.New("Invalid body section name: " + err.Error())
+		if length, err = strconv.Atoi(partialParts[1]); err != nil {
+			return errors.New("Invalid body section name: invalid partial: " + err.Error())
 		}
-		section.Partial = []uint32{uint32(from), uint32(to)}
+		if from < 0 || length < 0 {
+			return errors.New("Invalid body section name: invalid partial: negative number")
+		}
+		section.Partial = []int{from, length}
 	}
 
 	return nil
@@ -288,11 +291,11 @@ func (section *BodySectionName) String() (s string) {
 	s += "]"
 	if len(section.Partial) > 0 {
 		s += "<"
-		s += strconv.FormatUint(uint64(section.Partial[0]), 10)
+		s += strconv.Itoa(section.Partial[0])
 
 		if len(section.Partial) > 1 {
 			s += "."
-			s += strconv.FormatUint(uint64(section.Partial[0]), 10)
+			s += strconv.Itoa(section.Partial[1])
 		}
 
 		s += ">"
@@ -305,9 +308,28 @@ func (section *BodySectionName) resp() *BodySectionName {
 	section.value = "" // Reset cached value
 	section.Peek = false
 	if len(section.Partial) == 2 {
-		section.Partial = []uint32{section.Partial[0]}
+		section.Partial = []int{section.Partial[0]}
 	}
 	return section
+}
+
+// Returns a subset of the specified bytes matching the partial requested in the
+// section name.
+func (section *BodySectionName) ExtractPartial(b []byte) []byte {
+	if len(section.Partial) != 2 {
+		return b
+	}
+
+	from := section.Partial[0]
+	length := section.Partial[1]
+	to := from+length
+	if from > len(b) {
+		return nil
+	}
+	if to > len(b) {
+		to = len(b)
+	}
+	return b[from:to]
 }
 
 // Parse a body section name.
