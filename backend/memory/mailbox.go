@@ -14,6 +14,10 @@ type Mailbox struct {
 	user *User
 }
 
+func (mbox *Mailbox) Name() string {
+	return mbox.name
+}
+
 func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
 	info := &common.MailboxInfo{
 		Delimiter: "/",

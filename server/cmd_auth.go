@@ -253,5 +253,22 @@ func (cmd *Append) Handle(conn *Conn) error {
 		return err
 	}
 
-	return mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes())
+	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes()); err != nil {
+		return err
+	}
+
+	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
+	if conn.Mailbox != nil && conn.Mailbox.Name() == mbox.Name() {
+		status, err := mbox.Status([]string{"MESSAGES"})
+		if err != nil {
+			return err
+		}
+
+		res := common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
+		if err := res.WriteTo(conn.Writer); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

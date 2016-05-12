@@ -9,6 +9,9 @@ import (
 // Mailbox represents a mailbox belonging to a user in the mail storage system.
 // A mailbox operation always deals with messages.
 type Mailbox interface {
+	// Get this mailbox name.
+	Name() string
+
 	// Get this mailbox info.
 	Info() (*common.MailboxInfo, error)
 
