@@ -174,10 +174,10 @@ func (m *Message) GetBody(s string) *Literal {
 // A body section name.
 // See RFC 3501 page 55.
 type BodySectionName struct {
+	*BodyPartName
+
 	// If set to true, do not implicitely set the \Seen flag.
 	Peek bool
-	// The part requested in the section.
-	Part *BodyPartName
 	// The substring of the section requested. The first value is the position of
 	// the first desired octet and the second value is the maximum number of
 	// octets desired.
@@ -226,8 +226,8 @@ func (section *BodySectionName) parse(s string) (err error) {
 		return
 	}
 
-	section.Part = &BodyPartName{}
-	if err = section.Part.parse(fields); err != nil {
+	section.BodyPartName = &BodyPartName{}
+	if err = section.BodyPartName.parse(fields); err != nil {
 		return
 	}
 
@@ -268,7 +268,7 @@ func (section *BodySectionName) String() (s string) {
 		s += ".PEEK"
 	}
 
-	s += "[" + section.Part.String() + "]"
+	s += "[" + section.BodyPartName.String() + "]"
 
 	if len(section.Partial) > 0 {
 		s += "<"
@@ -286,7 +286,10 @@ func (section *BodySectionName) String() (s string) {
 }
 
 func (section *BodySectionName) resp() *BodySectionName {
-	section.value = "" // Reset cached value
+	if !strings.HasPrefix(section.value, "RFC822") {
+		section.value = "" // Reset cached value
+	}
+
 	section.Peek = false
 	if len(section.Partial) == 2 {
 		section.Partial = []int{section.Partial[0]}
@@ -350,7 +353,7 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 
 	end := 0
 	for i, node := range path {
-		if node == "HEADER" || node == "MIME" || node == "TEXT" {
+		if node == "" || node == "HEADER" || node == "MIME" || node == "TEXT" {
 			part.Specifier = node
 			end = i + 1
 			break
