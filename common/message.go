@@ -662,6 +662,9 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		return nil
 	}
 
+	// Initialize params map
+	bs.Params = map[string]string{}
+
 	switch fields[0].(type) {
 	case []interface{}: // A multipart body part
 		bs.MimeType = "multipart"
@@ -685,6 +688,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		}
 
 		bs.MimeSubType, _ = fields[end].(string)
+		end++
 
 		if len(fields) - end + 1 >= 4 { // Contains extension data
 			params, _ := fields[end].([]interface{})
@@ -699,8 +703,9 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 				bs.Language, _ = ParseStringList(langs)
 			}
 
-			location, _ := fields[end+3].([]interface{})
-			bs.Location, _ = ParseStringList(location)
+			if location, ok := fields[end+3].([]interface{}); ok {
+				bs.Location, _ = ParseStringList(location)
+			}
 		}
 	case string: // A non-multipart body part
 		if len(fields) < 7 {
@@ -722,6 +727,10 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 		// Type-specific fields
 		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
+			if len(fields) - end < 3 {
+				return errors.New("Missing type-specific fields for message/rfc822")
+			}
+
 			envelope, _ := fields[end].([]interface{})
 			bs.Envelope = &Envelope{}
 			bs.Envelope.Parse(envelope)
@@ -735,6 +744,10 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end += 3
 		}
 		if bs.MimeType == "text" {
+			if len(fields) - end < 1 {
+				return errors.New("Missing type-specific fields for text/*")
+			}
+
 			bs.Lines, _ = ParseNumber(fields[end])
 			end++
 		}
@@ -750,8 +763,9 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 				bs.Language, _ = ParseStringList(langs)
 			}
 
-			location, _ := fields[end+3].([]interface{})
-			bs.Location, _ = ParseStringList(location)
+			if location, ok := fields[end+3].([]interface{}); ok {
+				bs.Location, _ = ParseStringList(location)
+			}
 		}
 	}
 
@@ -771,15 +785,22 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 				FormatStringList(bs.Language), FormatStringList(bs.Location))
 		}
 	} else {
-		fields = []interface{}{
-			bs.MimeType,
-			bs.MimeSubType,
-			FormatParamList(bs.Params),
-			bs.Id,
-			bs.Description,
-			bs.Encoding,
-			bs.Size,
+		fields = make([]interface{}, 7)
+		fields[0] = bs.MimeType
+		fields[1] = bs.MimeSubType
+		fields[2] = FormatParamList(bs.Params)
+
+		if bs.Id != "" {
+			fields[3] = bs.Id
 		}
+		if bs.Description != "" {
+			fields[4] = bs.Description
+		}
+		if bs.Encoding != "" {
+			fields[5] = bs.Encoding
+		}
+
+		fields[6] = bs.Size
 
 		// Type-specific fields
 		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
