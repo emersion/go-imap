@@ -33,11 +33,11 @@ LOGIN         | ✓      | ✓            | ✓      | ✓
 STARTTLS      | ✓      | ✗            | ✓      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✓
 EXAMINE       | ✓      | ✓            | ✓      | ✗
-CREATE        | ✓      | ✓            | ✓      | ✗
-DELETE        | ✓      | ✓            | ✓      | ✗
-RENAME        | ✓      | ✓            | ✓      | ✗
-SUBSCRIBE     | ✓      | ✓            | ✓      | ✗
-UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✗
+CREATE        | ✓      | ✓            | ✓      | ✓
+DELETE        | ✓      | ✓            | ✓      | ✓
+RENAME        | ✓      | ✓            | ✓      | ✓
+SUBSCRIBE     | ✓      | ✓            | ✓      | ✓
+UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✓
 LIST          | ✓      | ✓            | ✓      | ✗
 LSUB          | ✓      | ✓            | ✓      | ✗
 STATUS        | ✓      | ✓            | ✓      | ✗

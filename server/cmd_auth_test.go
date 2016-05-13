@@ -80,3 +80,77 @@ func TestSelect_No(t *testing.T) {
 		t.Error("Invalid status response:", scanner.Text())
 	}
 }
+
+func TestCreate(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 CREATE test\r\n")
+	scanner.Scan()
+
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestDelete(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 CREATE test\r\n")
+	scanner.Scan()
+
+	io.WriteString(c, "a001 DELETE test\r\n")
+	scanner.Scan()
+
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestRename(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 CREATE test\r\n")
+	scanner.Scan()
+
+	io.WriteString(c, "a001 RENAME test test2\r\n")
+	scanner.Scan()
+
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestSubscribe(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
+	scanner.Scan()
+
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestUnsubscribe(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
+	scanner.Scan()
+
+	io.WriteString(c, "a001 UNSUBSCRIBE INBOX\r\n")
+	scanner.Scan()
+
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
