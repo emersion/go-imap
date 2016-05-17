@@ -7,7 +7,7 @@ import (
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
 	"github.com/emersion/imap/responses"
-	"github.com/emersion/imap/sasl"
+	"github.com/emersion/go-sasl"
 )
 
 // If the connection to the IMAP server isn't secure, starts TLS negociation.

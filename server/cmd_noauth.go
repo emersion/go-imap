@@ -6,7 +6,7 @@ import (
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/commands"
-	"github.com/emersion/imap/sasl"
+	"github.com/emersion/go-sasl"
 )
 
 type StartTLS struct {

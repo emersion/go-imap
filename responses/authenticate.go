@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 
 	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/sasl"
+	"github.com/emersion/go-sasl"
 )
 
 // An AUTHENTICATE response.

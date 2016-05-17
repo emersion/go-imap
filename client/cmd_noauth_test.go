@@ -10,7 +10,7 @@ import (
 
 	"github.com/emersion/imap/common"
 	"github.com/emersion/imap/client"
-	"github.com/emersion/imap/sasl"
+	"github.com/emersion/go-sasl"
 )
 
 func TestClient_Authenticate(t *testing.T) {
