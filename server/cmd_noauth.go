@@ -58,8 +58,6 @@ func (cmd *Login) Handle(conn *Conn) error {
 
 type Authenticate struct {
 	commands.Authenticate
-
-	Mechanisms map[string]sasl.ServerFactory
 }
 
 func (cmd *Authenticate) Handle(conn *Conn) error {
@@ -70,7 +68,12 @@ func (cmd *Authenticate) Handle(conn *Conn) error {
 		return errors.New("Authentication disabled")
 	}
 
-	user, err := cmd.Authenticate.Handle(cmd.Mechanisms, conn.Reader, conn.Writer)
+	mechanisms := map[string]sasl.Server{}
+	for name, newSasl := range conn.Server.auths {
+		mechanisms[name] = newSasl(conn)
+	}
+
+	user, err := cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
 	if err != nil {
 		return err
 	}

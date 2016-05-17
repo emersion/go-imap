@@ -24,6 +24,9 @@ type Handler interface {
 // A function that creates handlers.
 type HandlerFactory func() Handler
 
+// A function that creates SASL servers.
+type SaslServerFactory func(conn *Conn) sasl.Server
+
 // An IMAP server.
 type Server struct {
 	listener net.Listener
@@ -31,7 +34,7 @@ type Server struct {
 
 	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
-	auths map[string]sasl.ServerFactory
+	auths map[string]SaslServerFactory
 
 	// This server's backend.
 	Backend backend.Backend
@@ -175,8 +178,18 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 		Backend: bkd,
 	}
 
-	s.auths = map[string]sasl.ServerFactory{
-		"PLAIN": func() sasl.Server { return sasl.NewPlainServer(bkd) },
+	s.auths = map[string]SaslServerFactory{
+		"PLAIN": func(conn *Conn) sasl.Server {
+			return sasl.NewPlainServer(func(username, password string) error {
+				user, err := bkd.Login(username, password)
+				if err != nil {
+					return err
+				}
+
+				conn.User = user
+				return nil
+			})
+		},
 	}
 
 	s.commands = map[string]HandlerFactory{
@@ -186,7 +199,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 
 		common.StartTLS: func() Handler { return &StartTLS{} },
 		common.Login: func() Handler { return &Login{} },
-		common.Authenticate: func() Handler { return &Authenticate{Mechanisms: s.auths} },
+		common.Authenticate: func() Handler { return &Authenticate{} },
 
 		common.Select: func() Handler { return &Select{} },
 		common.Examine: func() Handler {
