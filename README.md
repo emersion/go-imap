@@ -7,7 +7,7 @@ An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server and supports UTF-7.
 
 ```bash
-go get gopkg.in/emersion/imap.v0
+go get gopkg.in/emersion/go-imap.v0
 ```
 
 ## Why?
@@ -61,8 +61,8 @@ package main
 import (
 	"log"
 
-	"github.com/emersion/imap/client"
-	imap "github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/client"
+	imap "github.com/emersion/go-imap/common"
 )
 
 func main() {
@@ -132,8 +132,8 @@ package main
 import (
 	"log"
 
-	"github.com/emersion/imap/server"
-	"github.com/emersion/imap/backend/memory"
+	"github.com/emersion/go-imap/server"
+	"github.com/emersion/go-imap/backend/memory"
 )
 
 func main() {
