@@ -73,12 +73,5 @@ func (cmd *Authenticate) Handle(conn *Conn) error {
 		mechanisms[name] = newSasl(conn)
 	}
 
-	user, err := cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
-	if err != nil {
-		return err
-	}
-
-	conn.State = common.AuthenticatedState
-	conn.User = user
-	return nil
+	return cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
 }

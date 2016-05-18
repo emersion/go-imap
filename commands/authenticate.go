@@ -7,7 +7,6 @@ import (
 
 	imap "github.com/emersion/imap/common"
 	"github.com/emersion/go-sasl"
-	"github.com/emersion/imap/backend"
 )
 
 // An AUTHENTICATE command.
@@ -37,56 +36,36 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w *imap.Writer) (user backend.User, err error) {
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w *imap.Writer) (err error) {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
 		err = errors.New("Unsupported mechanism")
 		return
 	}
 
-	ir, err := sasl.Start()
-	if err != nil {
-		return
-	}
-
-	var encoded string
-	if len(ir) > 0 {
-		encoded = base64.StdEncoding.EncodeToString(ir)
-	}
-
-	cont := &imap.ContinuationResp{Info: encoded}
-	if err = cont.WriteTo(w); err != nil {
-		return
-	}
-
+	var response []byte
 	for {
-		var encoded string
-		if encoded, err = r.ReadInfo(); err != nil {
-			return
-		}
-
 		var challenge []byte
-		if encoded != "" {
-			challenge, err = base64.StdEncoding.DecodeString(encoded)
-			if err != nil {
-				return
-			}
-		}
-
-		var res []byte
-		if res, err = sasl.Next(challenge); err != nil {
+		var done bool
+		challenge, done, err = sasl.Next(response)
+		if err != nil || done {
 			return
 		}
 
-		// Authentication finished
-		if res == nil {
-			return
-		}
-
-		encoded = base64.StdEncoding.EncodeToString(res)
+		encoded := base64.StdEncoding.EncodeToString(challenge)
 		cont := &imap.ContinuationResp{Info: encoded}
 		if err = cont.WriteTo(w); err != nil {
 			return
+		}
+
+		if encoded, err = r.ReadInfo(); err != nil {
+			return
+		}
+		if encoded != "" {
+			response, err = base64.StdEncoding.DecodeString(encoded)
+			if err != nil {
+				return
+			}
 		}
 	}
 }

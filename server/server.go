@@ -180,12 +180,17 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 
 	s.auths = map[string]SaslServerFactory{
 		"PLAIN": func(conn *Conn) sasl.Server {
-			return sasl.NewPlainServer(func(username, password string) error {
+			return sasl.NewPlainServer(func(identity, username, password string) error {
+				if identity != "" && identity != username {
+					return errors.New("Identities not supported")
+				}
+
 				user, err := bkd.Login(username, password)
 				if err != nil {
 					return err
 				}
 
+				conn.State = common.AuthenticatedState
 				conn.User = user
 				return nil
 			})

@@ -15,7 +15,7 @@ import (
 
 func TestClient_Authenticate(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		sasl := sasl.NewPlainClient("username", "password", "")
+		sasl := sasl.NewPlainClient("", "username", "password")
 
 		err = c.Authenticate(sasl)
 		if err != nil {
