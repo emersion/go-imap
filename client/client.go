@@ -126,14 +126,17 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
+	// Add handler before sending command, to be sure to get the response in time
+	// (in tests, the response is sent right after our command is received, so
+	// sometimes the response was received before the setup of this handler)
+	statusHdlr := make(imap.RespHandler)
+	c.addHandler(statusHdlr)
+	defer c.removeHandler(statusHdlr)
+
 	_, err = cmd.WriteTo(c.writer)
 	if err != nil {
 		return
 	}
-
-	statusHdlr := make(imap.RespHandler)
-	c.addHandler(statusHdlr)
-	defer c.removeHandler(statusHdlr)
 
 	var hdlr imap.RespHandler
 	var done chan error
