@@ -3,7 +3,7 @@ package memory
 import (
 	"bytes"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 type Message struct {

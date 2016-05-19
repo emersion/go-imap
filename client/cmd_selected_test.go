@@ -6,8 +6,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/emersion/imap/common"
-	"github.com/emersion/imap/client"
+	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Check(t *testing.T) {

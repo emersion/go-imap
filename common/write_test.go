@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 func newWriter() (w *common.Writer, b *bytes.Buffer) {

@@ -3,8 +3,8 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/utf7"
+	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/utf7"
 )
 
 // A LIST command.

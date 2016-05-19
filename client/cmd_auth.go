@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/commands"
-	"github.com/emersion/imap/responses"
+	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/responses"
 )
 
 // Selects a mailbox so that messages in the mailbox can be accessed. Any

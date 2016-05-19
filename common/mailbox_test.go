@@ -4,7 +4,7 @@ import (
 	"testing"
 	"fmt"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 func TestMailboxInfo(t *testing.T) {

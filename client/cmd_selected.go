@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/imap/common"
-	"github.com/emersion/imap/commands"
-	"github.com/emersion/imap/responses"
+	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/responses"
 )
 
 // Requests a checkpoint of the currently selected mailbox. A checkpoint refers

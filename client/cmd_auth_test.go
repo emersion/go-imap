@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emersion/imap/common"
-	"github.com/emersion/imap/client"
+	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Select(t *testing.T) {

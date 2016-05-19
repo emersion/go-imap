@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/imap/common"
-	"github.com/emersion/imap/commands"
-	"github.com/emersion/imap/responses"
+	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/responses"
 )
 
 // A command handler that supports UIDs.

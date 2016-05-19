@@ -3,7 +3,7 @@ package common
 import (
 	"errors"
 
-	"github.com/emersion/imap/utf7"
+	"github.com/emersion/go-imap/utf7"
 )
 
 // Basic mailbox info.

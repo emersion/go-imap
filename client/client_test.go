@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/imap/client"
+	"github.com/emersion/go-imap/client"
 )
 
 type ClientTester func(c *client.Client) error

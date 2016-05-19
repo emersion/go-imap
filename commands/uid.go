@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/imap/common"
+	imap "github.com/emersion/go-imap/common"
 )
 
 // A UID command.

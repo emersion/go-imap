@@ -8,8 +8,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/emersion/imap/common"
-	"github.com/emersion/imap/client"
+	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-sasl"
 )
 

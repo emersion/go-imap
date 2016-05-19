@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 type Mailbox struct {

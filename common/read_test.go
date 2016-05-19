@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 func newReader(s string) (b *bytes.Buffer, r *common.Reader) {

@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/imap/common"
+	imap "github.com/emersion/go-imap/common"
 )
 
 // A LOGIN command.

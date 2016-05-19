@@ -3,7 +3,7 @@ package common_test
 import (
 	"testing"
 
-	"github.com/emersion/imap/common"
+	"github.com/emersion/go-imap/common"
 )
 
 func TestRespHandling_Accept(t *testing.T) {
