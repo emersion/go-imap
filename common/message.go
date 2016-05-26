@@ -99,7 +99,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				// First check that the section name is correct
 				section, err := NewBodySectionName(item)
 				if err != nil {
-					break
+					return err
 				}
 
 				// Then check that the value is a correct literal
@@ -339,7 +339,7 @@ type BodyPartName struct {
 
 func (part *BodyPartName) parse(fields []interface{}) error {
 	if len(fields) == 0 {
-		return errors.New("Invalid body section name: empty part")
+		return nil
 	}
 
 	name, ok := fields[0].(string)
