@@ -86,6 +86,10 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 		return
 	}
 
+	if err = r.ReadSp(); err != nil {
+		return
+	}
+
 	// Can be either data or status
 	// Try to parse a status
 	isStatus := false
@@ -94,38 +98,44 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 	if atom, err = r.ReadAtom(); err == nil {
 		fields = append(fields, atom)
 
-		if name, ok := atom.(string); ok {
-			status := StatusRespType(name)
-			if status == OK || status == NO || status == BAD || status == PREAUTH || status == BYE {
-				isStatus = true
+		if err = r.ReadSp(); err == nil {
+			if name, ok := atom.(string); ok {
+				status := StatusRespType(name)
+				if status == OK || status == NO || status == BAD || status == PREAUTH || status == BYE {
+					isStatus = true
 
-				res := &StatusResp{
-					Tag: tag,
-					Type: status,
-				}
+					res := &StatusResp{
+						Tag: tag,
+						Type: status,
+					}
 
-				var char rune
-				if char, _, err = r.ReadRune(); err != nil {
-					return
-				}
-				r.UnreadRune()
+					var char rune
+					if char, _, err = r.ReadRune(); err != nil {
+						return
+					}
+					r.UnreadRune()
 
-				if char == '[' {
-					// Contains code & arguments
-					res.Code, res.Arguments, err = r.ReadRespCode()
+					if char == '[' {
+						// Contains code & arguments
+						res.Code, res.Arguments, err = r.ReadRespCode()
+						if err != nil {
+							return
+						}
+					}
+
+					res.Info, err = r.ReadInfo()
 					if err != nil {
 						return
 					}
-				}
 
-				res.Info, err = r.ReadInfo()
-				if err != nil {
-					return
+					out = res
 				}
-
-				out = res
 			}
+		} else {
+			r.UnreadRune()
 		}
+	} else {
+		r.UnreadRune()
 	}
 
 	if !isStatus {

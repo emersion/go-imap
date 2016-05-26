@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"os"
 
 	imap "github.com/emersion/go-imap/common"
 )
@@ -46,7 +47,8 @@ type Client struct {
 }
 
 func (c *Client) read() error {
-	r := imap.NewReader(bufio.NewReader(c.conn))
+	tee := io.TeeReader(c.conn, os.Stdout)
+	r := imap.NewReader(bufio.NewReader(tee))
 
 	defer (func () {
 		c.handlersLocker.Lock()

@@ -96,6 +96,28 @@ func TestReadResp_Resp(t *testing.T) {
 	}
 }
 
+func TestReadResp_Resp_NoArgs(t *testing.T) {
+	b := bytes.NewBufferString("* SEARCH\r\n")
+	r := common.NewReader(b)
+
+	respi, err := common.ReadResp(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, ok := respi.(*common.Resp)
+	if !ok {
+		t.Fatal("Invalid response type")
+	}
+
+	if resp.Tag != "*" {
+		t.Error("Invalid tag:", resp.Tag)
+	}
+	if len(resp.Fields) != 1 || resp.Fields[0] != "SEARCH" {
+		t.Error("Invalid fields:", resp.Fields)
+	}
+}
+
 func TestReadResp_StatusResp(t *testing.T) {
 	tests := []struct{
 		input string

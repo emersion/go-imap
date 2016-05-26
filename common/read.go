@@ -142,6 +142,8 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 		atom += string(char)
 	}
 
+	r.UnreadRune()
+
 	if atom == "NIL" {
 		return nil, nil
 	}
@@ -226,9 +228,10 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 			field, err = r.ReadList()
 		case listEnd:
 			ok = false
+		case cr:
+			return
 		default:
 			field, err = r.ReadAtom()
-			r.UnreadRune()
 		}
 
 		if err != nil {
