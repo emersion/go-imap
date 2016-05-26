@@ -76,6 +76,10 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 	}
 
 	if tag == "+" {
+		if err := r.ReadSp(); err != nil {
+			r.UnreadRune()
+		}
+
 		res := &ContinuationResp{}
 		res.Info, err = r.ReadInfo()
 		if err != nil {

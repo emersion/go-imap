@@ -74,6 +74,25 @@ func TestReadResp_ContinuationResp(t *testing.T) {
 	}
 }
 
+func TestReadResp_ContinuationResp_NoInfo(t *testing.T) {
+	b := bytes.NewBufferString("+\r\n")
+	r := common.NewReader(b)
+
+	resp, err := common.ReadResp(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cont, ok := resp.(*common.ContinuationResp)
+	if !ok {
+		t.Fatal("Response is not a continuation request")
+	}
+
+	if cont.Info != "" {
+		t.Error("Invalid info:", cont.Info)
+	}
+}
+
 func TestReadResp_Resp(t *testing.T) {
 	b := bytes.NewBufferString("* 1 EXISTS\r\n")
 	r := common.NewReader(b)
