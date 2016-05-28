@@ -1,21 +1,17 @@
 package server
 
 import (
-	"bufio"
 	"crypto/tls"
 	"net"
-	"os"
-	"io"
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/backend"
 )
 
 type Conn struct {
-	*common.Reader
-	*common.Writer
+	*common.Conn
 
-	conn net.Conn
+	isTLS bool
 	continues chan bool
 
 	// This connection's server.
@@ -32,7 +28,7 @@ type Conn struct {
 
 // Close this connection.
 func (c *Conn) Close() error {
-	if err := c.conn.Close(); err != nil {
+	if err := c.Conn.Close(); err != nil {
 		return err
 	}
 
@@ -88,8 +84,7 @@ func (c *Conn) greet() error {
 
 // Check if this connection is encrypted.
 func (c *Conn) IsTLS() bool {
-	_, ok := c.conn.(*tls.Conn)
-	return ok
+	return c.isTLS
 }
 
 // Check if the client can use plain text authentication.
@@ -99,16 +94,15 @@ func (c *Conn) CanAuth() bool {
 
 func newConn(s *Server, c net.Conn) *Conn {
 	continues := make(chan bool)
-	rtee := io.TeeReader(c, os.Stdout)
-	wtee := io.MultiWriter(c, os.Stdout)
-	r := common.NewServerReader(bufio.NewReader(rtee), continues)
-	w := common.NewWriter(wtee)
+	r := common.NewServerReader(nil, continues)
+	w := common.NewWriter(nil)
+
+	_, isTLS := c.(*tls.Conn)
 
 	conn := &Conn{
-		Reader: r,
-		Writer: w,
+		Conn: common.NewConn(c, r, w),
 
-		conn: c,
+		isTLS: isTLS,
 		continues: continues,
 
 		Server: s,

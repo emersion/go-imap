@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/tls"
 	"errors"
+	"net"
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/commands"
@@ -24,13 +25,18 @@ func (cmd *StartTLS) Handle(conn *Conn) error {
 		return errors.New("TLS support not enabled")
 	}
 
-	upgraded := tls.Server(conn.conn, conn.Server.TLSConfig)
+	tlsConfig := conn.Server.TLSConfig
+	upgrader := func (conn net.Conn) (net.Conn, error) {
+		upgraded := tls.Server(conn, tlsConfig)
+		err := upgraded.Handshake()
+		return upgraded, err
+	}
 
-	if err := upgraded.Handshake(); err != nil {
+	if err := conn.Upgrade(upgrader); err != nil {
 		return err
 	}
 
-	conn.conn = upgraded
+	conn.isTLS = true
 	return nil
 }
 
