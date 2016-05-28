@@ -20,8 +20,7 @@ Other IMAP implementations in Go:
 
 ## Implemented commands
 
-This package will implement all commands specified in the RFC. Additional
-commands will be available in other packages.
+This package implements all commands specified in the RFC.
 
 Command       | Client | Client tests | Server | Server tests
 ------------- | ------ | ------------ | ------ | ------------
@@ -50,6 +49,12 @@ FETCH         | ✓      | ✓            | ✓      | ✗
 STORE         | ✓      | ✓            | ✓      | ✗
 COPY          | ✓      | ✓            | ✓      | ✗
 UID           | ✓      | ✗            | ✓      | ✗
+
+## IMAP extensions
+
+Commands defined in IMAP extensions are available in other packages.
+
+* [COMPRESS](https://github.com/emersion/go-imap-compress)
 
 ## Usage
 
