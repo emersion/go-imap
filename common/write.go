@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // A string writer.
@@ -24,6 +25,16 @@ func FormatStringList(list []string) (fields []interface{}) {
 		fields[i] = v
 	}
 	return
+}
+
+// Check if a string is 8-bit clean.
+func isAscii(s string) bool {
+	for _, c := range s {
+		if c > unicode.MaxASCII || unicode.IsControl(c) {
+			return false
+		}
+	}
+	return true
 }
 
 type writer interface {
@@ -65,13 +76,20 @@ func (w *Writer) writeAtomString(s string) (int, error) {
 }
 
 func (w *Writer) writeQuotedString(s string) (int, error) {
-	return w.writeString(string(dquote) + s + string(dquote))
+	return w.writeString(strconv.Quote(s))
 }
 
 func (w *Writer) WriteString(s string) (int, error) {
-	if s == "NIL" || s == "" || strings.ContainsAny(s, " \"(") {
+	if !isAscii(s) {
+		// IMAP doesn't allow 8-bit data outside literals
+		return w.WriteLiteral(NewLiteral([]byte(s)))
+	}
+
+	specials := quotedSpecials + string([]rune{listStart, listEnd, literalStart, sp})
+	if strings.ToUpper(s) == "NIL" || s == "" || strings.ContainsAny(s, specials) {
 		return w.writeQuotedString(s)
 	}
+
 	return w.writeAtomString(s)
 }
 

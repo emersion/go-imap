@@ -80,6 +80,28 @@ func TestWriter_WriteString_Quoted(t *testing.T) {
 	}
 }
 
+func TestWriter_WriteString_Quoted_WithSpecials(t *testing.T) {
+	w, b := newWriter()
+
+	if _, err := w.WriteString("I love \"1984\"!"); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "\"I love \\\"1984\\\"!\"" {
+		t.Error("Not the expected quoted string")
+	}
+}
+
+func TestWriter_WriteString_8bit(t *testing.T) {
+	w, b := newWriter()
+
+	if _, err := w.WriteString("☺"); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "{3}\r\n☺" {
+		t.Error("Not the expected atom")
+	}
+}
+
 func TestWriter_WriteString_Nil(t *testing.T) {
 	w, b := newWriter()
 

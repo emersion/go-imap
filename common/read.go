@@ -20,6 +20,13 @@ const (
 	respCodeEnd = ']'
 )
 
+// TODO: add CTL to atomSpecials
+var (
+	quotedSpecials = string([]rune{dquote, '\\'})
+	respSpecials = string([]rune{respCodeEnd})
+	atomSpecials = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
+)
+
 // A string reader.
 type StringReader interface {
 	// ReadString reads until the first occurrence of delim in the input,
