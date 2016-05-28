@@ -2,7 +2,6 @@
 package client
 
 import (
-	"bufio"
 	"crypto/tls"
 	"io"
 	"log"
@@ -14,9 +13,8 @@ import (
 
 // An IMAP client.
 type Client struct {
-	conn net.Conn
+	conn *imap.Conn
 	isTLS bool
-	writer *imap.Writer
 
 	handlers []imap.RespHandler
 	handlersLocker sync.Locker
@@ -47,8 +45,7 @@ type Client struct {
 }
 
 func (c *Client) read() error {
-	//tee := io.TeeReader(c.conn, os.Stdout)
-	r := imap.NewReader(bufio.NewReader(c.conn))
+	r := c.conn.Reader
 
 	defer (func () {
 		c.handlersLocker.Lock()
@@ -137,7 +134,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	c.addHandler(statusHdlr)
 	defer c.removeHandler(statusHdlr)
 
-	_, err = cmd.WriteTo(c.writer)
+	_, err = cmd.WriteTo(c.conn.Writer)
 	if err != nil {
 		return
 	}
@@ -350,19 +347,13 @@ func (c *Client) handleUnilateral() {
 	}
 }
 
-// Upgrade a connection, e.g. wrap an unencrypted connection into an encrypted
+// Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
 // tunnel.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
 func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
-	upgraded, err := upgrader(c.conn)
-	if err != nil {
-		return err
-	}
-
-	c.conn = upgraded
-	return nil
+	return c.conn.Upgrade(upgrader)
 }
 
 // Check if this client's connection has TLS enabled.
@@ -372,14 +363,15 @@ func (c *Client) IsTLS() bool {
 
 // Create a new client from an existing connection.
 func NewClient(conn net.Conn) (c *Client, err error) {
+	continues := make(chan bool)
+	w := imap.NewClientWriter(nil, continues)
+	r := imap.NewReader(nil)
+
 	c = &Client{
-		conn: conn,
+		conn: imap.NewConn(conn, r, w),
 		handlersLocker: &sync.Mutex{},
 		State: imap.NotAuthenticatedState,
 	}
-
-	continues := make(chan bool)
-	c.writer = imap.NewClientWriter(c.conn, continues)
 
 	go c.handleContinuationReqs(continues)
 
@@ -407,5 +399,6 @@ func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 	}
 
 	c, err = NewClient(conn)
+	c.isTLS = true
 	return
 }
