@@ -77,6 +77,8 @@ func (s *Server) handleConn(conn *Conn) error {
 			return nil
 		}
 
+		conn.Wait()
+
 		fields, err := conn.ReadLine()
 		if err == io.EOF {
 			return nil

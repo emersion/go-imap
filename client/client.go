@@ -62,6 +62,8 @@ func (c *Client) read() error {
 			return nil
 		}
 
+		c.conn.Wait()
+
 		res, err := imap.ReadResp(r)
 		if err == io.EOF {
 			return nil
