@@ -75,6 +75,8 @@ func (c *Client) read() error {
 
 		c.handlersLocker.Lock()
 
+		// Browse the handlers list backward to give a greater priority to handlers
+		// registered by commands
 		var accepted bool
 		for _, hdlr := range c.handlers {
 			if hdlr == nil {
@@ -254,7 +256,9 @@ func (c *Client) handleUnilateral() {
 	for h := range hdlr {
 		switch res := h.Resp.(type) {
 		case *imap.StatusResp:
-			if res.Tag != "*" || (res.Type != imap.OK && res.Type != imap.NO && res.Type != imap.BAD && res.Type != imap.BYE) {
+			if res.Tag != "*" ||
+				(res.Type != imap.OK && res.Type != imap.NO && res.Type != imap.BAD && res.Type != imap.BYE) ||
+				(res.Code != "" && res.Code != "ALERT") {
 				h.Reject()
 				break
 			}
