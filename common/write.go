@@ -85,7 +85,7 @@ func (w *Writer) WriteString(s string) (int, error) {
 		return w.WriteLiteral(NewLiteral([]byte(s)))
 	}
 
-	specials := quotedSpecials + string([]rune{listStart, listEnd, literalStart, sp})
+	specials := string([]rune{dquote, listStart, listEnd, literalStart, sp})
 	if strings.ToUpper(s) == "NIL" || s == "" || strings.ContainsAny(s, specials) {
 		return w.writeQuotedString(s)
 	}
