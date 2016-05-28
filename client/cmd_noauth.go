@@ -3,6 +3,7 @@ package client
 import (
 	"crypto/tls"
 	"errors"
+	"net"
 
 	imap "github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/commands"
@@ -12,7 +13,7 @@ import (
 
 // If the connection to the IMAP server isn't secure, starts TLS negociation.
 func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
-	if _, ok := c.conn.(*tls.Conn); ok {
+	if c.isTLS {
 		err = errors.New("TLS is already enabled")
 		return
 	}
@@ -27,13 +28,16 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 		return
 	}
 
-	tlsConn := tls.Client(c.conn, tlsConfig)
-	err = tlsConn.Handshake()
+	err = c.Upgrade(func (conn net.Conn) (net.Conn, error) {
+		tlsConn := tls.Client(conn, tlsConfig)
+		err = tlsConn.Handshake()
+		return tlsConn, err
+	})
 	if err != nil {
 		return
 	}
 
-	c.conn = tlsConn
+	c.isTLS = true
 	c.Caps = nil
 	return
 }

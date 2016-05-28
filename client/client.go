@@ -15,6 +15,7 @@ import (
 // An IMAP client.
 type Client struct {
 	conn net.Conn
+	isTLS bool
 	writer *imap.Writer
 
 	handlers []imap.RespHandler
@@ -181,6 +182,17 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	return
 }
 
+// Execute a generic command. cmdr is a value that can be converted to a raw
+// command and res is a value that can handle responses. The function returns
+// when the command has completed or failed, in this case err is nil. A non-nil
+// err value indicates a network error.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (c *Client) Execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
+	return c.execute(cmdr, res)
+}
+
 func (c *Client) handleContinuationReqs(continues chan bool) {
 	hdlr := make(imap.RespHandler)
 	c.addHandler(hdlr)
@@ -336,6 +348,26 @@ func (c *Client) handleUnilateral() {
 			h.Reject()
 		}
 	}
+}
+
+// Upgrade a connection, e.g. wrap an unencrypted connection into an encrypted
+// tunnel.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
+	upgraded, err := upgrader(c.conn)
+	if err != nil {
+		return err
+	}
+
+	c.conn = upgraded
+	return nil
+}
+
+// Check if this client's connection has TLS enabled.
+func (c *Client) IsTLS() bool {
+	return c.isTLS
 }
 
 // Create a new client from an existing connection.
