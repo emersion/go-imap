@@ -36,17 +36,17 @@ func (cmd *Select) Handle(conn *Conn) error {
 		flags[i] = f
 	}
 	res := common.NewUntaggedResp([]interface{}{"FLAGS", flags})
-	if err := res.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(res); err != nil {
 		return err
 	}
 
 	res = common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
-	if err := res.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(res); err != nil {
 		return err
 	}
 
 	res = common.NewUntaggedResp([]interface{}{status.Recent, "RECENT"})
-	if err := res.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(res); err != nil {
 		return err
 	}
 
@@ -56,7 +56,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Code: "UNSEEN",
 		Arguments: []interface{}{status.Unseen},
 	}
-	if err := statusRes.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(statusRes); err != nil {
 		return err
 	}
 
@@ -71,7 +71,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Arguments: []interface{}{flags},
 		Info: "Flags permitted.",
 	}
-	if err := statusRes.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(statusRes); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Arguments: []interface{}{status.UidNext},
 		Info: "Predicted next UID",
 	}
-	if err := statusRes.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(statusRes); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 		Arguments: []interface{}{status.UidValidity},
 		Info: "UIDs valid",
 	}
-	if err := statusRes.WriteTo(conn.Writer); err != nil {
+	if err := conn.WriteRes(statusRes); err != nil {
 		return err
 	}
 
@@ -183,10 +183,10 @@ func (cmd *List) Handle(conn *Conn) error {
 	defer close(done)
 
 	ch := make(chan *common.MailboxInfo)
-	res := responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
+	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
 	go (func () {
-		done <- res.WriteTo(conn.Writer)
+		done <- conn.WriteRes(res)
 	})()
 
 	mailboxes, err := conn.User.ListMailboxes(cmd.Subscribed)
@@ -234,8 +234,8 @@ func (cmd *Status) Handle(conn *Conn) error {
 		return err
 	}
 
-	res := responses.Status{Mailbox: status}
-	return res.WriteTo(conn.Writer)
+	res := &responses.Status{Mailbox: status}
+	return conn.WriteRes(res)
 }
 
 type Append struct {
@@ -265,7 +265,7 @@ func (cmd *Append) Handle(conn *Conn) error {
 		}
 
 		res := common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
-		if err := res.WriteTo(conn.Writer); err != nil {
+		if err := conn.WriteRes(res); err != nil {
 			return err
 		}
 	}

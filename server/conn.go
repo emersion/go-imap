@@ -26,6 +26,15 @@ type Conn struct {
 	MailboxReadOnly bool
 }
 
+// Write a response to this connection.
+func (c *Conn) WriteRes(res common.WriterTo) error {
+	if err := res.WriteTo(c.Writer); err != nil {
+		return err
+	}
+
+	return c.Writer.Flush()
+}
+
 // Close this connection.
 func (c *Conn) Close() error {
 	if err := c.Conn.Close(); err != nil {
@@ -79,7 +88,7 @@ func (c *Conn) greet() error {
 		Info: "IMAP4rev1 Service Ready",
 	}
 
-	return greeting.WriteTo(c.Writer)
+	return c.WriteRes(greeting)
 }
 
 // Check if this connection is encrypted.

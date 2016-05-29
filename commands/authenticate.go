@@ -57,6 +57,9 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reade
 		if err = cont.WriteTo(w); err != nil {
 			return
 		}
+		if err = w.Flush(); err != nil {
+			return
+		}
 
 		if encoded, err = r.ReadInfo(); err != nil {
 			return

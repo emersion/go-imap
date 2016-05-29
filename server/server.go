@@ -108,7 +108,7 @@ func (s *Server) handleConn(conn *Conn) error {
 			}
 		}
 
-		if err := res.WriteTo(conn.Writer); err != nil {
+		if err := conn.WriteRes(res); err != nil {
 			log.Println("Error writing response:", err)
 			continue
 		}

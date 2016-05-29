@@ -70,10 +70,10 @@ func (cmd *Expunge) Handle(conn *Conn) error {
 	defer close(done)
 
 	ch := make(chan uint32)
-	res := responses.Expunge{SeqIds: ch}
+	res := &responses.Expunge{SeqIds: ch}
 
 	go (func () {
-		done <- res.WriteTo(conn.Writer)
+		done <- conn.WriteRes(res)
 	})()
 
 	// Iterate sequence numbers from the last one to the first one, as deleting
@@ -100,8 +100,8 @@ func (cmd *Search) handle(uid bool, conn *Conn) error {
 		return err
 	}
 
-	res := responses.Search{Ids: ids}
-	return res.WriteTo(conn.Writer)
+	res := &responses.Search{Ids: ids}
+	return conn.WriteRes(res)
 }
 
 func (cmd *Search) Handle(conn *Conn) error {
@@ -125,10 +125,10 @@ func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 	defer close(done)
 
 	ch := make(chan *common.Message)
-	res := responses.Fetch{Messages: ch}
+	res := &responses.Fetch{Messages: ch}
 
 	go (func () {
-		done <- res.WriteTo(conn.Writer)
+		done <- conn.WriteRes(res)
 	})()
 
 	messages, err := conn.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items)

@@ -141,6 +141,10 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		return
 	}
 
+	if err = c.conn.Flush(); err != nil {
+		return
+	}
+
 	var hdlr imap.RespHandler
 	var done chan error
 	defer (func () {

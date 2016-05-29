@@ -18,6 +18,13 @@ type StringWriter interface {
 	WriteString(s string) (int, error)
 }
 
+// An interface implemented by net.Conn that allows to flush buffered data to
+// the remote.
+type Flusher interface {
+	// Write any buffered data to the underlying connection.
+	Flush() error
+}
+
 // Convert a string list to a field list.
 func FormatStringList(list []string) (fields []interface{}) {
 	fields = make([]interface{}, len(list))
@@ -39,6 +46,7 @@ func isAscii(s string) bool {
 
 type writer interface {
 	io.Writer
+	Flusher
 }
 
 // An IMAP writer.

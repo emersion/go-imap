@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"net"
 	"sync"
+
+	"io"
+	"os"
 )
 
 // A function that upgrades a connection.
@@ -12,15 +15,6 @@ import (
 // COMPRESS).
 type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 
-// An interface implemented by net.Conn that allows to flush buffered data to
-// the remote.
-type FlushableConn interface {
-	net.Conn
-
-	// Flush sends any buffered data to the client.
-	Flush() error
-}
-
 // An IMAP connection.
 type Conn struct {
 	net.Conn
@@ -28,12 +22,37 @@ type Conn struct {
 	*Writer
 
 	waiter *sync.WaitGroup
+
+	// Set to true to print all commands and responses to STDOUT.
+	Debug bool
 }
 
 func (c *Conn) init() {
-	//tee := io.TeeReader(c.Conn, os.Stdout)
-	c.Reader.reader = bufio.NewReader(c.Conn)
-	c.Writer.writer = c.Conn
+	r := io.Reader(c.Conn)
+	w := io.Writer(c.Conn)
+
+	if c.Debug {
+		r = io.TeeReader(c.Conn, os.Stdout)
+		w = io.MultiWriter(c.Conn, os.Stdout)
+	}
+
+	c.Reader.reader = bufio.NewReader(r)
+	c.Writer.writer = bufio.NewWriter(w)
+}
+
+// Write any buffered data to the underlying connection.
+func (c *Conn) Flush() (err error) {
+	if err = c.Writer.Flush(); err != nil {
+		return
+	}
+
+	if f, ok := c.Conn.(Flusher); ok {
+		if err = f.Flush(); err != nil {
+			return
+		}
+	}
+
+	return
 }
 
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted

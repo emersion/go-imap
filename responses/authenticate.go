@@ -15,11 +15,13 @@ type Authenticate struct {
 }
 
 func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
+	w := r.Writer
+
 	// Cancel auth if an error occurs
 	defer (func () {
 		if err != nil {
-			r.Writer.WriteString("*")
-			r.Writer.WriteCrlf()
+			w.WriteString("*")
+			w.WriteCrlf()
 		}
 	})()
 
@@ -34,12 +36,13 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 		// Empty challenge, send initial response as stated in RFC 2222 section 5.1
 		if cont.Info == "" && r.InitialResponse != nil {
 			encoded := base64.StdEncoding.EncodeToString(r.InitialResponse)
-			_, err = r.Writer.WriteString(encoded)
-			if err != nil {
+			if _, err = w.WriteString(encoded); err != nil {
 				return
 			}
-			_, err = r.Writer.WriteCrlf()
-			if err != nil {
+			if _, err = w.WriteCrlf(); err != nil {
+				return
+			}
+			if err = w.Flush(); err != nil {
 				return
 			}
 
@@ -60,12 +63,13 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 
 		encoded := base64.StdEncoding.EncodeToString(res)
-		_, err = r.Writer.WriteString(encoded)
-		if err != nil {
+		if _, err = w.WriteString(encoded); err != nil {
 			return
 		}
-		_, err = r.Writer.WriteCrlf()
-		if err != nil {
+		if _, err = w.WriteCrlf(); err != nil {
+			return
+		}
+		if err = w.Flush(); err != nil {
 			return
 		}
 	}
