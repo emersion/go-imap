@@ -11,6 +11,11 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
+// Check if the server supports STARTTLS.
+func  (c *Client) SupportsStartTLS() bool {
+	return c.Caps[imap.StartTLS]
+}
+
 // If the connection to the IMAP server isn't secure, starts TLS negociation.
 func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	if c.isTLS {
