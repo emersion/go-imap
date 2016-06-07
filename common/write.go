@@ -46,7 +46,6 @@ func isAscii(s string) bool {
 
 type writer interface {
 	io.Writer
-	Flusher
 }
 
 // An IMAP writer.
@@ -242,6 +241,13 @@ func (w *Writer) WriteInfo(info string) (N int, err error) {
 	}
 	N += n
 
+	return
+}
+
+func (w *Writer) Flush() (err error) {
+	if f, ok := w.writer.(Flusher); ok {
+		err = f.Flush()
+	}
 	return
 }
 
