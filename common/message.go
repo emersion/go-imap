@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+// Message flags, defined in RFC 3501 section 2.3.2.
+const (
+	SeenFlag = "\\Seen"
+	AnsweredFlag = "\\Answered"
+	FlaggedFlag = "\\Flagged"
+	DeletedFlag = "\\Deleted"
+	DraftFlag = "\\Draft"
+	RecentFlag = "\\Recent"
+)
+
 // Parse an IMAP date.
 func ParseDate(date string) (*time.Time, error) {
 	t, err := time.Parse("2-Jan-2006 15:04:05 -0700", date)
