@@ -15,73 +15,73 @@ const max = ^uint32(0)
 func TestSeqParser(t *testing.T) {
 	tests := []struct {
 		in  string
-		out seq
+		out Seq
 		ok  bool
 	}{
 		// Invalid number
-		{"", seq{}, false},
-		{" ", seq{}, false},
-		{"A", seq{}, false},
-		{"0", seq{}, false},
-		{" 1", seq{}, false},
-		{"1 ", seq{}, false},
-		{"*1", seq{}, false},
-		{"1*", seq{}, false},
-		{"-1", seq{}, false},
-		{"01", seq{}, false},
-		{"0x1", seq{}, false},
-		{"1 2", seq{}, false},
-		{"1,2", seq{}, false},
-		{"1.2", seq{}, false},
-		{"4294967296", seq{}, false},
+		{"", Seq{}, false},
+		{" ", Seq{}, false},
+		{"A", Seq{}, false},
+		{"0", Seq{}, false},
+		{" 1", Seq{}, false},
+		{"1 ", Seq{}, false},
+		{"*1", Seq{}, false},
+		{"1*", Seq{}, false},
+		{"-1", Seq{}, false},
+		{"01", Seq{}, false},
+		{"0x1", Seq{}, false},
+		{"1 2", Seq{}, false},
+		{"1,2", Seq{}, false},
+		{"1.2", Seq{}, false},
+		{"4294967296", Seq{}, false},
 
 		// Valid number
-		{"*", seq{0, 0}, true},
-		{"1", seq{1, 1}, true},
-		{"42", seq{42, 42}, true},
-		{"1000", seq{1000, 1000}, true},
-		{"4294967295", seq{max, max}, true},
+		{"*", Seq{0, 0}, true},
+		{"1", Seq{1, 1}, true},
+		{"42", Seq{42, 42}, true},
+		{"1000", Seq{1000, 1000}, true},
+		{"4294967295", Seq{max, max}, true},
 
 		// Invalid range
-		{":", seq{}, false},
-		{"*:", seq{}, false},
-		{":*", seq{}, false},
-		{"1:", seq{}, false},
-		{":1", seq{}, false},
-		{"0:0", seq{}, false},
-		{"0:*", seq{}, false},
-		{"0:1", seq{}, false},
-		{"1:0", seq{}, false},
-		{"1:2 ", seq{}, false},
-		{"1: 2", seq{}, false},
-		{"1:2:", seq{}, false},
-		{"1:2,", seq{}, false},
-		{"1:2:3", seq{}, false},
-		{"1:2,3", seq{}, false},
-		{"*:4294967296", seq{}, false},
-		{"0:4294967295", seq{}, false},
-		{"1:4294967296", seq{}, false},
-		{"4294967296:*", seq{}, false},
-		{"4294967295:0", seq{}, false},
-		{"4294967296:1", seq{}, false},
-		{"4294967295:4294967296", seq{}, false},
+		{":", Seq{}, false},
+		{"*:", Seq{}, false},
+		{":*", Seq{}, false},
+		{"1:", Seq{}, false},
+		{":1", Seq{}, false},
+		{"0:0", Seq{}, false},
+		{"0:*", Seq{}, false},
+		{"0:1", Seq{}, false},
+		{"1:0", Seq{}, false},
+		{"1:2 ", Seq{}, false},
+		{"1: 2", Seq{}, false},
+		{"1:2:", Seq{}, false},
+		{"1:2,", Seq{}, false},
+		{"1:2:3", Seq{}, false},
+		{"1:2,3", Seq{}, false},
+		{"*:4294967296", Seq{}, false},
+		{"0:4294967295", Seq{}, false},
+		{"1:4294967296", Seq{}, false},
+		{"4294967296:*", Seq{}, false},
+		{"4294967295:0", Seq{}, false},
+		{"4294967296:1", Seq{}, false},
+		{"4294967295:4294967296", Seq{}, false},
 
 		// Valid range
-		{"*:*", seq{0, 0}, true},
-		{"1:*", seq{1, 0}, true},
-		{"*:1", seq{1, 0}, true},
-		{"2:2", seq{2, 2}, true},
-		{"2:42", seq{2, 42}, true},
-		{"42:2", seq{2, 42}, true},
-		{"*:4294967294", seq{max - 1, 0}, true},
-		{"*:4294967295", seq{max, 0}, true},
-		{"4294967294:*", seq{max - 1, 0}, true},
-		{"4294967295:*", seq{max, 0}, true},
-		{"1:4294967294", seq{1, max - 1}, true},
-		{"1:4294967295", seq{1, max}, true},
-		{"4294967295:1000", seq{1000, max}, true},
-		{"4294967294:4294967295", seq{max - 1, max}, true},
-		{"4294967295:4294967295", seq{max, max}, true},
+		{"*:*", Seq{0, 0}, true},
+		{"1:*", Seq{1, 0}, true},
+		{"*:1", Seq{1, 0}, true},
+		{"2:2", Seq{2, 2}, true},
+		{"2:42", Seq{2, 42}, true},
+		{"42:2", Seq{2, 42}, true},
+		{"*:4294967294", Seq{max - 1, 0}, true},
+		{"*:4294967295", Seq{max, 0}, true},
+		{"4294967294:*", Seq{max - 1, 0}, true},
+		{"4294967295:*", Seq{max, 0}, true},
+		{"1:4294967294", Seq{1, max - 1}, true},
+		{"1:4294967295", Seq{1, max}, true},
+		{"4294967295:1000", Seq{1000, max}, true},
+		{"4294967294:4294967295", Seq{max - 1, max}, true},
+		{"4294967295:4294967295", Seq{max, max}, true},
 	}
 	for _, test := range tests {
 		out, err := parseSeq(test.in)
@@ -371,21 +371,21 @@ func TestSeqMerge(T *testing.T) {
 }
 
 func checkSeqSet(s *SeqSet, t *testing.T) {
-	n := len(s.set)
-	for i, v := range s.set {
-		if v.start == 0 {
-			if v.stop != 0 {
+	n := len(s.Set)
+	for i, v := range s.Set {
+		if v.Start == 0 {
+			if v.Stop != 0 {
 				t.Errorf(`SeqSet(%q) index %d: "*:n" range`, s, i)
 			} else if i != n-1 {
 				t.Errorf(`SeqSet(%q) index %d: "*" not at the end`, s, i)
 			}
 			continue
 		}
-		if i > 0 && s.set[i-1].stop >= v.start-1 {
+		if i > 0 && s.Set[i-1].Stop >= v.Start-1 {
 			t.Errorf(`SeqSet(%q) index %d: overlap`, s, i)
 		}
-		if v.stop < v.start {
-			if v.stop != 0 {
+		if v.Stop < v.Start {
+			if v.Stop != 0 {
 				t.Errorf(`SeqSet(%q) index %d: reversed range`, s, i)
 			} else if i != n-1 {
 				t.Errorf(`SeqSet(%q) index %d: "n:*" not at the end`, s, i)
@@ -696,19 +696,19 @@ func TestSeqSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
-		rng seq
+		rng Seq
 		set string
 		out string
 	}{
-		{num{5}, seq{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5}, seq{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, Seq{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, Seq{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
 
-		{num{15}, seq{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
-		{num{15}, seq{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, Seq{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, Seq{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
 
-		{num{1, 3, 5, 7, 9, 11, 0}, seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{1, 3, 5, 7, 9, 11, 0}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, Seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
 		other, _ := NewSeqSet(test.set)
@@ -716,7 +716,7 @@ func TestSeqSetAddNumRangeSet(t *testing.T) {
 		s := &SeqSet{}
 		s.AddNum(test.num...)
 		checkSeqSet(s, t)
-		s.AddRange(test.rng.start, test.rng.stop)
+		s.AddRange(test.rng.Start, test.rng.Stop)
 		checkSeqSet(s, t)
 		s.AddSet(other)
 		checkSeqSet(s, t)
