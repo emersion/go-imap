@@ -333,10 +333,23 @@ func NewBodySectionName(s string) (section *BodySectionName, err error) {
 	return
 }
 
+// Part specifiers described in RFC 3501 page 55.
+const (
+	// Refers to the entire part, including headers.
+	EntireSpecifier = ""
+	// Refers to the header of the part. Must include the final CRLF delimiting
+	// the header and the body.
+	HeaderSpecifier = "HEADER"
+	// Refers to the text body of the part, omitting the header.
+	TextSpecifier = "TEXT"
+	// Refers to the MIME Internet Message Body header.  Must include the final
+	// CRLF delimiting the header and the body.
+	MimeSpecifier = "MIME"
+)
+
 // A body part name.
 type BodyPartName struct {
 	// The specifier of the requested part.
-	// Can be either HEADER, TEXT or an empty string (to get the whole part).
 	Specifier string
 	// The part path. Parts indexes start at 1.
 	Path []int
