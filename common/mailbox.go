@@ -8,8 +8,8 @@ import (
 
 // Basic mailbox info.
 type MailboxInfo struct {
-	// The mailbox flags.
-	Flags []string
+	// The mailbox attributes.
+	Attributes []string
 	// The server's path separator.
 	Delimiter string
 	// The mailbox name.
@@ -22,8 +22,8 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 		return errors.New("Mailbox info needs at least 3 fields")
 	}
 
-	flags, _ := fields[0].([]interface{})
-	info.Flags, _ = ParseStringList(flags)
+	attrs, _ := fields[0].([]interface{})
+	info.Attributes, _ = ParseStringList(attrs)
 
 	info.Delimiter, _ = fields[1].(string)
 
@@ -36,7 +36,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoder.String(info.Name)
-	return []interface{}{FormatStringList(info.Flags), info.Delimiter, name}
+	return []interface{}{FormatStringList(info.Attributes), info.Delimiter, name}
 }
 
 // A mailbox status.

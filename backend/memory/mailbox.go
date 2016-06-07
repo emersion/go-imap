@@ -22,7 +22,7 @@ func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
 	info := &common.MailboxInfo{
 		Delimiter: "/",
 		Name: mbox.name,
-		Flags: []string{"\\Noinferiors"},
+		Attributes: []string{"\\Noinferiors"},
 	}
 	return info, nil
 }

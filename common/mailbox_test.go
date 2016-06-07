@@ -14,7 +14,7 @@ func TestMailboxInfo(t *testing.T) {
 		"INBOX",
 	}
 	info := &common.MailboxInfo{
-		Flags: []string{"\\Noselect", "\\Recent", "\\Unseen"},
+		Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
 		Delimiter: "/",
 		Name: "INBOX",
 	}
@@ -29,8 +29,8 @@ func testMailboxInfo_Parse(t *testing.T, input []interface{}, expected *common.M
 		t.Fatal(err)
 	}
 
-	if fmt.Sprint(output.Flags) != fmt.Sprint(expected.Flags) {
-		t.Fatal("Invalid flags:", output.Flags)
+	if fmt.Sprint(output.Attributes) != fmt.Sprint(expected.Attributes) {
+		t.Fatal("Invalid flags:", output.Attributes)
 	}
 	if output.Delimiter != expected.Delimiter {
 		t.Fatal("Invalid delimiter:", output.Delimiter)

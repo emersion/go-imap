@@ -225,7 +225,7 @@ func TestClient_List(t *testing.T) {
 
 		expected := []struct{
 			name string
-			flags []string
+			attributes []string
 		}{
 			{"INBOX", []string{"flag1"}},
 			{"Drafts", []string{"flag2", "flag3"}},
@@ -238,8 +238,8 @@ func TestClient_List(t *testing.T) {
 				return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
 			}
 
-			if fmt.Sprint(mbox.Flags) != fmt.Sprint(expected[i].flags) {
-				return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
+			if fmt.Sprint(mbox.Attributes) != fmt.Sprint(expected[i].attributes) {
+				return fmt.Errorf("Bad mailbox attributes: %v", mbox.Attributes)
 			}
 
 			i++
@@ -279,8 +279,8 @@ func TestClient_Lsub(t *testing.T) {
 		if mbox.Name != "INBOX" {
 			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
 		}
-		if len(mbox.Flags) != 0 {
-			return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
+		if len(mbox.Attributes) != 0 {
+			return fmt.Errorf("Bad mailbox flags: %v", mbox.Attributes)
 		}
 
 		return
