@@ -25,3 +25,4 @@ _testmain.go
 
 /client.go
 /server.go
+coverage.txt

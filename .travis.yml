@@ -2,4 +2,5 @@ language: go
 go:
   - 1.6
 after_success:
+  - bash <(curl -sL https://gist.github.com/emersion/49d4dda535497002639626bd9e16480c/raw/3ad4622fbc6112952e711235e18518e7ce1cb6a8/codecov-go.sh)
   - bash <(curl -s https://codecov.io/bash)
