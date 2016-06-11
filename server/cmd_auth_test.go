@@ -154,3 +154,21 @@ func TestUnsubscribe(t *testing.T) {
 		t.Error("Invalid status response:", scanner.Text())
 	}
 }
+
+func TestList(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 LIST \"\" *\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* LIST (\\Noinferiors) / INBOX" {
+		t.Error("Invalid LIST response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Error("Invalid status response:", scanner.Text())
+	}
+}
