@@ -77,7 +77,7 @@ func TestSelect_No(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -90,7 +90,7 @@ func TestCreate(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -106,7 +106,7 @@ func TestDelete(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -122,7 +122,7 @@ func TestRename(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -135,7 +135,7 @@ func TestSubscribe(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -151,7 +151,7 @@ func TestUnsubscribe(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
 
@@ -164,11 +164,29 @@ func TestList(t *testing.T) {
 
 	scanner.Scan()
 	if scanner.Text() != "* LIST (\\Noinferiors) / INBOX" {
-		t.Error("Invalid LIST response:", scanner.Text())
+		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Error("Invalid status response:", scanner.Text())
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestStatus(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STATUS INBOX (MESSAGES RECENT UIDNEXT UIDVALIDITY UNSEEN)\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* STATUS INBOX (MESSAGES 1 RECENT 0 UIDNEXT 7 UIDVALIDITY 1 UNSEEN 0)" {
+		t.Fatal("Invalid STATUS response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }

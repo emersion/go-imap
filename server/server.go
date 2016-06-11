@@ -98,6 +98,7 @@ func (s *Server) handleConn(conn *Conn) error {
 				Info: err.Error(),
 			}
 		} else {
+			var err error
 			res, err = s.handleCommand(cmd, conn)
 			if err != nil {
 				res = &common.StatusResp{
