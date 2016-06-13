@@ -121,6 +121,11 @@ func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 		return errors.New("No mailbox selected")
 	}
 
+	messages, err := conn.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items)
+	if err != nil {
+		return err
+	}
+
 	done := make(chan error)
 	defer close(done)
 
@@ -130,12 +135,6 @@ func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 	go (func () {
 		done <- conn.WriteRes(res)
 	})()
-
-	messages, err := conn.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items)
-	if err != nil {
-		close(ch)
-		return err
-	}
 
 	for _, msg := range messages {
 		ch <- msg
