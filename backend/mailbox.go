@@ -38,7 +38,9 @@ type Mailbox interface {
 	// seqset must be interpreted as UIDs if uid is set to true and as message
 	// sequence numbers otherwise.
 	// See RFC 3501 section 6.4.5 for a list of items that can be requested.
-	ListMessages(uid bool, seqset *common.SeqSet, items []string) ([]*common.Message, error)
+	//
+	// Messages must be sent to ch. When the function returns, ch must be closed.
+	ListMessages(uid bool, seqset *common.SeqSet, items []string, ch chan<- *common.Message) error
 
 	// Search messages.
 	SearchMessages(uid bool, criteria *common.SearchCriteria) ([]uint32, error)

@@ -77,7 +77,9 @@ func (mbox *Mailbox) Check() error {
 	return nil
 }
 
-func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string) (msgs []*common.Message, err error) {
+func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string, ch chan<- *common.Message) (err error) {
+	defer close(ch)
+
 	for i, msg := range mbox.messages {
 		seqid := uint32(i+1)
 
@@ -93,7 +95,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []strin
 
 		m := msg.Metadata(items)
 		m.Id = seqid
-		msgs = append(msgs, m)
+		ch <- m
 	}
 
 	return
