@@ -51,6 +51,11 @@ type Message struct {
 	Uid uint32
 }
 
+// Create a new empty message.
+func NewMessage() *Message {
+	return &Message{Body: map[*BodySectionName]*Literal{}}
+}
+
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
 	m.Items = nil
