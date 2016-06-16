@@ -24,14 +24,14 @@ type Conn struct {
 	waiter *sync.WaitGroup
 
 	// Set to true to print all commands and responses to STDOUT.
-	Debug bool
+	debug bool
 }
 
 func (c *Conn) init() {
 	r := io.Reader(c.Conn)
 	w := io.Writer(c.Conn)
 
-	if c.Debug {
+	if c.debug {
 		r = io.TeeReader(c.Conn, os.Stdout)
 		w = io.MultiWriter(c.Conn, os.Stdout)
 	}
@@ -80,6 +80,12 @@ func (c *Conn) Wait() {
 	if c.waiter != nil {
 		c.waiter.Wait()
 	}
+}
+
+// Enable or disable debugging.
+func (c *Conn) SetDebug(debug bool) {
+	c.debug = debug
+	c.init()
 }
 
 // Create a new IMAP connection.

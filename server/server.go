@@ -42,6 +42,8 @@ type Server struct {
 	TLSConfig *tls.Config
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
+	// Print all network activity to STDOUT.
+	Debug bool
 }
 
 // Get this server's address.
@@ -59,6 +61,10 @@ func (s *Server) listen() error {
 		}
 
 		conn := newConn(s, c)
+		if s.Debug {
+			conn.SetDebug(true)
+		}
+
 		go s.handleConn(conn)
 	}
 }
