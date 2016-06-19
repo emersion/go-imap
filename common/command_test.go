@@ -7,6 +7,17 @@ import (
 	"github.com/emersion/go-imap/common"
 )
 
+func TestCommand_Command(t *testing.T) {
+	cmd := &common.Command{
+		Tag: "A001",
+		Name: "NOOP",
+	}
+
+	if cmd.Command() != cmd {
+		t.Error("Command should return itself")
+	}
+}
+
 func TestCommand_WriteTo_NoArgs(t *testing.T) {
 	var b bytes.Buffer
 	w := common.NewWriter(&b)
