@@ -71,3 +71,24 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		}
 	}
 }
+
+func TestStatus_Err(t *testing.T) {
+	status := &common.StatusResp{Type: common.OK, Info: "All green"}
+	if err := status.Err(); err != nil {
+		t.Error("OK status returned error:", err)
+	}
+
+	status = &common.StatusResp{Type: common.BAD, Info: "BAD!"}
+	if err := status.Err(); err == nil {
+		t.Error("BAD status didn't returned error:", err)
+	} else if err.Error() != "BAD!" {
+		t.Error("BAD status returned incorrect error message:", err)
+	}
+
+	status = &common.StatusResp{Type: common.NO, Info: "NO!"}
+	if err := status.Err(); err == nil {
+		t.Error("NO status didn't returned error:", err)
+	} else if err.Error() != "NO!" {
+		t.Error("NO status returned incorrect error message:", err)
+	}
+}
