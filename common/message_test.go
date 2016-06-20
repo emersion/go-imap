@@ -129,6 +129,18 @@ func TestParseParamList(t *testing.T) {
 			t.Errorf("Invalid params for #%v: got %v but expected %v", i, params, test.params)
 		}
 	}
+
+	// Malformed params lists
+
+	fields := []interface{}{"cc", []interface{}{"dille"}}
+	if params, err := common.ParseParamList(fields); err == nil {
+		t.Error("Parsed invalid params list:", params)
+	}
+
+	fields = []interface{}{"cc"}
+	if params, err := common.ParseParamList(fields); err == nil {
+		t.Error("Parsed invalid params list:", params)
+	}
 }
 
 func TestFormatParamList(t *testing.T) {

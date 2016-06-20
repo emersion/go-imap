@@ -679,9 +679,13 @@ func ParseParamList(fields []interface{}) (params map[string]string, err error) 
 			key = p
 		} else {
 			params[key] = p
+			key = ""
 		}
 	}
 
+	if key != "" {
+		err = errors.New("Parameter list contains a key without a value")
+	}
 	return
 }
 
