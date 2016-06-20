@@ -103,6 +103,60 @@ func TestNewBodySectionName(t *testing.T) {
 	}
 }
 
+var addrTests = []struct{
+	fields []interface{}
+	addr *common.Address
+}{
+	{
+		fields: []interface{}{"The NSA", nil, "root", "nsa.gov"},
+		addr: &common.Address{
+			PersonalName: "The NSA",
+			MailboxName: "root",
+			HostName: "nsa.gov",
+		},
+	},
+}
+
+func TestAddress_Parse(t *testing.T) {
+	for i, test := range addrTests {
+		addr := &common.Address{}
+
+		if err := addr.Parse(test.fields); err != nil {
+			t.Error("Error parsing address:", err)
+		} else if !reflect.DeepEqual(addr, test.addr) {
+			t.Errorf("Invalid address for #%v: got %v but expected %v", i, addr, test.addr)
+		}
+	}
+}
+
+func TestAddress_Format(t *testing.T) {
+	for i, test := range addrTests {
+		fields := test.addr.Format()
+		if !reflect.DeepEqual(fields, test.fields) {
+			t.Errorf("Invalid address fields for #%v: got %v but expected %v", i, fields, test.fields)
+		}
+	}
+}
+
+func TestAddressList(t *testing.T) {
+	fields := make([]interface{}, len(addrTests))
+	addrs := make([]*common.Address, len(addrTests))
+	for i, test := range addrTests {
+		fields[i] = test.fields
+		addrs[i] = test.addr
+	}
+
+	gotAddrs := common.ParseAddressList(fields)
+	if !reflect.DeepEqual(gotAddrs, addrs) {
+		t.Error("Invalid address list: got", gotAddrs, "but expected", addrs)
+	}
+
+	gotFields := common.FormatAddressList(addrs)
+	if !reflect.DeepEqual(gotFields, fields) {
+		t.Error("Invalid address list fields: got", gotFields, "but expected", fields)
+	}
+}
+
 var paramsListTest = []struct{
 	fields []interface{}
 	params map[string]string
@@ -315,52 +369,5 @@ func TestBodyStructure_Format(t *testing.T) {
 		if got != expected {
 			t.Errorf("Invalid body structure fields for #%v: has %v but expected %v", i, got, expected)
 		}
-	}
-}
-
-func TestAddress_Parse(t *testing.T) {
-	addr := &common.Address{}
-	fields := []interface{}{"The NSA", nil, "root", "nsa.gov"}
-
-	if err := addr.Parse(fields); err != nil {
-		t.Fatal(err)
-	}
-
-	if addr.PersonalName != "The NSA" {
-		t.Error("Invalid personal name:", addr.PersonalName)
-	}
-	if addr.AtDomainList != "" {
-		t.Error("Invalid at-domain-list:", addr.AtDomainList)
-	}
-	if addr.MailboxName != "root" {
-		t.Error("Invalid mailbox name:", addr.MailboxName)
-	}
-	if addr.HostName != "nsa.gov" {
-		t.Error("Invalid host name:", addr.HostName)
-	}
-}
-
-func TestAddress_Format(t *testing.T) {
-	addr := &common.Address{
-		PersonalName: "The NSA",
-		MailboxName: "root",
-		HostName: "nsa.gov",
-	}
-
-	fields := addr.Format()
-	if len(fields) != 4 {
-		t.Fatal("Invalid fields list length")
-	}
-	if fields[0] != "The NSA" {
-		t.Error("Invalid personal name:", fields[0])
-	}
-	if fields[1] != nil {
-		t.Error("Invalid at-domain-list:", fields[1])
-	}
-	if fields[2] != "root" {
-		t.Error("Invalid mailbox name:", fields[2])
-	}
-	if fields[3] != "nsa.gov" {
-		t.Error("Invalid host name:", fields[3])
 	}
 }
