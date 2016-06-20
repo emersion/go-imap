@@ -31,62 +31,70 @@ func TestParseDate(t *testing.T) {
 	}
 }
 
-func TestNewBodySectionName(t *testing.T) {
-	tests := []struct{
-		raw string
-		parsed *common.BodySectionName
-	}{
-		{
-			raw: "BODY[]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}},
-		},
-		{
-			raw: "RFC822",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}},
-		},
-		{
-			raw: "BODY[HEADER]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier}},
-		},
-		{
-			raw: "BODY.PEEK[]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}, Peek: true},
-		},
-		{
-			raw: "BODY[TEXT]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.TextSpecifier}},
-		},
-		{
-			raw: "RFC822.HEADER",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier}, Peek: true},
-		},
-		{
-			raw: "BODY[]<0.512>",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}, Partial: []int{0, 512}},
-		},
-		{
-			raw: "BODY[1.2.3]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Path: []int{1, 2, 3}}},
-		},
-		{
-			raw: "BODY[1.2.3.HEADER]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Path: []int{1, 2, 3}}},
-		},
-		{
-			raw: "BODY[5.MIME]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.MimeSpecifier, Path: []int{5}}},
-		},
-		{
-			raw: "BODY[HEADER.FIELDS (From To)]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Fields: []string{"From", "To"}}},
-		},
-		{
-			raw: "BODY[HEADER.FIELDS.NOT (Content-Id)]",
-			parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
-		},
-	}
+var bodySectionNameTests = []struct{
+	raw string
+	parsed *common.BodySectionName
+	formatted string
+}{
+	{
+		raw: "BODY[]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}},
+	},
+	{
+		raw: "RFC822",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}},
+		formatted: "BODY[]",
+	},
+	{
+		raw: "BODY[HEADER]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier}},
+	},
+	{
+		raw: "BODY.PEEK[]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}, Peek: true},
+	},
+	{
+		raw: "BODY[TEXT]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.TextSpecifier}},
+	},
+	{
+		raw: "RFC822.TEXT",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.TextSpecifier}},
+		formatted: "BODY[TEXT]",
+	},
+	{
+		raw: "RFC822.HEADER",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier}, Peek: true},
+		formatted: "BODY.PEEK[HEADER]",
+	},
+	{
+		raw: "BODY[]<0.512>",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{}, Partial: []int{0, 512}},
+	},
+	{
+		raw: "BODY[1.2.3]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Path: []int{1, 2, 3}}},
+	},
+	{
+		raw: "BODY[1.2.3.HEADER]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Path: []int{1, 2, 3}}},
+	},
+	{
+		raw: "BODY[5.MIME]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.MimeSpecifier, Path: []int{5}}},
+	},
+	{
+		raw: "BODY[HEADER.FIELDS (From To)]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Fields: []string{"From", "To"}}},
+	},
+	{
+		raw: "BODY[HEADER.FIELDS.NOT (Content-Id)]",
+		parsed: &common.BodySectionName{BodyPartName: &common.BodyPartName{Specifier: common.HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
+	},
+}
 
-	for i, test := range tests {
+func TestNewBodySectionName(t *testing.T) {
+	for i, test := range bodySectionNameTests {
 		bsn, err := common.NewBodySectionName(test.raw)
 		if err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
@@ -99,6 +107,21 @@ func TestNewBodySectionName(t *testing.T) {
 			t.Errorf("Invalid peek value for #%v: %#+v", i, bsn.Peek)
 		} else if !reflect.DeepEqual(bsn.Partial, test.parsed.Partial) {
 			t.Errorf("Invalid partial for #%v: %#+v", i, bsn.Partial)
+		}
+	}
+}
+
+func TestBodySectionName_String(t *testing.T) {
+	for i, test := range bodySectionNameTests {
+		s := test.parsed.String()
+
+		expected := test.formatted
+		if expected == "" {
+			expected = test.raw
+		}
+
+		if expected != s {
+			t.Errorf("Invalid body section name for #%v: got %v but expected %v", i, s, expected)
 		}
 	}
 }
