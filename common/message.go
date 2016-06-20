@@ -685,11 +685,12 @@ func ParseParamList(fields []interface{}) (params map[string]string, err error) 
 	return
 }
 
-func FormatParamList(params map[string]string) (fields []interface{}) {
+func FormatParamList(params map[string]string) []interface{} {
+	fields := []interface{}{}
 	for key, value := range params {
 		fields = append(fields, key, value)
 	}
-	return
+	return fields
 }
 
 func (bs *BodyStructure) Parse(fields []interface{}) error {

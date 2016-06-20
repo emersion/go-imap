@@ -103,6 +103,44 @@ func TestNewBodySectionName(t *testing.T) {
 	}
 }
 
+var paramsListTest = []struct{
+	fields []interface{}
+	params map[string]string
+}{
+	{
+		fields: []interface{}{},
+		params: map[string]string{},
+	},
+	{
+		fields: []interface{}{"a", "b"},
+		params: map[string]string{"a": "b"},
+	},
+	{
+		fields: []interface{}{"cc", "dille", "cc dille", "CC DILLE"},
+		params: map[string]string{"cc": "dille", "cc dille": "CC DILLE"},
+	},
+}
+
+func TestParseParamList(t *testing.T) {
+	for i, test := range paramsListTest {
+		if params, err := common.ParseParamList(test.fields); err != nil {
+			t.Errorf("Cannot parse params fields for #%v: %v", i, err)
+		} else if !reflect.DeepEqual(params, test.params) {
+			t.Errorf("Invalid params for #%v: got %v but expected %v", i, params, test.params)
+		}
+	}
+}
+
+func TestFormatParamList(t *testing.T) {
+	for i, test := range paramsListTest {
+		fields := common.FormatParamList(test.params)
+
+		if !reflect.DeepEqual(fields, test.fields) {
+			t.Errorf("Invalid params fields for #%v: got %v but expected %v", i, fields, test.fields)
+		}
+	}
+}
+
 var bodyStructureTests = []struct{
 	fields []interface{}
 	bodyStructure *common.BodyStructure
@@ -263,7 +301,7 @@ func TestBodyStructure_Format(t *testing.T) {
 		expected := formatFields(test.fields)
 
 		if got != expected {
-			t.Errorf("Invalid body structure for #%v: has %v but expected %v", i, got, expected)
+			t.Errorf("Invalid body structure fields for #%v: has %v but expected %v", i, got, expected)
 		}
 	}
 }
