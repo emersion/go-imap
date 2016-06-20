@@ -147,6 +147,10 @@ func (m *Message) Format() (fields []interface{}) {
 		case "ENVELOPE":
 			value = m.Envelope.Format()
 		case "BODYSTRUCTURE", "BODY":
+			if item == "BODY" {
+				// Extension data is never returned with the BODY fetch
+				m.BodyStructure.Extended = false
+			}
 			value = m.BodyStructure.Format()
 		case "FLAGS":
 			flags := make([]interface{}, len(m.Flags))
@@ -646,6 +650,9 @@ type BodyStructure struct {
 
 	// Extension data
 
+	// True if the body structure contains extension data.
+	Extended bool
+
 	// The Content-Disposition header.
 	Disposition string
 	// The Content-Language header, if multipart.
@@ -719,6 +726,8 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		end++
 
 		if len(fields) - end + 1 >= 4 { // Contains extension data
+			bs.Extended = true
+
 			params, _ := fields[end].([]interface{})
 			bs.Params, _ = ParseParamList(params)
 
@@ -781,6 +790,8 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		}
 
 		if len(fields) - end + 1 >= 4 { // Contains extension data
+			bs.Extended = true
+
 			bs.Md5, _ = fields[end].(string)
 			bs.Disposition, _ = fields[end+1].(string)
 
@@ -808,7 +819,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 		fields = append(fields, bs.MimeSubType)
 
-		if bs.Params != nil || bs.Disposition != "" || len(bs.Language) > 0 || len(bs.Location) > 0 {
+		if bs.Extended {
 			fields = append(fields, FormatParamList(bs.Params), bs.Disposition,
 				FormatStringList(bs.Language), FormatStringList(bs.Location))
 		}
@@ -839,7 +850,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		}
 
 		// Extension data
-		if bs.Md5 != "" || bs.Disposition != "" || len(bs.Language) > 0 || len(bs.Location) > 0 {
+		if bs.Extended {
 			fields = append(fields, bs.Md5, bs.Disposition,
 				FormatStringList(bs.Language), FormatStringList(bs.Location))
 		}
