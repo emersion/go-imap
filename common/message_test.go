@@ -126,6 +126,53 @@ func TestBodySectionName_String(t *testing.T) {
 	}
 }
 
+func TestBodySectionName_ExtractPartial(t *testing.T) {
+	tests := []struct{
+		bsn string
+		whole string
+		partial string
+	}{
+		{
+			bsn: "BODY[]",
+			whole: "Hello World!",
+			partial: "Hello World!",
+		},
+		{
+			bsn: "BODY[]<6.5>",
+			whole: "Hello World!",
+			partial: "World",
+		},
+		{
+			bsn: "BODY[]<6.1000>",
+			whole: "Hello World!",
+			partial: "World!",
+		},
+		{
+			bsn: "BODY[]<0.1>",
+			whole: "Hello World!",
+			partial: "H",
+		},
+		{
+			bsn: "BODY[]<1000.2000>",
+			whole: "Hello World!",
+			partial: "",
+		},
+	}
+
+	for i, test := range tests {
+		bsn, err := common.NewBodySectionName(test.bsn)
+		if err != nil {
+			t.Errorf("Cannot parse body section name #%v: %v", i, err)
+			continue
+		}
+
+		partial := string(bsn.ExtractPartial([]byte(test.whole)))
+		if partial != test.partial {
+			t.Errorf("Invalid partial for #%v: got %v but expected %v", i, partial, test.partial)
+		}
+	}
+}
+
 var addrTests = []struct{
 	fields []interface{}
 	addr *common.Address
