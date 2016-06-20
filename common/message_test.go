@@ -1,6 +1,7 @@
 package common_test
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ var bodyStructureTests = []struct{
 	bodyStructure *common.BodyStructure
 }{
 	{
-		fields: []interface{}{"image", "jpeg", nil, "<foo4%25foo1@bar.net>", "A picture of cat", "base64", "4242"},
+		fields: []interface{}{"image", "jpeg", []interface{}{}, "<foo4%25foo1@bar.net>", "A picture of cat", "base64", "4242"},
 		bodyStructure: &common.BodyStructure{
 			MimeType: "image",
 			MimeSubType: "jpeg",
@@ -130,7 +131,12 @@ var bodyStructureTests = []struct{
 		},
 	},
 	{
-		fields: []interface{}{"message", "rfc822", nil, nil, nil, "us-ascii", "42", []interface{}{}, []interface{}{}, "67"},
+		fields: []interface{}{
+			"message", "rfc822", []interface{}{}, nil, nil, "us-ascii", "42",
+			(&common.Envelope{}).Format(),
+			(&common.BodyStructure{}).Format(),
+			"67",
+		},
 		bodyStructure: &common.BodyStructure{
 			MimeType: "message",
 			MimeSubType: "rfc822",
@@ -138,12 +144,22 @@ var bodyStructureTests = []struct{
 			Encoding: "us-ascii",
 			Size: 42,
 			Lines: 67,
-			Envelope: &common.Envelope{},
-			BodyStructure: &common.BodyStructure{},
+			Envelope: &common.Envelope{
+				From: []*common.Address{},
+				Sender: []*common.Address{},
+				ReplyTo: []*common.Address{},
+				To: []*common.Address{},
+				Cc: []*common.Address{},
+				Bcc: []*common.Address{},
+			},
+			BodyStructure: &common.BodyStructure{
+				Params: map[string]string{},
+			},
 		},
 	},
 	{
-		fields: []interface{}{"application", "pdf", nil, nil, nil, "base64", "4242", "e0323a9039add2978bf5b49550572c7c", "attachment", "en-US", nil},
+		fields: []interface{}{"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
+			"e0323a9039add2978bf5b49550572c7c", "attachment", []interface{}{"en-US"}, []interface{}{}},
 		bodyStructure: &common.BodyStructure{
 			MimeType: "application",
 			MimeSubType: "pdf",
@@ -154,12 +170,13 @@ var bodyStructureTests = []struct{
 			Md5: "e0323a9039add2978bf5b49550572c7c",
 			Disposition: "attachment",
 			Language: []string{"en-US"},
+			Location: []string{},
 		},
 	},
 	{
 		fields: []interface{}{
-			[]interface{}{"text", "plain", nil, nil, nil, "us-ascii", "87", "22"},
-			[]interface{}{"text", "html", nil, nil, nil, "us-ascii", "106", "36"},
+			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
+			[]interface{}{"text", "html", []interface{}{}, nil, nil, "us-ascii", "106", "36"},
 			"alternative",
 		},
 		bodyStructure: &common.BodyStructure{
@@ -188,8 +205,8 @@ var bodyStructureTests = []struct{
 	},
 	{
 		fields: []interface{}{
-			[]interface{}{"text", "plain", nil, nil, nil, "us-ascii", "87", "22"},
-			"alternative", []interface{}{"hello", "world"}, "inline", "en-US", nil,
+			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
+			"alternative", []interface{}{"hello", "world"}, "inline", []interface{}{"en-US"}, []interface{}{},
 		},
 		bodyStructure: &common.BodyStructure{
 			MimeType: "multipart",
@@ -208,6 +225,7 @@ var bodyStructureTests = []struct{
 			Extended: true,
 			Disposition: "inline",
 			Language: []string{"en-US"},
+			Location: []string{},
 		},
 	},
 }
@@ -219,7 +237,33 @@ func TestBodyStructure_Parse(t *testing.T) {
 		if err := bs.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
 		} else if !reflect.DeepEqual(bs, test.bodyStructure) {
-			t.Errorf("Invalid body structure for #%v: %v", i, bs)
+			t.Errorf("Invalid body structure for #%v: got %v but expected %v", i, bs, test.bodyStructure)
+		}
+	}
+}
+
+func TestBodyStructure_Format(t *testing.T) {
+	b := &bytes.Buffer{}
+	w := common.NewWriter(b)
+
+	formatFields := func(fields []interface{}) string {
+		if _, err := w.WriteList(fields); err != nil {
+			t.Fatalf("Cannot format %v: %v", fields, err)
+		}
+
+		s := b.String()
+		b.Reset()
+		return s
+	}
+
+	for i, test := range bodyStructureTests {
+		fields := test.bodyStructure.Format()
+		got := formatFields(fields)
+
+		expected := formatFields(test.fields)
+
+		if got != expected {
+			t.Errorf("Invalid body structure for #%v: has %v but expected %v", i, got, expected)
 		}
 	}
 }
