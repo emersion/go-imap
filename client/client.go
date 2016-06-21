@@ -75,8 +75,6 @@ func (c *Client) read() error {
 
 		c.handlersLocker.Lock()
 
-		// Browse the handlers list backward to give a greater priority to handlers
-		// registered by commands
 		var accepted bool
 		for _, hdlr := range c.handlers {
 			if hdlr == nil {
