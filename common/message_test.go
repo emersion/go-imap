@@ -2,12 +2,24 @@ package common_test
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/emersion/go-imap/common"
 )
+
+func formatFields(fields []interface{}) (string, error) {
+	b := &bytes.Buffer{}
+	w := common.NewWriter(b)
+
+	if _, err := w.WriteList(fields); err != nil {
+		return "", fmt.Errorf("Cannot format %v: %v", fields, err)
+	}
+
+	return b.String(), nil
+}
 
 func TestParseDate(t *testing.T) {
 	tests := []struct{
@@ -27,6 +39,59 @@ func TestParseDate(t *testing.T) {
 		}
 		if !date.Equal(test.exp) {
 			t.Errorf("Parse of %q: got %+v, want %+v", test.dateStr, date, test.exp)
+		}
+	}
+}
+
+var messageTests = []struct{
+	message *common.Message
+	fields []interface{}
+}{
+	{
+		message: &common.Message{
+			Items: []string{"ENVELOPE", "BODYSTRUCTURE", "FLAGS", "RFC822.SIZE", "UID"},
+			Body: map[*common.BodySectionName]*common.Literal{},
+			Envelope: envelopeTests[0].envelope,
+			BodyStructure: bodyStructureTests[0].bodyStructure,
+			Flags: []string{common.SeenFlag, common.AnsweredFlag},
+			Size: 4242,
+			Uid: 2424,
+		},
+		fields: []interface{}{
+			"ENVELOPE", envelopeTests[0].fields,
+			"BODYSTRUCTURE", bodyStructureTests[0].fields,
+			"FLAGS", []interface{}{common.SeenFlag, common.AnsweredFlag},
+			"RFC822.SIZE", "4242",
+			"UID", "2424",
+		},
+	},
+}
+
+func TestMessage_Parse(t *testing.T) {
+	for i, test := range messageTests {
+		m := common.NewMessage()
+		if err := m.Parse(test.fields); err != nil {
+			t.Errorf("Cannot parse message for #%v:", i, err)
+		} else if !reflect.DeepEqual(m, test.message) {
+			t.Errorf("Invalid parsed message for #%v: got %v but expected %v", i, m, test.message)
+		}
+	}
+}
+
+func TestMessage_Format(t *testing.T) {
+	for i, test := range messageTests {
+		fields := test.message.Format()
+
+		got, err := formatFields(fields)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		expected, _ := formatFields(test.fields)
+
+		if got != expected {
+			t.Errorf("Invalid message fields for #%v: got %v but expected %v", i, got, expected)
 		}
 	}
 }
@@ -222,9 +287,17 @@ func TestEnvelope_Parse(t *testing.T) {
 func TestEnvelope_Format(t *testing.T) {
 	for i, test := range envelopeTests {
 		fields := test.envelope.Format()
-		fields[0] = common.FormatDate(fields[0].(*time.Time))
-		if !reflect.DeepEqual(fields, test.fields) {
-			t.Errorf("Invalid envelope fields for #%v: got %v but expected %v", i, fields, test.fields)
+
+		got, err := formatFields(fields)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		expected, _ := formatFields(test.fields)
+
+		if got != expected {
+			t.Errorf("Invalid envelope fields for #%v: got %v but expected %v", i, got, expected)
 		}
 	}
 }
@@ -473,24 +546,15 @@ func TestBodyStructure_Parse(t *testing.T) {
 }
 
 func TestBodyStructure_Format(t *testing.T) {
-	b := &bytes.Buffer{}
-	w := common.NewWriter(b)
-
-	formatFields := func(fields []interface{}) string {
-		if _, err := w.WriteList(fields); err != nil {
-			t.Fatalf("Cannot format %v: %v", fields, err)
-		}
-
-		s := b.String()
-		b.Reset()
-		return s
-	}
-
 	for i, test := range bodyStructureTests {
 		fields := test.bodyStructure.Format()
-		got := formatFields(fields)
+		got, err := formatFields(fields)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
 
-		expected := formatFields(test.fields)
+		expected, _ := formatFields(test.fields)
 
 		if got != expected {
 			t.Errorf("Invalid body structure fields for #%v: has %v but expected %v", i, got, expected)
