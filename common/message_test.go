@@ -238,7 +238,7 @@ func TestBodySectionName_ExtractPartial(t *testing.T) {
 	}
 }
 
-var t = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.FixedZone("", 0))
+var t = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.FixedZone("", -6*60*60))
 
 var envelopeTests = []struct{
 	envelope *common.Envelope
@@ -258,7 +258,7 @@ var envelopeTests = []struct{
 			MessageId: "43@example.org",
 		},
 		fields: []interface{}{
-			"10-Nov-2009 23:00:00 +0000",
+			"10-Nov-2009 23:00:00 -0600",
 			"Hello World!",
 			[]interface{}{addrTests[0].fields},
 			[]interface{}{},
@@ -367,10 +367,6 @@ var paramsListTest = []struct{
 	{
 		fields: []interface{}{"a", "b"},
 		params: map[string]string{"a": "b"},
-	},
-	{
-		fields: []interface{}{"cc", "dille", "cc dille", "CC DILLE"},
-		params: map[string]string{"cc": "dille", "cc dille": "CC DILLE"},
 	},
 }
 
