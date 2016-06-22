@@ -6,6 +6,22 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+// Mailbox attributes definied in RFC 3501 section 7.2.2.
+const (
+	// It is not possible for any child levels of hierarchy to exist under this\
+	// name; no child levels exist now and none can be created in the future.
+	NoInferiorsAttr = "\\Noinferiors"
+	// It is not possible to use this name as a selectable mailbox.
+	NoSelectAttr = "\\Noselect"
+	// The mailbox has been marked "interesting" by the server; the mailbox
+	// probably contains messages that have been added since the last time the
+	// mailbox was selected.
+	MarkedAttr = "\\Marked"
+	// The mailbox does not contain any additional messages since the last time
+	// the mailbox was selected.
+	UnmarkedAttr = "\\Unmarked"
+)
+
 // Basic mailbox info.
 type MailboxInfo struct {
 	// The mailbox attributes.
