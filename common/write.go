@@ -25,6 +25,11 @@ type Flusher interface {
 	Flush() error
 }
 
+// Format an IMAP date.
+func FormatDate(date *time.Time) string {
+	return date.Format("2-Jan-2006 15:04:05 -0700")
+}
+
 // Convert a string list to a field list.
 func FormatStringList(list []string) (fields []interface{}) {
 	fields = make([]interface{}, len(list))
@@ -104,7 +109,7 @@ func (w *Writer) WriteDate(date *time.Time) (int, error) {
 	if date == nil {
 		return w.WriteNil()
 	}
-	return w.writeQuotedString(date.Format("2-Jan-2006 15:04:05 -0700"))
+	return w.writeQuotedString(FormatDate(date))
 }
 
 func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {

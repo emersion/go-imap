@@ -173,6 +173,62 @@ func TestBodySectionName_ExtractPartial(t *testing.T) {
 	}
 }
 
+var t = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.FixedZone("", 0))
+
+var envelopeTests = []struct{
+	envelope *common.Envelope
+	fields []interface{}
+}{
+	{
+		envelope: &common.Envelope{
+			Date: &t,
+			Subject: "Hello World!",
+			From: []*common.Address{addrTests[0].addr},
+			Sender: []*common.Address{},
+			ReplyTo: []*common.Address{},
+			To: []*common.Address{},
+			Cc: []*common.Address{},
+			Bcc: []*common.Address{},
+			InReplyTo: "42@example.org",
+			MessageId: "43@example.org",
+		},
+		fields: []interface{}{
+			"10-Nov-2009 23:00:00 +0000",
+			"Hello World!",
+			[]interface{}{addrTests[0].fields},
+			[]interface{}{},
+			[]interface{}{},
+			[]interface{}{},
+			[]interface{}{},
+			[]interface{}{},
+			"42@example.org",
+			"43@example.org",
+		},
+	},
+}
+
+func TestEnvelope_Parse(t *testing.T) {
+	for i, test := range envelopeTests {
+		e := &common.Envelope{}
+
+		if err := e.Parse(test.fields); err != nil {
+			t.Error("Error parsing envelope:", err)
+		} else if !reflect.DeepEqual(e, test.envelope) {
+			t.Errorf("Invalid envelope for #%v: got %v but expected %v", i, e, test.envelope)
+		}
+	}
+}
+
+func TestEnvelope_Format(t *testing.T) {
+	for i, test := range envelopeTests {
+		fields := test.envelope.Format()
+		fields[0] = common.FormatDate(fields[0].(*time.Time))
+		if !reflect.DeepEqual(fields, test.fields) {
+			t.Errorf("Invalid envelope fields for #%v: got %v but expected %v", i, fields, test.fields)
+		}
+	}
+}
+
 var addrTests = []struct{
 	fields []interface{}
 	addr *common.Address
