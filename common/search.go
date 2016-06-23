@@ -284,7 +284,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "SINCE", FormatSearchDate(c.Since))
 	}
 	if c.Smaller != 0 {
-		fields = append(fields, "LARGER", c.Smaller)
+		fields = append(fields, "SMALLER", c.Smaller)
 	}
 	if c.Subject != "" {
 		fields = append(fields, "SUBJECT", c.Subject)
@@ -311,7 +311,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "UNFLAGGED")
 	}
 	if c.Unkeyword != "" {
-		fields = append(fields, "UNKEYWORD")
+		fields = append(fields, "UNKEYWORD", c.Unkeyword)
 	}
 	if c.Unseen {
 		fields = append(fields, "UNSEEN")
