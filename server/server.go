@@ -90,8 +90,10 @@ func (s *Server) handleConn(conn *Conn) error {
 			return nil
 		}
 		if err != nil {
-			log.Println("Error reading command:", err)
-			continue
+			if conn.State != common.LogoutState {
+				log.Println("Error reading command:", err)
+			}
+			return err
 		}
 
 		var res common.WriterTo
