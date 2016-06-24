@@ -312,7 +312,6 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 	}
 
 	r.inRespCode = true
-
 	fields, err = r.ReadFields()
 	r.inRespCode = false
 	if err != nil {
@@ -327,6 +326,10 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 	code, ok := fields[0].(string)
 	if !ok {
 		err = errors.New("Response code doesn't start with a string atom")
+		return
+	}
+	if code == "" {
+		err = errors.New("Response code is empty")
 		return
 	}
 
