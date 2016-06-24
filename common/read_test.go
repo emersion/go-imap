@@ -108,6 +108,11 @@ func TestReader_ReadCrlf(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
+	b, r = newReader("")
+	if err := r.ReadCrlf(); err == nil {
+		t.Error("Invalid read didn't fail")
+	}
+
 	b, r = newReader("\r")
 	if err := r.ReadCrlf(); err == nil {
 		t.Error("Invalid read didn't fail")
@@ -119,9 +124,8 @@ func TestReader_ReadCrlf(t *testing.T) {
 	}
 }
 
-func TestReader_ReadAtom_Nil(t *testing.T) {
+func TestReader_ReadAtom(t *testing.T) {
 	b, r := newReader("NIL\r\n")
-
 	if atom, err := r.ReadAtom(); err != nil {
 		t.Error(err)
 	} else if atom != nil {
@@ -134,12 +138,8 @@ func TestReader_ReadAtom_Nil(t *testing.T) {
 			t.Error("Buffer is not empty after read")
 		}
 	}
-}
 
-func TestReader_ReadAtom_String(t *testing.T) {
-	b, r := newReader("atom\r\n")
-
-
+	b, r = newReader("atom\r\n")
 	if atom, err := r.ReadAtom(); err != nil {
 		t.Error(err)
 	} else if s, ok := atom.(string); !ok || s != "atom" {
@@ -152,10 +152,8 @@ func TestReader_ReadAtom_String(t *testing.T) {
 			t.Error("Buffer is not empty after read")
 		}
 	}
-}
 
-func TestReader_ReadAtom_Invalid(t *testing.T) {
-	_, r := newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadAtom(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -171,6 +169,16 @@ func TestReader_ReadAtom_Invalid(t *testing.T) {
 	}
 
 	_, r = newReader("\"\r\n")
+	if _, err := r.ReadAtom(); err == nil {
+		t.Error("Invalid read didn't fail")
+	}
+
+	_, r = newReader("abc]")
+	if _, err := r.ReadAtom(); err == nil {
+		t.Error("Invalid read didn't fail")
+	}
+
+	_, r = newReader("[abc]def]ghi")
 	if _, err := r.ReadAtom(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -240,6 +248,11 @@ func TestReader_ReadQuotedString(t *testing.T) {
 		if len(b.Bytes()) > 0 {
 			t.Error("Buffer is not empty after read")
 		}
+	}
+
+	b, r = newReader("")
+	if _, err := r.ReadQuotedString(); err == nil {
+		t.Error("Invalid read didn't fail")
 	}
 
 	b, r = newReader("hello gopher\"\r\n")
