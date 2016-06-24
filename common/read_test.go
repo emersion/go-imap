@@ -8,6 +8,36 @@ import (
 	"github.com/emersion/go-imap/common"
 )
 
+func TestParseNumber(t *testing.T) {
+	tests := []struct{
+		f interface{}
+		n uint32
+		err bool
+	}{
+		{f: "42", n: 42},
+		{f: "0", n: 0},
+		{f: "-1", err: true},
+		{f: "1.2", err: true},
+		{f: nil, err: true},
+		{f: common.NewLiteral([]byte("cc")), err: true},
+	}
+
+	for _, test := range tests {
+		n, err := common.ParseNumber(test.f)
+		if err != nil {
+			if !test.err {
+				t.Errorf("Cannot parse number %v", test.f)
+			}
+		} else {
+			if test.err {
+				t.Errorf("Parsed invalid number %v", test.f)
+			} else if n != test.n {
+				t.Errorf("Invalid parsed number: got %v but expected %v", n, test.n)
+			}
+		}
+	}
+}
+
 func newReader(s string) (b *bytes.Buffer, r *common.Reader) {
 	b = bytes.NewBuffer([]byte(s))
 	r = common.NewReader(b)
