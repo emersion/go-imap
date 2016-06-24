@@ -86,13 +86,11 @@ func (s *Server) handleConn(conn *Conn) error {
 		conn.Wait()
 
 		fields, err := conn.ReadLine()
-		if err == io.EOF {
+		if err == io.EOF || conn.State == common.LogoutState {
 			return nil
 		}
 		if err != nil {
-			if conn.State != common.LogoutState {
-				log.Println("Error reading command:", err)
-			}
+			log.Println("Error reading command:", err)
 			return err
 		}
 
