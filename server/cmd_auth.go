@@ -8,13 +8,18 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+// Common errors in Authenticated state.
+var (
+	ErrNotAuthenticated = errors.New("Not authenticated")
+)
+
 type Select struct {
 	commands.Select
 }
 
 func (cmd *Select) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
@@ -106,7 +111,7 @@ type Create struct {
 
 func (cmd *Create) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	return conn.User.CreateMailbox(cmd.Mailbox)
@@ -118,7 +123,7 @@ type Delete struct {
 
 func (cmd *Delete) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	return conn.User.DeleteMailbox(cmd.Mailbox)
@@ -130,7 +135,7 @@ type Rename struct {
 
 func (cmd *Rename) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	return conn.User.RenameMailbox(cmd.Existing, cmd.New)
@@ -142,7 +147,7 @@ type Subscribe struct {
 
 func (cmd *Subscribe) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
@@ -159,7 +164,7 @@ type Unsubscribe struct {
 
 func (cmd *Unsubscribe) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
@@ -176,7 +181,7 @@ type List struct {
 
 func (cmd *List) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	done := make(chan error)
@@ -221,7 +226,7 @@ type Status struct {
 
 func (cmd *Status) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
@@ -244,7 +249,7 @@ type Append struct {
 
 func (cmd *Append) Handle(conn *Conn) error {
 	if conn.User == nil {
-		return errors.New("Not authenticated")
+		return ErrNotAuthenticated
 	}
 
 	mbox, err := conn.User.GetMailbox(cmd.Mailbox)

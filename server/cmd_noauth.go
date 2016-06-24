@@ -10,13 +10,19 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
+// Common errors in Not Authenticated state.
+var (
+	ErrAlreadyAuthenticated = errors.New("Already authenticated")
+	ErrAuthDisabled = errors.New("Authentication disabled")
+)
+
 type StartTLS struct {
 	commands.StartTLS
 }
 
 func (cmd *StartTLS) Handle(conn *Conn) error {
 	if conn.State != common.NotAuthenticatedState {
-		return errors.New("Already authenticated")
+		return ErrAlreadyAuthenticated
 	}
 	if conn.IsTLS() {
 		return errors.New("TLS is already enabled")
@@ -46,10 +52,10 @@ type Login struct {
 
 func (cmd *Login) Handle(conn *Conn) error {
 	if conn.State != common.NotAuthenticatedState {
-		return errors.New("Already authenticated")
+		return ErrAlreadyAuthenticated
 	}
 	if !conn.CanAuth() {
-		return errors.New("Authentication disabled")
+		return ErrAuthDisabled
 	}
 
 	user, err := conn.Server.Backend.Login(cmd.Username, cmd.Password)
@@ -68,10 +74,10 @@ type Authenticate struct {
 
 func (cmd *Authenticate) Handle(conn *Conn) error {
 	if conn.State != common.NotAuthenticatedState {
-		return errors.New("Already authenticated")
+		return ErrAlreadyAuthenticated
 	}
 	if !conn.CanAuth() {
-		return errors.New("Authentication disabled")
+		return ErrAuthDisabled
 	}
 
 	mechanisms := map[string]sasl.Server{}

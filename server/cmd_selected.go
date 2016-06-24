@@ -9,6 +9,12 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+// Common errors in Selected state.
+var (
+	ErrNoMailboxSelected = errors.New("No mailbox selected")
+	ErrMailboxReadOnly = errors.New("Mailbox opened in read-only mode")
+)
+
 // A command handler that supports UIDs.
 type UidHandler interface {
 	Handler
@@ -23,7 +29,10 @@ type Check struct {
 
 func (cmd *Check) Handle(conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
+	}
+	if conn.MailboxReadOnly {
+		return ErrMailboxReadOnly
 	}
 
 	return conn.Mailbox.Check()
@@ -35,7 +44,7 @@ type Close struct {
 
 func (cmd *Close) Handle(conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
 	}
 
 	if err := conn.Mailbox.Expunge(); err != nil {
@@ -53,7 +62,10 @@ type Expunge struct {
 
 func (cmd *Expunge) Handle(conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
+	}
+	if conn.MailboxReadOnly {
+		return ErrMailboxReadOnly
 	}
 
 	// Get a list of messages that will be deleted
@@ -92,7 +104,7 @@ type Search struct {
 
 func (cmd *Search) handle(uid bool, conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
 	}
 
 	ids, err := conn.Mailbox.SearchMessages(uid, cmd.Criteria)
@@ -118,7 +130,7 @@ type Fetch struct {
 
 func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
 	}
 
 	ch := make(chan *common.Message)
@@ -165,7 +177,10 @@ type Store struct {
 
 func (cmd *Store) handle(uid bool, conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
+	}
+	if conn.MailboxReadOnly {
+		return ErrMailboxReadOnly
 	}
 
 	itemStr := cmd.Item
@@ -222,7 +237,7 @@ type Copy struct {
 
 func (cmd *Copy) handle(uid bool, conn *Conn) error {
 	if conn.Mailbox == nil {
-		return errors.New("No mailbox selected")
+		return ErrNoMailboxSelected
 	}
 
 	return conn.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
