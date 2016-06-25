@@ -346,6 +346,7 @@ func NewServer(l net.Listener, bkd backend.Backend) *Server {
 	}
 
 	go s.listen()
+	go s.listenUpdates()
 	return s
 }
 
