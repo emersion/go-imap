@@ -14,9 +14,9 @@ go get github.com/emersion/go-imap
 ## Why?
 
 Other IMAP implementations in Go:
-* Require to make many type assertions
+* Require to make [many type assertions or conversions](https://github.com/emersion/neutron/blob/ca635850e2223d6cfe818664ef901fa6e3c1d859/backend/imap/util.go#L110)
 * Are not idiomatic or are [ugly](https://github.com/jordwest/imap-server/blob/master/conn/commands.go#L53)
-* Are not pleasant to use
+* Are [not pleasant to use](https://github.com/emersion/neutron/blob/ca635850e2223d6cfe818664ef901fa6e3c1d859/backend/imap/messages.go#L228)
 * Implement a server _xor_ a client, not both
 * Don't implement unilateral updates (i.e. the server can't notify clients for
   new messages)
