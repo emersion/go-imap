@@ -179,6 +179,30 @@ func (s *Server) Close() error {
 	return nil
 }
 
+// Register a new capability that will be advertised by this server.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (s *Server) RegisterCapability(name string, state common.ConnState) {
+	s.caps[name] = state
+}
+
+// Register a new authentication mechanism for this server.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
+	s.auths[name] = f
+}
+
+// Register a new command for this server.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (s *Server) RegisterCommand(name string, f HandlerFactory) {
+	s.commands[name] = f
+}
+
 // Create a new IMAP server from an existing listener.
 func NewServer(l net.Listener, bkd backend.Backend) *Server {
 	s := &Server{
