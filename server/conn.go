@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/tls"
 	"net"
+	"sync"
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/backend"
@@ -14,6 +15,7 @@ type Conn struct {
 	isTLS bool
 	continues chan bool
 	silent bool
+	locker sync.Locker
 
 	// This connection's server.
 	Server *Server
@@ -29,6 +31,9 @@ type Conn struct {
 
 // Write a response to this connection.
 func (c *Conn) WriteRes(res common.WriterTo) error {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+
 	if err := res.WriteTo(c.Writer); err != nil {
 		return err
 	}
@@ -114,6 +119,7 @@ func newConn(s *Server, c net.Conn) *Conn {
 
 		isTLS: isTLS,
 		continues: continues,
+		locker: &sync.Mutex{},
 
 		Server: s,
 		State: common.NotAuthenticatedState,

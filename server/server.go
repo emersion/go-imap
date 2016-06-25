@@ -223,11 +223,12 @@ func (s *Server) listenUpdates() (err error) {
 				}
 			}
 
+			conn.locker.Lock()
 			if _, err := conn.Writer.Write(b.Bytes()); err != nil {
 				log.Println("WARN: error sending unilateral update:", err)
-				continue
 			}
 			conn.Flush()
+			conn.locker.Unlock()
 		}
 	}
 }
