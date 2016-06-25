@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bytes"
 	"crypto/tls"
 	"errors"
 	"io"
@@ -170,6 +171,8 @@ func (s *Server) listenUpdates() (err error) {
 	var update *backend.Update
 	var res common.WriterTo
 	for {
+		// TODO: do not generate response if nobody will receive it
+
 		select {
 		case status := <-s.Updates.Statuses:
 			update = &status.Update
@@ -199,9 +202,13 @@ func (s *Server) listenUpdates() (err error) {
 			res = &responses.Expunge{SeqIds: ch}
 		}
 
-		// TODO: this doesn't work with responses using channels
-		// Use a buffer instead, making sure the response is generated if at least
-		// one client matches
+		// Format response
+		b := &bytes.Buffer{}
+		w := common.NewWriter(b)
+		if err := res.WriteTo(w); err != nil {
+			log.Println("WARN: cannot format unlateral update:", err)
+		}
+
 		for _, conn := range s.conns {
 			if update.Username != "" && (conn.User == nil || conn.User.Username() != update.Username) {
 				continue
@@ -216,9 +223,11 @@ func (s *Server) listenUpdates() (err error) {
 				}
 			}
 
-			if err := conn.WriteRes(res); err != nil {
+			if _, err := conn.Writer.Write(b.Bytes()); err != nil {
 				log.Println("WARN: error sending unilateral update:", err)
+				continue
 			}
+			conn.Flush()
 		}
 	}
 }
