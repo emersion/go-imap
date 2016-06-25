@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
@@ -23,6 +24,13 @@ type Noop struct {
 }
 
 func (cmd *Noop) Handle(conn *Conn) error {
+	if conn.Mailbox != nil {
+		// If a mailbox is selected, NOOP can be used to poll for server updates
+		if mbox, ok := conn.Mailbox.(backend.UpdaterMailbox); ok {
+			return mbox.Poll()
+		}
+	}
+
 	return nil
 }
 

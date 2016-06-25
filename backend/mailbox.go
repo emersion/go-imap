@@ -48,9 +48,15 @@ type Mailbox interface {
 	// Append a new message to this mailbox. The \Recent flag will be added no
 	// matter flags is empty or not. If date is nil, the current time will be
 	// used.
+	//
+	// If the Backend implements Updater, it must notify the client immediately
+	// via a mailbox update.
 	CreateMessage(flags []string, date *time.Time, body []byte) error
 
 	// Alter flags for the specified message(s).
+	//
+	// If the Backend implements Updater, it must notify the client immediately
+	// via a message update.
 	UpdateMessagesFlags(uid bool, seqset *common.SeqSet, operation common.FlagsOp, flags []string) error
 
 	// Copy the specified message(s) to the end of the specified destination
@@ -59,9 +65,15 @@ type Mailbox interface {
 	//
 	// If the destination mailbox does not exist, a server SHOULD return an error.
 	// It SHOULD NOT automatically create the mailbox.
+	//
+	// If the Backend implements Updater, it must notify the client immediately
+	// via a mailbox update.
 	CopyMessages(uid bool, seqset *common.SeqSet, dest string) error
 
 	// Permanently removes all messages that have the \Deleted flag set from the
 	// currently selected mailbox.
+	//
+	// If the Backend implements Updater, it must notify the client immediately
+	// via an expunge update.
 	Expunge() error
 }

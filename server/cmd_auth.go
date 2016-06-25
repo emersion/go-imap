@@ -27,7 +27,12 @@ func (cmd *Select) Handle(conn *Conn) error {
 		return err
 	}
 
-	items := []string{"MESSAGES", "RECENT", "UNSEEN", "UIDNEXT", "UIDVALIDITY"}
+	items := []string{
+		common.MailboxFlags, common.MailboxPermanentFlags,
+		common.MailboxMessages, common.MailboxRecent, common.MailboxUnseen,
+		common.MailboxUidNext, common.MailboxUidValidity,
+	}
+
 	status, err := mbox.Status(items)
 	if err != nil {
 		return err
@@ -36,73 +41,8 @@ func (cmd *Select) Handle(conn *Conn) error {
 	conn.Mailbox = mbox
 	conn.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
-	flags := make([]interface{}, len(status.Flags))
-	for i, f := range status.Flags {
-		flags[i] = f
-	}
-	res := common.NewUntaggedResp([]interface{}{"FLAGS", flags})
-	if err := conn.WriteRes(res); err != nil {
-		return err
-	}
-
-	res = common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
-	if err := conn.WriteRes(res); err != nil {
-		return err
-	}
-
-	res = common.NewUntaggedResp([]interface{}{status.Recent, "RECENT"})
-	if err := conn.WriteRes(res); err != nil {
-		return err
-	}
-
-	statusRes := &common.StatusResp{
-		Tag: "*",
-		Type: common.OK,
-		Code: "UNSEEN",
-		Arguments: []interface{}{status.Unseen},
-	}
-	if err := conn.WriteRes(statusRes); err != nil {
-		return err
-	}
-
-	flags = make([]interface{}, len(status.PermanentFlags))
-	for i, f := range status.PermanentFlags {
-		flags[i] = f
-	}
-	statusRes = &common.StatusResp{
-		Tag: "*",
-		Type: common.OK,
-		Code: "PERMANENTFLAGS",
-		Arguments: []interface{}{flags},
-		Info: "Flags permitted.",
-	}
-	if err := conn.WriteRes(statusRes); err != nil {
-		return err
-	}
-
-	statusRes = &common.StatusResp{
-		Tag: "*",
-		Type: common.OK,
-		Code: "UIDNEXT",
-		Arguments: []interface{}{status.UidNext},
-		Info: "Predicted next UID",
-	}
-	if err := conn.WriteRes(statusRes); err != nil {
-		return err
-	}
-
-	statusRes = &common.StatusResp{
-		Tag: "*",
-		Type: common.OK,
-		Code: "UIDVALIDITY",
-		Arguments: []interface{}{status.UidValidity},
-		Info: "UIDs valid",
-	}
-	if err := conn.WriteRes(statusRes); err != nil {
-		return err
-	}
-
-	return nil
+	res := &responses.Select{Mailbox: status}
+	return conn.WriteRes(res)
 }
 
 type Create struct {
@@ -263,13 +203,14 @@ func (cmd *Append) Handle(conn *Conn) error {
 	}
 
 	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
-	if conn.Mailbox != nil && conn.Mailbox.Name() == mbox.Name() {
-		status, err := mbox.Status([]string{"MESSAGES"})
+	// Do this only if the backend doesn't send updates itself
+	if conn.Server.Updates == nil && conn.Mailbox != nil && conn.Mailbox.Name() == mbox.Name() {
+		status, err := mbox.Status([]string{common.MailboxMessages})
 		if err != nil {
 			return err
 		}
 
-		res := common.NewUntaggedResp([]interface{}{status.Messages, "EXISTS"})
+		res := &responses.Select{Mailbox: status}
 		if err := conn.WriteRes(res); err != nil {
 			return err
 		}

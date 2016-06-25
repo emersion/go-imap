@@ -53,16 +53,16 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 				mbox.Items = append(mbox.Items, key)
 
 				switch key {
-				case "MESSAGES":
+				case imap.MailboxMessages:
 					mbox.Messages, _ = imap.ParseNumber(f)
-				case "RECENT":
+				case imap.MailboxRecent:
 					mbox.Recent, _ = imap.ParseNumber(f)
-				case "UIDNEXT":
-					mbox.UidNext, _ = imap.ParseNumber(f)
-				case "UIDVALIDITY":
-					mbox.UidValidity, _ = imap.ParseNumber(f)
-				case "UNSEEN":
+				case imap.MailboxUnseen:
 					mbox.Unseen, _ = imap.ParseNumber(f)
+				case imap.MailboxUidNext:
+					mbox.UidNext, _ = imap.ParseNumber(f)
+				case imap.MailboxUidValidity:
+					mbox.UidValidity, _ = imap.ParseNumber(f)
 				}
 			}
 		}
@@ -78,16 +78,16 @@ func (r *Status) WriteTo(w *imap.Writer) error {
 	for _, item := range mbox.Items {
 		var value interface{}
 		switch strings.ToUpper(item) {
-		case "MESSAGES":
+		case imap.MailboxMessages:
 			value = mbox.Messages
-		case "RECENT":
+		case imap.MailboxRecent:
 			value = mbox.Recent
-		case "UIDNEXT":
-			value = mbox.UidNext
-		case "UIDVALIDITY":
-			value = mbox.UidValidity
-		case "UNSEEN":
+		case imap.MailboxUnseen:
 			value = mbox.Unseen
+		case imap.MailboxUidNext:
+			value = mbox.UidNext
+		case imap.MailboxUidValidity:
+			value = mbox.UidValidity
 		}
 
 		fields = append(fields, item, value)

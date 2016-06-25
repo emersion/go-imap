@@ -10,6 +10,7 @@ import (
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/backend"
+	"github.com/emersion/go-imap/responses"
 	"github.com/emersion/go-sasl"
 )
 
@@ -38,6 +39,8 @@ type Server struct {
 
 	// This server's backend.
 	Backend backend.Backend
+	// Backend updates that will be sent to connected clients.
+	Updates *backend.Updates
 	// This server's TLS configuration.
 	TLSConfig *tls.Config
 	// Allow authentication over unencrypted connections.
@@ -155,6 +158,66 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 	}
 
 	return
+}
+
+func (s *Server) listenUpdates() (err error) {
+	updater, ok := s.Backend.(backend.Updater)
+	if !ok {
+		return
+	}
+	s.Updates = updater.Updates()
+
+	var update *backend.Update
+	var res common.WriterTo
+	for {
+		select {
+		case status := <-s.Updates.Statuses:
+			update = &status.Update
+			res = status.StatusResp
+		case mailbox := <-s.Updates.Mailboxes:
+			update = &mailbox.Update
+			res = &responses.Select{Mailbox: mailbox.MailboxStatus}
+		case message := <-s.Updates.Messages:
+			update = &message.Update
+
+			ch := make(chan *common.Message)
+			go (func() {
+				ch <- message.Message
+				close(ch)
+			})()
+
+			res = &responses.Fetch{Messages: ch}
+		case expunge := <-s.Updates.Expunges:
+			update = &expunge.Update
+
+			ch := make(chan uint32)
+			go (func() {
+				ch <- expunge.SeqNum
+				close(ch)
+			})()
+
+			res = &responses.Expunge{SeqIds: ch}
+		}
+
+		// TODO: this doesn't work with responses using channels
+		// Use a buffer instead, making sure the response is generated if at least
+		// one client matches
+		for _, conn := range s.conns {
+			if update.Username != "" && (conn.User == nil || conn.User.Username() != update.Username) {
+				continue
+			}
+			if update.Mailbox != "" && (conn.Mailbox == nil || conn.Mailbox.Name() != update.Mailbox) {
+				continue
+			}
+			if conn.silent {
+				continue
+			}
+
+			if err := conn.WriteRes(res); err != nil {
+				log.Println("WARN: error sending unilateral update:", err)
+			}
+		}
+	}
 }
 
 func (s *Server) getCaps(currentState common.ConnState) (caps []string) {

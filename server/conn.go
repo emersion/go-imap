@@ -13,6 +13,7 @@ type Conn struct {
 
 	isTLS bool
 	continues chan bool
+	silent bool
 
 	// This connection's server.
 	Server *Server

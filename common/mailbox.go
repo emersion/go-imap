@@ -55,18 +55,30 @@ func (info *MailboxInfo) Format() []interface{} {
 	return []interface{}{FormatStringList(info.Attributes), info.Delimiter, name}
 }
 
+// Mailbox status items.
+const (
+	MailboxFlags = "FLAGS"
+	MailboxPermanentFlags = "PERMANENTFLAGS"
+	MailboxMessages = "MESSAGES"
+	MailboxRecent = "RECENT"
+	MailboxUnseen = "UNSEEN"
+	MailboxUidNext = "UIDNEXT"
+	MailboxUidValidity = "UIDVALIDITY"
+)
+
 // A mailbox status.
 type MailboxStatus struct {
 	// The mailbox name.
 	Name string
 	// True if the mailbox is open in read-only mode.
 	ReadOnly bool
+	// The mailbox items that are currently filled in.
+	Items []string
+
 	// The mailbox flags.
 	Flags []string
 	// The mailbox permanent flags.
 	PermanentFlags []string
-	// The mailbox items that are currently filled in.
-	Items []string
 
 	// The number of messages in this mailbox.
 	Messages uint32

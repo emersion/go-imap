@@ -47,12 +47,14 @@ func (cmd *Close) Handle(conn *Conn) error {
 		return ErrNoMailboxSelected
 	}
 
+	conn.Mailbox = nil
+	conn.MailboxReadOnly = false
+
 	if err := conn.Mailbox.Expunge(); err != nil {
 		return err
 	}
 
-	conn.Mailbox = nil
-	conn.MailboxReadOnly = false
+	// No need to send expunge updates here, since the mailbox is already unselected
 	return nil
 }
 
@@ -69,33 +71,45 @@ func (cmd *Expunge) Handle(conn *Conn) error {
 	}
 
 	// Get a list of messages that will be deleted
-	seqids, err := conn.Mailbox.SearchMessages(false, &common.SearchCriteria{Deleted: true})
-	if err != nil {
-		return err
+	// That will allow us to send expunge updates if the backend doesn't support it
+	var seqnums []uint32
+	if conn.Server.Updates == nil {
+		var err error
+		seqnums, err = conn.Mailbox.SearchMessages(false, &common.SearchCriteria{Deleted: true})
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := conn.Mailbox.Expunge(); err != nil {
 		return err
 	}
 
-	done := make(chan error)
-	defer close(done)
+	// If the backend doesn't support expunge updates, let's do it ourselves
+	if conn.Server.Updates == nil {
+		done := make(chan error)
+		defer close(done)
 
-	ch := make(chan uint32)
-	res := &responses.Expunge{SeqIds: ch}
+		ch := make(chan uint32)
+		res := &responses.Expunge{SeqIds: ch}
 
-	go (func () {
-		done <- conn.WriteRes(res)
-	})()
+		go (func () {
+			done <- conn.WriteRes(res)
+		})()
 
-	// Iterate sequence numbers from the last one to the first one, as deleting
-	// messages changes their respective numbers
-	for i := len(seqids) - 1; i >= 0; i-- {
-		ch <- seqids[i]
+		// Iterate sequence numbers from the last one to the first one, as deleting
+		// messages changes their respective numbers
+		for i := len(seqnums) - 1; i >= 0; i-- {
+			ch <- seqnums[i]
+		}
+		close(ch)
+
+		if err := <-done; err != nil {
+			return err
+		}
 	}
-	close(ch)
 
-	return <-done
+	return nil
 }
 
 type Search struct {
@@ -203,11 +217,18 @@ func (cmd *Store) handle(uid bool, conn *Conn) error {
 		return err
 	}
 
-	if err := conn.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags); err != nil {
+	// If the backend supports message updates, this will prevent this connection
+	// from receiving them
+	conn.silent = silent
+	err = conn.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags)
+	conn.silent = false
+	if err != nil {
 		return err
 	}
 
-	if !silent { // Not silent: send FETCH updates
+	// Not silent: send FETCH updates if the backend doesn't support message
+	// updates
+	if conn.Server.Updates == nil && !silent {
 		inner := &Fetch{}
 		inner.SeqSet = cmd.SeqSet
 		inner.Items = []string{"FLAGS"}

@@ -3,6 +3,9 @@ package backend
 // User represents a user in the mail storage system.
 // A user operation always deals with mailboxes.
 type User interface {
+	// Get this user's username.
+	Username() string
+
 	// Returns a list of mailboxes belonging to this user.
 	// If subscribed is set to true, only returns subscribed mailboxes.
 	ListMailboxes(subscribed bool) ([]Mailbox, error)
