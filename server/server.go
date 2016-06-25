@@ -210,7 +210,10 @@ func (s *Server) listenUpdates() (err error) {
 				continue
 			}
 			if conn.silent {
-				continue
+				// If silent is set, do not send message updates
+				if _, ok := res.(*responses.Fetch); ok {
+					continue
+				}
 			}
 
 			if err := conn.WriteRes(res); err != nil {
