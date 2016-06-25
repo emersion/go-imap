@@ -57,6 +57,7 @@ Commands defined in IMAP extensions are available in other packages.
 
 * [COMPRESS](https://github.com/emersion/go-imap-compress)
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
+* [MOVE](https://github.com/emersion/go-imap-move)
 
 ## Usage
 
