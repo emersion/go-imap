@@ -18,6 +18,8 @@ Other IMAP implementations in Go:
 * Are not idiomatic or are [ugly](https://github.com/jordwest/imap-server/blob/master/conn/commands.go#L53)
 * Are not pleasant to use
 * Implement a server _xor_ a client, not both
+* Don't implement unilateral updates (i.e. the server can't notify clients for
+  new messages)
 
 ## Implemented commands
 
