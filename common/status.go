@@ -41,7 +41,7 @@ const (
 // A status response.
 // See RFC 3501 section 7.1
 type StatusResp struct {
-	// The response tag.
+	// The response tag. If empty, it defaults to *.
 	Tag string
 
 	// The status type.
@@ -73,7 +73,12 @@ func (r *StatusResp) Err() error {
 }
 
 func (r *StatusResp) WriteTo(w *Writer) (err error) {
-	if _, err = w.WriteFields([]interface{}{r.Tag, string(r.Type)}); err != nil {
+	tag := r.Tag
+	if tag == "" {
+		tag = "*"
+	}
+
+	if _, err = w.WriteFields([]interface{}{tag, string(r.Type)}); err != nil {
 		return
 	}
 

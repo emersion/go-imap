@@ -22,7 +22,7 @@ type Handler interface {
 	// Handle this command for a given connection.
 	//
 	// By default, after this function has returned a status response is sent. To
-	// prevent this behavior handlers can use ErrStatusRes or ErrNoStatusRes.
+	// prevent this behavior handlers can use ErrStatusResp or ErrNoStatusResp.
 	Handle(conn *Conn) error
 }
 
@@ -32,24 +32,26 @@ type HandlerFactory func() Handler
 // A function that creates SASL servers.
 type SaslServerFactory func(conn *Conn) sasl.Server
 
-type errStatusRes struct {
-	res *common.StatusResp
+type errStatusResp struct {
+	resp *common.StatusResp
 }
 
-func (err *errStatusRes) Error() string {
+func (err *errStatusResp) Error() string {
 	return ""
 }
 
-// ErrStatusRes can be returned by a Handler to replace the default status
-// response.
-func ErrStatusRes(res *common.StatusResp) error {
-	return &errStatusRes{res}
+// ErrStatusResp can be returned by a Handler to replace the default status
+// response. The response tag must be empty.
+//
+// To disable the default status response, use ErrNoStatusResp instead.
+func ErrStatusResp(res *common.StatusResp) error {
+	return &errStatusResp{res}
 }
 
-// ErrNoStatusRes can be returned by a Handler to prevent the default status
+// ErrNoStatusResp can be returned by a Handler to prevent the default status
 // response from being sent.
-func ErrNoStatusRes() error {
-	return &errStatusRes{nil}
+func ErrNoStatusResp() error {
+	return &errStatusResp{nil}
 }
 
 // An IMAP server.
@@ -126,7 +128,7 @@ func (s *Server) handleConn(conn *Conn) error {
 		cmd := &common.Command{}
 		if err := cmd.Parse(fields); err != nil {
 			res = &common.StatusResp{
-				Tag: "*",
+				Tag: cmd.Tag,
 				Type: common.BAD,
 				Info: err.Error(),
 			}
@@ -162,30 +164,33 @@ func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error
 	return
 }
 
-func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.WriterTo, err error) {
+func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.StatusResp, err error) {
 	hdlr, err := s.getCommandHandler(cmd)
 	if err != nil {
 		return
 	}
 
-	if err := hdlr.Handle(conn); err != nil {
-		if errStatus, ok := err.(*errStatusRes); ok {
-			res = errStatus.res
-		} else {
-			res = &common.StatusResp{
-				Tag: cmd.Tag,
-				Type: common.NO,
-				Info: err.Error(),
-			}
+	hdlrErr := hdlr.Handle(conn)
+	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
+		res = statusErr.resp
+	} else if hdlrErr != nil {
+		res = &common.StatusResp{
+			Type: common.NO,
+			Info: hdlrErr.Error(),
 		}
 	} else {
 		res = &common.StatusResp{
-			Tag: cmd.Tag,
 			Type: common.OK,
-			Info: cmd.Name + " completed",
 		}
 	}
 
+	if res != nil {
+		res.Tag = cmd.Tag
+
+		if res.Type == common.OK && res.Info == "" {
+			res.Info = cmd.Name + " completed"
+		}
+	}
 	return
 }
 

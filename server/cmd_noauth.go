@@ -46,6 +46,14 @@ func (cmd *StartTLS) Handle(conn *Conn) error {
 	return nil
 }
 
+func afterAuthStatus(conn *Conn) error {
+	return ErrStatusResp(&common.StatusResp{
+		Type: common.OK,
+		Code: common.Capability,
+		Arguments: common.FormatStringList(conn.getCaps()),
+	})
+}
+
 type Login struct {
 	commands.Login
 }
@@ -65,7 +73,7 @@ func (cmd *Login) Handle(conn *Conn) error {
 
 	conn.State = common.AuthenticatedState
 	conn.User = user
-	return nil
+	return afterAuthStatus(conn)
 }
 
 type Authenticate struct {
@@ -85,5 +93,10 @@ func (cmd *Authenticate) Handle(conn *Conn) error {
 		mechanisms[name] = newSasl(conn)
 	}
 
-	return cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
+	err := cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
+	if err != nil {
+		return err
+	}
+
+	return afterAuthStatus(conn)
 }
