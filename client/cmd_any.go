@@ -36,11 +36,6 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 	return
 }
 
-// Check if the server supports a given authentication mechanism.
-func (c *Client) SupportsAuthentication(mech string) bool {
-	return c.Caps["AUTH=" + mech]
-}
-
 // This command always succeeds. It does nothing.
 // Can be used as a periodic poll for new messages or message status updates
 // during a period of inactivity. Can also be used to reset any inactivity

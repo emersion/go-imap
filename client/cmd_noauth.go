@@ -53,6 +53,11 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	return
 }
 
+// Check if the server supports a given authentication mechanism.
+func (c *Client) SupportsAuth(mech string) bool {
+	return c.Caps["AUTH=" + mech]
+}
+
 // Indicates a SASL authentication mechanism to the server. If the server
 // supports the requested authentication mechanism, it performs an
 // authentication protocol exchange to authenticate and identify the client.
