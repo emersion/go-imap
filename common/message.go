@@ -29,8 +29,8 @@ func ParseDate(date string) (*time.Time, error) {
 
 // A message.
 type Message struct {
-	// The message sequence number.
-	Id uint32
+	// The message sequence number. It must be greater than or equal to 1.
+	SeqNum uint32
 	// The message items that are currently filled in.
 	Items []string
 	// The message body sections.
@@ -46,8 +46,7 @@ type Message struct {
 	InternalDate *time.Time
 	// The message size.
 	Size uint32
-	// The message unique identifier.
-	// Must be greater than or equal to 1.
+	// The message unique identifier. It must be greater than or equal to 1.
 	Uid uint32
 }
 

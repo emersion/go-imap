@@ -81,20 +81,20 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []strin
 	defer close(ch)
 
 	for i, msg := range mbox.messages {
-		seqid := uint32(i+1)
+		seqNum := uint32(i+1)
 
 		var id uint32
 		if uid {
 			id = msg.Uid
 		} else {
-			id = seqid
+			id = seqNum
 		}
 		if !seqset.Contains(id) {
 			continue
 		}
 
 		m := msg.Metadata(items)
-		m.Id = seqid
+		m.SeqNum = seqNum
 		ch <- m
 	}
 

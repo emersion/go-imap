@@ -23,11 +23,11 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 		h.Accept()
 
-		id, _ := imap.ParseNumber(res.Fields[0])
+		seqNum, _ := imap.ParseNumber(res.Fields[0])
 		fields, _ := res.Fields[2].([]interface{})
 
 		msg := &imap.Message{
-			Id: id,
+			SeqNum: seqNum,
 		}
 
 		if err = msg.Parse(fields); err != nil {
@@ -42,7 +42,7 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 
 func (r *Fetch) WriteTo(w *imap.Writer) error {
 	for msg := range r.Messages {
-		res := imap.NewUntaggedResp([]interface{}{msg.Id, imap.Fetch, msg.Format()})
+		res := imap.NewUntaggedResp([]interface{}{msg.SeqNum, imap.Fetch, msg.Format()})
 
 		if err := res.WriteTo(w); err != nil {
 			return err
