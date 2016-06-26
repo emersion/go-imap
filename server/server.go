@@ -20,6 +20,9 @@ type Handler interface {
 	common.Parser
 
 	// Handle this command for a given connection.
+	//
+	// By default, after this function has returned a status response is sent. To
+	// prevent this behavior handlers can use ErrStatusRes or ErrNoStatusRes.
 	Handle(conn *Conn) error
 }
 
@@ -28,6 +31,26 @@ type HandlerFactory func() Handler
 
 // A function that creates SASL servers.
 type SaslServerFactory func(conn *Conn) sasl.Server
+
+type errStatusRes struct {
+	res *common.StatusResp
+}
+
+func (err *errStatusRes) Error() string {
+	return ""
+}
+
+// ErrStatusRes can be returned by a Handler to replace the default status
+// response.
+func ErrStatusRes(res *common.StatusResp) error {
+	return &errStatusRes{res}
+}
+
+// ErrNoStatusRes can be returned by a Handler to prevent the default status
+// response from being sent.
+func ErrNoStatusRes() error {
+	return &errStatusRes{nil}
+}
 
 // An IMAP server.
 type Server struct {
@@ -119,9 +142,10 @@ func (s *Server) handleConn(conn *Conn) error {
 			}
 		}
 
-		if err := conn.WriteRes(res); err != nil {
-			log.Println("Error writing response:", err)
-			continue
+		if res != nil {
+			if err := conn.WriteRes(res); err != nil {
+				log.Println("Error writing response:", err)
+			}
 		}
 	}
 }
@@ -145,10 +169,14 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res common.Writ
 	}
 
 	if err := hdlr.Handle(conn); err != nil {
-		res = &common.StatusResp{
-			Tag: cmd.Tag,
-			Type: common.NO,
-			Info: err.Error(),
+		if errStatus, ok := err.(*errStatusRes); ok {
+			res = errStatus.res
+		} else {
+			res = &common.StatusResp{
+				Tag: cmd.Tag,
+				Type: common.NO,
+				Info: err.Error(),
+			}
 		}
 	} else {
 		res = &common.StatusResp{
