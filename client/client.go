@@ -338,10 +338,10 @@ func (c *Client) handleUnilateral() {
 				default:
 				}
 			case "EXPUNGE":
-				seqid, _ := imap.ParseNumber(res.Fields[0])
+				seqNum, _ := imap.ParseNumber(res.Fields[0])
 
 				select {
-				case c.Expunges <- seqid:
+				case c.Expunges <- seqNum:
 				default:
 				}
 			}

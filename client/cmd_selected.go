@@ -70,7 +70,7 @@ func (c *Client) Expunge(ch chan uint32) (err error) {
 
 	var res *responses.Expunge
 	if ch != nil {
-		res = &responses.Expunge{SeqIds: ch}
+		res = &responses.Expunge{SeqNums: ch}
 	}
 
 	status, err := c.execute(cmd, res)
@@ -117,7 +117,7 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, 
 // function) of all the messages that match those keys.
 // Criteria must be UTF-8 encoded.
 // See RFC 3501 section 6.4.4 for a list of searching criteria.
-func (c *Client) Search(criteria *imap.SearchCriteria) (seqids []uint32, err error) {
+func (c *Client) Search(criteria *imap.SearchCriteria) (seqNums []uint32, err error) {
 	return c.search(false, criteria)
 }
 

@@ -199,7 +199,7 @@ func (s *Server) listenUpdates() (err error) {
 				close(ch)
 			})()
 
-			res = &responses.Expunge{SeqIds: ch}
+			res = &responses.Expunge{SeqNums: ch}
 		}
 
 		// Format response

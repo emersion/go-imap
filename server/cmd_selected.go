@@ -91,7 +91,7 @@ func (cmd *Expunge) Handle(conn *Conn) error {
 		defer close(done)
 
 		ch := make(chan uint32)
-		res := &responses.Expunge{SeqIds: ch}
+		res := &responses.Expunge{SeqNums: ch}
 
 		go (func () {
 			done <- conn.WriteRes(res)
