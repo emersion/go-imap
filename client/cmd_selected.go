@@ -9,12 +9,14 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+var ErrNoMailboxSelected = errors.New("No mailbox selected")
+
 // Requests a checkpoint of the currently selected mailbox. A checkpoint refers
 // to any implementation-dependent housekeeping associated with the mailbox that
 // is not normally executed as part of each command.
 func (c *Client) Check() (err error) {
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -34,7 +36,7 @@ func (c *Client) Check() (err error) {
 // selected state.
 func (c *Client) Close() (err error) {
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -62,7 +64,7 @@ func (c *Client) Expunge(ch chan uint32) (err error) {
 	defer close(ch)
 
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -84,7 +86,7 @@ func (c *Client) Expunge(ch chan uint32) (err error) {
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -131,7 +133,7 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *i
 	defer close(ch)
 
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -175,7 +177,7 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 	})()
 
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 
@@ -224,7 +226,7 @@ func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, c
 
 func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) (err error) {
 	if c.State != imap.SelectedState {
-		err = errors.New("No mailbox selected")
+		err = ErrNoMailboxSelected
 		return
 	}
 

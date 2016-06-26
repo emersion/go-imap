@@ -11,6 +11,12 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
+var (
+	ErrAlreadyLoggedIn = errors.New("Already logged in")
+	ErrTLSAlreadyEnabled = errors.New("TLS is already enabled")
+	ErrLoginDisabled = errors.New("Login is disabled in current state")
+)
+
 // Check if the server supports STARTTLS.
 func  (c *Client) SupportsStartTLS() bool {
 	return c.Caps[imap.StartTLS]
@@ -19,7 +25,7 @@ func  (c *Client) SupportsStartTLS() bool {
 // If the connection to the IMAP server isn't secure, starts TLS negociation.
 func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	if c.isTLS {
-		err = errors.New("TLS is already enabled")
+		err = ErrTLSAlreadyEnabled
 		return
 	}
 
@@ -52,7 +58,7 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 // authentication protocol exchange to authenticate and identify the client.
 func (c *Client) Authenticate(auth sasl.Client) (err error) {
 	if c.State != imap.NotAuthenticatedState {
-		err = errors.New("Already logged in")
+		err = ErrAlreadyLoggedIn
 		return
 	}
 
@@ -93,11 +99,11 @@ func (c *Client) Authenticate(auth sasl.Client) (err error) {
 // authenticating this user.
 func (c *Client) Login(username, password string) (err error) {
 	if c.State != imap.NotAuthenticatedState {
-		err = errors.New("Already logged in")
+		err = ErrAlreadyLoggedIn
 		return
 	}
 	if c.Caps["LOGINDISABLED"] {
-		err = errors.New("Login is disabled in current state")
+		err = ErrLoginDisabled
 		return
 	}
 

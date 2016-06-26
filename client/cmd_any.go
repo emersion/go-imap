@@ -8,6 +8,8 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+var ErrAlreadyLoggedOut = errors.New("Already logged out")
+
 // Request a listing of capabilities that the server supports. Capabilities are
 // often returned by the server with the greeting or with the STARTTLS and LOGIN
 // responses, so usually explicitely requesting capabilities isn't needed.
@@ -58,7 +60,7 @@ func (c *Client) Noop() (err error) {
 // Close the connection.
 func (c *Client) Logout() (err error) {
 	if c.State == imap.LogoutState {
-		err = errors.New("Already logged out")
+		err = ErrAlreadyLoggedOut
 		return
 	}
 

@@ -9,13 +9,15 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+var ErrNotLoggedIn = errors.New("Not logged in")
+
 // Selects a mailbox so that messages in the mailbox can be accessed. Any
 // currently selected mailbox is deselected before attempting the new selection.
 // Even if the readOnly parameter is set to false, the server can decide to open
 // the mailbox in read-only mode.
 func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -51,7 +53,7 @@ func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, e
 // Creates a mailbox with the given name.
 func (c *Client) Create(name string) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -71,7 +73,7 @@ func (c *Client) Create(name string) (err error) {
 // Permanently removes the mailbox with the given name.
 func (c *Client) Delete(name string) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -91,7 +93,7 @@ func (c *Client) Delete(name string) (err error) {
 // Changes the name of a mailbox.
 func (c *Client) Rename(existingName, newName string) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -113,7 +115,7 @@ func (c *Client) Rename(existingName, newName string) (err error) {
 // "subscribed" mailboxes.
 func (c *Client) Subscribe(name string) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -134,7 +136,7 @@ func (c *Client) Subscribe(name string) (err error) {
 // "subscribed" mailboxes.
 func (c *Client) Unsubscribe(name string) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -161,7 +163,7 @@ func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 	defer close(ch)
 
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -186,7 +188,7 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 	defer close(ch)
 
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -215,7 +217,7 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 // See RFC 2501 section 6.3.10 for a list of items that can be requested.
 func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
@@ -244,7 +246,7 @@ func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, 
 // flags and date are optional arguments and can be set to nil.
 func (c *Client) Append(mbox string, flags []string, date *time.Time, msg *imap.Literal) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		err = errors.New("Not logged in")
+		err = ErrNotLoggedIn
 		return
 	}
 
