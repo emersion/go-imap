@@ -44,7 +44,7 @@ UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✓
 LIST          | ✓      | ✓            | ✓      | ✓
 LSUB          | ✓      | ✓            | ✓      | ✗
 STATUS        | ✓      | ✓            | ✓      | ✓
-APPEND        | ✓      | ✗            | ✓      | ✗
+APPEND        | ✓      | ✓            | ✓      | ✗
 CHECK         | ✓      | ✓            | ✓      | ✗
 CLOSE         | ✓      | ✓            | ✓      | ✗
 EXPUNGE       | ✓      | ✓            | ✓      | ✗
