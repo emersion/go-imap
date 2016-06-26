@@ -5,7 +5,7 @@ import (
 	"io"
 	"net"
 	"testing"
-	//"time"
+	"time"
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/client"
@@ -335,7 +335,7 @@ func TestClient_Status(t *testing.T) {
 	testClient(t, ct, st)
 }
 
-/*func TestClient_Append(t *testing.T) {
+func TestClient_Append(t *testing.T) {
 	msg := "Hello World!\r\nHello Gophers!\r\n"
 
 	ct := func(c *client.Client) (err error) {
@@ -370,4 +370,4 @@ func TestClient_Status(t *testing.T) {
 	}
 
 	testClient(t, ct, st)
-}*/
+}
