@@ -3,11 +3,13 @@ package client_test
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
 	"testing"
 
+	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/client"
 )
 
@@ -31,13 +33,13 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 
 		err = ct(c)
 		if err != nil {
+			fmt.Println("Client error:", err)
 			done <- err
 			return
 		}
 
+		c.State = common.LogoutState
 		done <- nil
-
-		c.Logout()
 	})()
 
 	conn, err := l.Accept()
@@ -45,7 +47,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 		t.Fatal(err)
 	}
 
-	greeting := "* OK [CAPABILITY IMAP4rev1] Server ready.\r\n"
+	greeting := "* OK [CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN] Server ready.\r\n"
 	if _, err = io.WriteString(conn, greeting); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +59,6 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 		t.Fatal(err)
 	}
 
-	io.WriteString(conn, "* BYE Shutting down.\r\n")
 	conn.Close()
 }
 

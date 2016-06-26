@@ -3,8 +3,6 @@ package common
 import (
 	"bufio"
 	"net"
-	"sync"
-
 	"io"
 	"os"
 )
@@ -21,7 +19,7 @@ type Conn struct {
 	*Reader
 	*Writer
 
-	waiter *sync.WaitGroup
+	waits chan struct{}
 
 	// Set to true to print all commands and responses to STDOUT.
 	debug bool
@@ -59,8 +57,8 @@ func (c *Conn) Flush() (err error) {
 // tunnel.
 func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	// Block reads and writes during the upgrading process
-	c.waiter = &sync.WaitGroup{}
-	c.waiter.Add(1)
+	c.waits = make(chan struct{})
+	defer close(c.waits)
 
 	upgraded, err := upgrader(c.Conn)
 	if err != nil {
@@ -69,16 +67,13 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 
 	c.Conn = upgraded
 	c.init()
-
-	c.waiter.Done()
-	c.waiter = nil
 	return nil
 }
 
 // Wait for the connection to be ready for reads and writes.
 func (c *Conn) Wait() {
-	if c.waiter != nil {
-		c.waiter.Wait()
+	if c.waits != nil {
+		<-c.waits
 	}
 }
 
