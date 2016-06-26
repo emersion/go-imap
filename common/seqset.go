@@ -1,7 +1,3 @@
-// Copyright 2013 The Go-IMAP Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package common
 
 import (
@@ -10,11 +6,11 @@ import (
 	"strings"
 )
 
-// SeqSetError is used to report problems with the format of a sequence set
+// ErrBadSeqSet is used to report problems with the format of a sequence set
 // value.
-type SeqSetError string
+type ErrBadSeqSet string
 
-func (err SeqSetError) Error() string {
+func (err ErrBadSeqSet) Error() string {
 	return fmt.Sprintf("imap: bad sequence set value %q", string(err))
 }
 
@@ -34,7 +30,7 @@ func parseSeqNumber(v string) (uint32, error) {
 	} else if v == "*" {
 		return 0, nil
 	}
-	return 0, SeqSetError(v)
+	return 0, ErrBadSeqSet(v)
 }
 
 // parseSeq creates a new seq instance by parsing strings in the format "n" or
@@ -52,7 +48,7 @@ func parseSeq(v string) (s Seq, err error) {
 			return
 		}
 	}
-	return s, SeqSetError(v)
+	return s, ErrBadSeqSet(v)
 }
 
 // Contains returns true if the seq-number q is contained in sequence value s.
