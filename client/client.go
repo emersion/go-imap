@@ -65,7 +65,7 @@ func (c *Client) read() error {
 		c.conn.Wait()
 
 		res, err := imap.ReadResp(r)
-		if err == io.EOF {
+		if err == io.EOF || c.State == imap.LogoutState {
 			return nil
 		}
 		if err != nil {
