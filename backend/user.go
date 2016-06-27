@@ -76,4 +76,8 @@ type User interface {
 	// inferior hierarchical names of INBOX, these are unaffected by a
 	// rename of INBOX.
 	RenameMailbox(existingName, newName string) error
+
+	// Logout is called when this User will no longer be used, likely because the
+	// client closed the connection.
+	Logout() error
 }

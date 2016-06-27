@@ -43,6 +43,10 @@ func (c *Conn) WriteResp(res common.WriterTo) error {
 
 // Close this connection.
 func (c *Conn) Close() error {
+	if c.User != nil {
+		c.User.Logout()
+	}
+
 	if err := c.Conn.Close(); err != nil {
 		return err
 	}
