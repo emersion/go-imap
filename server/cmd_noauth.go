@@ -31,30 +31,28 @@ func (cmd *StartTLS) Handle(conn *Conn) error {
 		return errors.New("TLS support not enabled")
 	}
 
-	// First send an OK status response to let the client know that the TLS
-	// Handshake can begin
-	// TODO: set the Tag!
-	res := &common.StatusResp{
+	// Send an OK status response to let the client know that the TLS handshake
+	// can begin
+	return ErrStatusResp(&common.StatusResp{
 		Type: common.OK,
 		Info: "Begin TLS negotiation now",
-	}
-	if err := conn.WriteRes(res); err != nil {
-		return err
-	}
+	})
+}
 
+func (cmd *StartTLS) Upgrade(conn *Conn) error {
 	tlsConfig := conn.Server.TLSConfig
-	upgrader := func (conn net.Conn) (net.Conn, error) {
+
+	err := conn.Upgrade(func (conn net.Conn) (net.Conn, error) {
 		upgraded := tls.Server(conn, tlsConfig)
 		err := upgraded.Handshake()
 		return upgraded, err
-	}
-
-	if err := conn.Upgrade(upgrader); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
 	conn.isTLS = true
-	return ErrNoStatusResp()
+	return nil
 }
 
 func afterAuthStatus(conn *Conn) error {

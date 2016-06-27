@@ -26,6 +26,16 @@ type Handler interface {
 	Handle(conn *Conn) error
 }
 
+// A connection upgrader. If a Handler is also an Upgrader, the connection will
+// be upgraded after the Handler succeeds.
+//
+// This should only be used by libraries implementing an IMAP extension (e.g.
+// COMPRESS).
+type Upgrader interface {
+	// Upgrade the connection. This method should call conn.Upgrade().
+	Upgrade(conn *Conn) error
+}
+
 // A function that creates handlers.
 type HandlerFactory func() Handler
 
@@ -123,7 +133,8 @@ func (s *Server) handleConn(conn *Conn) error {
 			return err
 		}
 
-		var res common.WriterTo
+		var res *common.StatusResp
+		var up Upgrader
 
 		cmd := &common.Command{}
 		if err := cmd.Parse(fields); err != nil {
@@ -134,7 +145,7 @@ func (s *Server) handleConn(conn *Conn) error {
 			}
 		} else {
 			var err error
-			res, err = s.handleCommand(cmd, conn)
+			res, up, err = s.handleCommand(cmd, conn)
 			if err != nil {
 				res = &common.StatusResp{
 					Tag: cmd.Tag,
@@ -147,6 +158,14 @@ func (s *Server) handleConn(conn *Conn) error {
 		if res != nil {
 			if err := conn.WriteRes(res); err != nil {
 				log.Println("Error writing response:", err)
+				continue
+			}
+		}
+
+		if up != nil && res.Type == common.OK {
+			if err := up.Upgrade(conn); err != nil {
+				log.Println("Error upgrading connection:", err)
+				return err
 			}
 		}
 	}
@@ -164,7 +183,7 @@ func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error
 	return
 }
 
-func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.StatusResp, err error) {
+func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.StatusResp, up Upgrader, err error) {
 	hdlr, err := s.getCommandHandler(cmd)
 	if err != nil {
 		return
@@ -191,6 +210,8 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.Sta
 			res.Info = cmd.Name + " completed"
 		}
 	}
+
+	up, _ = hdlr.(Upgrader)
 	return
 }
 
