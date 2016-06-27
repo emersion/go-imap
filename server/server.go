@@ -110,7 +110,16 @@ func (s *Server) listen() error {
 
 func (s *Server) handleConn(conn *Conn) error {
 	s.conns = append(s.conns, conn)
-	defer conn.Close()
+	defer (func() {
+		conn.Close()
+
+		for i, c := range s.conns {
+			if c == conn {
+				s.conns = append(s.conns[:i], s.conns[i+1:]...)
+				break
+			}
+		}
+	})()
 
 	// Send greeting
 	if err := conn.greet(); err != nil {
