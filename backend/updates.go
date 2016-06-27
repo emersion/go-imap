@@ -47,6 +47,16 @@ type Updates struct {
 	Expunges chan *ExpungeUpdate
 }
 
+// NewUpdates initializes a new Updates struct.
+func NewUpdates() (up *Updates) {
+	return &Updates{
+		Statuses: make(chan *StatusUpdate),
+		Mailboxes: make(chan *MailboxUpdate),
+		Messages: make(chan *MessageUpdate),
+		Expunges: make(chan *ExpungeUpdate),
+	}
+}
+
 // A Backend that implements Updater is able to send unilateral backend updates.
 // Backends not implementing this interface don't correctly send unilateral
 // updates, for instance if a user logs in from two connections and deletes a
