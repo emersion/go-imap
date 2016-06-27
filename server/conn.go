@@ -30,7 +30,7 @@ type Conn struct {
 }
 
 // Write a response to this connection.
-func (c *Conn) WriteRes(res common.WriterTo) error {
+func (c *Conn) WriteResp(res common.WriterTo) error {
 	c.locker.Lock()
 	defer c.locker.Unlock()
 
@@ -94,7 +94,7 @@ func (c *Conn) greet() error {
 		Info: "IMAP4rev1 Service Ready",
 	}
 
-	return c.WriteRes(greeting)
+	return c.WriteResp(greeting)
 }
 
 // Check if this connection is encrypted.

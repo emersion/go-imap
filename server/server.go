@@ -156,7 +156,7 @@ func (s *Server) handleConn(conn *Conn) error {
 		}
 
 		if res != nil {
-			if err := conn.WriteRes(res); err != nil {
+			if err := conn.WriteResp(res); err != nil {
 				log.Println("Error writing response:", err)
 				continue
 			}

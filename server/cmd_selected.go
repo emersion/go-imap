@@ -94,7 +94,7 @@ func (cmd *Expunge) Handle(conn *Conn) error {
 		res := &responses.Expunge{SeqNums: ch}
 
 		go (func () {
-			done <- conn.WriteRes(res)
+			done <- conn.WriteResp(res)
 		})()
 
 		// Iterate sequence numbers from the last one to the first one, as deleting
@@ -127,7 +127,7 @@ func (cmd *Search) handle(uid bool, conn *Conn) error {
 	}
 
 	res := &responses.Search{Ids: ids}
-	return conn.WriteRes(res)
+	return conn.WriteResp(res)
 }
 
 func (cmd *Search) Handle(conn *Conn) error {
@@ -153,7 +153,7 @@ func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 	// TODO: if ListMessages() fails, make sure the goroutine is stopped
 	done := make(chan error)
 	go (func () {
-		done <- conn.WriteRes(res)
+		done <- conn.WriteResp(res)
 		close(done)
 	})()
 

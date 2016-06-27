@@ -16,7 +16,7 @@ func (cmd *Capability) Handle(conn *Conn) error {
 		Caps: conn.getCaps(),
 	}
 
-	return conn.WriteRes(res.Response())
+	return conn.WriteResp(res.Response())
 }
 
 type Noop struct {
@@ -45,7 +45,7 @@ func (cmd *Logout) Handle(conn *Conn) error {
 		Info: "Closing connection",
 	}
 
-	if err := conn.WriteRes(res); err != nil {
+	if err := conn.WriteResp(res); err != nil {
 		return err
 	}
 

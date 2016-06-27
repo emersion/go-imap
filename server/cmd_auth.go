@@ -42,7 +42,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 	conn.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	res := &responses.Select{Mailbox: status}
-	return conn.WriteRes(res)
+	return conn.WriteResp(res)
 }
 
 type Create struct {
@@ -131,7 +131,7 @@ func (cmd *List) Handle(conn *Conn) error {
 	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
 	go (func () {
-		done <- conn.WriteRes(res)
+		done <- conn.WriteResp(res)
 	})()
 
 	mailboxes, err := conn.User.ListMailboxes(cmd.Subscribed)
@@ -180,7 +180,7 @@ func (cmd *Status) Handle(conn *Conn) error {
 	}
 
 	res := &responses.Status{Mailbox: status}
-	return conn.WriteRes(res)
+	return conn.WriteResp(res)
 }
 
 type Append struct {
@@ -211,7 +211,7 @@ func (cmd *Append) Handle(conn *Conn) error {
 		}
 
 		res := &responses.Select{Mailbox: status}
-		if err := conn.WriteRes(res); err != nil {
+		if err := conn.WriteResp(res); err != nil {
 			return err
 		}
 	}
