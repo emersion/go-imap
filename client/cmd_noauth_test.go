@@ -82,6 +82,11 @@ func TestClient_StartTLS(t *testing.T) {
 
 func TestClient_Authenticate(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
+		if !c.SupportsAuth("PLAIN") {
+			err = fmt.Errorf("Server doesn't support AUTH=PLAIN")
+			return
+		}
+
 		sasl := sasl.NewPlainClient("", "username", "password")
 
 		err = c.Authenticate(sasl)
