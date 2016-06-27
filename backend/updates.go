@@ -13,6 +13,8 @@ type Update struct {
 	// The mailbox targeted by this update. If empty, the update targets all
 	// mailboxes.
 	Mailbox string
+	// A channel that will be closed once the update has been processed.
+	Done chan struct{}
 }
 
 // A status update. See RFC 3501 section 7.1 for a list of status responses.

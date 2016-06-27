@@ -246,21 +246,17 @@ func (s *Server) listenUpdates() (err error) {
 		case message := <-s.Updates.Messages:
 			update = &message.Update
 
-			ch := make(chan *common.Message)
-			go (func() {
-				ch <- message.Message
-				close(ch)
-			})()
+			ch := make(chan *common.Message, 1)
+			ch <- message.Message
+			close(ch)
 
 			res = &responses.Fetch{Messages: ch}
 		case expunge := <-s.Updates.Expunges:
 			update = &expunge.Update
 
-			ch := make(chan uint32)
-			go (func() {
-				ch <- expunge.SeqNum
-				close(ch)
-			})()
+			ch := make(chan uint32, 1)
+			ch <- expunge.SeqNum
+			close(ch)
 
 			res = &responses.Expunge{SeqNums: ch}
 		}
@@ -292,6 +288,10 @@ func (s *Server) listenUpdates() (err error) {
 			}
 			conn.Flush()
 			conn.locker.Unlock()
+		}
+
+		if update.Done != nil {
+			close(update.Done)
 		}
 	}
 }
