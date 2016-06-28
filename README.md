@@ -62,6 +62,7 @@ Commands defined in IMAP extensions are available in other packages.
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 * [MOVE](https://github.com/emersion/go-imap-move)
 * [IDLE](https://github.com/emersion/go-imap-idle)
+* [QUOTA](https://github.com/emersion/go-imap-quota)
 
 ## Usage
 
