@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/tls"
+	"log"
 	"net"
 	"sync"
 
@@ -79,7 +80,9 @@ func (c *Conn) getCaps() (caps []string) {
 func (c *Conn) sendContinuationReqs() {
 	for range c.continues {
 		cont := &common.ContinuationResp{Info: "send literal"}
-		cont.WriteTo(c.Writer)
+		if err := c.WriteResp(cont); err != nil {
+			log.Println("WARN: cannot send continuation request:", err)
+		}
 	}
 }
 
