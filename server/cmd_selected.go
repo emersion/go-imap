@@ -47,10 +47,11 @@ func (cmd *Close) Handle(conn *Conn) error {
 		return ErrNoMailboxSelected
 	}
 
+	mailbox := conn.Mailbox
 	conn.Mailbox = nil
 	conn.MailboxReadOnly = false
 
-	if err := conn.Mailbox.Expunge(); err != nil {
+	if err := mailbox.Expunge(); err != nil {
 		return err
 	}
 
