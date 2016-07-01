@@ -46,7 +46,7 @@ LSUB          | ✓      | ✓            | ✓      | ✓
 STATUS        | ✓      | ✓            | ✓      | ✓
 APPEND        | ✓      | ✓            | ✓      | ✗
 CHECK         | ✓      | ✓            | ✓      | ✓
-CLOSE         | ✓      | ✓            | ✓      | ✗
+CLOSE         | ✓      | ✓            | ✓      | ✓
 EXPUNGE       | ✓      | ✓            | ✓      | ✗
 SEARCH        | ✓      | ✓            | ✓      | ✗
 FETCH         | ✓      | ✓            | ✓      | ✗
