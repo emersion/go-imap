@@ -146,7 +146,7 @@ func TestReadResp_StatusResp(t *testing.T) {
 			input: "* OK IMAP4rev1 Service Ready\r\n",
 			expected: &common.StatusResp{
 				Tag: "*",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Info: "IMAP4rev1 Service Ready",
 			},
 		},
@@ -154,7 +154,7 @@ func TestReadResp_StatusResp(t *testing.T) {
 			input: "* PREAUTH Welcome Pauline!\r\n",
 			expected: &common.StatusResp{
 				Tag: "*",
-				Type: common.PREAUTH,
+				Type: common.StatusPreauth,
 				Info: "Welcome Pauline!",
 			},
 		},
@@ -162,7 +162,7 @@ func TestReadResp_StatusResp(t *testing.T) {
 			input: "a001 OK NOOP completed\r\n",
 			expected: &common.StatusResp{
 				Tag: "a001",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Info: "NOOP completed",
 			},
 		},
@@ -170,7 +170,7 @@ func TestReadResp_StatusResp(t *testing.T) {
 			input: "a001 OK [READ-ONLY] SELECT completed\r\n",
 			expected: &common.StatusResp{
 				Tag: "a001",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Code: "READ-ONLY",
 				Info: "SELECT completed",
 			},
@@ -179,7 +179,7 @@ func TestReadResp_StatusResp(t *testing.T) {
 			input: "a001 OK [CAPABILITY IMAP4rev1 UIDPLUS] LOGIN completed\r\n",
 			expected: &common.StatusResp{
 				Tag: "a001",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Code: "CAPABILITY",
 				Arguments: []interface{}{"IMAP4rev1", "UIDPLUS"},
 				Info: "LOGIN completed",

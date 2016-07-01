@@ -105,7 +105,7 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 		if err = r.ReadSp(); err == nil {
 			if name, ok := atom.(string); ok {
 				status := StatusRespType(name)
-				if status == OK || status == NO || status == BAD || status == PREAUTH || status == BYE {
+				if status == StatusOk || status == StatusNo || status == StatusBad || status == StatusPreauth || status == StatusBye {
 					isStatus = true
 
 					res := &StatusResp{

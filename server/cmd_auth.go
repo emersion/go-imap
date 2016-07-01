@@ -42,7 +42,18 @@ func (cmd *Select) Handle(conn *Conn) error {
 	conn.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	res := &responses.Select{Mailbox: status}
-	return conn.WriteResp(res)
+	if err := conn.WriteResp(res); err != nil {
+		return err
+	}
+
+	code := common.CodeReadWrite
+	if conn.MailboxReadOnly {
+		code = common.CodeReadOnly
+	}
+	return ErrStatusResp(&common.StatusResp{
+		Type: common.StatusOk,
+		Code: code,
+	})
 }
 
 type Create struct {

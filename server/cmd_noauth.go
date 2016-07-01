@@ -34,7 +34,7 @@ func (cmd *StartTLS) Handle(conn *Conn) error {
 	// Send an OK status response to let the client know that the TLS handshake
 	// can begin
 	return ErrStatusResp(&common.StatusResp{
-		Type: common.OK,
+		Type: common.StatusOk,
 		Info: "Begin TLS negotiation now",
 	})
 }
@@ -57,8 +57,8 @@ func (cmd *StartTLS) Upgrade(conn *Conn) error {
 
 func afterAuthStatus(conn *Conn) error {
 	return ErrStatusResp(&common.StatusResp{
-		Type: common.OK,
-		Code: common.Capability,
+		Type: common.StatusOk,
+		Code: common.CodeCapability,
 		Arguments: common.FormatStringList(conn.getCaps()),
 	})
 }

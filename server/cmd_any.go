@@ -40,8 +40,7 @@ type Logout struct {
 
 func (cmd *Logout) Handle(conn *Conn) error {
 	res := &common.StatusResp{
-		Tag: "*",
-		Type: common.BYE,
+		Type: common.StatusBye,
 		Info: "Closing connection",
 	}
 

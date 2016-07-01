@@ -94,9 +94,8 @@ func (c *Conn) greet() error {
 	}
 
 	greeting := &common.StatusResp{
-		Tag: "*",
-		Type: common.OK,
-		Code: common.Capability,
+		Type: common.StatusOk,
+		Code: common.CodeCapability,
 		Arguments: args,
 		Info: "IMAP4rev1 Service Ready",
 	}

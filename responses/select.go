@@ -78,9 +78,8 @@ func (r *Select) WriteTo(w *imap.Writer) (err error) {
 				flags[i] = f
 			}
 			statusRes := &imap.StatusResp{
-				Tag: "*",
-				Type: imap.OK,
-				Code: "PERMANENTFLAGS",
+				Type: imap.StatusOk,
+				Code: imap.CodePermanentFlags,
 				Arguments: []interface{}{flags},
 				Info: "Flags permitted.",
 			}
@@ -99,9 +98,8 @@ func (r *Select) WriteTo(w *imap.Writer) (err error) {
 			}
 		case imap.MailboxUnseen:
 			statusRes := &imap.StatusResp{
-				Tag: "*",
-				Type: imap.OK,
-				Code: "UNSEEN",
+				Type: imap.StatusOk,
+				Code: imap.CodeUnseen,
 				Arguments: []interface{}{status.Unseen},
 			}
 			if err = statusRes.WriteTo(w); err != nil {
@@ -109,9 +107,8 @@ func (r *Select) WriteTo(w *imap.Writer) (err error) {
 			}
 		case imap.MailboxUidNext:
 			statusRes := &imap.StatusResp{
-				Tag: "*",
-				Type: imap.OK,
-				Code: "UIDNEXT",
+				Type: imap.StatusOk,
+				Code: imap.CodeUidNext,
 				Arguments: []interface{}{status.UidNext},
 				Info: "Predicted next UID",
 			}
@@ -120,9 +117,8 @@ func (r *Select) WriteTo(w *imap.Writer) (err error) {
 			}
 		case imap.MailboxUidValidity:
 			statusRes := &imap.StatusResp{
-				Tag: "*",
-				Type: imap.OK,
-				Code: "UIDVALIDITY",
+				Type: imap.StatusOk,
+				Code: imap.CodeUidValidity,
 				Arguments: []interface{}{status.UidValidity},
 				Info: "UIDs valid",
 			}

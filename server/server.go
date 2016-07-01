@@ -149,7 +149,7 @@ func (s *Server) handleConn(conn *Conn) error {
 		if err := cmd.Parse(fields); err != nil {
 			res = &common.StatusResp{
 				Tag: cmd.Tag,
-				Type: common.BAD,
+				Type: common.StatusBad,
 				Info: err.Error(),
 			}
 		} else {
@@ -158,7 +158,7 @@ func (s *Server) handleConn(conn *Conn) error {
 			if err != nil {
 				res = &common.StatusResp{
 					Tag: cmd.Tag,
-					Type: common.BAD,
+					Type: common.StatusBad,
 					Info: err.Error(),
 				}
 			}
@@ -171,7 +171,7 @@ func (s *Server) handleConn(conn *Conn) error {
 			}
 		}
 
-		if up != nil && res.Type == common.OK {
+		if up != nil && res.Type == common.StatusOk {
 			if err := up.Upgrade(conn); err != nil {
 				log.Println("Error upgrading connection:", err)
 				return err
@@ -203,19 +203,19 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.Sta
 		res = statusErr.resp
 	} else if hdlrErr != nil {
 		res = &common.StatusResp{
-			Type: common.NO,
+			Type: common.StatusNo,
 			Info: hdlrErr.Error(),
 		}
 	} else {
 		res = &common.StatusResp{
-			Type: common.OK,
+			Type: common.StatusOk,
 		}
 	}
 
 	if res != nil {
 		res.Tag = cmd.Tag
 
-		if res.Type == common.OK && res.Info == "" {
+		if res.Type == common.StatusOk && res.Info == "" {
 			res.Info = cmd.Name + " completed"
 		}
 	}

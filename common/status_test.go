@@ -15,14 +15,14 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &common.StatusResp{
 				Tag: "*",
-				Type: common.OK,
+				Type: common.StatusOk,
 			},
 			expected: "* OK \r\n",
 		},
 		{
 			input: &common.StatusResp{
 				Tag: "*",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Info: "LOGIN completed",
 			},
 			expected: "* OK LOGIN completed\r\n",
@@ -30,7 +30,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &common.StatusResp{
 				Tag: "42",
-				Type: common.BAD,
+				Type: common.StatusBad,
 				Info: "Invalid arguments",
 			},
 			expected: "42 BAD Invalid arguments\r\n",
@@ -38,7 +38,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &common.StatusResp{
 				Tag: "a001",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Code: "READ-ONLY",
 				Info: "EXAMINE completed",
 			},
@@ -47,7 +47,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &common.StatusResp{
 				Tag: "*",
-				Type: common.OK,
+				Type: common.StatusOk,
 				Code: "CAPABILITY",
 				Arguments: []interface{}{"IMAP4rev1"},
 				Info: "IMAP4rev1 service ready",
@@ -73,19 +73,19 @@ func TestStatusResp_WriteTo(t *testing.T) {
 }
 
 func TestStatus_Err(t *testing.T) {
-	status := &common.StatusResp{Type: common.OK, Info: "All green"}
+	status := &common.StatusResp{Type: common.StatusOk, Info: "All green"}
 	if err := status.Err(); err != nil {
 		t.Error("OK status returned error:", err)
 	}
 
-	status = &common.StatusResp{Type: common.BAD, Info: "BAD!"}
+	status = &common.StatusResp{Type: common.StatusBad, Info: "BAD!"}
 	if err := status.Err(); err == nil {
 		t.Error("BAD status didn't returned error:", err)
 	} else if err.Error() != "BAD!" {
 		t.Error("BAD status returned incorrect error message:", err)
 	}
 
-	status = &common.StatusResp{Type: common.NO, Info: "NO!"}
+	status = &common.StatusResp{Type: common.StatusNo, Info: "NO!"}
 	if err := status.Err(); err == nil {
 		t.Error("NO status didn't returned error:", err)
 	} else if err.Error() != "NO!" {

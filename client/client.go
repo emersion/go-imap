@@ -234,21 +234,21 @@ func (c *Client) handleGreeting() *imap.StatusResp {
 
 	for h := range hdlr {
 		status, ok := h.Resp.(*imap.StatusResp)
-		if !ok || status.Tag != "*" || (status.Type != imap.OK && status.Type != imap.PREAUTH && status.Type != imap.BYE) {
+		if !ok || status.Tag != "*" || (status.Type != imap.StatusOk && status.Type != imap.StatusPreauth && status.Type != imap.StatusBye) {
 			h.Reject()
 			continue
 		}
 
 		h.Accept()
 
-		if status.Code == "CAPABILITY" {
+		if status.Code == imap.CodeCapability {
 			c.gotStatusCaps(status.Arguments)
 		}
 
-		if status.Type == imap.PREAUTH {
+		if status.Type == imap.StatusPreauth {
 			c.State = imap.AuthenticatedState
 		}
-		if status.Type == imap.BYE {
+		if status.Type == imap.StatusBye {
 			c.State = imap.LogoutState
 		}
 
@@ -270,30 +270,30 @@ func (c *Client) handleUnilateral() {
 		switch res := h.Resp.(type) {
 		case *imap.StatusResp:
 			if res.Tag != "*" ||
-				(res.Type != imap.OK && res.Type != imap.NO && res.Type != imap.BAD && res.Type != imap.BYE) ||
-				(res.Code != "" && res.Code != "ALERT") {
+				(res.Type != imap.StatusOk && res.Type != imap.StatusNo && res.Type != imap.StatusBad && res.Type != imap.StatusBye) ||
+				(res.Code != "" && res.Code != imap.CodeAlert) {
 				h.Reject()
 				break
 			}
 			h.Accept()
 
 			switch res.Type {
-			case imap.OK:
+			case imap.StatusOk:
 				select {
 				case c.Infos <- res:
 				default:
 				}
-			case imap.NO:
+			case imap.StatusNo:
 				select {
 				case c.Warnings <- res:
 				default:
 				}
-			case imap.BAD:
+			case imap.StatusBad:
 				select {
 				case c.Errors <- res:
 				default:
 				}
-			case imap.BYE:
+			case imap.StatusBye:
 				c.State = imap.LogoutState
 				c.Mailbox = nil
 				c.conn.Close()
