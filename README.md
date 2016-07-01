@@ -42,7 +42,7 @@ RENAME        | ✓      | ✓            | ✓      | ✓
 SUBSCRIBE     | ✓      | ✓            | ✓      | ✓
 UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✓
 LIST          | ✓      | ✓            | ✓      | ✓
-LSUB          | ✓      | ✓            | ✓      | ✗
+LSUB          | ✓      | ✓            | ✓      | ✓
 STATUS        | ✓      | ✓            | ✓      | ✓
 APPEND        | ✓      | ✓            | ✓      | ✗
 CHECK         | ✓      | ✓            | ✓      | ✗
