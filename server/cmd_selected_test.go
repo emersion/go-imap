@@ -61,3 +61,52 @@ func TestClose(t *testing.T) {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
+
+func TestStore(t *testing.T) {
+	s, c, scanner := testServerSelected(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STORE 1 +FLAGS (\\Flagged)\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "* 1 FETCH (FLAGS (\\Seen \\Flagged))") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 STORE 1 FLAGS (\\Anwsered)\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "* 1 FETCH (FLAGS (\\Anwsered))") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 STORE 1 -FLAGS (\\Anwsered)\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "* 1 FETCH (FLAGS ())") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 STORE 1 +FLAGS.SILENT (\\Flagged \\Seen)\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
