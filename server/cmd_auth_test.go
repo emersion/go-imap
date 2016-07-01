@@ -26,6 +26,7 @@ func TestSelect_Ok(t *testing.T) {
 	io.WriteString(c, "a001 SELECT INBOX\r\n")
 
 	got := map[string]bool{
+		"OK": false,
 		"FLAGS": false,
 		"EXISTS": false,
 		"RECENT": false,
@@ -35,8 +36,7 @@ func TestSelect_Ok(t *testing.T) {
 		"UIDVALIDITY": false,
 	}
 
-	for {
-		scanner.Scan()
+	for scanner.Scan() {
 		res := scanner.Text()
 
 		if res == "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)" {
@@ -53,7 +53,8 @@ func TestSelect_Ok(t *testing.T) {
 			got["UIDNEXT"] = true
 		} else if strings.HasPrefix(res, "* OK [UIDVALIDITY 1]") {
 			got["UIDVALIDITY"] = true
-		} else if strings.HasPrefix(res, "a001 OK ") {
+		} else if strings.HasPrefix(res, "a001 OK [READ-WRITE] ") {
+			got["OK"] = true
 			break
 		} else {
 			t.Fatal("Unexpected response:", res)
@@ -64,6 +65,28 @@ func TestSelect_Ok(t *testing.T) {
 		if !val {
 			t.Error("Did not got response:", name)
 		}
+	}
+}
+
+func TestSelect_ReadOnly(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 EXAMINE INBOX\r\n")
+
+	gotOk := true
+	for scanner.Scan() {
+		res := scanner.Text()
+
+		if strings.HasPrefix(res, "a001 OK [READ-ONLY]") {
+			gotOk = true
+			break
+		}
+	}
+
+	if !gotOk {
+		t.Error("Did not get a correct OK response")
 	}
 }
 

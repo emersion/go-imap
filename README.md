@@ -35,7 +35,7 @@ AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
 LOGIN         | ✓      | ✓            | ✓      | ✓
 STARTTLS      | ✓      | ✓            | ✓      | ✗
 SELECT        | ✓      | ✓            | ✓      | ✓
-EXAMINE       | ✓      | ✓            | ✓      | ✗
+EXAMINE       | ✓      | ✓            | ✓      | ✓
 CREATE        | ✓      | ✓            | ✓      | ✓
 DELETE        | ✓      | ✓            | ✓      | ✓
 RENAME        | ✓      | ✓            | ✓      | ✓
