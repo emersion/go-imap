@@ -75,6 +75,22 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 	return
 }
 
+func (m *Message) hasFlag(flag string) bool {
+	for _, f := range m.Flags {
+		if f == flag {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Message) Matches(criteria *common.SearchCriteria) bool {
-	return true // TODO
+	// TODO
+	if criteria.SeqSet != nil && !criteria.SeqSet.Contains(m.SeqNum) {
+		return false
+	}
+	if criteria.Deleted && !m.hasFlag(common.DeletedFlag) {
+		return false
+	}
+	return true
 }

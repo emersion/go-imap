@@ -110,3 +110,35 @@ func TestStore(t *testing.T) {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
+
+func TestExpunge(t *testing.T) {
+	s, c, scanner := testServerSelected(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 EXPUNGE\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 STORE 1 +FLAGS.SILENT (\\Deleted)\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 EXPUNGE\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "* 1 EXPUNGE") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
