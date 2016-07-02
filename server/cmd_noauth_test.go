@@ -2,9 +2,58 @@ package server_test
 
 import (
 	"io"
+	"bufio"
+	"crypto/tls"
 	"strings"
 	"testing"
+
+	"github.com/emersion/go-imap/internal"
 )
+
+func TestStartTLS(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	cert, err := tls.X509KeyPair(internal.LocalhostCert, internal.LocalhostKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates: []tls.Certificate{cert},
+	}
+
+	s.AllowInsecureAuth = false
+	s.TLSConfig = tlsConfig
+
+	io.WriteString(c, "a001 CAPABILITY\r\n")
+	scanner.Scan()
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 STARTTLS LOGINDISABLED" {
+		t.Fatal("Bad CAPABILITY response:", scanner.Text())
+	}
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 STARTTLS\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+	sc := tls.Client(c, tlsConfig)
+	if err = sc.Handshake(); err != nil {
+		t.Fatal(err)
+	}
+	scanner = bufio.NewScanner(sc)
+
+	scanner.Scan()
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=PLAIN" {
+		t.Fatal("Bad CAPABILITY response:", scanner.Text())
+	}
+}
 
 func TestLogin_Ok(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)

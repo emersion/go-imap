@@ -7,6 +7,7 @@ import (
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/responses"
 	"github.com/emersion/go-sasl"
 )
 
@@ -52,7 +53,9 @@ func (cmd *StartTLS) Upgrade(conn *Conn) error {
 	}
 
 	conn.isTLS = true
-	return nil
+
+	res := &responses.Capability{Caps: conn.getCaps()}
+	return conn.WriteResp(res)
 }
 
 func afterAuthStatus(conn *Conn) error {

@@ -12,11 +12,8 @@ type Capability struct {
 }
 
 func (cmd *Capability) Handle(conn *Conn) error {
-	res := &responses.Capability{
-		Caps: conn.getCaps(),
-	}
-
-	return conn.WriteResp(res.Response())
+	res := &responses.Capability{Caps: conn.getCaps()}
+	return conn.WriteResp(res)
 }
 
 type Noop struct {

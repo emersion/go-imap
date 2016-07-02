@@ -10,16 +10,14 @@ type Capability struct {
 	Caps []string
 }
 
-func (r *Capability) Response() *imap.Resp {
+func (r *Capability) WriteTo(w *imap.Writer) error {
 	fields := []interface{}{imap.Capability}
 	for _, cap := range r.Caps {
 		fields = append(fields, cap)
 	}
 
-	return &imap.Resp{
-		Tag: "*",
-		Fields: fields,
-	}
+	res := &imap.Resp{Fields: fields}
+	return res.WriteTo(w)
 }
 
 func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {

@@ -33,7 +33,7 @@ NOOP          | ✓      | ✓            | ✓      | ✓
 LOGOUT        | ✓      | ✓            | ✓      | ✓
 AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
 LOGIN         | ✓      | ✓            | ✓      | ✓
-STARTTLS      | ✓      | ✓            | ✓      | ✗
+STARTTLS      | ✓      | ✓            | ✓      | ✓
 SELECT        | ✓      | ✓            | ✓      | ✓
 EXAMINE       | ✓      | ✓            | ✓      | ✓
 CREATE        | ✓      | ✓            | ✓      | ✓

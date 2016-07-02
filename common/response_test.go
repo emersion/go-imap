@@ -12,7 +12,6 @@ func TestResp_WriteTo(t *testing.T) {
 	w := common.NewWriter(&b)
 
 	resp := &common.Resp{
-		Tag: "*",
 		Fields: []interface{}{"76", "FETCH", []interface{}{"UID", 783}},
 	}
 

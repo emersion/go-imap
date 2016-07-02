@@ -15,7 +15,12 @@ type Resp struct {
 }
 
 func (r *Resp) WriteTo(w *Writer) (err error) {
-	fields := []interface{}{r.Tag}
+	tag := r.Tag
+	if tag == "" {
+		tag = "*"
+	}
+
+	fields := []interface{}{tag}
 	fields = append(fields, r.Fields...)
 
 	if _, err = w.WriteFields(fields); err != nil {
