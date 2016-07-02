@@ -48,10 +48,10 @@ APPEND        | ✓      | ✓            | ✓      | ✗
 CHECK         | ✓      | ✓            | ✓      | ✓
 CLOSE         | ✓      | ✓            | ✓      | ✓
 EXPUNGE       | ✓      | ✓            | ✓      | ✓
-SEARCH        | ✓      | ✓            | ✓      | ✗
-FETCH         | ✓      | ✓            | ✓      | ✗
+SEARCH        | ✓      | ✓            | ✓      | ✓
+FETCH         | ✓      | ✓            | ✓      | ✓
 STORE         | ✓      | ✓            | ✓      | ✓
-COPY          | ✓      | ✓            | ✓      | ✗
+COPY          | ✓      | ✓            | ✓      | ✓
 UID           | ✓      | ✗            | ✓      | ✗
 
 ## IMAP extensions
