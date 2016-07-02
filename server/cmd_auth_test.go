@@ -241,3 +241,63 @@ func TestStatus(t *testing.T) {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
+
+func TestAppend(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND INBOX {80}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "From: Edward Snowden <root@nsa.gov>\r\n")
+	io.WriteString(c, "To: Julian Assange <root@gchq.gov.uk>\r\n")
+	io.WriteString(c, "\r\n")
+	io.WriteString(c, "<3\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestAppend_WithFlags(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND INBOX (\\Draft) {11}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "Hello World\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestAppend_WithFlagsAndDate(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND INBOX (\\Draft) \"5-Nov-1984 13:37:00 -0700\" {11}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "Hello World\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
