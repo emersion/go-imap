@@ -90,7 +90,7 @@ func TestSelect_ReadOnly(t *testing.T) {
 	}
 }
 
-func TestSelect_No(t *testing.T) {
+func TestSelect_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()
 	defer s.Close()
@@ -99,6 +99,18 @@ func TestSelect_No(t *testing.T) {
 
 	scanner.Scan()
 
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestSelect_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 SELECT INBOX\r\n")
+	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
@@ -113,6 +125,18 @@ func TestCreate(t *testing.T) {
 	scanner.Scan()
 
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestCreate_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 CREATE test\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
@@ -133,6 +157,30 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestDelete_InvalidMailbox(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 DELETE test\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestDelete_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 DELETE INBOX\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestRename(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()
@@ -149,6 +197,30 @@ func TestRename(t *testing.T) {
 	}
 }
 
+func TestRename_InvalidMailbox(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 RENAME test test2\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestRename_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 RENAME test test2\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestSubscribe(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()
@@ -156,8 +228,25 @@ func TestSubscribe(t *testing.T) {
 
 	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
 	scanner.Scan()
-
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 SUBSCRIBE idontexist\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestSubscribe_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
@@ -172,8 +261,25 @@ func TestUnsubscribe(t *testing.T) {
 
 	io.WriteString(c, "a001 UNSUBSCRIBE INBOX\r\n")
 	scanner.Scan()
-
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 UNSUBSCRIBE idontexist\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestUnsubscribe_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 UNSUBSCRIBE INBOX\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
@@ -224,6 +330,18 @@ func TestList_Subscribed(t *testing.T) {
 	}
 }
 
+func TestList_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 LIST \"\" *\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestStatus(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()
@@ -238,6 +356,30 @@ func TestStatus(t *testing.T) {
 
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestStatus_InvalidMailbox(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STATUS idontexist (MESSAGES)\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestStatus_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STATUS INBOX (MESSAGES)\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
@@ -298,6 +440,68 @@ func TestAppend_WithFlagsAndDate(t *testing.T) {
 
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestAppend_Selected(t *testing.T) {
+	s, c, scanner := testServerSelected(t, true)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND INBOX {11}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "Hello World\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* 2 EXISTS" {
+		t.Fatal("Invalid untagged response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestAppend_InvalidMailbox(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND idontexist {11}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "Hello World\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestAppend_NotAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 APPEND INBOX {11}\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "+ ") {
+		t.Fatal("Invalid continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "Hello World\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 }
