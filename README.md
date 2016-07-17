@@ -52,7 +52,7 @@ SEARCH        | ✓      | ✓            | ✓      | ✓
 FETCH         | ✓      | ✓            | ✓      | ✓
 STORE         | ✓      | ✓            | ✓      | ✓
 COPY          | ✓      | ✓            | ✓      | ✓
-UID           | ✓      | ✗            | ✓      | ✗
+UID           | ✓      | ✗            | ✓      | ✓
 
 ## IMAP extensions
 
