@@ -302,6 +302,76 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestList_Nested(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 CREATE first\r\n")
+	scanner.Scan()
+	io.WriteString(c, "a001 CREATE first/second\r\n")
+	scanner.Scan()
+	io.WriteString(c, "a001 CREATE first/second/third\r\n")
+	scanner.Scan()
+	io.WriteString(c, "a001 CREATE first/second/third2\r\n")
+	scanner.Scan()
+
+	check := func(mailboxes []string) {
+		checked := map[string]bool{}
+
+		for scanner.Scan() {
+			if strings.HasPrefix(scanner.Text(), "a001 OK ") {
+				break
+			} else if strings.HasPrefix(scanner.Text(), "* LIST ") {
+				found := false
+				for _, name := range mailboxes {
+					if strings.HasSuffix(scanner.Text(), " "+name) {
+						checked[name] = true
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					t.Fatal("Unexpected mailbox:", scanner.Text())
+				}
+			} else {
+				t.Fatal("Invalid LIST response:", scanner.Text())
+			}
+		}
+
+		for _, name := range mailboxes {
+			if !checked[name] {
+				t.Fatal("Missing mailbox:", name)
+			}
+		}
+	}
+
+	io.WriteString(c, "a001 LIST \"\" *\r\n")
+	check([]string{"INBOX", "first", "first/second", "first/second/third", "first/second/third2"})
+
+	io.WriteString(c, "a001 LIST \"\" %\r\n")
+	check([]string{"INBOX", "first"})
+
+	io.WriteString(c, "a001 LIST first *\r\n")
+	check([]string{"first/second", "first/second/third", "first/second/third2"})
+
+	io.WriteString(c, "a001 LIST first %\r\n")
+	check([]string{"first/second"})
+
+	io.WriteString(c, "a001 LIST first/second *\r\n")
+	check([]string{"first/second/third", "first/second/third2"})
+
+	io.WriteString(c, "a001 LIST first/second %\r\n")
+	check([]string{"first/second/third", "first/second/third2"})
+
+	io.WriteString(c, "a001 LIST first second\r\n")
+	check([]string{"first/second"})
+
+	io.WriteString(c, "a001 LIST first/second third\r\n")
+	check([]string{"first/second/third"})
+}
+
 func TestList_Subscribed(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()

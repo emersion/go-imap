@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/commands"
@@ -158,8 +159,18 @@ func (cmd *List) Handle(conn *Conn) error {
 			return err
 		}
 
-		// TODO: filter mailboxes with cmd.Reference and cmd.Mailbox
-		if cmd.Reference != "" || (cmd.Mailbox != "*" && cmd.Mailbox != "%" && cmd.Mailbox != info.Name) {
+		name := info.Name
+		if cmd.Reference != "" {
+			if !strings.HasSuffix(cmd.Reference, info.Delimiter) {
+				cmd.Reference += info.Delimiter
+			}
+			if !strings.HasPrefix(info.Name, cmd.Reference) {
+				continue
+			}
+			name = strings.TrimPrefix(info.Name, cmd.Reference)
+		}
+
+		if cmd.Mailbox != name && cmd.Mailbox != "*" && (cmd.Mailbox != "%" || strings.Contains(name, info.Delimiter)) {
 			continue
 		}
 
