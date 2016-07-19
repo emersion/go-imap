@@ -170,6 +170,7 @@ func (cmd *List) Handle(conn *Conn) error {
 			name = strings.TrimPrefix(info.Name, cmd.Reference)
 		}
 
+		// TODO: support mixed patterns such as test% or abc*def
 		if cmd.Mailbox != name && cmd.Mailbox != "*" && (cmd.Mailbox != "%" || strings.Contains(name, info.Delimiter)) {
 			continue
 		}
