@@ -136,14 +136,14 @@ func (cmd *List) Handle(conn *Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	done := make(chan error)
-	defer close(done)
+	done := make(chan error, 1)
 
 	ch := make(chan *common.MailboxInfo)
 	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
 	go (func () {
 		done <- conn.WriteResp(res)
+		close(done)
 	})()
 
 	mailboxes, err := conn.User.ListMailboxes(cmd.Subscribed)
