@@ -278,7 +278,8 @@ type Uid struct {
 }
 
 func (cmd *Uid) Handle(conn *Conn) error {
-	hdlr, err := conn.Server.getCommandHandler(cmd.Cmd.Command())
+	inner := cmd.Cmd.Command()
+	hdlr, err := conn.Server.getCommandHandler(inner)
 	if err != nil {
 		return err
 	}
@@ -288,5 +289,12 @@ func (cmd *Uid) Handle(conn *Conn) error {
 		return errors.New("Command unsupported with UID")
 	}
 
-	return uidHdlr.UidHandle(conn)
+	if err := uidHdlr.UidHandle(conn); err != nil {
+		return err
+	}
+
+	return ErrStatusResp(&common.StatusResp{
+		Type: common.StatusOk,
+		Info: "UID " + inner.Name + " completed",
+	})
 }
