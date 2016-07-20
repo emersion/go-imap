@@ -292,7 +292,7 @@ func TestList(t *testing.T) {
 	io.WriteString(c, "a001 LIST \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LIST (\\Noinferiors) / INBOX" {
+	if scanner.Text() != "* LIST (\\Noinferiors) \"/\" INBOX" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 
@@ -390,7 +390,7 @@ func TestList_Subscribed(t *testing.T) {
 	io.WriteString(c, "a001 LSUB \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LSUB (\\Noinferiors) / INBOX" {
+	if scanner.Text() != "* LSUB (\\Noinferiors) \"/\" INBOX" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 

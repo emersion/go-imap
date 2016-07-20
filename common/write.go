@@ -97,8 +97,9 @@ func (w *Writer) WriteString(s string) (int, error) {
 		return w.WriteLiteral(NewLiteral([]byte(s)))
 	}
 
+	// Thunderbird doesn't understand "/" if not quoted
 	specials := string([]rune{dquote, listStart, listEnd, literalStart, sp})
-	if strings.ToUpper(s) == "NIL" || s == "" || strings.ContainsAny(s, specials) {
+	if strings.ToUpper(s) == "NIL" || s == "" || s == "/" || strings.ContainsAny(s, specials) {
 		return w.writeQuotedString(s)
 	}
 
