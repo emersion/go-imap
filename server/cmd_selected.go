@@ -295,6 +295,6 @@ func (cmd *Uid) Handle(conn *Conn) error {
 
 	return ErrStatusResp(&common.StatusResp{
 		Type: common.StatusOk,
-		Info: "UID " + inner.Name + " completed",
+		Info: common.Uid + " " + inner.Name + " completed",
 	})
 }
