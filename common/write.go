@@ -9,6 +9,9 @@ import (
 	"unicode"
 )
 
+// A string that will be quoted.
+type Quoted string
+
 // A string writer.
 type StringWriter interface {
 	// WriteString writes a string. It returns the number of bytes written. If the
@@ -97,9 +100,8 @@ func (w *Writer) WriteString(s string) (int, error) {
 		return w.WriteLiteral(NewLiteral([]byte(s)))
 	}
 
-	// Thunderbird doesn't understand "/" if not quoted
 	specials := string([]rune{dquote, listStart, listEnd, literalStart, sp})
-	if strings.ToUpper(s) == "NIL" || s == "" || s == "/" || strings.ContainsAny(s, specials) {
+	if strings.ToUpper(s) == "NIL" || s == "" || strings.ContainsAny(s, specials) {
 		return w.writeQuotedString(s)
 	}
 
@@ -131,6 +133,8 @@ func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
 			switch f := field.(type) {
 			case string:
 				n, err = w.WriteString(f)
+			case Quoted:
+				n, err = w.writeQuotedString(string(f))
 			case int:
 				n, err = w.WriteNumber(uint32(f))
 			case uint32:

@@ -52,7 +52,8 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoder.String(info.Name)
-	return []interface{}{FormatStringList(info.Attributes), info.Delimiter, name}
+	// Thunderbird doesn't understand delimiters if not quoted
+	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
 }
 
 // Mailbox status items.
