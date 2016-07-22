@@ -63,6 +63,7 @@ Commands defined in IMAP extensions are available in other packages.
 * [MOVE](https://github.com/emersion/go-imap-move)
 * [IDLE](https://github.com/emersion/go-imap-idle)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
+* [ID](https://github.com/ProtonMail/go-imap-id)
 
 ## Usage
 
