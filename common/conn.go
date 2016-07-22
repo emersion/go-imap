@@ -36,6 +36,9 @@ const (
 	// LOGOUT command) or by unilateral action on the part of either
 	// the client or server.
 	LogoutState = 0
+
+	// ConnectedState is any state except LogoutState.
+	ConnectedState = NotAuthenticatedState | AuthenticatedState | SelectedState
 )
 
 // A function that upgrades a connection.
