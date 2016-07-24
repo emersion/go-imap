@@ -155,10 +155,7 @@ func New(bkd backend.Backend) *Server {
 	return s
 }
 
-// ListenAndServe listens on the TCP network address s.Addr and then calls Serve
-// to handle requests on incoming connections.
-//
-// If s.Addr is blank, ":imap" is used.
+// Serve accepts incoming connections on the Listener l.
 func (s *Server) Serve(l net.Listener) error {
 	s.listener = l
 	defer s.Close()
@@ -178,6 +175,24 @@ func (s *Server) Serve(l net.Listener) error {
 
 		go s.handleConn(conn)
 	}
+}
+
+// ListenAndServe listens on the TCP network address s.Addr and then calls Serve
+// to handle requests on incoming connections.
+//
+// If s.Addr is blank, ":imap" is used.
+func (s *Server) ListenAndServe() error {
+	addr := s.Addr
+	if addr == "" {
+		addr = ":imap"
+	}
+
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	return s.Serve(l)
 }
 
 // ListenAndServeTLS listens on the TCP network address s.Addr and then calls
