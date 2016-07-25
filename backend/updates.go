@@ -49,6 +49,25 @@ type Updates struct {
 	Expunges chan *ExpungeUpdate
 }
 
+// Send sends all specified updates. It panics if one of the provided value is
+// not an update.
+func (U *Updates) Send(updates ...interface{}) {
+	for _, u := range updates {
+		switch u := u.(type) {
+		case *StatusUpdate:
+			U.Statuses <- u
+		case *MailboxUpdate:
+			U.Mailboxes <- u
+		case *MessageUpdate:
+			U.Messages <- u
+		case *ExpungeUpdate:
+			U.Expunges <- u
+		default:
+			panic("imap: cannot send update: provided value is not a valid update")
+		}
+	}
+}
+
 // NewUpdates initializes a new Updates struct.
 func NewUpdates() (up *Updates) {
 	return &Updates{
@@ -75,4 +94,41 @@ type Updater interface {
 type UpdaterMailbox interface {
 	// Poll requests mailbox updates.
 	Poll() error
+}
+
+// UpdatesDone returns a channel that's closed when all provided updates have
+// been dispatched to all clients. It panics if one of the provided value is
+// not an update.
+func UpdatesDone(updates ...interface{}) <-chan struct{} {
+	done := make(chan struct{})
+
+	var chs []chan struct{}
+	for _, u := range updates {
+		var uu *Update
+		switch u := u.(type) {
+		case *StatusUpdate:
+			uu = &u.Update
+		case *MailboxUpdate:
+			uu = &u.Update
+		case *MessageUpdate:
+			uu = &u.Update
+		case *ExpungeUpdate:
+			uu = &u.Update
+		default:
+			panic("imap: cannot wait for update: provided value is not a valid update")
+		}
+
+		uu.Done = make(chan struct{})
+		chs = append(chs, uu.Done)
+	}
+
+	go (func() {
+		// Wait for all updates to be sent
+		for _, ch := range chs {
+			<-ch
+		}
+		close(done)
+	})()
+
+	return done
 }
