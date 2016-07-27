@@ -73,28 +73,98 @@ type Server struct {
 	commands map[string]HandlerFactory
 	auths map[string]SaslServerFactory
 
+	// TCP address to listen on.
+	Addr string
+	// This server's TLS configuration.
+	TLSConfig *tls.Config
 	// This server's backend.
 	Backend backend.Backend
 	// Backend updates that will be sent to connected clients.
 	Updates *backend.Updates
-	// This server's TLS configuration.
-	TLSConfig *tls.Config
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 	// Print all network activity to STDOUT.
 	Debug bool
 }
 
-// Get this server's address.
-func (s *Server) Addr() net.Addr {
-	return s.listener.Addr()
+// Create a new IMAP server from an existing listener.
+func New(bkd backend.Backend) *Server {
+	s := &Server{
+		caps: map[string]common.ConnState{},
+		Backend: bkd,
+	}
+
+	s.auths = map[string]SaslServerFactory{
+		"PLAIN": func(conn Conn) sasl.Server {
+			return sasl.NewPlainServer(func(identity, username, password string) error {
+				if identity != "" && identity != username {
+					return errors.New("Identities not supported")
+				}
+
+				user, err := bkd.Login(username, password)
+				if err != nil {
+					return err
+				}
+
+				ctx := conn.Context()
+				ctx.State = common.AuthenticatedState
+				ctx.User = user
+				return nil
+			})
+		},
+	}
+
+	s.commands = map[string]HandlerFactory{
+		common.Noop: func() Handler { return &Noop{} },
+		common.Capability: func() Handler { return &Capability{} },
+		common.Logout: func() Handler { return &Logout{} },
+
+		common.StartTLS: func() Handler { return &StartTLS{} },
+		common.Login: func() Handler { return &Login{} },
+		common.Authenticate: func() Handler { return &Authenticate{} },
+
+		common.Select: func() Handler { return &Select{} },
+		common.Examine: func() Handler {
+			hdlr := &Select{}
+			hdlr.ReadOnly = true
+			return hdlr
+		},
+		common.Create: func() Handler { return &Create{} },
+		common.Delete: func() Handler { return &Delete{} },
+		common.Rename: func() Handler { return &Rename{} },
+		common.Subscribe: func() Handler { return &Subscribe{} },
+		common.Unsubscribe: func() Handler { return &Unsubscribe{} },
+		common.List: func() Handler { return &List{} },
+		common.Lsub: func() Handler {
+			hdlr := &List{}
+			hdlr.Subscribed = true
+			return hdlr
+		},
+		common.Status: func() Handler { return &Status{} },
+		common.Append: func() Handler { return &Append{} },
+
+		common.Check: func() Handler { return &Check{} },
+		common.Close: func() Handler { return &Close{} },
+		common.Expunge: func() Handler { return &Expunge{} },
+		common.Search: func() Handler { return &Search{} },
+		common.Fetch: func() Handler { return &Fetch{} },
+		common.Store: func() Handler { return &Store{} },
+		common.Copy: func() Handler { return &Copy{} },
+		common.Uid: func() Handler { return &Uid{} },
+	}
+
+	return s
 }
 
-func (s *Server) listen() error {
-	defer s.listener.Close()
+// Serve accepts incoming connections on the Listener l.
+func (s *Server) Serve(l net.Listener) error {
+	s.listener = l
+	defer s.Close()
+
+	go s.listenUpdates()
 
 	for {
-		c, err := s.listener.Accept()
+		c, err := l.Accept()
 		if err != nil {
 			return err
 		}
@@ -108,7 +178,43 @@ func (s *Server) listen() error {
 	}
 }
 
-func (s *Server) handleConn(conn *conn) error {
+// ListenAndServe listens on the TCP network address s.Addr and then calls Serve
+// to handle requests on incoming connections.
+//
+// If s.Addr is blank, ":imap" is used.
+func (s *Server) ListenAndServe() error {
+	addr := s.Addr
+	if addr == "" {
+		addr = ":imap"
+	}
+
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	return s.Serve(l)
+}
+
+// ListenAndServeTLS listens on the TCP network address s.Addr and then calls
+// Serve to handle requests on incoming TLS connections.
+//
+// If s.Addr is blank, ":imaps" is used.
+func (s *Server) ListenAndServeTLS() error {
+	addr := s.Addr
+	if addr == "" {
+		addr = ":imaps"
+	}
+
+	l, err := tls.Listen("tcp", addr, s.TLSConfig)
+	if err != nil {
+		return err
+	}
+
+	return s.Serve(l)
+}
+
+func (s *Server) handleConn(conn Conn) error {
 	s.conns = append(s.conns, conn)
 	defer (func() {
 		conn.Close()
@@ -122,19 +228,19 @@ func (s *Server) handleConn(conn *conn) error {
 	})()
 
 	// Send greeting
-	if err := conn.greet(); err != nil {
+	if err := conn.conn().greet(); err != nil {
 		return err
 	}
 
 	for {
-		if conn.ctx.State == common.LogoutState {
+		if conn.Context().State == common.LogoutState {
 			return nil
 		}
 
-		conn.Wait()
+		conn.conn().Wait()
 
-		fields, err := conn.ReadLine()
-		if err == io.EOF || conn.ctx.State == common.LogoutState {
+		fields, err := conn.conn().ReadLine()
+		if err == io.EOF || conn.Context().State == common.LogoutState {
 			return nil
 		}
 		if err != nil {
@@ -342,96 +448,4 @@ func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
 // libraries implementing extensions of the IMAP protocol.
 func (s *Server) RegisterCommand(name string, f HandlerFactory) {
 	s.commands[name] = f
-}
-
-// Create a new IMAP server from an existing listener.
-func NewServer(l net.Listener, bkd backend.Backend) *Server {
-	s := &Server{
-		listener: l,
-		caps: map[string]common.ConnState{},
-		Backend: bkd,
-	}
-
-	s.auths = map[string]SaslServerFactory{
-		"PLAIN": func(conn Conn) sasl.Server {
-			return sasl.NewPlainServer(func(identity, username, password string) error {
-				if identity != "" && identity != username {
-					return errors.New("Identities not supported")
-				}
-
-				user, err := bkd.Login(username, password)
-				if err != nil {
-					return err
-				}
-
-				ctx := conn.Context()
-				ctx.State = common.AuthenticatedState
-				ctx.User = user
-				return nil
-			})
-		},
-	}
-
-	s.commands = map[string]HandlerFactory{
-		common.Noop: func() Handler { return &Noop{} },
-		common.Capability: func() Handler { return &Capability{} },
-		common.Logout: func() Handler { return &Logout{} },
-
-		common.StartTLS: func() Handler { return &StartTLS{} },
-		common.Login: func() Handler { return &Login{} },
-		common.Authenticate: func() Handler { return &Authenticate{} },
-
-		common.Select: func() Handler { return &Select{} },
-		common.Examine: func() Handler {
-			hdlr := &Select{}
-			hdlr.ReadOnly = true
-			return hdlr
-		},
-		common.Create: func() Handler { return &Create{} },
-		common.Delete: func() Handler { return &Delete{} },
-		common.Rename: func() Handler { return &Rename{} },
-		common.Subscribe: func() Handler { return &Subscribe{} },
-		common.Unsubscribe: func() Handler { return &Unsubscribe{} },
-		common.List: func() Handler { return &List{} },
-		common.Lsub: func() Handler {
-			hdlr := &List{}
-			hdlr.Subscribed = true
-			return hdlr
-		},
-		common.Status: func() Handler { return &Status{} },
-		common.Append: func() Handler { return &Append{} },
-
-		common.Check: func() Handler { return &Check{} },
-		common.Close: func() Handler { return &Close{} },
-		common.Expunge: func() Handler { return &Expunge{} },
-		common.Search: func() Handler { return &Search{} },
-		common.Fetch: func() Handler { return &Fetch{} },
-		common.Store: func() Handler { return &Store{} },
-		common.Copy: func() Handler { return &Copy{} },
-		common.Uid: func() Handler { return &Uid{} },
-	}
-
-	go s.listen()
-	go s.listenUpdates()
-	return s
-}
-
-func Listen(addr string, bkd backend.Backend) (s *Server, err error) {
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return
-	}
-
-	s = NewServer(l, bkd)
-	return
-}
-
-func ListenTLS(addr string, bkd backend.Backend, tlsConfig *tls.Config) (s *Server, err error) {
-	l, err := tls.Listen("tcp", addr, tlsConfig)
-	if err != nil {
-		return
-	}
-
-	s = NewServer(l, bkd)
-	return
 }

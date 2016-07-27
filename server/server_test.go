@@ -12,14 +12,17 @@ import (
 func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 	bkd := memory.New()
 
-	s, err := server.Listen("127.0.0.1:0", bkd)
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal("Cannot start server:", err)
+		t.Fatal("Cannot listen:", err)
 	}
+
+	s = server.New(bkd)
+	go s.Serve(l)
 
 	s.AllowInsecureAuth = true
 
-	conn, err = net.Dial("tcp", s.Addr().String())
+	conn, err = net.Dial("tcp", l.Addr().String())
 	if err != nil {
 		t.Fatal("Cannot connect to server:", err)
 	}
