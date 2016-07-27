@@ -72,6 +72,7 @@ type Server struct {
 	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
 	auths map[string]SaslServerFactory
+	newConn func(Conn) Conn
 
 	// TCP address to listen on.
 	Addr string
@@ -153,6 +154,10 @@ func New(bkd backend.Backend) *Server {
 		common.Uid: func() Handler { return &Uid{} },
 	}
 
+	s.newConn = func(conn Conn) Conn {
+		return conn
+	}
+
 	return s
 }
 
@@ -174,6 +179,7 @@ func (s *Server) Serve(l net.Listener) error {
 			conn.SetDebug(true)
 		}
 
+		conn = s.newConn(conn).conn()
 		go s.handleConn(conn)
 	}
 }
@@ -448,4 +454,17 @@ func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
 // libraries implementing extensions of the IMAP protocol.
 func (s *Server) RegisterCommand(name string, f HandlerFactory) {
 	s.commands[name] = f
+}
+
+// Extend connections managed by the server. The provided function will be
+// called when a client connects to the server. It can be used to add new
+// features to the default Conn interface by implementing new methods.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (s *Server) RegisterConn(f func(conn Conn) Conn) {
+	newConn := s.newConn
+	s.newConn = func(conn Conn) Conn {
+		return f(newConn(conn))
+	}
 }
