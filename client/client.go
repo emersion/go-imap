@@ -18,6 +18,7 @@ type Client struct {
 
 	handlers []imap.RespHandler
 	handlersLocker sync.Locker
+	loggedOut chan struct{}
 
 	// The server capabilities.
 	Caps map[string]bool
@@ -55,6 +56,8 @@ func (c *Client) read() error {
 			close(hdlr)
 		}
 		c.handlers = nil
+
+		close(c.loggedOut)
 	})()
 
 	for {
@@ -365,6 +368,12 @@ func (c *Client) IsTLS() bool {
 	return c.isTLS
 }
 
+// LoggedOut returns a channel which is closed when the connection to the server
+// is closed.
+func (c *Client) LoggedOut() <-chan struct{} {
+	return c.loggedOut
+}
+
 // Create a new client from an existing connection.
 func NewClient(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
@@ -374,6 +383,7 @@ func NewClient(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn: imap.NewConn(conn, r, w),
 		handlersLocker: &sync.Mutex{},
+		loggedOut: make(chan struct{}),
 		State: imap.NotAuthenticatedState,
 	}
 
