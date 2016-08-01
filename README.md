@@ -100,9 +100,9 @@ func main() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo)
-	go (func () {
-		err = c.List("", "%", mailboxes)
-	})()
+	go func () {
+		err = c.List("", "*", mailboxes)
+	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
