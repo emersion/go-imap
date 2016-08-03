@@ -23,7 +23,7 @@ type Handler interface {
 	//
 	// By default, after this function has returned a status response is sent. To
 	// prevent this behavior handlers can use ErrStatusResp or ErrNoStatusResp.
-	Handle(conn *Conn) error
+	Handle(conn Conn) error
 }
 
 // A connection upgrader. If a Handler is also an Upgrader, the connection will
@@ -33,14 +33,14 @@ type Handler interface {
 // COMPRESS).
 type Upgrader interface {
 	// Upgrade the connection. This method should call conn.Upgrade().
-	Upgrade(conn *Conn) error
+	Upgrade(conn Conn) error
 }
 
 // A function that creates handlers.
 type HandlerFactory func() Handler
 
 // A function that creates SASL servers.
-type SaslServerFactory func(conn *Conn) sasl.Server
+type SaslServerFactory func(conn Conn) sasl.Server
 
 type errStatusResp struct {
 	resp *common.StatusResp
@@ -67,11 +67,12 @@ func ErrNoStatusResp() error {
 // An IMAP server.
 type Server struct {
 	listener net.Listener
-	conns []*Conn
+	conns []Conn
 
 	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
 	auths map[string]SaslServerFactory
+	newConn func(Conn) Conn
 
 	// TCP address to listen on.
 	Addr string
@@ -95,7 +96,7 @@ func New(bkd backend.Backend) *Server {
 	}
 
 	s.auths = map[string]SaslServerFactory{
-		"PLAIN": func(conn *Conn) sasl.Server {
+		"PLAIN": func(conn Conn) sasl.Server {
 			return sasl.NewPlainServer(func(identity, username, password string) error {
 				if identity != "" && identity != username {
 					return errors.New("Identities not supported")
@@ -106,8 +107,9 @@ func New(bkd backend.Backend) *Server {
 					return err
 				}
 
-				conn.State = common.AuthenticatedState
-				conn.User = user
+				ctx := conn.Context()
+				ctx.State = common.AuthenticatedState
+				ctx.User = user
 				return nil
 			})
 		},
@@ -152,6 +154,10 @@ func New(bkd backend.Backend) *Server {
 		common.Uid: func() Handler { return &Uid{} },
 	}
 
+	s.newConn = func(conn Conn) Conn {
+		return conn
+	}
+
 	return s
 }
 
@@ -173,6 +179,7 @@ func (s *Server) Serve(l net.Listener) error {
 			conn.SetDebug(true)
 		}
 
+		conn = s.newConn(conn).conn()
 		go s.handleConn(conn)
 	}
 }
@@ -213,7 +220,7 @@ func (s *Server) ListenAndServeTLS() error {
 	return s.Serve(l)
 }
 
-func (s *Server) handleConn(conn *Conn) error {
+func (s *Server) handleConn(conn Conn) error {
 	s.conns = append(s.conns, conn)
 	defer (func() {
 		conn.Close()
@@ -227,19 +234,19 @@ func (s *Server) handleConn(conn *Conn) error {
 	})()
 
 	// Send greeting
-	if err := conn.greet(); err != nil {
+	if err := conn.conn().greet(); err != nil {
 		return err
 	}
 
 	for {
-		if conn.State == common.LogoutState {
+		if conn.Context().State == common.LogoutState {
 			return nil
 		}
 
-		conn.Wait()
+		conn.conn().Wait()
 
-		fields, err := conn.ReadLine()
-		if err == io.EOF || conn.State == common.LogoutState {
+		fields, err := conn.conn().ReadLine()
+		if err == io.EOF || conn.Context().State == common.LogoutState {
 			return nil
 		}
 		if err != nil {
@@ -297,7 +304,7 @@ func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error
 	return
 }
 
-func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.StatusResp, up Upgrader, err error) {
+func (s *Server) handleCommand(cmd *common.Command, conn Conn) (res *common.StatusResp, up Upgrader, err error) {
 	hdlr, err := s.getCommandHandler(cmd)
 	if err != nil {
 		return
@@ -374,25 +381,27 @@ func (s *Server) listenUpdates() (err error) {
 		}
 
 		for _, conn := range s.conns {
-			if update.Username != "" && (conn.User == nil || conn.User.Username() != update.Username) {
+			ctx := conn.Context()
+
+			if update.Username != "" && (ctx.User == nil || ctx.User.Username() != update.Username) {
 				continue
 			}
-			if update.Mailbox != "" && (conn.Mailbox == nil || conn.Mailbox.Name() != update.Mailbox) {
+			if update.Mailbox != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox) {
 				continue
 			}
-			if conn.silent {
+			if conn.conn().silent {
 				// If silent is set, do not send message updates
 				if _, ok := res.(*responses.Fetch); ok {
 					continue
 				}
 			}
 
-			conn.locker.Lock()
-			if _, err := conn.Writer.Write(b.Bytes()); err != nil {
+			conn.conn().locker.Lock()
+			if _, err := conn.conn().Writer.Write(b.Bytes()); err != nil {
 				log.Println("WARN: error sending unilateral update:", err)
 			}
-			conn.Flush()
-			conn.locker.Unlock()
+			conn.conn().Flush()
+			conn.conn().locker.Unlock()
 		}
 
 		if update.Done != nil {
@@ -401,7 +410,7 @@ func (s *Server) listenUpdates() (err error) {
 	}
 }
 
-func (s *Server) getCaps(currentState common.ConnState) (caps []string) {
+func (s *Server) Capability(currentState common.ConnState) (caps []string) {
 	for name, state := range s.caps {
 		if currentState & state != 0 {
 			caps = append(caps, name)
@@ -445,4 +454,17 @@ func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
 // libraries implementing extensions of the IMAP protocol.
 func (s *Server) RegisterCommand(name string, f HandlerFactory) {
 	s.commands[name] = f
+}
+
+// Extend connections managed by the server. The provided function will be
+// called when a client connects to the server. It can be used to add new
+// features to the default Conn interface by implementing new methods.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (s *Server) RegisterConn(f func(conn Conn) Conn) {
+	newConn := s.newConn
+	s.newConn = func(conn Conn) Conn {
+		return f(newConn(conn))
+	}
 }
