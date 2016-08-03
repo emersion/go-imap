@@ -401,7 +401,7 @@ func Dial(addr string) (c *Client, err error) {
 		return
 	}
 
-	c, err = NewClient(conn)
+	c, err = New(conn)
 	return
 }
 
@@ -412,7 +412,7 @@ func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 		return
 	}
 
-	c, err = NewClient(conn)
+	c, err = New(conn)
 	c.isTLS = true
 	return
 }
