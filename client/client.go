@@ -374,8 +374,8 @@ func (c *Client) LoggedOut() <-chan struct{} {
 	return c.loggedOut
 }
 
-// Create a new client from an existing connection.
-func NewClient(conn net.Conn) (c *Client, err error) {
+// New creates a new client from an existing connection.
+func New(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
 	w := imap.NewClientWriter(nil, continues)
 	r := imap.NewReader(nil)
