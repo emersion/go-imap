@@ -73,7 +73,11 @@ func (c *Client) read() error {
 		}
 		if err != nil {
 			log.Println("Error reading response:", err)
-			continue
+			if imap.IsParseError(err) {
+				continue
+			} else {
+				return err
+			}
 		}
 
 		c.handlersLocker.Lock()
