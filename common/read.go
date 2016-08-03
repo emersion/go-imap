@@ -27,16 +27,18 @@ var (
 	atomSpecials = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
 )
 
-type parseError error
+type parseError struct {
+	error
+}
 
 func newParseError(text string) error {
-	return parseError(errors.New(text))
+	return &parseError{errors.New(text)}
 }
 
 // IsParseError returns true if the provided error is a parse error produced by
 // Reader.
 func IsParseError(err error) bool {
-	_, ok := err.(parseError)
+	_, ok := err.(*parseError)
 	return ok
 }
 
