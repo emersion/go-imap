@@ -144,6 +144,41 @@ func TestClient_Search(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Search_Uid(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		criteria := &common.SearchCriteria{
+			Undeleted: true,
+		}
+
+		results, err := c.UidSearch(criteria)
+		if err != nil {
+			return
+		}
+
+		expected := []uint32{1, 78, 2010}
+		if fmt.Sprint(results) != fmt.Sprint(expected) {
+			return fmt.Errorf("Bad results: %v", results)
+		}
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "UID SEARCH CHARSET UTF-8 UNDELETED" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* SEARCH 1 78 2010\r\n")
+		io.WriteString(c, tag + " OK UID SEARCH completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_Fetch(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.SelectedState
