@@ -21,38 +21,12 @@ Other IMAP implementations in Go:
 * Implement a server _xor_ a client, not both
 * Don't implement unilateral updates (i.e. the server can't notify clients for
   new messages)
+* Do not have a good test coverage
 
 ## Implemented commands
 
-This package implements all commands specified in the RFC.
-
-Command       | Client | Client tests | Server | Server tests
-------------- | ------ | ------------ | ------ | ------------
-CAPABILITY    | ✓      | ✓            | ✓      | ✓
-NOOP          | ✓      | ✓            | ✓      | ✓
-LOGOUT        | ✓      | ✓            | ✓      | ✓
-AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
-LOGIN         | ✓      | ✓            | ✓      | ✓
-STARTTLS      | ✓      | ✓            | ✓      | ✓
-SELECT        | ✓      | ✓            | ✓      | ✓
-EXAMINE       | ✓      | ✓            | ✓      | ✓
-CREATE        | ✓      | ✓            | ✓      | ✓
-DELETE        | ✓      | ✓            | ✓      | ✓
-RENAME        | ✓      | ✓            | ✓      | ✓
-SUBSCRIBE     | ✓      | ✓            | ✓      | ✓
-UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✓
-LIST          | ✓      | ✓            | ✓      | ✓
-LSUB          | ✓      | ✓            | ✓      | ✓
-STATUS        | ✓      | ✓            | ✓      | ✓
-APPEND        | ✓      | ✓            | ✓      | ✓
-CHECK         | ✓      | ✓            | ✓      | ✓
-CLOSE         | ✓      | ✓            | ✓      | ✓
-EXPUNGE       | ✓      | ✓            | ✓      | ✓
-SEARCH        | ✓      | ✓            | ✓      | ✓
-FETCH         | ✓      | ✓            | ✓      | ✓
-STORE         | ✓      | ✓            | ✓      | ✓
-COPY          | ✓      | ✓            | ✓      | ✓
-UID           | ✓      | ✗            | ✓      | ✓
+This package implements all commands specified in the RFC. Each command has its
+own tests.
 
 ## IMAP extensions
 
@@ -164,7 +138,7 @@ func main() {
 	// authentication over unencrypted connections
 	s.AllowInsecureAuth = true
 
-	log.Println("Server listening at", s.Addr())
+	log.Println("Server listening at localhost:3000")
 
 	// Do something else to keep the server alive
 	select {}
