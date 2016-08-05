@@ -194,6 +194,9 @@ func TestClient_Fetch(t *testing.T) {
 
 		msg := <-messages
 		body := msg.GetBody("BODY[]").String()
+		if msg.SeqNum != 2 {
+			return fmt.Errorf("First message has bad sequence number: %v", msg.SeqNum)
+		}
 		if msg.Uid != 42 {
 			return fmt.Errorf("First message has bad UID: %v", msg.Uid)
 		}
@@ -203,6 +206,9 @@ func TestClient_Fetch(t *testing.T) {
 
 		msg = <-messages
 		body = msg.GetBody("BODY[]").String()
+		if msg.SeqNum != 3 {
+			return fmt.Errorf("First message has bad sequence number: %v", msg.SeqNum)
+		}
 		if msg.Uid != 28 {
 			return fmt.Errorf("Second message has bad UID: %v", msg.Uid)
 		}
@@ -230,6 +236,49 @@ func TestClient_Fetch(t *testing.T) {
 		io.WriteString(c, ")\r\n")
 
 		io.WriteString(c, tag + " OK FETCH completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Fetch_Uid(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("1:867")
+		fields := []string{"FLAGS"}
+		messages := make(chan *common.Message, 1)
+
+		err = c.UidFetch(seqset, fields, messages)
+		if err != nil {
+			return
+		}
+
+		msg := <-messages
+		if msg.SeqNum != 23 {
+			return fmt.Errorf("First message has bad sequence number: %v", msg.SeqNum)
+		}
+		if msg.Uid != 42 {
+			return fmt.Errorf("Message has bad UID: %v", msg.Uid)
+		}
+		if len(msg.Flags) != 1 || msg.Flags[0] != "\\Seen" {
+			return fmt.Errorf("Message has bad flags: %v", msg.Flags)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "UID FETCH 1:867 (FLAGS)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* 23 FETCH (UID 42 FLAGS (\\Seen))\r\n")
+
+		io.WriteString(c, tag + " OK UID FETCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
