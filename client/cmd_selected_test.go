@@ -290,7 +290,7 @@ func TestClient_Store(t *testing.T) {
 
 		updates := make(chan *common.Message, 1)
 		seqset, _ := common.NewSeqSet("2")
-		err = c.Store(seqset, "+FLAGS", []interface{}{"\\Seen"}, updates)
+		err = c.Store(seqset, common.AddFlags, []interface{}{"\\Seen"}, updates)
 		if err != nil {
 			return
 		}
@@ -323,7 +323,7 @@ func TestClient_Store_Silent(t *testing.T) {
 		c.State = common.SelectedState
 
 		seqset, _ := common.NewSeqSet("2:3")
-		err = c.Store(seqset, "+FLAGS", []interface{}{"\\Seen"}, nil)
+		err = c.Store(seqset, common.AddFlags, []interface{}{"\\Seen"}, nil)
 		return
 	}
 
@@ -332,6 +332,29 @@ func TestClient_Store_Silent(t *testing.T) {
 
 		tag, cmd := scanner.Scan()
 		if cmd != "STORE 2:3 +FLAGS.SILENT (\\Seen)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK STORE completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Store_Uid(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("27:901")
+		err = c.UidStore(seqset, common.AddFlags, []interface{}{"\\Deleted"}, nil)
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "UID STORE 27:901 +FLAGS.SILENT (\\Deleted)" {
 			t.Fatal("Bad command:", cmd)
 		}
 
