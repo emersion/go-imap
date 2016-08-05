@@ -358,7 +358,7 @@ func TestClient_Store_Uid(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK STORE completed\r\n")
+		io.WriteString(c, tag + " OK UID STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -382,6 +382,29 @@ func TestClient_Copy(t *testing.T) {
 		}
 
 		io.WriteString(c, tag + " OK COPY completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_Copy_Uid(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = common.SelectedState
+
+		seqset, _ := common.NewSeqSet("78:102")
+		err = c.UidCopy(seqset, "Drafts")
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "UID COPY 78:102 Drafts" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, tag + " OK UID COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)
