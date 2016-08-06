@@ -3,7 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
 [![Build Status](https://travis-ci.org/emersion/go-imap.svg?branch=master)](https://travis-ci.org/emersion/go-imap)
 [![codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
-![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)
+[![stability-unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/emersion/stability-badges#unstable)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server and supports UTF-7.
@@ -21,38 +21,12 @@ Other IMAP implementations in Go:
 * Implement a server _xor_ a client, not both
 * Don't implement unilateral updates (i.e. the server can't notify clients for
   new messages)
+* Do not have a good test coverage
 
 ## Implemented commands
 
-This package implements all commands specified in the RFC.
-
-Command       | Client | Client tests | Server | Server tests
-------------- | ------ | ------------ | ------ | ------------
-CAPABILITY    | ✓      | ✓            | ✓      | ✓
-NOOP          | ✓      | ✓            | ✓      | ✓
-LOGOUT        | ✓      | ✓            | ✓      | ✓
-AUTHENTICATE  | ✓      | ✓            | ✓      | ✓
-LOGIN         | ✓      | ✓            | ✓      | ✓
-STARTTLS      | ✓      | ✓            | ✓      | ✓
-SELECT        | ✓      | ✓            | ✓      | ✓
-EXAMINE       | ✓      | ✓            | ✓      | ✓
-CREATE        | ✓      | ✓            | ✓      | ✓
-DELETE        | ✓      | ✓            | ✓      | ✓
-RENAME        | ✓      | ✓            | ✓      | ✓
-SUBSCRIBE     | ✓      | ✓            | ✓      | ✓
-UNSUBSCRIBE   | ✓      | ✓            | ✓      | ✓
-LIST          | ✓      | ✓            | ✓      | ✓
-LSUB          | ✓      | ✓            | ✓      | ✓
-STATUS        | ✓      | ✓            | ✓      | ✓
-APPEND        | ✓      | ✓            | ✓      | ✓
-CHECK         | ✓      | ✓            | ✓      | ✓
-CLOSE         | ✓      | ✓            | ✓      | ✓
-EXPUNGE       | ✓      | ✓            | ✓      | ✓
-SEARCH        | ✓      | ✓            | ✓      | ✓
-FETCH         | ✓      | ✓            | ✓      | ✓
-STORE         | ✓      | ✓            | ✓      | ✓
-COPY          | ✓      | ✓            | ✓      | ✓
-UID           | ✓      | ✗            | ✓      | ✓
+This package implements all commands specified in the RFC. Each command has its
+own tests.
 
 ## IMAP extensions
 
@@ -100,9 +74,9 @@ func main() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo)
-	go (func () {
-		err = c.List("", "%", mailboxes)
-	})()
+	go func () {
+		err = c.List("", "*", mailboxes)
+	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
@@ -164,7 +138,7 @@ func main() {
 	// authentication over unencrypted connections
 	s.AllowInsecureAuth = true
 
-	log.Println("Server listening at", s.Addr())
+	log.Println("Server listening at localhost:3000")
 
 	// Do something else to keep the server alive
 	select {}

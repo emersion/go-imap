@@ -243,35 +243,41 @@ func (s *Server) handleConn(conn Conn) error {
 			return nil
 		}
 
-		conn.conn().Wait()
+		var res *common.StatusResp
+		var up Upgrader
 
+		conn.conn().Wait()
 		fields, err := conn.conn().ReadLine()
 		if err == io.EOF || conn.Context().State == common.LogoutState {
 			return nil
 		}
 		if err != nil {
-			log.Println("Error reading command:", err)
-			return err
-		}
-
-		var res *common.StatusResp
-		var up Upgrader
-
-		cmd := &common.Command{}
-		if err := cmd.Parse(fields); err != nil {
-			res = &common.StatusResp{
-				Tag: cmd.Tag,
-				Type: common.StatusBad,
-				Info: err.Error(),
+			if common.IsParseError(err) {
+				res = &common.StatusResp{
+					Type: common.StatusBad,
+					Info: err.Error(),
+				}
+			} else {
+				log.Println("Error reading command:", err)
+				return err
 			}
 		} else {
-			var err error
-			res, up, err = s.handleCommand(cmd, conn)
-			if err != nil {
+			cmd := &common.Command{}
+			if err := cmd.Parse(fields); err != nil {
 				res = &common.StatusResp{
 					Tag: cmd.Tag,
 					Type: common.StatusBad,
 					Info: err.Error(),
+				}
+			} else {
+				var err error
+				res, up, err = s.handleCommand(cmd, conn)
+				if err != nil {
+					res = &common.StatusResp{
+						Tag: cmd.Tag,
+						Type: common.StatusBad,
+						Info: err.Error(),
+					}
 				}
 			}
 		}
@@ -281,12 +287,12 @@ func (s *Server) handleConn(conn Conn) error {
 				log.Println("Error writing response:", err)
 				continue
 			}
-		}
 
-		if up != nil && res.Type == common.StatusOk {
-			if err := up.Upgrade(conn); err != nil {
-				log.Println("Error upgrading connection:", err)
-				return err
+			if up != nil && res.Type == common.StatusOk {
+				if err := up.Upgrade(conn); err != nil {
+					log.Println("Error upgrading connection:", err)
+					return err
+				}
 			}
 		}
 	}
