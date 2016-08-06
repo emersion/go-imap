@@ -20,6 +20,11 @@ const (
 	respCodeEnd = ']'
 )
 
+const (
+	crlf = "\r\n"
+	nilAtom = "NIL"
+)
+
 // TODO: add CTL to atomSpecials
 var (
 	quotedSpecials = string([]rune{dquote, '\\'})

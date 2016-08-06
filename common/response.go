@@ -4,17 +4,22 @@ import (
 	"errors"
 )
 
+// A value that can be converted to a Resp.
+type Responser interface {
+	Response() *Resp
+}
+
 // A response.
 // See RFC 3501 section 2.2.2
 type Resp struct {
-	// The response tag. Can be either * for untagged responses, + for continuation
+	// The response tag. Can be either "" for untagged responses, "+" for continuation
 	// requests or a previous command's tag.
 	Tag string
 	// The parsed response fields.
 	Fields []interface{}
 }
 
-func (r *Resp) WriteTo(w *Writer) (err error) {
+func (r *Resp) WriteTo(w Writer) error {
 	tag := r.Tag
 	if tag == "" {
 		tag = "*"
@@ -22,13 +27,7 @@ func (r *Resp) WriteTo(w *Writer) (err error) {
 
 	fields := []interface{}{tag}
 	fields = append(fields, r.Fields...)
-
-	if _, err = w.WriteFields(fields); err != nil {
-		return
-	}
-
-	_, err = w.WriteCrlf()
-	return
+	return w.writer().writeLine(fields...)
 }
 
 // Create a new untagged response.
@@ -45,26 +44,20 @@ type ContinuationResp struct {
 	Info string
 }
 
-func (r *ContinuationResp) WriteTo(w *Writer) (err error) {
-	if _, err = w.WriteString("+"); err != nil {
-		return
+func (r *ContinuationResp) WriteTo(w Writer) error {
+	ww := w.writer()
+
+	if err := ww.writeString("+"); err != nil {
+		return err
 	}
 
 	if r.Info != "" {
-		if _, err = w.WriteSp(); err != nil {
-			return
+		if err := ww.writeString(string(sp) + r.Info); err != nil {
+			return err
 		}
-
-		_, err = w.WriteInfo(r.Info)
-	} else {
-		_, err = w.WriteCrlf()
 	}
-	return
-}
 
-// A value that can be converted to a Resp.
-type Responser interface {
-	Response() *Resp
+	return ww.writeCrlf()
 }
 
 // Read a single response from a Reader. Returns either a continuation request,
