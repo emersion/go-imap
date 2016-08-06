@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -74,6 +75,11 @@ func ParseNumber(input interface{}) (uint32, error) {
 	}
 
 	return uint32(nbr), nil
+}
+
+// Parse an IMAP date.
+func ParseDateTime(date string) (time.Time, error) {
+ 	return time.Parse("2-Jan-2006 15:04:05 -0700", date)
 }
 
 // Convert a field list to a string list.
