@@ -205,6 +205,12 @@ func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
 		return
 	}
 
+	// Make sure all buffered data is flushed because we'll maybe wait for a
+	// continuation request
+	if err = w.Flush(); err != nil {
+		return
+	}
+
 	// If a channel is available, wait for a continuation request before sending data
 	if w.continues != nil {
 		// Make sure to flush the writer, otherwise we may never receive a continuation request
