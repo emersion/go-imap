@@ -416,6 +416,7 @@ func (s *Server) listenUpdates() (err error) {
 	}
 }
 
+// Get this server's capabilities for the provided connection state.
 func (s *Server) Capability(currentState common.ConnState) (caps []string) {
 	for name, state := range s.caps {
 		if currentState & state != 0 {

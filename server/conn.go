@@ -10,6 +10,7 @@ import (
 	"github.com/emersion/go-imap/backend"
 )
 
+// A connection.
 type Conn interface {
 	// Get this connection's server.
 	Server() *Server
@@ -30,6 +31,7 @@ type Conn interface {
 	conn() *conn
 }
 
+// A connection's context.
 type Context struct {
 	// This connection's current state.
 	State common.ConnState
