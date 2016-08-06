@@ -13,7 +13,7 @@ import (
 type Append struct {
 	Mailbox string
 	Flags []string
-	Date *time.Time
+	Date time.Time
 	Message *imap.Literal
 }
 
@@ -31,7 +31,7 @@ func (cmd *Append) Command() *imap.Command {
 		args = append(args, flags)
 	}
 
-	if cmd.Date != nil {
+	if !cmd.Date.IsZero() {
 		args = append(args, cmd.Date)
 	}
 
@@ -81,7 +81,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 			if !ok {
 				return errors.New("Date must be a string")
 			}
-			if cmd.Date, err = imap.ParseDate(date); err != nil {
+			if cmd.Date, err = imap.ParseDateTime(date); err != nil {
 				return err
 			}
 		}
