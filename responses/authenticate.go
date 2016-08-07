@@ -11,7 +11,7 @@ import (
 type Authenticate struct {
 	Mechanism sasl.Client
 	InitialResponse []byte
-	Writer *imap.Writer
+	Writer imap.Writer
 }
 
 func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
@@ -20,8 +20,7 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 	// Cancel auth if an error occurs
 	defer (func () {
 		if err != nil {
-			w.WriteString("*")
-			w.WriteCrlf()
+			w.Write([]byte("*\r\n"))
 		}
 	})()
 
@@ -36,10 +35,7 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 		// Empty challenge, send initial response as stated in RFC 2222 section 5.1
 		if cont.Info == "" && r.InitialResponse != nil {
 			encoded := base64.StdEncoding.EncodeToString(r.InitialResponse)
-			if _, err = w.WriteString(encoded); err != nil {
-				return
-			}
-			if _, err = w.WriteCrlf(); err != nil {
+			if _, err = w.Write([]byte(encoded + "\r\n")); err != nil {
 				return
 			}
 			if err = w.Flush(); err != nil {
@@ -63,10 +59,7 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 
 		encoded := base64.StdEncoding.EncodeToString(res)
-		if _, err = w.WriteString(encoded); err != nil {
-			return
-		}
-		if _, err = w.WriteCrlf(); err != nil {
+		if _, err = w.Write([]byte(encoded + "\r\n")); err != nil {
 			return
 		}
 		if err = w.Flush(); err != nil {

@@ -1,7 +1,7 @@
 package common
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -12,25 +12,29 @@ import (
 // A string that will be quoted.
 type Quoted string
 
-// A string writer.
-type StringWriter interface {
-	// WriteString writes a string. It returns the number of bytes written. If the
-	// count is less than len(s), it also returns an error explaining why the
-	// write is short.
-	// See https://golang.org/pkg/bufio/#writeString
-	WriteString(s string) (int, error)
-}
+// An IMAP writer.
+type Writer interface {
+	io.Writer
 
-// An interface implemented by net.Conn that allows to flush buffered data to
-// the remote.
-type Flusher interface {
-	// Write any buffered data to the underlying connection.
 	Flush() error
+
+	writer() *writer
 }
 
-// Format an IMAP date.
-func FormatDate(date *time.Time) string {
-	return date.Format("2-Jan-2006 15:04:05 -0700")
+type WriterTo interface {
+	WriteTo(w Writer) error
+}
+
+func formatNumber(num uint32) string {
+	return strconv.FormatUint(uint64(num), 10)
+}
+
+func FormatDate(t time.Time) string {
+	return t.Format("2-Jan-2006")
+}
+
+func FormatDateTime(t time.Time) string {
+	return t.Format("2-Jan-2006 15:04:05 -0700")
 }
 
 // Convert a string list to a field list.
@@ -52,234 +56,183 @@ func isAscii(s string) bool {
 	return true
 }
 
-type writer interface {
+type writer struct {
 	io.Writer
-}
-
-// An IMAP writer.
-type Writer struct {
-	writer
 
 	continues <-chan bool
 }
 
-func (w *Writer) writeString(s string) (int, error) {
-	return io.WriteString(w.writer, s)
+func (w *writer) writer() *writer {
+	return w
 }
 
-// Write a separator.
-func (w *Writer) WriteSp() (int, error) {
-	return w.writeString(string(sp))
+// Helper function to write a string to w.
+func (w *writer) writeString(s string) error {
+	_, err := io.WriteString(w.Writer, s)
+	return err
 }
 
-// Write a CRLF.
-func (w *Writer) WriteCrlf() (int, error) {
-	return w.writeString(string(cr) + string(lf))
+func (w *writer) writeCrlf() error {
+	if err := w.writeString(crlf); err != nil {
+		return err
+	}
+
+	return w.Flush()
 }
 
-// Write NIL.
-func (w *Writer) WriteNil() (int, error) {
-	return w.writeString("NIL")
+func (w *writer) writeNumber(num uint32) error {
+	return w.writeString(formatNumber(num))
 }
 
-func (w *Writer) WriteNumber(num uint32) (int, error) {
-	return w.writeString(strconv.Itoa(int(num)))
-}
-
-func (w *Writer) writeAtomString(s string) (int, error) {
-	return w.writeString(s)
-}
-
-func (w *Writer) writeQuotedString(s string) (int, error) {
+func (w *writer) writeQuoted(s string) error {
 	return w.writeString(strconv.Quote(s))
 }
 
-func (w *Writer) WriteString(s string) (int, error) {
+func (w *writer) writeAtom(s string) error {
+	return w.writeString(s)
+}
+
+func (w *writer) writeAstring(s string) error {
 	if !isAscii(s) {
 		// IMAP doesn't allow 8-bit data outside literals
-		return w.WriteLiteral(NewLiteral([]byte(s)))
+		return w.writeLiteral(NewLiteral([]byte(s)))
 	}
 
 	specials := string([]rune{dquote, listStart, listEnd, literalStart, sp})
-	if strings.ToUpper(s) == "NIL" || s == "" || strings.ContainsAny(s, specials) {
-		return w.writeQuotedString(s)
+	if strings.ToUpper(s) == nilAtom || s == "" || strings.ContainsAny(s, specials) {
+		return w.writeQuoted(s)
 	}
 
-	return w.writeAtomString(s)
+	return w.writeAtom(s)
 }
 
-func (w *Writer) WriteDate(date *time.Time) (int, error) {
-	if date == nil {
-		return w.WriteNil()
+func (w *writer) writeDateTime(t time.Time) error {
+	if t.IsZero() {
+		return w.writeAtom(nilAtom)
 	}
-	return w.writeQuotedString(FormatDate(date))
+	return w.writeQuoted(FormatDateTime(t))
 }
 
-func (w *Writer) WriteFields(fields []interface{}) (N int, err error) {
-	var n int
-
+func (w *writer) writeFields(fields []interface{}) error {
 	for i, field := range fields {
-		// Write separator
-		if i > 0 {
-			if n, err = w.WriteSp(); err != nil {
-				return
-			}
-			N += n
-		}
-
-		if field == nil {
-			n, err = w.WriteNil()
-		} else {
-			switch f := field.(type) {
-			case string:
-				n, err = w.WriteString(f)
-			case Quoted:
-				n, err = w.writeQuotedString(string(f))
-			case int:
-				n, err = w.WriteNumber(uint32(f))
-			case uint32:
-				n, err = w.WriteNumber(f)
-			case *Literal:
-				n, err = w.WriteLiteral(f)
-			case []interface{}:
-				n, err = w.WriteList(f)
-			case *time.Time:
-				n, err = w.WriteDate(f)
-			case *SeqSet:
-				n, err = w.writeString(f.String())
-			case *BodySectionName:
-				n, err = w.writeString(f.String())
-			default:
-				err = errors.New("Cannot format argument #" + strconv.Itoa(i))
+		if i > 0 { // Write separator
+			if err := w.writeString(string(sp)); err != nil {
+				return err
 			}
 		}
 
-		N += n
-		if err != nil {
-			return
+		if err := w.writeField(field); err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
-func (w *Writer) WriteList(fields []interface{}) (N int, err error) {
-	n, err := w.writeString(string(listStart))
-	N += n
-	if err != nil {
-		return
+func (w *writer) writeList(fields []interface{}) error {
+	if err := w.writeString(string(listStart)); err != nil {
+		return err
 	}
 
-	n, err = w.WriteFields(fields)
-	N += n
-	if err != nil {
-		return
+	if err := w.writeFields(fields); err != nil {
+		return err
 	}
 
-	n, err = w.writeString(string(listEnd))
-	N += n
-	return
+	return w.writeString(string(listEnd))
 }
 
-func (w *Writer) writeLiteralField(literal *Literal) (N int, err error) {
-	field := string(literalStart) + strconv.Itoa(literal.Len()) + string(literalEnd)
-	n, err := w.writeString(field)
-	N += n
-	if err != nil {
-		return
+func (w *writer) writeLiteral(l *Literal) error {
+	if l == nil {
+		return w.writeString(nilAtom)
 	}
 
-	n, err = w.WriteCrlf()
-	N += n
-	return
-}
-
-func (w *Writer) WriteLiteral(literal *Literal) (N int, err error) {
-	if literal == nil {
-		return w.WriteNil()
-	}
-
-	n, err := w.writeLiteralField(literal)
-	N += n
-	if err != nil {
-		return
-	}
-
-	// Make sure all buffered data is flushed because we'll maybe wait for a
-	// continuation request
-	if err = w.Flush(); err != nil {
-		return
+	header := string(literalStart) + strconv.Itoa(l.Len()) + string(literalEnd) + crlf
+	if err := w.writeString(header); err != nil {
+		return err
 	}
 
 	// If a channel is available, wait for a continuation request before sending data
 	if w.continues != nil {
 		// Make sure to flush the writer, otherwise we may never receive a continuation request
-		if err = w.Flush(); err != nil {
-			return
+		if err := w.Flush(); err != nil {
+			return err
 		}
 
 		if !<-w.continues {
-			err = errors.New("Cannot send literal: no continuation request received")
-			return
+			return fmt.Errorf("imap: cannot send literal: no continuation request received")
 		}
 	}
 
-	n, err = w.Write(literal.Bytes())
-	N += n
-	return
+	_, err := w.Write(l.Bytes())
+	return err
 }
 
-func (w *Writer) WriteRespCode(code string, args []interface{}) (N int, err error) {
-	n, err := w.writeString(string(respCodeStart))
-	if err != nil {
-		return
+func (w *writer) writeField(field interface{}) error {
+	if field == nil {
+		return w.writeAtom(nilAtom)
 	}
-	N += n
+
+	switch field := field.(type) {
+	case string:
+		return w.writeAstring(field)
+	case Quoted:
+		return w.writeQuoted(string(field))
+	case int:
+		return w.writeNumber(uint32(field))
+	case uint32:
+		return w.writeNumber(field)
+	case *Literal:
+		return w.writeLiteral(field)
+	case []interface{}:
+		return w.writeList(field)
+	case time.Time:
+		return w.writeDateTime(field)
+	case *SeqSet:
+		return w.writeString(field.String())
+	case *BodySectionName:
+		return w.writeString(field.String())
+	}
+
+	return fmt.Errorf("imap: cannot format field: %v", field)
+}
+
+func (w *writer) writeRespCode(code string, args []interface{}) error {
+	if err := w.writeString(string(respCodeStart)); err != nil {
+		return err
+	}
 
 	fields := []interface{}{code}
 	fields = append(fields, args...)
 
-	if n, err = w.WriteFields(fields); err != nil {
-		return
+	if err := w.writeFields(fields); err != nil {
+		return err
 	}
-	N += n
 
-	n, err = w.writeString(string(respCodeEnd))
-	N += n
-	return
+	return w.writeString(string(respCodeEnd))
 }
 
-func (w *Writer) WriteInfo(info string) (N int, err error) {
-	n, err := w.writeString(info)
-	if err != nil {
-		return
+func (w *writer) writeLine(fields ...interface{}) error {
+	if err := w.writeFields(fields); err != nil {
+		return err
 	}
-	N += n
 
-	n, err = w.WriteCrlf()
-	if err != nil {
-		return
+	return w.writeCrlf()
+}
+
+func (w *writer) Flush() error {
+	f, ok := w.Writer.(interface {
+		Flush() error
+	})
+	if ok {
+		return f.Flush()
 	}
-	N += n
-
-	return
+	return nil
 }
 
-func (w *Writer) Flush() (err error) {
-	if f, ok := w.writer.(Flusher); ok {
-		err = f.Flush()
-	}
-	return
+func NewWriter(w io.Writer) Writer {
+	return &writer{Writer: w}
 }
 
-func NewWriter(w writer) *Writer {
-	return &Writer{writer: w}
-}
-
-func NewClientWriter(w writer, continues <-chan bool) *Writer {
-	return &Writer{writer: w, continues: continues}
-}
-
-type WriterTo interface {
-	WriteTo(w *Writer) error
+func NewClientWriter(w io.Writer, continues <-chan bool) Writer {
+	return &writer{Writer: w, continues: continues}
 }

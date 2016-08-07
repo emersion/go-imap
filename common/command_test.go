@@ -27,7 +27,7 @@ func TestCommand_WriteTo_NoArgs(t *testing.T) {
 		Name: "NOOP",
 	}
 
-	if _, err := cmd.WriteTo(w); err != nil {
+	if err := cmd.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}
 	if b.String() != "A001 NOOP\r\n" {
@@ -45,7 +45,7 @@ func TestCommand_WriteTo_WithArgs(t *testing.T) {
 		Arguments: []interface{}{"username", "password"},
 	}
 
-	if _, err := cmd.WriteTo(w); err != nil {
+	if err := cmd.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}
 	if b.String() != "A002 LOGIN username password\r\n" {

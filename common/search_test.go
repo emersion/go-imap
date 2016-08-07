@@ -1,23 +1,21 @@
-package common_test
+package common
 
 import (
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/emersion/go-imap/common"
 )
 
 // Note to myself: writing these broing tests actually fixed 2 bugs :P
 
-var searchSeqSet1, _ = common.NewSeqSet("1:42")
-var searchSeqSet2, _ = common.NewSeqSet("743:938")
+var searchSeqSet1, _ = NewSeqSet("1:42")
+var searchSeqSet2, _ = NewSeqSet("743:938")
 var searchDate1 = time.Date(1997, 11, 21, 0, 0, 0, 0, time.UTC)
 var searchDate2 = time.Date(1984, 11, 5, 0, 0, 0, 0, time.UTC)
 
 var searchCriteriaTests = []struct{
 	fields []interface{}
-	criteria *common.SearchCriteria
+	criteria *SearchCriteria
 }{
 	{
 		fields: []interface{}{
@@ -51,11 +49,11 @@ var searchCriteriaTests = []struct{
 			"UNKEYWORD", "microsoft",
 			"UNSEEN",
 		},
-		criteria: &common.SearchCriteria{
+		criteria: &SearchCriteria{
 			SeqSet: searchSeqSet1,
 			Answered: true,
 			Bcc: "root@nsa.gov",
-			Before: &searchDate1,
+			Before: searchDate1,
 			Body: "hey there",
 			Cc: "root@gchq.gov.uk",
 			Deleted: true,
@@ -66,13 +64,13 @@ var searchCriteriaTests = []struct{
 			Keyword: "cc",
 			Larger: 4242,
 			New: true,
-			Not: &common.SearchCriteria{Old: true, On: &searchDate2},
-			Or: [2]*common.SearchCriteria{
-				&common.SearchCriteria{Recent: true, SentOn: &searchDate1},
-				&common.SearchCriteria{Seen: true, SentBefore: &searchDate2},
+			Not: &SearchCriteria{Old: true, On: searchDate2},
+			Or: [2]*SearchCriteria{
+				&SearchCriteria{Recent: true, SentOn: searchDate1},
+				&SearchCriteria{Seen: true, SentBefore: searchDate2},
 			},
-			SentSince: &searchDate1,
-			Since: &searchDate2,
+			SentSince: searchDate1,
+			Since: searchDate2,
 			Smaller: 643,
 			Subject: "saucisse royale",
 			Text: "DILLE",
@@ -103,7 +101,7 @@ func TestSearchCriteria_Format(t *testing.T) {
 
 func TestSearchCriteria_Parse(t *testing.T) {
 	for i, test := range searchCriteriaTests {
-		criteria := &common.SearchCriteria{}
+		criteria := &SearchCriteria{}
 
 		if err := criteria.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse search criteria for #%v: %v", i, err)

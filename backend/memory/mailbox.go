@@ -119,10 +119,9 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (
 	return
 }
 
-func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte) error {
-	if date == nil {
-		now := time.Now()
-		date = &now
+func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body []byte) error {
+	if date.IsZero() {
+		date = time.Now()
 	}
 
 	mbox.messages = append(mbox.messages, &Message{&common.Message{

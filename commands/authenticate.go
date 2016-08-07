@@ -36,7 +36,7 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w *imap.Writer) (err error) {
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w imap.Writer) (err error) {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
 		err = errors.New("Unsupported mechanism")
@@ -55,9 +55,6 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reade
 		encoded := base64.StdEncoding.EncodeToString(challenge)
 		cont := &imap.ContinuationResp{Info: encoded}
 		if err = cont.WriteTo(w); err != nil {
-			return
-		}
-		if err = w.Flush(); err != nil {
 			return
 		}
 

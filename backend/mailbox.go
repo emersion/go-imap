@@ -51,7 +51,7 @@ type Mailbox interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a mailbox update.
-	CreateMessage(flags []string, date *time.Time, body []byte) error
+	CreateMessage(flags []string, date time.Time, body []byte) error
 
 	// Alter flags for the specified message(s).
 	//

@@ -343,7 +343,7 @@ func TestClient_Append(t *testing.T) {
 
 		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 		literal := common.NewLiteral([]byte(msg))
-		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, &date, literal)
+		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, date, literal)
 		return
 	}
 

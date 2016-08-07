@@ -244,7 +244,7 @@ func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, 
 // destination mailbox. This argument SHOULD be in the format of an RFC 2822
 // message.
 // flags and date are optional arguments and can be set to nil.
-func (c *Client) Append(mbox string, flags []string, date *time.Time, msg *imap.Literal) (err error) {
+func (c *Client) Append(mbox string, flags []string, date time.Time, msg *imap.Literal) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		err = ErrNotLoggedIn
 		return
