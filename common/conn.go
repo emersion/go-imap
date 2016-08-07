@@ -51,7 +51,7 @@ type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 type Conn struct {
 	net.Conn
 	*Reader
-	*writer
+	Writer
 
 	waits chan struct{}
 
@@ -69,12 +69,16 @@ func (c *Conn) init() {
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
-	c.writer.Writer = bufio.NewWriter(w)
+	c.writer().Writer = bufio.NewWriter(w)
+}
+
+func (c *Conn) Write(b []byte) (n int, err error) {
+	return c.Writer.Write(b)
 }
 
 // Write any buffered data to the underlying connection.
 func (c *Conn) Flush() (err error) {
-	if err = c.writer.Flush(); err != nil {
+	if err = c.writer().Flush(); err != nil {
 		return
 	}
 
@@ -122,7 +126,7 @@ func (c *Conn) SetDebug(debug bool) {
 
 // Create a new IMAP connection.
 func NewConn(conn net.Conn, r *Reader, w Writer) *Conn {
-	c := &Conn{Conn: conn, Reader: r, writer: w.writer()}
+	c := &Conn{Conn: conn, Reader: r, Writer: w}
 
 	c.init()
 	return c
