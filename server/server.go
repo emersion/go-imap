@@ -42,6 +42,24 @@ type HandlerFactory func() Handler
 // A function that creates SASL servers.
 type SaslServerFactory func(conn Conn) sasl.Server
 
+// An IMAP extension.
+type Extension interface {
+	// Get capabilities provided by this extension for a given connection state.
+	Capabilities(state common.ConnState) []string
+	// Get the command handler factory for the provided command name.
+	Command(name string) HandlerFactory
+}
+
+// An extension that provides additional features to each connection.
+type ConnExtension interface {
+	Extension
+
+	// This function will be called when a client connects to the server. It can
+	// be used to add new features to the default Conn interface by implementing
+	// new methods.
+	NewConn(c Conn) Conn
+}
+
 type errStatusResp struct {
 	resp *common.StatusResp
 }
@@ -72,7 +90,7 @@ type Server struct {
 	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
 	auths map[string]SaslServerFactory
-	newConn func(Conn) Conn
+	extensions []Extension
 
 	// TCP address to listen on.
 	Addr string
@@ -154,10 +172,6 @@ func New(bkd backend.Backend) *Server {
 		common.Uid: func() Handler { return &Uid{} },
 	}
 
-	s.newConn = func(conn Conn) Conn {
-		return conn
-	}
-
 	return s
 }
 
@@ -174,12 +188,17 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		conn := newConn(s, c)
+		var conn Conn = newConn(s, c)
 		if s.Debug {
-			conn.SetDebug(true)
+			conn.conn().SetDebug(true)
 		}
 
-		conn = s.newConn(conn).conn()
+		for _, ext := range s.extensions {
+			if ext, ok := ext.(ConnExtension); ok {
+				conn = ext.NewConn(conn)
+			}
+		}
+
 		go s.handleConn(conn)
 	}
 }
@@ -298,9 +317,21 @@ func (s *Server) handleConn(conn Conn) error {
 	}
 }
 
-func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error) {
-	newHandler, ok := s.commands[cmd.Name]
-	if !ok {
+// Get a command handler factory for the provided command name.
+func (s *Server) Command(name string) HandlerFactory {
+	// Extensions can override builtin commands
+	for _, ext := range s.extensions {
+		if h := ext.Command(name); h != nil {
+			return h
+		}
+	}
+
+	return s.commands[name]
+}
+
+func (s *Server) commandHandler(cmd *common.Command) (hdlr Handler, err error) {
+	newHandler := s.Command(cmd.Name)
+	if newHandler == nil {
 		err = errors.New("Unknown command")
 		return
 	}
@@ -311,7 +342,7 @@ func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error
 }
 
 func (s *Server) handleCommand(cmd *common.Command, conn Conn) (res *common.StatusResp, up Upgrader, err error) {
-	hdlr, err := s.getCommandHandler(cmd)
+	hdlr, err := s.commandHandler(cmd)
 	if err != nil {
 		return
 	}
@@ -417,11 +448,17 @@ func (s *Server) listenUpdates() (err error) {
 }
 
 // Get this server's capabilities for the provided connection state.
-func (s *Server) Capability(currentState common.ConnState) (caps []string) {
+func (s *Server) Capabilities(currentState common.ConnState) (caps []string) {
+	caps = []string{"IMAP4rev1"}
+
 	for name, state := range s.caps {
 		if currentState & state != 0 {
 			caps = append(caps, name)
 		}
+	}
+
+	for _, ext := range s.extensions {
+		caps = append(caps, ext.Capabilities(currentState)...)
 	}
 	return
 }
@@ -439,39 +476,18 @@ func (s *Server) Close() error {
 	return nil
 }
 
-// Register a new capability that will be advertised by this server.
+// Enable an IMAP extension on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterCapability(name string, state common.ConnState) {
-	s.caps[name] = state
+func (s *Server) Enable(extension Extension) {
+	s.extensions = append(s.extensions, extension)
 }
 
-// Register a new authentication mechanism for this server.
+// Enable an authentication mechanism on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
+func (s *Server) EnableAuth(name string, f SaslServerFactory) {
 	s.auths[name] = f
-}
-
-// Register a new command for this server.
-//
-// This function should not be called directly, it must only be used by
-// libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterCommand(name string, f HandlerFactory) {
-	s.commands[name] = f
-}
-
-// Extend connections managed by the server. The provided function will be
-// called when a client connects to the server. It can be used to add new
-// features to the default Conn interface by implementing new methods.
-//
-// This function should not be called directly, it must only be used by
-// libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterConn(f func(conn Conn) Conn) {
-	newConn := s.newConn
-	s.newConn = func(conn Conn) Conn {
-		return f(newConn(conn))
-	}
 }

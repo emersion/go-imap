@@ -55,7 +55,7 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 
 	conn.conn().isTLS = true // TODO
 
-	res := &responses.Capability{Caps: conn.Capability()}
+	res := &responses.Capability{Caps: conn.Capabilities()}
 	return conn.WriteResp(res)
 }
 
@@ -63,12 +63,12 @@ func afterAuthStatus(conn Conn) error {
 	return ErrStatusResp(&common.StatusResp{
 		Type: common.StatusOk,
 		Code: common.CodeCapability,
-		Arguments: common.FormatStringList(conn.Capability()),
+		Arguments: common.FormatStringList(conn.Capabilities()),
 	})
 }
 
 func canAuth(conn Conn) bool {
-	for _, cap := range conn.Capability() {
+	for _, cap := range conn.Capabilities() {
 		if cap == "AUTH=PLAIN" {
 			return true
 		}

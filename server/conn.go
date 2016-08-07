@@ -17,7 +17,7 @@ type Conn interface {
 	// Get this connection's context.
 	Context() *Context
 	// Get a list of capabilities enabled for this connection.
-	Capability() []string
+	Capabilities() []string
 	// Write a response to this connection.
 	WriteResp(res common.WriterTo) error
 	// Check if TLS is enabled on this connection.
@@ -118,8 +118,8 @@ func (c *conn) Close() error {
 	return nil
 }
 
-func (c *conn) Capability() (caps []string) {
-	caps = []string{"IMAP4rev1"}
+func (c *conn) Capabilities() (caps []string) {
+	caps = c.s.Capabilities(c.ctx.State)
 
 	if c.ctx.State == common.NotAuthenticatedState {
 		if !c.IsTLS() && c.s.TLSConfig != nil {
@@ -133,7 +133,6 @@ func (c *conn) Capability() (caps []string) {
 		}
 	}
 
-	caps = append(caps, c.s.Capability(c.ctx.State)...)
 	return
 }
 
@@ -147,7 +146,7 @@ func (c *conn) sendContinuationReqs() {
 }
 
 func (c *conn) greet() error {
-	caps := c.Capability()
+	caps := c.Capabilities()
 	args := make([]interface{}, len(caps))
 	for i, cap := range caps {
 		args[i] = cap
