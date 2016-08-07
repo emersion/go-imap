@@ -109,7 +109,7 @@ func TestClient_Search(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = common.SelectedState
 
-		date, _ := common.ParseSearchDate("1-Feb-1994")
+		date, _ := common.ParseDate("1-Feb-1994")
 		criteria := &common.SearchCriteria{
 			Deleted: true,
 			From: "Smith",

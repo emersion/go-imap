@@ -63,13 +63,13 @@ type reader interface {
 }
 
 // Convert a field to a number.
-func ParseNumber(input interface{}) (uint32, error) {
-	str, ok := input.(string)
+func ParseNumber(f interface{}) (uint32, error) {
+	s, ok := f.(string)
 	if !ok {
-		return 0, newParseError("Number is not an atom")
+		return 0, newParseError("imap: number is not a string")
 	}
 
-	nbr, err := strconv.ParseUint(str, 10, 32)
+	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
 		return 0, err
 	}
@@ -77,9 +77,24 @@ func ParseNumber(input interface{}) (uint32, error) {
 	return uint32(nbr), nil
 }
 
-// Parse an IMAP date.
-func ParseDateTime(date string) (time.Time, error) {
- 	return time.Parse("2-Jan-2006 15:04:05 -0700", date)
+func ParseDate(f interface{}) (t time.Time, err error) {
+	s, ok := f.(string)
+	if !ok {
+		err = newParseError("imap: date is not a string")
+		return
+	}
+
+ 	return time.Parse("2-Jan-2006", s)
+}
+
+func ParseDateTime(f interface{}) (t time.Time, err error) {
+	s, ok := f.(string)
+	if !ok {
+		err = newParseError("imap: date-time is not a string")
+		return
+	}
+
+ 	return time.Parse("2-Jan-2006 15:04:05 -0700", s)
 }
 
 // Convert a field list to a string list.
