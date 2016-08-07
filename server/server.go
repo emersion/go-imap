@@ -87,7 +87,6 @@ type Server struct {
 	listener net.Listener
 	conns []Conn
 
-	caps map[string]common.ConnState
 	commands map[string]HandlerFactory
 	auths map[string]SaslServerFactory
 	extensions []Extension
@@ -109,7 +108,6 @@ type Server struct {
 // Create a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
-		caps: map[string]common.ConnState{},
 		Backend: bkd,
 	}
 
@@ -450,12 +448,6 @@ func (s *Server) listenUpdates() (err error) {
 // Get this server's capabilities for the provided connection state.
 func (s *Server) Capabilities(currentState common.ConnState) (caps []string) {
 	caps = []string{"IMAP4rev1"}
-
-	for name, state := range s.caps {
-		if currentState & state != 0 {
-			caps = append(caps, name)
-		}
-	}
 
 	for _, ext := range s.extensions {
 		caps = append(caps, ext.Capabilities(currentState)...)
