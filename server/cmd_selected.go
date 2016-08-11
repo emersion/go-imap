@@ -226,9 +226,9 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	// If the backend supports message updates, this will prevent this connection
 	// from receiving them
 	// TODO: find a better way to do this, without conn.silent
-	conn.conn().silent = silent
+	*conn.silent() = silent
 	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags)
-	conn.conn().silent = false
+	*conn.silent() = false
 	if err != nil {
 		return err
 	}

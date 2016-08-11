@@ -28,7 +28,13 @@ type Conn interface {
 	// Close this connection.
 	Close() error
 
-	conn() *conn
+	conn() *imap.Conn
+	reader() *imap.Reader
+	writer() imap.Writer
+	locker() sync.Locker
+	greet() error
+	setTLSConn(*tls.Conn)
+	silent() *bool // TODO: remove this
 }
 
 // A connection's context.
@@ -48,10 +54,10 @@ type conn struct {
 
 	s         *Server
 	ctx       *Context
+	l         sync.Locker
 	tlsConn   *tls.Conn
 	continues chan bool
-	silent    bool
-	locker    sync.Locker
+	silentVal bool
 }
 
 func newConn(s *Server, c net.Conn) *conn {
@@ -65,12 +71,12 @@ func newConn(s *Server, c net.Conn) *conn {
 		Conn: imap.NewConn(c, r, w),
 
 		s: s,
+		l: &sync.Mutex{},
 		ctx: &Context{
 			State: imap.NotAuthenticatedState,
 		},
 		tlsConn:   tlsConn,
 		continues: continues,
-		locker:    &sync.Mutex{},
 	}
 
 	go conn.sendContinuationReqs()
@@ -78,8 +84,20 @@ func newConn(s *Server, c net.Conn) *conn {
 	return conn
 }
 
-func (c *conn) conn() *conn {
-	return c
+func (c *conn) conn() *imap.Conn {
+	return c.Conn
+}
+
+func (c *conn) reader() *imap.Reader {
+	return c.Reader
+}
+
+func (c *conn) writer() imap.Writer {
+	return c.Writer
+}
+
+func (c *conn) locker() sync.Locker {
+	return c.l
 }
 
 func (c *conn) Server() *Server {
@@ -92,8 +110,8 @@ func (c *conn) Context() *Context {
 
 // Write a response to this connection.
 func (c *conn) WriteResp(res imap.WriterTo) error {
-	c.locker.Lock()
-	defer c.locker.Unlock()
+	c.l.Lock()
+	defer c.l.Unlock()
 
 	if err := res.WriteTo(c.Writer); err != nil {
 		return err
@@ -162,6 +180,10 @@ func (c *conn) greet() error {
 	return c.WriteResp(greeting)
 }
 
+func (c *conn) setTLSConn(tlsConn *tls.Conn) {
+	c.tlsConn = tlsConn
+}
+
 // Check if this connection is encrypted.
 func (c *conn) IsTLS() bool {
 	return c.tlsConn != nil
@@ -170,4 +192,8 @@ func (c *conn) IsTLS() bool {
 // Check if the client can use plain text authentication.
 func (c *conn) canAuth() bool {
 	return c.IsTLS() || c.s.AllowInsecureAuth
+}
+
+func (c *conn) silent() *bool {
+	return &c.silentVal
 }

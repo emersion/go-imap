@@ -54,7 +54,7 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 		return err
 	}
 
-	conn.conn().tlsConn = tlsConn
+	conn.setTLSConn(tlsConn)
 
 	res := &responses.Capability{Caps: conn.Capabilities()}
 	return conn.WriteResp(res)
@@ -119,7 +119,7 @@ func (cmd *Authenticate) Handle(conn Conn) error {
 	}
 
 	// TODO: do not use Reader and Writer here
-	err := cmd.Authenticate.Handle(mechanisms, conn.conn().Reader, conn.conn().Writer)
+	err := cmd.Authenticate.Handle(mechanisms, conn.reader(), conn.writer())
 	if err != nil {
 		return err
 	}

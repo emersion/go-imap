@@ -251,7 +251,7 @@ func (s *Server) handleConn(conn Conn) error {
 	})()
 
 	// Send greeting
-	if err := conn.conn().greet(); err != nil {
+	if err := conn.greet(); err != nil {
 		return err
 	}
 
@@ -424,19 +424,19 @@ func (s *Server) listenUpdates() (err error) {
 			if update.Mailbox != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox) {
 				continue
 			}
-			if conn.conn().silent {
+			if *conn.silent() {
 				// If silent is set, do not send message updates
 				if _, ok := res.(*responses.Fetch); ok {
 					continue
 				}
 			}
 
-			conn.conn().locker.Lock()
-			if _, err := conn.conn().Writer.Write(b.Bytes()); err != nil {
+			conn.locker().Lock()
+			if _, err := conn.writer().Write(b.Bytes()); err != nil {
 				log.Println("WARN: error sending unilateral update:", err)
 			}
 			conn.conn().Flush()
-			conn.conn().locker.Unlock()
+			conn.locker().Unlock()
 		}
 
 		if update.Done != nil {
