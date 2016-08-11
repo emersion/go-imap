@@ -48,7 +48,7 @@ type conn struct {
 
 	s *Server
 	ctx *Context
-	isTLS bool
+	tlsConn *tls.Conn
 	continues chan bool
 	silent bool
 	locker sync.Locker
@@ -59,7 +59,7 @@ func newConn(s *Server, c net.Conn) *conn {
 	r := common.NewServerReader(nil, continues)
 	w := common.NewWriter(nil)
 
-	_, isTLS := c.(*tls.Conn)
+	tlsConn, _ := c.(*tls.Conn)
 
 	conn := &conn{
 		Conn: common.NewConn(c, r, w),
@@ -68,7 +68,7 @@ func newConn(s *Server, c net.Conn) *conn {
 		ctx: &Context{
 			State: common.NotAuthenticatedState,
 		},
-		isTLS: isTLS,
+		tlsConn: tlsConn,
 		continues: continues,
 		locker: &sync.Mutex{},
 	}
@@ -164,7 +164,7 @@ func (c *conn) greet() error {
 
 // Check if this connection is encrypted.
 func (c *conn) IsTLS() bool {
-	return c.isTLS
+	return c.tlsConn != nil
 }
 
 // Check if the client can use plain text authentication.

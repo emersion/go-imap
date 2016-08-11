@@ -44,16 +44,17 @@ func (cmd *StartTLS) Handle(conn Conn) error {
 func (cmd *StartTLS) Upgrade(conn Conn) error {
 	tlsConfig := conn.Server().TLSConfig
 
+	var tlsConn *tls.Conn
 	err := conn.Upgrade(func (conn net.Conn) (net.Conn, error) {
-		upgraded := tls.Server(conn, tlsConfig)
-		err := upgraded.Handshake()
-		return upgraded, err
+		tlsConn = tls.Server(conn, tlsConfig)
+		err := tlsConn.Handshake()
+		return tlsConn, err
 	})
 	if err != nil {
 		return err
 	}
 
-	conn.conn().isTLS = true // TODO
+	conn.conn().tlsConn = tlsConn
 
 	res := &responses.Capability{Caps: conn.Capabilities()}
 	return conn.WriteResp(res)
