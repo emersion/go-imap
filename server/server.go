@@ -446,11 +446,16 @@ func (s *Server) listenUpdates() (err error) {
 }
 
 // Get this server's capabilities for the provided connection state.
-func (s *Server) Capabilities(currentState imap.ConnState) (caps []string) {
+func (s *Server) Capabilities(state imap.ConnState) (caps []string) {
 	caps = []string{"IMAP4rev1"}
 
+	if state == imap.AuthenticatedState {
+		// Also add capabilities for imap.SelectedState
+		state |= imap.SelectedState
+	}
+
 	for _, ext := range s.extensions {
-		caps = append(caps, ext.Capabilities(currentState)...)
+		caps = append(caps, ext.Capabilities(state)...)
 	}
 	return
 }

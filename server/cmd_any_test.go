@@ -118,7 +118,8 @@ func TestServer_EnableAuth(t *testing.T) {
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=PLAIN AUTH=XNOOP" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=PLAIN AUTH=XNOOP" &&
+		scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=XNOOP AUTH=PLAIN" {
 		t.Fatal("Bad capability:", scanner.Text())
 	}
 
