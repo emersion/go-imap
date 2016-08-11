@@ -43,7 +43,7 @@ Hi there :)`
 					Uid: 6,
 					Flags: []string{"\\Seen"},
 					Envelope: &common.Envelope{
-						Date: &now,
+						Date: now,
 						Subject: "Hello World!",
 						From: []*common.Address{},
 						Sender: []*common.Address{},
@@ -51,7 +51,7 @@ Hi there :)`
 					},
 					BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
 					Size: uint32(len(body)),
-					InternalDate: &now,
+					InternalDate: now,
 				}, []byte(body)},
 			},
 			user: user,

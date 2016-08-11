@@ -58,7 +58,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *Select) WriteTo(w *imap.Writer) (err error) {
+func (r *Select) WriteTo(w imap.Writer) (err error) {
 	status := r.Mailbox
 
 	for _, item := range r.Mailbox.Items {

@@ -18,15 +18,6 @@ const (
 	RecentFlag = "\\Recent"
 )
 
-// Parse an IMAP date.
-func ParseDate(date string) (*time.Time, error) {
-	t, err := time.Parse("2-Jan-2006 15:04:05 -0700", date)
-	if err != nil {
-		return nil, err
-	}
-	return &t, nil
-}
-
 // A message.
 type Message struct {
 	// The message sequence number. It must be greater than or equal to 1.
@@ -43,7 +34,7 @@ type Message struct {
 	// The message flags.
 	Flags []string
 	// The date the message was received by th server.
-	InternalDate *time.Time
+	InternalDate time.Time
 	// The message size.
 	Size uint32
 	// The message unique identifier. It must be greater than or equal to 1.
@@ -103,7 +94,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				}
 			case "INTERNALDATE":
 				date, _ := f.(string)
-				m.InternalDate, _ = ParseDate(date)
+				m.InternalDate, _ = ParseDateTime(date)
 			case "RFC822.SIZE":
 				m.Size, _ = ParseNumber(f)
 			case "UID":
@@ -453,7 +444,7 @@ func (part *BodyPartName) String() (s string) {
 // See RFC 3501 page 77.
 type Envelope struct {
 	// The message date.
-	Date *time.Time
+	Date time.Time
 	// The message subject.
 	Subject string
 	// The From header addresses.
@@ -481,7 +472,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	}
 
 	if date, ok := fields[0].(string); ok {
-		e.Date, _ = ParseDate(date)
+		e.Date, _ = ParseDateTime(date)
 	}
 	if subject, ok := fields[1].(string); ok {
 		e.Subject = subject
