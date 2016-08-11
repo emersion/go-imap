@@ -23,8 +23,10 @@ type Conn interface {
 	Capabilities() []string
 	// Write a response to this connection.
 	WriteResp(res imap.WriterTo) error
-	// Check if TLS is enabled on this connection.
+	// IsTLS returns true if TLS is enabled.
 	IsTLS() bool
+	// TLSState returns the TLS connection state if TLS is enabled, nil otherwise.
+	TLSState() *tls.ConnectionState
 	// Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
 	// tunnel.
 	Upgrade(upgrader imap.ConnUpgrader) error
@@ -189,9 +191,16 @@ func (c *conn) setTLSConn(tlsConn *tls.Conn) {
 	c.tlsConn = tlsConn
 }
 
-// Check if this connection is encrypted.
 func (c *conn) IsTLS() bool {
 	return c.tlsConn != nil
+}
+
+func (c *conn) TLSState() *tls.ConnectionState {
+	if c.tlsConn != nil {
+		state := c.tlsConn.ConnectionState()
+		return &state
+	}
+	return nil
 }
 
 // Check if the client can use plain text authentication.
