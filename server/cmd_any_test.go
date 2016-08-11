@@ -9,6 +9,7 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/server"
+	"github.com/emersion/go-sasl"
 )
 
 func testServerGreeted(t *testing.T) (s *server.Server, c net.Conn, scanner *bufio.Scanner) {
@@ -89,6 +90,35 @@ func TestServer_Enable(t *testing.T) {
 
 	scanner.Scan()
 	if scanner.Text() != "* CAPABILITY IMAP4rev1 XNOOP AUTH=PLAIN" {
+		t.Fatal("Bad capability:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
+type xnoopAuth struct{}
+
+func (ext *xnoopAuth) Next(response []byte) (challenge []byte, done bool, err error) {
+	done = true
+	return
+}
+
+func TestServer_EnableAuth(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	s.EnableAuth("XNOOP", func(server.Conn) sasl.Server {
+		return &xnoopAuth{}
+	})
+
+	io.WriteString(c, "a001 CAPABILITY\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=PLAIN AUTH=XNOOP" {
 		t.Fatal("Bad capability:", scanner.Text())
 	}
 
