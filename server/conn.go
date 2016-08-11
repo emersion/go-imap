@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/tls"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -12,6 +13,8 @@ import (
 
 // A connection.
 type Conn interface {
+	io.Reader
+
 	// Get this connection's server.
 	Server() *Server
 	// Get this connection's context.
