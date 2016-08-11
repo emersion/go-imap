@@ -68,7 +68,7 @@ func TestLogout(t *testing.T) {
 	}
 }
 
-type xnoop struct {}
+type xnoop struct{}
 
 func (ext *xnoop) Capabilities(imap.ConnState) []string {
 	return []string{"XNOOP"}

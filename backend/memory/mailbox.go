@@ -8,10 +8,10 @@ import (
 )
 
 type Mailbox struct {
-	name string
+	name       string
 	subscribed bool
-	messages []*Message
-	user *User
+	messages   []*Message
+	user       *User
 }
 
 func (mbox *Mailbox) Name() string {
@@ -20,8 +20,8 @@ func (mbox *Mailbox) Name() string {
 
 func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 	info := &imap.MailboxInfo{
-		Delimiter: "/",
-		Name: mbox.name,
+		Delimiter:  "/",
+		Name:       mbox.name,
 		Attributes: []string{"\\Noinferiors"},
 	}
 	return info, nil
@@ -39,9 +39,9 @@ func (mbox *Mailbox) uidNext() (uid uint32) {
 
 func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
 	status := &imap.MailboxStatus{
-		Items: items,
-		Name: mbox.name,
-		Flags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"},
+		Items:          items,
+		Name:           mbox.name,
+		Flags:          []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"},
 		PermanentFlags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"},
 	}
 
@@ -81,7 +81,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []string,
 	defer close(ch)
 
 	for i, msg := range mbox.messages {
-		seqNum := uint32(i+1)
+		seqNum := uint32(i + 1)
 
 		var id uint32
 		if uid {
@@ -111,7 +111,7 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) (id
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		ids = append(ids, id)
 	}
@@ -125,12 +125,12 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body []byte) 
 	}
 
 	mbox.messages = append(mbox.messages, &Message{&imap.Message{
-		Uid: mbox.uidNext(),
-		Envelope: &imap.Envelope{},
+		Uid:           mbox.uidNext(),
+		Envelope:      &imap.Envelope{},
 		BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-		Size: uint32(len(body)),
-		InternalDate: date,
-		Flags: flags,
+		Size:          uint32(len(body)),
+		InternalDate:  date,
+		Flags:         flags,
 	}, body})
 
 	return nil
@@ -142,7 +142,7 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		if !seqset.Contains(id) {
 			continue
@@ -185,7 +185,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		if !seqset.Contains(id) {
 			continue

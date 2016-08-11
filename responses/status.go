@@ -43,7 +43,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 		var key string
 		for i, f := range items {
-			if i % 2 == 0 {
+			if i%2 == 0 {
 				var ok bool
 				if key, ok = f.(string); !ok {
 					return errors.New("Key is not a string")

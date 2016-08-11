@@ -14,7 +14,7 @@ import (
 // imap errors in Not Authenticated state.
 var (
 	ErrAlreadyAuthenticated = errors.New("Already authenticated")
-	ErrAuthDisabled = errors.New("Authentication disabled")
+	ErrAuthDisabled         = errors.New("Authentication disabled")
 )
 
 type StartTLS struct {
@@ -45,7 +45,7 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 	tlsConfig := conn.Server().TLSConfig
 
 	var tlsConn *tls.Conn
-	err := conn.Upgrade(func (conn net.Conn) (net.Conn, error) {
+	err := conn.Upgrade(func(conn net.Conn) (net.Conn, error) {
 		tlsConn = tls.Server(conn, tlsConfig)
 		err := tlsConn.Handshake()
 		return tlsConn, err
@@ -62,8 +62,8 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 
 func afterAuthStatus(conn Conn) error {
 	return ErrStatusResp(&imap.StatusResp{
-		Type: imap.StatusOk,
-		Code: imap.CodeCapability,
+		Type:      imap.StatusOk,
+		Code:      imap.CodeCapability,
 		Arguments: imap.FormatStringList(conn.Capabilities()),
 	})
 }

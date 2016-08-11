@@ -2,8 +2,8 @@ package imap
 
 import (
 	"bufio"
-	"net"
 	"io"
+	"net"
 	"os"
 )
 
@@ -29,7 +29,7 @@ const (
 	// In a selected state, a mailbox has been selected to access.
 	// This state is entered when a mailbox has been successfully
 	// selected.
-	SelectedState = AuthenticatedState + 1 << 2
+	SelectedState = AuthenticatedState + 1<<2
 
 	// In the logout state, the connection is being terminated. This
 	// state can be entered as a result of a client request (via the

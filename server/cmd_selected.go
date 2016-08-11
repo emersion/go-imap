@@ -12,7 +12,7 @@ import (
 // imap errors in Selected state.
 var (
 	ErrNoMailboxSelected = errors.New("No mailbox selected")
-	ErrMailboxReadOnly = errors.New("Mailbox opened in read-only mode")
+	ErrMailboxReadOnly   = errors.New("Mailbox opened in read-only mode")
 )
 
 // A command handler that supports UIDs.
@@ -97,7 +97,7 @@ func (cmd *Expunge) Handle(conn Conn) error {
 		ch := make(chan uint32)
 		res := &responses.Expunge{SeqNums: ch}
 
-		go (func () {
+		go (func() {
 			done <- conn.WriteResp(res)
 		})()
 
@@ -157,7 +157,7 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 	res := &responses.Fetch{Messages: ch}
 
 	done := make(chan error, 1)
-	go (func () {
+	go (func() {
 		done <- conn.WriteResp(res)
 		close(done)
 	})()

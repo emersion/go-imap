@@ -1,8 +1,8 @@
 package client_test
 
 import (
-	"io"
 	"fmt"
+	"io"
 	"net"
 	"testing"
 
@@ -26,7 +26,7 @@ func TestClient_Check(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CHECK completed\r\n")
+		io.WriteString(c, tag+" OK CHECK completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -59,7 +59,7 @@ func TestClient_Close(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CLOSE completed\r\n")
+		io.WriteString(c, tag+" OK CLOSE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -99,7 +99,7 @@ func TestClient_Expunge(t *testing.T) {
 		io.WriteString(c, "* 3 EXPUNGE\r\n")
 		io.WriteString(c, "* 5 EXPUNGE\r\n")
 		io.WriteString(c, "* 8 EXPUNGE\r\n")
-		io.WriteString(c, tag + " OK EXPUNGE completed\r\n")
+		io.WriteString(c, tag+" OK EXPUNGE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -112,9 +112,9 @@ func TestClient_Search(t *testing.T) {
 		date, _ := imap.ParseDate("1-Feb-1994")
 		criteria := &imap.SearchCriteria{
 			Deleted: true,
-			From: "Smith",
-			Since: date,
-			Not: &imap.SearchCriteria{To: "Pauline"},
+			From:    "Smith",
+			Since:   date,
+			Not:     &imap.SearchCriteria{To: "Pauline"},
 		}
 
 		results, err := c.Search(criteria)
@@ -138,7 +138,7 @@ func TestClient_Search(t *testing.T) {
 		}
 
 		io.WriteString(c, "* SEARCH 2 84 882\r\n")
-		io.WriteString(c, tag + " OK SEARCH completed\r\n")
+		io.WriteString(c, tag+" OK SEARCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -173,7 +173,7 @@ func TestClient_Search_Uid(t *testing.T) {
 		}
 
 		io.WriteString(c, "* SEARCH 1 78 2010\r\n")
-		io.WriteString(c, tag + " OK UID SEARCH completed\r\n")
+		io.WriteString(c, tag+" OK UID SEARCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -235,7 +235,7 @@ func TestClient_Fetch(t *testing.T) {
 		io.WriteString(c, "Hello World!")
 		io.WriteString(c, ")\r\n")
 
-		io.WriteString(c, tag + " OK FETCH completed\r\n")
+		io.WriteString(c, tag+" OK FETCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -278,7 +278,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 
 		io.WriteString(c, "* 23 FETCH (UID 42 FLAGS (\\Seen))\r\n")
 
-		io.WriteString(c, tag + " OK UID FETCH completed\r\n")
+		io.WriteString(c, tag+" OK UID FETCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -312,7 +312,7 @@ func TestClient_Store(t *testing.T) {
 		}
 
 		io.WriteString(c, "* 2 FETCH (FLAGS (\\Seen))\r\n")
-		io.WriteString(c, tag + " OK STORE completed\r\n")
+		io.WriteString(c, tag+" OK STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -335,7 +335,7 @@ func TestClient_Store_Silent(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK STORE completed\r\n")
+		io.WriteString(c, tag+" OK STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -358,7 +358,7 @@ func TestClient_Store_Uid(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UID STORE completed\r\n")
+		io.WriteString(c, tag+" OK UID STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -381,7 +381,7 @@ func TestClient_Copy(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK COPY completed\r\n")
+		io.WriteString(c, tag+" OK COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -404,7 +404,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UID COPY completed\r\n")
+		io.WriteString(c, tag+" OK UID COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)

@@ -6,7 +6,7 @@ import (
 
 // An EXPUNGE command.
 // See RFC 3501 section 6.4.3
-type Expunge struct {}
+type Expunge struct{}
 
 func (cmd *Expunge) Command() *imap.Command {
 	return &imap.Command{Name: imap.Expunge}

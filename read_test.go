@@ -10,9 +10,9 @@ import (
 )
 
 func TestParseNumber(t *testing.T) {
-	tests := []struct{
-		f interface{}
-		n uint32
+	tests := []struct {
+		f   interface{}
+		n   uint32
 		err bool
 	}{
 		{f: "42", n: 42},
@@ -40,29 +40,29 @@ func TestParseNumber(t *testing.T) {
 }
 
 func TestParseStringList(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		fields []interface{}
-		list []string
+		list   []string
 	}{
 		{
 			fields: []interface{}{"a", "b", "c", "d"},
-			list: []string{"a", "b", "c", "d"},
+			list:   []string{"a", "b", "c", "d"},
 		},
 		{
 			fields: []interface{}{"a"},
-			list: []string{"a"},
+			list:   []string{"a"},
 		},
 		{
 			fields: []interface{}{},
-			list: []string{},
+			list:   []string{},
 		},
 		{
 			fields: []interface{}{"a", 42, "c", "d"},
-			list: nil,
+			list:   nil,
 		},
 		{
 			fields: []interface{}{"a", nil, "c", "d"},
-			list: nil,
+			list:   nil,
 		},
 	}
 

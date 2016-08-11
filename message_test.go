@@ -20,7 +20,7 @@ func formatFields(fields []interface{}) (string, error) {
 }
 
 func TestParseDate(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		dateStr string
 		exp     time.Time
 	}{
@@ -41,19 +41,19 @@ func TestParseDate(t *testing.T) {
 	}
 }
 
-var messageTests = []struct{
+var messageTests = []struct {
 	message *Message
-	fields []interface{}
+	fields  []interface{}
 }{
 	{
 		message: &Message{
-			Items: []string{"ENVELOPE", "BODYSTRUCTURE", "FLAGS", "RFC822.SIZE", "UID"},
-			Body: map[*BodySectionName]*Literal{},
-			Envelope: envelopeTests[0].envelope,
+			Items:         []string{"ENVELOPE", "BODYSTRUCTURE", "FLAGS", "RFC822.SIZE", "UID"},
+			Body:          map[*BodySectionName]*Literal{},
+			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
-			Flags: []string{SeenFlag, AnsweredFlag},
-			Size: 4242,
-			Uid: 2424,
+			Flags:         []string{SeenFlag, AnsweredFlag},
+			Size:          4242,
+			Uid:           2424,
 		},
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
@@ -94,64 +94,64 @@ func TestMessage_Format(t *testing.T) {
 	}
 }
 
-var bodySectionNameTests = []struct{
-	raw string
-	parsed *BodySectionName
+var bodySectionNameTests = []struct {
+	raw       string
+	parsed    *BodySectionName
 	formatted string
 }{
 	{
-		raw: "BODY[]",
+		raw:    "BODY[]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{}},
 	},
 	{
-		raw: "RFC822",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{}},
+		raw:       "RFC822",
+		parsed:    &BodySectionName{BodyPartName: &BodyPartName{}},
 		formatted: "BODY[]",
 	},
 	{
-		raw: "BODY[HEADER]",
+		raw:    "BODY[HEADER]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier}},
 	},
 	{
-		raw: "BODY.PEEK[]",
+		raw:    "BODY.PEEK[]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Peek: true},
 	},
 	{
-		raw: "BODY[TEXT]",
+		raw:    "BODY[TEXT]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: TextSpecifier}},
 	},
 	{
-		raw: "RFC822.TEXT",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: TextSpecifier}},
+		raw:       "RFC822.TEXT",
+		parsed:    &BodySectionName{BodyPartName: &BodyPartName{Specifier: TextSpecifier}},
 		formatted: "BODY[TEXT]",
 	},
 	{
-		raw: "RFC822.HEADER",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier}, Peek: true},
+		raw:       "RFC822.HEADER",
+		parsed:    &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier}, Peek: true},
 		formatted: "BODY.PEEK[HEADER]",
 	},
 	{
-		raw: "BODY[]<0.512>",
+		raw:    "BODY[]<0.512>",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Partial: []int{0, 512}},
 	},
 	{
-		raw: "BODY[1.2.3]",
+		raw:    "BODY[1.2.3]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Path: []int{1, 2, 3}}},
 	},
 	{
-		raw: "BODY[1.2.3.HEADER]",
+		raw:    "BODY[1.2.3.HEADER]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Path: []int{1, 2, 3}}},
 	},
 	{
-		raw: "BODY[5.MIME]",
+		raw:    "BODY[5.MIME]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: MimeSpecifier, Path: []int{5}}},
 	},
 	{
-		raw: "BODY[HEADER.FIELDS (From To)]",
+		raw:    "BODY[HEADER.FIELDS (From To)]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"From", "To"}}},
 	},
 	{
-		raw: "BODY[HEADER.FIELDS.NOT (Content-Id)]",
+		raw:    "BODY[HEADER.FIELDS.NOT (Content-Id)]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
 	},
 }
@@ -190,34 +190,34 @@ func TestBodySectionName_String(t *testing.T) {
 }
 
 func TestBodySectionName_ExtractPartial(t *testing.T) {
-	tests := []struct{
-		bsn string
-		whole string
+	tests := []struct {
+		bsn     string
+		whole   string
 		partial string
 	}{
 		{
-			bsn: "BODY[]",
-			whole: "Hello World!",
+			bsn:     "BODY[]",
+			whole:   "Hello World!",
 			partial: "Hello World!",
 		},
 		{
-			bsn: "BODY[]<6.5>",
-			whole: "Hello World!",
+			bsn:     "BODY[]<6.5>",
+			whole:   "Hello World!",
 			partial: "World",
 		},
 		{
-			bsn: "BODY[]<6.1000>",
-			whole: "Hello World!",
+			bsn:     "BODY[]<6.1000>",
+			whole:   "Hello World!",
 			partial: "World!",
 		},
 		{
-			bsn: "BODY[]<0.1>",
-			whole: "Hello World!",
+			bsn:     "BODY[]<0.1>",
+			whole:   "Hello World!",
 			partial: "H",
 		},
 		{
-			bsn: "BODY[]<1000.2000>",
-			whole: "Hello World!",
+			bsn:     "BODY[]<1000.2000>",
+			whole:   "Hello World!",
 			partial: "",
 		},
 	}
@@ -238,20 +238,20 @@ func TestBodySectionName_ExtractPartial(t *testing.T) {
 
 var t = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.FixedZone("", -6*60*60))
 
-var envelopeTests = []struct{
+var envelopeTests = []struct {
 	envelope *Envelope
-	fields []interface{}
+	fields   []interface{}
 }{
 	{
 		envelope: &Envelope{
-			Date: t,
-			Subject: "Hello World!",
-			From: []*Address{addrTests[0].addr},
-			Sender: []*Address{},
-			ReplyTo: []*Address{},
-			To: []*Address{},
-			Cc: []*Address{},
-			Bcc: []*Address{},
+			Date:      t,
+			Subject:   "Hello World!",
+			From:      []*Address{addrTests[0].addr},
+			Sender:    []*Address{},
+			ReplyTo:   []*Address{},
+			To:        []*Address{},
+			Cc:        []*Address{},
+			Bcc:       []*Address{},
 			InReplyTo: "42@example.org",
 			MessageId: "43@example.org",
 		},
@@ -300,16 +300,16 @@ func TestEnvelope_Format(t *testing.T) {
 	}
 }
 
-var addrTests = []struct{
+var addrTests = []struct {
 	fields []interface{}
-	addr *Address
+	addr   *Address
 }{
 	{
 		fields: []interface{}{"The NSA", nil, "root", "nsa.gov"},
 		addr: &Address{
 			PersonalName: "The NSA",
-			MailboxName: "root",
-			HostName: "nsa.gov",
+			MailboxName:  "root",
+			HostName:     "nsa.gov",
 		},
 	},
 }
@@ -354,7 +354,7 @@ func TestAddressList(t *testing.T) {
 	}
 }
 
-var paramsListTest = []struct{
+var paramsListTest = []struct {
 	fields []interface{}
 	params map[string]string
 }{
@@ -400,31 +400,31 @@ func TestFormatParamList(t *testing.T) {
 	}
 }
 
-var bodyStructureTests = []struct{
-	fields []interface{}
+var bodyStructureTests = []struct {
+	fields        []interface{}
 	bodyStructure *BodyStructure
 }{
 	{
 		fields: []interface{}{"image", "jpeg", []interface{}{}, "<foo4%25foo1@bar.net>", "A picture of cat", "base64", "4242"},
 		bodyStructure: &BodyStructure{
-			MimeType: "image",
+			MimeType:    "image",
 			MimeSubType: "jpeg",
-			Params: map[string]string{},
-			Id: "<foo4%25foo1@bar.net>",
+			Params:      map[string]string{},
+			Id:          "<foo4%25foo1@bar.net>",
 			Description: "A picture of cat",
-			Encoding: "base64",
-			Size: 4242,
+			Encoding:    "base64",
+			Size:        4242,
 		},
 	},
 	{
 		fields: []interface{}{"text", "plain", []interface{}{"charset", "utf-8"}, nil, nil, "us-ascii", "42", "2"},
 		bodyStructure: &BodyStructure{
-			MimeType: "text",
+			MimeType:    "text",
 			MimeSubType: "plain",
-			Params: map[string]string{"charset": "utf-8"},
-			Encoding: "us-ascii",
-			Size: 42,
-			Lines: 2,
+			Params:      map[string]string{"charset": "utf-8"},
+			Encoding:    "us-ascii",
+			Size:        42,
+			Lines:       2,
 		},
 	},
 	{
@@ -435,19 +435,19 @@ var bodyStructureTests = []struct{
 			"67",
 		},
 		bodyStructure: &BodyStructure{
-			MimeType: "message",
+			MimeType:    "message",
 			MimeSubType: "rfc822",
-			Params: map[string]string{},
-			Encoding: "us-ascii",
-			Size: 42,
-			Lines: 67,
+			Params:      map[string]string{},
+			Encoding:    "us-ascii",
+			Size:        42,
+			Lines:       67,
 			Envelope: &Envelope{
-				From: []*Address{},
-				Sender: []*Address{},
+				From:    []*Address{},
+				Sender:  []*Address{},
 				ReplyTo: []*Address{},
-				To: []*Address{},
-				Cc: []*Address{},
-				Bcc: []*Address{},
+				To:      []*Address{},
+				Cc:      []*Address{},
+				Bcc:     []*Address{},
 			},
 			BodyStructure: &BodyStructure{
 				Params: map[string]string{},
@@ -458,16 +458,16 @@ var bodyStructureTests = []struct{
 		fields: []interface{}{"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
 			"e0323a9039add2978bf5b49550572c7c", "attachment", []interface{}{"en-US"}, []interface{}{}},
 		bodyStructure: &BodyStructure{
-			MimeType: "application",
+			MimeType:    "application",
 			MimeSubType: "pdf",
-			Params: map[string]string{},
-			Encoding: "base64",
-			Size: 4242,
-			Extended: true,
-			Md5: "e0323a9039add2978bf5b49550572c7c",
+			Params:      map[string]string{},
+			Encoding:    "base64",
+			Size:        4242,
+			Extended:    true,
+			Md5:         "e0323a9039add2978bf5b49550572c7c",
 			Disposition: "attachment",
-			Language: []string{"en-US"},
-			Location: []string{},
+			Language:    []string{"en-US"},
+			Location:    []string{},
 		},
 	},
 	{
@@ -477,25 +477,25 @@ var bodyStructureTests = []struct{
 			"alternative",
 		},
 		bodyStructure: &BodyStructure{
-			MimeType: "multipart",
+			MimeType:    "multipart",
 			MimeSubType: "alternative",
-			Params: map[string]string{},
+			Params:      map[string]string{},
 			Parts: []*BodyStructure{
 				&BodyStructure{
-					MimeType: "text",
+					MimeType:    "text",
 					MimeSubType: "plain",
-					Params: map[string]string{},
-					Encoding: "us-ascii",
-					Size: 87,
-					Lines: 22,
+					Params:      map[string]string{},
+					Encoding:    "us-ascii",
+					Size:        87,
+					Lines:       22,
 				},
 				&BodyStructure{
-					MimeType: "text",
+					MimeType:    "text",
 					MimeSubType: "html",
-					Params: map[string]string{},
-					Encoding: "us-ascii",
-					Size: 106,
-					Lines: 36,
+					Params:      map[string]string{},
+					Encoding:    "us-ascii",
+					Size:        106,
+					Lines:       36,
 				},
 			},
 		},
@@ -506,23 +506,23 @@ var bodyStructureTests = []struct{
 			"alternative", []interface{}{"hello", "world"}, "inline", []interface{}{"en-US"}, []interface{}{},
 		},
 		bodyStructure: &BodyStructure{
-			MimeType: "multipart",
+			MimeType:    "multipart",
 			MimeSubType: "alternative",
-			Params: map[string]string{"hello": "world"},
+			Params:      map[string]string{"hello": "world"},
 			Parts: []*BodyStructure{
 				&BodyStructure{
-					MimeType: "text",
+					MimeType:    "text",
 					MimeSubType: "plain",
-					Params: map[string]string{},
-					Encoding: "us-ascii",
-					Size: 87,
-					Lines: 22,
+					Params:      map[string]string{},
+					Encoding:    "us-ascii",
+					Size:        87,
+					Lines:       22,
 				},
 			},
-			Extended: true,
+			Extended:    true,
 			Disposition: "inline",
-			Language: []string{"en-US"},
-			Location: []string{},
+			Language:    []string{"en-US"},
+			Location:    []string{},
 		},
 	},
 }

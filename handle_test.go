@@ -38,7 +38,7 @@ func TestRespHandling_AcceptNamedResp_Matching(t *testing.T) {
 	ch := make(chan bool, 1)
 	hdlr := &imap.RespHandling{
 		Resp: &imap.Resp{
-			Tag: "*",
+			Tag:    "*",
 			Fields: []interface{}{"SEARCH", "42"},
 		},
 		Accepts: ch,
@@ -65,7 +65,7 @@ func TestRespHandling_AcceptNamedResp_NotMatching(t *testing.T) {
 	ch := make(chan bool, 1)
 	hdlr := &imap.RespHandling{
 		Resp: &imap.Resp{
-			Tag: "*",
+			Tag:    "*",
 			Fields: []interface{}{"26", "EXISTS"},
 		},
 		Accepts: ch,

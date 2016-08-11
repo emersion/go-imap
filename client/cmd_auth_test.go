@@ -65,7 +65,7 @@ func TestClient_Select(t *testing.T) {
 		io.WriteString(c, "* OK [UIDNEXT 4392] Predicted next UID\r\n")
 		io.WriteString(c, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n")
 		io.WriteString(c, "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n")
-		io.WriteString(c, tag + " OK SELECT completed\r\n")
+		io.WriteString(c, tag+" OK SELECT completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -97,7 +97,7 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK [READ-ONLY] EXAMINE completed\r\n")
+		io.WriteString(c, tag+" OK [READ-ONLY] EXAMINE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -119,7 +119,7 @@ func TestClient_Create(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CREATE completed\r\n")
+		io.WriteString(c, tag+" OK CREATE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -141,7 +141,7 @@ func TestClient_Delete(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK DELETE completed\r\n")
+		io.WriteString(c, tag+" OK DELETE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -163,7 +163,7 @@ func TestClient_Rename(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK RENAME completed\r\n")
+		io.WriteString(c, tag+" OK RENAME completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -185,7 +185,7 @@ func TestClient_Subscribe(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK SUBSCRIBE completed\r\n")
+		io.WriteString(c, tag+" OK SUBSCRIBE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -207,7 +207,7 @@ func TestClient_Unsubscribe(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UNSUBSCRIBE completed\r\n")
+		io.WriteString(c, tag+" OK UNSUBSCRIBE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -223,8 +223,8 @@ func TestClient_List(t *testing.T) {
 			return
 		}
 
-		expected := []struct{
-			name string
+		expected := []struct {
+			name       string
 			attributes []string
 		}{
 			{"INBOX", []string{"flag1"}},
@@ -259,7 +259,7 @@ func TestClient_List(t *testing.T) {
 		io.WriteString(c, "* LIST (flag1) \"/\" INBOX\r\n")
 		io.WriteString(c, "* LIST (flag2 flag3) \"/\" Drafts\r\n")
 		io.WriteString(c, "* LIST () \"/\" Sent\r\n")
-		io.WriteString(c, tag + " OK LIST completed\r\n")
+		io.WriteString(c, tag+" OK LIST completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -295,7 +295,7 @@ func TestClient_Lsub(t *testing.T) {
 		}
 
 		io.WriteString(c, "* LSUB () \"/\" INBOX\r\n")
-		io.WriteString(c, tag + " OK LIST completed\r\n")
+		io.WriteString(c, tag+" OK LIST completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -329,7 +329,7 @@ func TestClient_Status(t *testing.T) {
 		}
 
 		io.WriteString(c, "* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
-		io.WriteString(c, tag + " OK STATUS completed\r\n")
+		io.WriteString(c, tag+" OK STATUS completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -366,7 +366,7 @@ func TestClient_Append(t *testing.T) {
 			t.Fatal("Bad literal:", string(b))
 		}
 
-		io.WriteString(c, tag + " OK APPEND completed\r\n")
+		io.WriteString(c, tag+" OK APPEND completed\r\n")
 	}
 
 	testClient(t, ct, st)

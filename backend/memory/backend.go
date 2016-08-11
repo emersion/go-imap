@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 )
 
 type Backend struct {
@@ -40,18 +40,18 @@ Hi there :)`
 			name: "INBOX",
 			messages: []*Message{
 				&Message{&imap.Message{
-					Uid: 6,
+					Uid:   6,
 					Flags: []string{"\\Seen"},
 					Envelope: &imap.Envelope{
-						Date: now,
+						Date:    now,
 						Subject: "Hello World!",
-						From: []*imap.Address{},
-						Sender: []*imap.Address{},
-						To: []*imap.Address{},
+						From:    []*imap.Address{},
+						Sender:  []*imap.Address{},
+						To:      []*imap.Address{},
 					},
 					BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-					Size: uint32(len(body)),
-					InternalDate: now,
+					Size:          uint32(len(body)),
+					InternalDate:  now,
 				}, []byte(body)},
 			},
 			user: user,

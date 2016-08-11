@@ -148,7 +148,7 @@ func (cmd *List) Handle(conn Conn) error {
 	ch := make(chan *imap.MailboxInfo)
 	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
-	go (func () {
+	go (func() {
 		done <- conn.WriteResp(res)
 		close(done)
 	})()

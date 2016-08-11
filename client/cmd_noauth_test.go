@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
-	"io"
 	"fmt"
+	"io"
 	"net"
 	"testing"
 
@@ -23,7 +23,7 @@ func TestClient_StartTLS(t *testing.T) {
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
-		Certificates: []tls.Certificate{cert},
+		Certificates:       []tls.Certificate{cert},
 	}
 
 	ct := func(c *client.Client) (err error) {
@@ -59,7 +59,7 @@ func TestClient_StartTLS(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK Begin TLS negotiation now\r\n")
+		io.WriteString(c, tag+" OK Begin TLS negotiation now\r\n")
 
 		sc := tls.Server(c, tlsConfig)
 		if err = sc.Handshake(); err != nil {
@@ -74,7 +74,7 @@ func TestClient_StartTLS(t *testing.T) {
 		}
 
 		io.WriteString(sc, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\n")
-		io.WriteString(sc, tag + " OK CAPABILITY completed.\r\n")
+		io.WriteString(sc, tag+" OK CAPABILITY completed.\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -128,7 +128,7 @@ func TestClient_Authenticate(t *testing.T) {
 			t.Fatal("Bad password")
 		}
 
-		io.WriteString(c, tag + " OK AUTHENTICATE completed\r\n")
+		io.WriteString(c, tag+" OK AUTHENTICATE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -156,7 +156,7 @@ func TestClient_Login_Success(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK LOGIN completed\r\n")
+		io.WriteString(c, tag+" OK LOGIN completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -184,7 +184,7 @@ func TestClient_Login_Error(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " NO LOGIN incorrect\r\n")
+		io.WriteString(c, tag+" NO LOGIN incorrect\r\n")
 	}
 
 	testClient(t, ct, st)

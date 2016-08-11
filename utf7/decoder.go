@@ -29,7 +29,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		}
 
 		if ch != '&' {
-			if nDst + 1 > len(dst) {
+			if nDst+1 > len(dst) {
 				err = transform.ErrShortDst
 				return
 			}
@@ -80,7 +80,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 			return
 		}
 
-		if nDst + len(b) > len(dst) {
+		if nDst+len(b) > len(dst) {
 			err = transform.ErrShortDst
 			return
 		}

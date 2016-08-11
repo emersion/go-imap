@@ -10,12 +10,12 @@ import (
 
 // Message flags, defined in RFC 3501 section 2.3.2.
 const (
-	SeenFlag = "\\Seen"
+	SeenFlag     = "\\Seen"
 	AnsweredFlag = "\\Answered"
-	FlaggedFlag = "\\Flagged"
-	DeletedFlag = "\\Deleted"
-	DraftFlag = "\\Draft"
-	RecentFlag = "\\Recent"
+	FlaggedFlag  = "\\Flagged"
+	DeletedFlag  = "\\Deleted"
+	DraftFlag    = "\\Draft"
+	RecentFlag   = "\\Recent"
 )
 
 // A message.
@@ -53,7 +53,7 @@ func (m *Message) Parse(fields []interface{}) error {
 
 	var key string
 	for i, f := range fields {
-		if i % 2 == 0 { // It's a key
+		if i%2 == 0 { // It's a key
 			var ok bool
 			if key, ok = f.(string); !ok {
 				return errors.New("Key is not a string")
@@ -219,7 +219,7 @@ func (section *BodySectionName) parse(s string) (err error) {
 	}
 
 	name := s[:partStart]
-	part := s[partStart+1:partEnd]
+	part := s[partStart+1 : partEnd]
 	partial := s[partEnd+1:]
 
 	if name == "BODY.PEEK" {
@@ -244,7 +244,7 @@ func (section *BodySectionName) parse(s string) (err error) {
 		if !strings.HasPrefix(partial, "<") || !strings.HasSuffix(partial, ">") {
 			return errors.New("Invalid body section name: invalid partial")
 		}
-		partial = partial[1:len(partial)-1]
+		partial = partial[1 : len(partial)-1]
 
 		partialParts := strings.SplitN(partial, ".", 2)
 		if len(partialParts) < 2 {
@@ -315,7 +315,7 @@ func (section *BodySectionName) ExtractPartial(b []byte) []byte {
 
 	from := section.Partial[0]
 	length := section.Partial[1]
-	to := from+length
+	to := from + length
 	if from > len(b) {
 		return nil
 	}
@@ -665,7 +665,7 @@ func ParseParamList(fields []interface{}) (params map[string]string, err error) 
 			return
 		}
 
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			key = p
 		} else {
 			params[key] = p
@@ -720,7 +720,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[end].(string)
 		end++
 
-		if len(fields) - end + 1 >= 4 { // Contains extension data
+		if len(fields)-end+1 >= 4 { // Contains extension data
 			bs.Extended = true
 
 			params, _ := fields[end].([]interface{})
@@ -759,7 +759,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 		// Type-specific fields
 		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
-			if len(fields) - end < 3 {
+			if len(fields)-end < 3 {
 				return errors.New("Missing type-specific fields for message/rfc822")
 			}
 
@@ -776,7 +776,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end += 3
 		}
 		if bs.MimeType == "text" {
-			if len(fields) - end < 1 {
+			if len(fields)-end < 1 {
 				return errors.New("Missing type-specific fields for text/*")
 			}
 
@@ -784,7 +784,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end++
 		}
 
-		if len(fields) - end + 1 >= 4 { // Contains extension data
+		if len(fields)-end+1 >= 4 { // Contains extension data
 			bs.Extended = true
 
 			bs.Md5, _ = fields[end].(string)

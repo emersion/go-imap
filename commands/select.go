@@ -11,7 +11,7 @@ import (
 // If ReadOnly is set to true, the EXAMINE command will be used instead.
 // See RFC 3501 section 6.3.1
 type Select struct {
-	Mailbox string
+	Mailbox  string
 	ReadOnly bool
 }
 
@@ -24,7 +24,7 @@ func (cmd *Select) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: name,
+		Name:      name,
 		Arguments: []interface{}{mailbox},
 	}
 }

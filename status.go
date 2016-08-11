@@ -41,17 +41,17 @@ const (
 
 // Status response codes defined in RFC 3501 section 7.1.
 const (
-	CodeAlert = "ALERT"
-	CodeBadCharset = "BADCHARSET"
-	CodeCapability = "CAPABILITY"
-	CodeParse = "PARSE"
+	CodeAlert          = "ALERT"
+	CodeBadCharset     = "BADCHARSET"
+	CodeCapability     = "CAPABILITY"
+	CodeParse          = "PARSE"
 	CodePermanentFlags = "PERMANENTFLAGS"
-	CodeReadOnly = "READ-ONLY"
-	CodeReadWrite = "READ-WRITE"
-	CodeTryCreate = "TRYCREATE"
-	CodeUidNext = "UIDNEXT"
-	CodeUidValidity = "UIDVALIDITY"
-	CodeUnseen = "UNSEEN"
+	CodeReadOnly       = "READ-ONLY"
+	CodeReadWrite      = "READ-WRITE"
+	CodeTryCreate      = "TRYCREATE"
+	CodeUidNext        = "UIDNEXT"
+	CodeUidValidity    = "UIDVALIDITY"
+	CodeUnseen         = "UNSEEN"
 )
 
 // A status response.

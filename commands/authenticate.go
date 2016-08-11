@@ -17,7 +17,7 @@ type Authenticate struct {
 
 func (cmd *Authenticate) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Authenticate,
+		Name:      imap.Authenticate,
 		Arguments: []interface{}{cmd.Mechanism},
 	}
 }

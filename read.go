@@ -9,28 +9,28 @@ import (
 )
 
 const (
-	sp = ' '
-	cr = '\r'
-	lf = '\n'
-	dquote = '"'
-	literalStart = '{'
-	literalEnd = '}'
-	listStart = '('
-	listEnd = ')'
+	sp            = ' '
+	cr            = '\r'
+	lf            = '\n'
+	dquote        = '"'
+	literalStart  = '{'
+	literalEnd    = '}'
+	listStart     = '('
+	listEnd       = ')'
 	respCodeStart = '['
-	respCodeEnd = ']'
+	respCodeEnd   = ']'
 )
 
 const (
-	crlf = "\r\n"
+	crlf    = "\r\n"
 	nilAtom = "NIL"
 )
 
 // TODO: add CTL to atomSpecials
 var (
 	quotedSpecials = string([]rune{dquote, '\\'})
-	respSpecials = string([]rune{respCodeEnd})
-	atomSpecials = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
+	respSpecials   = string([]rune{respCodeEnd})
+	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
 )
 
 type parseError struct {
@@ -84,7 +84,7 @@ func ParseDate(f interface{}) (t time.Time, err error) {
 		return
 	}
 
- 	return time.Parse("2-Jan-2006", s)
+	return time.Parse("2-Jan-2006", s)
 }
 
 func ParseDateTime(f interface{}) (t time.Time, err error) {
@@ -94,7 +94,7 @@ func ParseDateTime(f interface{}) (t time.Time, err error) {
 		return
 	}
 
- 	return time.Parse("2-Jan-2006 15:04:05 -0700", s)
+	return time.Parse("2-Jan-2006 15:04:05 -0700", s)
 }
 
 // Convert a field list to a string list.
@@ -117,9 +117,9 @@ func trimSuffix(str string, suffix rune) string {
 type Reader struct {
 	reader
 
-	brackets int
+	brackets   int
 	inRespCode bool
-	continues chan<- bool
+	continues  chan<- bool
 }
 
 func (r *Reader) ReadSp() error {

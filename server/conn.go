@@ -46,12 +46,12 @@ type Context struct {
 type conn struct {
 	*imap.Conn
 
-	s *Server
-	ctx *Context
-	tlsConn *tls.Conn
+	s         *Server
+	ctx       *Context
+	tlsConn   *tls.Conn
 	continues chan bool
-	silent bool
-	locker sync.Locker
+	silent    bool
+	locker    sync.Locker
 }
 
 func newConn(s *Server, c net.Conn) *conn {
@@ -68,9 +68,9 @@ func newConn(s *Server, c net.Conn) *conn {
 		ctx: &Context{
 			State: imap.NotAuthenticatedState,
 		},
-		tlsConn: tlsConn,
+		tlsConn:   tlsConn,
 		continues: continues,
-		locker: &sync.Mutex{},
+		locker:    &sync.Mutex{},
 	}
 
 	go conn.sendContinuationReqs()
@@ -153,10 +153,10 @@ func (c *conn) greet() error {
 	}
 
 	greeting := &imap.StatusResp{
-		Type: imap.StatusOk,
-		Code: imap.CodeCapability,
+		Type:      imap.StatusOk,
+		Code:      imap.CodeCapability,
 		Arguments: args,
-		Info: "IMAP4rev1 Service Ready",
+		Info:      "IMAP4rev1 Service Ready",
 	}
 
 	return c.WriteResp(greeting)

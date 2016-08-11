@@ -8,7 +8,7 @@ import (
 // If Subscribed is set to true, LSUB will be used instead.
 // See RFC 3501 section 7.2.2
 type List struct {
-	Mailboxes chan *imap.MailboxInfo
+	Mailboxes  chan *imap.MailboxInfo
 	Subscribed bool
 }
 

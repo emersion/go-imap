@@ -6,7 +6,7 @@ import (
 
 // A CAPABILITY command.
 // See RFC 3501 section 6.1.1
-type Capability struct {}
+type Capability struct{}
 
 func (c *Capability) Command() *imap.Command {
 	return &imap.Command{

@@ -9,7 +9,7 @@ import (
 // A SEARCH command.
 // See RFC 3501 section 6.4.4
 type Search struct {
-	Charset string
+	Charset  string
 	Criteria *imap.SearchCriteria
 }
 
@@ -21,7 +21,7 @@ func (cmd *Search) Command() *imap.Command {
 	args = append(args, cmd.Criteria.Format()...)
 
 	return &imap.Command{
-		Name: imap.Search,
+		Name:      imap.Search,
 		Arguments: args,
 	}
 }

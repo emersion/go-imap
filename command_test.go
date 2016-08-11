@@ -9,7 +9,7 @@ import (
 
 func TestCommand_Command(t *testing.T) {
 	cmd := &imap.Command{
-		Tag: "A001",
+		Tag:  "A001",
 		Name: "NOOP",
 	}
 
@@ -23,7 +23,7 @@ func TestCommand_WriteTo_NoArgs(t *testing.T) {
 	w := imap.NewWriter(&b)
 
 	cmd := &imap.Command{
-		Tag: "A001",
+		Tag:  "A001",
 		Name: "NOOP",
 	}
 
@@ -40,8 +40,8 @@ func TestCommand_WriteTo_WithArgs(t *testing.T) {
 	w := imap.NewWriter(&b)
 
 	cmd := &imap.Command{
-		Tag: "A002",
-		Name: "LOGIN",
+		Tag:       "A002",
+		Name:      "LOGIN",
 		Arguments: []interface{}{"username", "password"},
 	}
 

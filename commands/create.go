@@ -17,7 +17,7 @@ func (cmd *Create) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: imap.Create,
+		Name:      imap.Create,
 		Arguments: []interface{}{mailbox},
 	}
 }

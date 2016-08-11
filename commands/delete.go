@@ -17,7 +17,7 @@ func (cmd *Delete) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: imap.Delete,
+		Name:      imap.Delete,
 		Arguments: []interface{}{mailbox},
 	}
 }

@@ -8,20 +8,20 @@ import (
 )
 
 func TestStatusResp_WriteTo(t *testing.T) {
-	tests := []struct{
-		input *imap.StatusResp
+	tests := []struct {
+		input    *imap.StatusResp
 		expected string
 	}{
 		{
 			input: &imap.StatusResp{
-				Tag: "*",
+				Tag:  "*",
 				Type: imap.StatusOk,
 			},
 			expected: "* OK \r\n",
 		},
 		{
 			input: &imap.StatusResp{
-				Tag: "*",
+				Tag:  "*",
 				Type: imap.StatusOk,
 				Info: "LOGIN completed",
 			},
@@ -29,7 +29,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		},
 		{
 			input: &imap.StatusResp{
-				Tag: "42",
+				Tag:  "42",
 				Type: imap.StatusBad,
 				Info: "Invalid arguments",
 			},
@@ -37,7 +37,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		},
 		{
 			input: &imap.StatusResp{
-				Tag: "a001",
+				Tag:  "a001",
 				Type: imap.StatusOk,
 				Code: "READ-ONLY",
 				Info: "EXAMINE completed",
@@ -46,11 +46,11 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		},
 		{
 			input: &imap.StatusResp{
-				Tag: "*",
-				Type: imap.StatusOk,
-				Code: "CAPABILITY",
+				Tag:       "*",
+				Type:      imap.StatusOk,
+				Code:      "CAPABILITY",
 				Arguments: []interface{}{"IMAP4rev1"},
-				Info: "IMAP4rev1 service ready",
+				Info:      "IMAP4rev1 service ready",
 			},
 			expected: "* OK [CAPABILITY IMAP4rev1] IMAP4rev1 service ready\r\n",
 		},

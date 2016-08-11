@@ -33,7 +33,7 @@ func (r *Resp) WriteTo(w Writer) error {
 // Create a new untagged response.
 func NewUntaggedResp(fields []interface{}) *Resp {
 	return &Resp{
-		Tag: "*",
+		Tag:    "*",
 		Fields: fields,
 	}
 }
@@ -107,7 +107,7 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 					isStatus = true
 
 					res := &StatusResp{
-						Tag: tag,
+						Tag:  tag,
 						Type: status,
 					}
 

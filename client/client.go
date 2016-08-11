@@ -13,12 +13,12 @@ import (
 
 // An IMAP client.
 type Client struct {
-	conn *imap.Conn
+	conn  *imap.Conn
 	isTLS bool
 
-	handlers []imap.RespHandler
+	handlers       []imap.RespHandler
 	handlersLocker sync.Locker
-	loggedOut chan struct{}
+	loggedOut      chan struct{}
 
 	// The server capabilities.
 	Caps map[string]bool
@@ -48,7 +48,7 @@ type Client struct {
 func (c *Client) read() error {
 	r := c.conn.Reader
 
-	defer (func () {
+	defer (func() {
 		c.handlersLocker.Lock()
 		defer c.handlersLocker.Unlock()
 
@@ -89,7 +89,7 @@ func (c *Client) read() error {
 			}
 
 			h := &imap.RespHandling{
-				Resp: res,
+				Resp:    res,
 				Accepts: make(chan bool),
 			}
 
@@ -147,9 +147,13 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	var hdlr imap.RespHandler
 	var done chan error
-	defer (func () {
-		if hdlr != nil { close(hdlr) }
-		if done != nil { close(done) }
+	defer (func() {
+		if hdlr != nil {
+			close(hdlr)
+		}
+		if done != nil {
+			close(done)
+		}
 	})()
 
 	if res != nil {
@@ -380,10 +384,10 @@ func New(conn net.Conn) (c *Client, err error) {
 	r := imap.NewReader(nil)
 
 	c = &Client{
-		conn: imap.NewConn(conn, r, w),
+		conn:           imap.NewConn(conn, r, w),
 		handlersLocker: &sync.Mutex{},
-		loggedOut: make(chan struct{}),
-		State: imap.NotAuthenticatedState,
+		loggedOut:      make(chan struct{}),
+		State:          imap.NotAuthenticatedState,
 	}
 
 	go c.handleContinuationReqs(continues)

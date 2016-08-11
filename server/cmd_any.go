@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )

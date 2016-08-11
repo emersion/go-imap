@@ -12,8 +12,8 @@ import (
 // See RFC 3501 section 6.3.11
 type Append struct {
 	Mailbox string
-	Flags []string
-	Date time.Time
+	Flags   []string
+	Date    time.Time
 	Message *imap.Literal
 }
 
@@ -38,7 +38,7 @@ func (cmd *Append) Command() *imap.Command {
 	args = append(args, cmd.Message)
 
 	return &imap.Command{
-		Name: imap.Append,
+		Name:      imap.Append,
 		Arguments: args,
 	}
 }

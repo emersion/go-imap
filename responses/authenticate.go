@@ -9,16 +9,16 @@ import (
 
 // An AUTHENTICATE response.
 type Authenticate struct {
-	Mechanism sasl.Client
+	Mechanism       sasl.Client
 	InitialResponse []byte
-	Writer imap.Writer
+	Writer          imap.Writer
 }
 
 func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 	w := r.Writer
 
 	// Cancel auth if an error occurs
-	defer (func () {
+	defer (func() {
 		if err != nil {
 			w.Write([]byte("*\r\n"))
 		}

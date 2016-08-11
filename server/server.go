@@ -85,10 +85,10 @@ func ErrNoStatusResp() error {
 // An IMAP server.
 type Server struct {
 	listener net.Listener
-	conns []Conn
+	conns    []Conn
 
-	commands map[string]HandlerFactory
-	auths map[string]SaslServerFactory
+	commands   map[string]HandlerFactory
+	auths      map[string]SaslServerFactory
 	extensions []Extension
 
 	// TCP address to listen on.
@@ -132,12 +132,12 @@ func New(bkd backend.Backend) *Server {
 	}
 
 	s.commands = map[string]HandlerFactory{
-		imap.Noop: func() Handler { return &Noop{} },
+		imap.Noop:       func() Handler { return &Noop{} },
 		imap.Capability: func() Handler { return &Capability{} },
-		imap.Logout: func() Handler { return &Logout{} },
+		imap.Logout:     func() Handler { return &Logout{} },
 
-		imap.StartTLS: func() Handler { return &StartTLS{} },
-		imap.Login: func() Handler { return &Login{} },
+		imap.StartTLS:     func() Handler { return &StartTLS{} },
+		imap.Login:        func() Handler { return &Login{} },
 		imap.Authenticate: func() Handler { return &Authenticate{} },
 
 		imap.Select: func() Handler { return &Select{} },
@@ -146,12 +146,12 @@ func New(bkd backend.Backend) *Server {
 			hdlr.ReadOnly = true
 			return hdlr
 		},
-		imap.Create: func() Handler { return &Create{} },
-		imap.Delete: func() Handler { return &Delete{} },
-		imap.Rename: func() Handler { return &Rename{} },
-		imap.Subscribe: func() Handler { return &Subscribe{} },
+		imap.Create:      func() Handler { return &Create{} },
+		imap.Delete:      func() Handler { return &Delete{} },
+		imap.Rename:      func() Handler { return &Rename{} },
+		imap.Subscribe:   func() Handler { return &Subscribe{} },
 		imap.Unsubscribe: func() Handler { return &Unsubscribe{} },
-		imap.List: func() Handler { return &List{} },
+		imap.List:        func() Handler { return &List{} },
 		imap.Lsub: func() Handler {
 			hdlr := &List{}
 			hdlr.Subscribed = true
@@ -160,14 +160,14 @@ func New(bkd backend.Backend) *Server {
 		imap.Status: func() Handler { return &Status{} },
 		imap.Append: func() Handler { return &Append{} },
 
-		imap.Check: func() Handler { return &Check{} },
-		imap.Close: func() Handler { return &Close{} },
+		imap.Check:   func() Handler { return &Check{} },
+		imap.Close:   func() Handler { return &Close{} },
 		imap.Expunge: func() Handler { return &Expunge{} },
-		imap.Search: func() Handler { return &Search{} },
-		imap.Fetch: func() Handler { return &Fetch{} },
-		imap.Store: func() Handler { return &Store{} },
-		imap.Copy: func() Handler { return &Copy{} },
-		imap.Uid: func() Handler { return &Uid{} },
+		imap.Search:  func() Handler { return &Search{} },
+		imap.Fetch:   func() Handler { return &Fetch{} },
+		imap.Store:   func() Handler { return &Store{} },
+		imap.Copy:    func() Handler { return &Copy{} },
+		imap.Uid:     func() Handler { return &Uid{} },
 	}
 
 	return s
@@ -282,7 +282,7 @@ func (s *Server) handleConn(conn Conn) error {
 			cmd := &imap.Command{}
 			if err := cmd.Parse(fields); err != nil {
 				res = &imap.StatusResp{
-					Tag: cmd.Tag,
+					Tag:  cmd.Tag,
 					Type: imap.StatusBad,
 					Info: err.Error(),
 				}
@@ -291,7 +291,7 @@ func (s *Server) handleConn(conn Conn) error {
 				res, up, err = s.handleCommand(cmd, conn)
 				if err != nil {
 					res = &imap.StatusResp{
-						Tag: cmd.Tag,
+						Tag:  cmd.Tag,
 						Type: imap.StatusBad,
 						Info: err.Error(),
 					}

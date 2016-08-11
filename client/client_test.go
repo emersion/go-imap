@@ -24,7 +24,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 	defer l.Close()
 
 	done := make(chan error)
-	go (func () {
+	go (func() {
 		c, err := client.Dial(l.Addr().String())
 		if err != nil {
 			done <- err

@@ -11,13 +11,13 @@ import (
 // See RFC 3501 section 6.4.6
 type Store struct {
 	SeqSet *imap.SeqSet
-	Item string
-	Value interface{}
+	Item   string
+	Value  interface{}
 }
 
 func (cmd *Store) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Store,
+		Name:      imap.Store,
 		Arguments: []interface{}{cmd.SeqSet, cmd.Item, cmd.Value},
 	}
 }

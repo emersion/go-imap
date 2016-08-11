@@ -13,8 +13,8 @@ var searchSeqSet2, _ = NewSeqSet("743:938")
 var searchDate1 = time.Date(1997, 11, 21, 0, 0, 0, 0, time.UTC)
 var searchDate2 = time.Date(1984, 11, 5, 0, 0, 0, 0, time.UTC)
 
-var searchCriteriaTests = []struct{
-	fields []interface{}
+var searchCriteriaTests = []struct {
+	fields   []interface{}
 	criteria *SearchCriteria
 }{
 	{
@@ -50,38 +50,38 @@ var searchCriteriaTests = []struct{
 			"UNSEEN",
 		},
 		criteria: &SearchCriteria{
-			SeqSet: searchSeqSet1,
+			SeqSet:   searchSeqSet1,
 			Answered: true,
-			Bcc: "root@nsa.gov",
-			Before: searchDate1,
-			Body: "hey there",
-			Cc: "root@gchq.gov.uk",
-			Deleted: true,
-			Draft: true,
-			Flagged: true,
-			From: "root@protonmail.com",
-			Header: [2]string{"Content-Type", "text/csv"},
-			Keyword: "cc",
-			Larger: 4242,
-			New: true,
-			Not: &SearchCriteria{Old: true, On: searchDate2},
+			Bcc:      "root@nsa.gov",
+			Before:   searchDate1,
+			Body:     "hey there",
+			Cc:       "root@gchq.gov.uk",
+			Deleted:  true,
+			Draft:    true,
+			Flagged:  true,
+			From:     "root@protonmail.com",
+			Header:   [2]string{"Content-Type", "text/csv"},
+			Keyword:  "cc",
+			Larger:   4242,
+			New:      true,
+			Not:      &SearchCriteria{Old: true, On: searchDate2},
 			Or: [2]*SearchCriteria{
 				&SearchCriteria{Recent: true, SentOn: searchDate1},
 				&SearchCriteria{Seen: true, SentBefore: searchDate2},
 			},
-			SentSince: searchDate1,
-			Since: searchDate2,
-			Smaller: 643,
-			Subject: "saucisse royale",
-			Text: "DILLE",
-			To: "cc@dille.cc",
-			Uid: searchSeqSet2,
+			SentSince:  searchDate1,
+			Since:      searchDate2,
+			Smaller:    643,
+			Subject:    "saucisse royale",
+			Text:       "DILLE",
+			To:         "cc@dille.cc",
+			Uid:        searchSeqSet2,
 			Unanswered: true,
-			Undeleted: true,
-			Undraft: true,
-			Unflagged: true,
-			Unkeyword: "microsoft",
-			Unseen: true,
+			Undeleted:  true,
+			Undraft:    true,
+			Unflagged:  true,
+			Unkeyword:  "microsoft",
+			Unseen:     true,
 		},
 	},
 }

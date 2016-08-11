@@ -92,7 +92,7 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, 
 
 	var cmd imap.Commander
 	cmd = &commands.Search{
-		Charset: "UTF-8",
+		Charset:  "UTF-8",
 		Criteria: criteria,
 	}
 	if uid {
@@ -140,7 +140,7 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *i
 	var cmd imap.Commander
 	cmd = &commands.Fetch{
 		SeqSet: seqset,
-		Items: items,
+		Items:  items,
 	}
 	if uid {
 		cmd = &commands.Uid{Cmd: cmd}
@@ -170,7 +170,7 @@ func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan *imap.Mes
 }
 
 func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
-	defer (func () {
+	defer (func() {
 		if ch != nil {
 			close(ch)
 		}
@@ -190,8 +190,8 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 	var cmd imap.Commander
 	cmd = &commands.Store{
 		SeqSet: seqset,
-		Item: item,
-		Value: value,
+		Item:   item,
+		Value:  value,
 	}
 	if uid {
 		cmd = &commands.Uid{Cmd: cmd}
@@ -232,7 +232,7 @@ func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) (err error) {
 
 	var cmd imap.Commander
 	cmd = &commands.Copy{
-		SeqSet: seqset,
+		SeqSet:  seqset,
 		Mailbox: dest,
 	}
 	if uid {

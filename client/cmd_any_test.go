@@ -31,7 +31,7 @@ func TestClient_Capability(t *testing.T) {
 		}
 
 		io.WriteString(c, "* CAPABILITY IMAP4rev1 XTEST\r\n")
-		io.WriteString(c, tag + " OK CAPABILITY completed.\r\n")
+		io.WriteString(c, tag+" OK CAPABILITY completed.\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -51,7 +51,7 @@ func TestClient_Noop(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK NOOP completed\r\n")
+		io.WriteString(c, tag+" OK NOOP completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -72,7 +72,7 @@ func TestClient_Logout(t *testing.T) {
 		}
 
 		io.WriteString(c, "* BYE Client asked to close connection.\r\n")
-		io.WriteString(c, tag + " OK LOGOUT completed.\r\n")
+		io.WriteString(c, tag+" OK LOGOUT completed.\r\n")
 		//c.Close()
 	}
 

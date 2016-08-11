@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	ErrAlreadyLoggedIn = errors.New("Already logged in")
+	ErrAlreadyLoggedIn   = errors.New("Already logged in")
 	ErrTLSAlreadyEnabled = errors.New("TLS is already enabled")
-	ErrLoginDisabled = errors.New("Login is disabled in current state")
+	ErrLoginDisabled     = errors.New("Login is disabled in current state")
 )
 
 // Check if the server supports STARTTLS.
-func  (c *Client) SupportsStartTLS() bool {
+func (c *Client) SupportsStartTLS() bool {
 	return c.Caps[imap.StartTLS]
 }
 
@@ -34,7 +34,7 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 
 	cmd := &commands.StartTLS{}
 
-	err = c.Upgrade(func (conn net.Conn) (net.Conn, error) {
+	err = c.Upgrade(func(conn net.Conn) (net.Conn, error) {
 		status, err := c.execute(cmd, nil)
 		if err != nil {
 			return nil, err
@@ -58,7 +58,7 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 
 // Check if the server supports a given authentication mechanism.
 func (c *Client) SupportsAuth(mech string) bool {
-	return c.Caps["AUTH=" + mech]
+	return c.Caps["AUTH="+mech]
 }
 
 // Indicates a SASL authentication mechanism to the server. If the server
@@ -80,9 +80,9 @@ func (c *Client) Authenticate(auth sasl.Client) (err error) {
 	}
 
 	res := &responses.Authenticate{
-		Mechanism: auth,
+		Mechanism:       auth,
 		InitialResponse: ir,
-		Writer: c.conn.Writer,
+		Writer:          c.conn.Writer,
 	}
 
 	status, err := c.execute(cmd, res)

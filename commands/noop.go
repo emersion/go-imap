@@ -6,7 +6,7 @@ import (
 
 // A NOOP command.
 // See RFC 3501 section 6.1.2
-type Noop struct {}
+type Noop struct{}
 
 func (c *Noop) Command() *imap.Command {
 	return &imap.Command{

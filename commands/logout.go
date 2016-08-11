@@ -6,7 +6,7 @@ import (
 
 // A LOGOUT command.
 // See RFC 3501 section 6.1.3
-type Logout struct {}
+type Logout struct{}
 
 func (c *Logout) Command() *imap.Command {
 	return &imap.Command{

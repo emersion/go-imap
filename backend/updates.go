@@ -43,10 +43,10 @@ type ExpungeUpdate struct {
 
 // Updates contains channels where unilateral backend updates will be sent.
 type Updates struct {
-	Statuses chan *StatusUpdate
+	Statuses  chan *StatusUpdate
 	Mailboxes chan *MailboxUpdate
-	Messages chan *MessageUpdate
-	Expunges chan *ExpungeUpdate
+	Messages  chan *MessageUpdate
+	Expunges  chan *ExpungeUpdate
 }
 
 // Send sends all specified updates. It panics if one of the provided value is
@@ -71,10 +71,10 @@ func (U *Updates) Send(updates ...interface{}) {
 // NewUpdates initializes a new Updates struct.
 func NewUpdates() (up *Updates) {
 	return &Updates{
-		Statuses: make(chan *StatusUpdate),
+		Statuses:  make(chan *StatusUpdate),
 		Mailboxes: make(chan *MailboxUpdate),
-		Messages: make(chan *MessageUpdate),
-		Expunges: make(chan *ExpungeUpdate),
+		Messages:  make(chan *MessageUpdate),
+		Expunges:  make(chan *ExpungeUpdate),
 	}
 }
 

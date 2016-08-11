@@ -12,7 +12,7 @@ import (
 // See RFC 3501 section 6.3.10
 type Status struct {
 	Mailbox string
-	Items []string
+	Items   []string
 }
 
 func (cmd *Status) Command() *imap.Command {
@@ -24,7 +24,7 @@ func (cmd *Status) Command() *imap.Command {
 	}
 
 	return &imap.Command{
-		Name: imap.Status,
+		Name:      imap.Status,
 		Arguments: []interface{}{mailbox, items},
 	}
 }

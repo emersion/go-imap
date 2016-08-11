@@ -1,8 +1,8 @@
 package imap_test
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 
 	"github.com/emersion/go-imap"
 )
@@ -15,8 +15,8 @@ func TestMailboxInfo(t *testing.T) {
 	}
 	info := &imap.MailboxInfo{
 		Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
-		Delimiter: "/",
-		Name: "INBOX",
+		Delimiter:  "/",
+		Name:       "INBOX",
 	}
 
 	testMailboxInfo_Parse(t, fields, info)

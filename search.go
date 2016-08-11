@@ -11,41 +11,41 @@ import (
 // A search criteria.
 // See RFC 3501 section 6.4.4 for a description of each field.
 type SearchCriteria struct {
-	SeqSet *SeqSet
-	Answered bool
-	Bcc string
-	Before time.Time
-	Body string
-	Cc string
-	Deleted bool
-	Draft bool
-	Flagged bool
-	From string
-	Header [2]string
-	Keyword string
-	Larger uint32
-	New bool
-	Not *SearchCriteria
-	Old bool
-	On time.Time
-	Or [2]*SearchCriteria
-	Recent bool
-	Seen bool
+	SeqSet     *SeqSet
+	Answered   bool
+	Bcc        string
+	Before     time.Time
+	Body       string
+	Cc         string
+	Deleted    bool
+	Draft      bool
+	Flagged    bool
+	From       string
+	Header     [2]string
+	Keyword    string
+	Larger     uint32
+	New        bool
+	Not        *SearchCriteria
+	Old        bool
+	On         time.Time
+	Or         [2]*SearchCriteria
+	Recent     bool
+	Seen       bool
 	SentBefore time.Time
-	SentOn time.Time
-	SentSince time.Time
-	Since time.Time
-	Smaller uint32
-	Subject string
-	Text string
-	To string
-	Uid *SeqSet
+	SentOn     time.Time
+	SentSince  time.Time
+	Since      time.Time
+	Smaller    uint32
+	Subject    string
+	Text       string
+	To         string
+	Uid        *SeqSet
 	Unanswered bool
-	Undeleted bool
-	Undraft bool
-	Unflagged bool
-	Unkeyword string
-	Unseen bool
+	Undeleted  bool
+	Undraft    bool
+	Unflagged  bool
+	Unkeyword  string
+	Unseen     bool
 }
 
 // Parse search criteria from fields.
