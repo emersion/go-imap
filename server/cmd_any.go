@@ -11,8 +11,8 @@ type Capability struct {
 	commands.Capability
 }
 
-func (cmd *Capability) Handle(conn *Conn) error {
-	res := &responses.Capability{Caps: conn.getCaps()}
+func (cmd *Capability) Handle(conn Conn) error {
+	res := &responses.Capability{Caps: conn.Capabilities()}
 	return conn.WriteResp(res)
 }
 
@@ -20,10 +20,11 @@ type Noop struct {
 	commands.Noop
 }
 
-func (cmd *Noop) Handle(conn *Conn) error {
-	if conn.Mailbox != nil {
+func (cmd *Noop) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox != nil {
 		// If a mailbox is selected, NOOP can be used to poll for server updates
-		if mbox, ok := conn.Mailbox.(backend.UpdaterMailbox); ok {
+		if mbox, ok := ctx.Mailbox.(backend.UpdaterMailbox); ok {
 			return mbox.Poll()
 		}
 	}
@@ -35,7 +36,7 @@ type Logout struct {
 	commands.Logout
 }
 
-func (cmd *Logout) Handle(conn *Conn) error {
+func (cmd *Logout) Handle(conn Conn) error {
 	res := &common.StatusResp{
 		Type: common.StatusBye,
 		Info: "Closing connection",
@@ -46,6 +47,6 @@ func (cmd *Logout) Handle(conn *Conn) error {
 	}
 
 	// Request to close the connection
-	conn.State = common.LogoutState
+	conn.Context().State = common.LogoutState
 	return nil
 }

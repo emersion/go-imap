@@ -18,12 +18,13 @@ type Select struct {
 	commands.Select
 }
 
-func (cmd *Select) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Select) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
@@ -39,8 +40,8 @@ func (cmd *Select) Handle(conn *Conn) error {
 		return err
 	}
 
-	conn.Mailbox = mbox
-	conn.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
+	ctx.Mailbox = mbox
+	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	res := &responses.Select{Mailbox: status}
 	if err := conn.WriteResp(res); err != nil {
@@ -48,7 +49,7 @@ func (cmd *Select) Handle(conn *Conn) error {
 	}
 
 	code := common.CodeReadWrite
-	if conn.MailboxReadOnly {
+	if ctx.MailboxReadOnly {
 		code = common.CodeReadOnly
 	}
 	return ErrStatusResp(&common.StatusResp{
@@ -61,48 +62,52 @@ type Create struct {
 	commands.Create
 }
 
-func (cmd *Create) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Create) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	return conn.User.CreateMailbox(cmd.Mailbox)
+	return ctx.User.CreateMailbox(cmd.Mailbox)
 }
 
 type Delete struct {
 	commands.Delete
 }
 
-func (cmd *Delete) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Delete) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	return conn.User.DeleteMailbox(cmd.Mailbox)
+	return ctx.User.DeleteMailbox(cmd.Mailbox)
 }
 
 type Rename struct {
 	commands.Rename
 }
 
-func (cmd *Rename) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Rename) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	return conn.User.RenameMailbox(cmd.Existing, cmd.New)
+	return ctx.User.RenameMailbox(cmd.Existing, cmd.New)
 }
 
 type Subscribe struct {
 	commands.Subscribe
 }
 
-func (cmd *Subscribe) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Subscribe) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
@@ -114,12 +119,13 @@ type Unsubscribe struct {
 	commands.Unsubscribe
 }
 
-func (cmd *Unsubscribe) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Unsubscribe) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
@@ -131,8 +137,9 @@ type List struct {
 	commands.List
 }
 
-func (cmd *List) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *List) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
@@ -146,7 +153,7 @@ func (cmd *List) Handle(conn *Conn) error {
 		close(done)
 	})()
 
-	mailboxes, err := conn.User.ListMailboxes(cmd.Subscribed)
+	mailboxes, err := ctx.User.ListMailboxes(cmd.Subscribed)
 	if err != nil {
 		close(ch)
 		return err
@@ -187,12 +194,13 @@ type Status struct {
 	commands.Status
 }
 
-func (cmd *Status) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Status) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
@@ -210,12 +218,13 @@ type Append struct {
 	commands.Append
 }
 
-func (cmd *Append) Handle(conn *Conn) error {
-	if conn.User == nil {
+func (cmd *Append) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := conn.User.GetMailbox(cmd.Mailbox)
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		// TODO: add [TRYCREATE] to the NO response
 		return err
@@ -227,7 +236,7 @@ func (cmd *Append) Handle(conn *Conn) error {
 
 	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
 	// Do this only if the backend doesn't send updates itself
-	if conn.Server.Updates == nil && conn.Mailbox != nil && conn.Mailbox.Name() == mbox.Name() {
+	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == mbox.Name() {
 		status, err := mbox.Status([]string{common.MailboxMessages})
 		if err != nil {
 			return err

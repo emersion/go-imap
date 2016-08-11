@@ -21,14 +21,15 @@ type StartTLS struct {
 	commands.StartTLS
 }
 
-func (cmd *StartTLS) Handle(conn *Conn) error {
-	if conn.State != common.NotAuthenticatedState {
+func (cmd *StartTLS) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.State != common.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
 	if conn.IsTLS() {
 		return errors.New("TLS is already enabled")
 	}
-	if conn.Server.TLSConfig == nil {
+	if conn.Server().TLSConfig == nil {
 		return errors.New("TLS support not enabled")
 	}
 
@@ -40,51 +41,62 @@ func (cmd *StartTLS) Handle(conn *Conn) error {
 	})
 }
 
-func (cmd *StartTLS) Upgrade(conn *Conn) error {
-	tlsConfig := conn.Server.TLSConfig
+func (cmd *StartTLS) Upgrade(conn Conn) error {
+	tlsConfig := conn.Server().TLSConfig
 
+	var tlsConn *tls.Conn
 	err := conn.Upgrade(func (conn net.Conn) (net.Conn, error) {
-		upgraded := tls.Server(conn, tlsConfig)
-		err := upgraded.Handshake()
-		return upgraded, err
+		tlsConn = tls.Server(conn, tlsConfig)
+		err := tlsConn.Handshake()
+		return tlsConn, err
 	})
 	if err != nil {
 		return err
 	}
 
-	conn.isTLS = true
+	conn.conn().tlsConn = tlsConn
 
-	res := &responses.Capability{Caps: conn.getCaps()}
+	res := &responses.Capability{Caps: conn.Capabilities()}
 	return conn.WriteResp(res)
 }
 
-func afterAuthStatus(conn *Conn) error {
+func afterAuthStatus(conn Conn) error {
 	return ErrStatusResp(&common.StatusResp{
 		Type: common.StatusOk,
 		Code: common.CodeCapability,
-		Arguments: common.FormatStringList(conn.getCaps()),
+		Arguments: common.FormatStringList(conn.Capabilities()),
 	})
+}
+
+func canAuth(conn Conn) bool {
+	for _, cap := range conn.Capabilities() {
+		if cap == "AUTH=PLAIN" {
+			return true
+		}
+	}
+	return false
 }
 
 type Login struct {
 	commands.Login
 }
 
-func (cmd *Login) Handle(conn *Conn) error {
-	if conn.State != common.NotAuthenticatedState {
+func (cmd *Login) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.State != common.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
-	if !conn.CanAuth() {
+	if !canAuth(conn) {
 		return ErrAuthDisabled
 	}
 
-	user, err := conn.Server.Backend.Login(cmd.Username, cmd.Password)
+	user, err := conn.Server().Backend.Login(cmd.Username, cmd.Password)
 	if err != nil {
 		return err
 	}
 
-	conn.State = common.AuthenticatedState
-	conn.User = user
+	ctx.State = common.AuthenticatedState
+	ctx.User = user
 	return afterAuthStatus(conn)
 }
 
@@ -92,20 +104,22 @@ type Authenticate struct {
 	commands.Authenticate
 }
 
-func (cmd *Authenticate) Handle(conn *Conn) error {
-	if conn.State != common.NotAuthenticatedState {
+func (cmd *Authenticate) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.State != common.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
-	if !conn.CanAuth() {
+	if !canAuth(conn) {
 		return ErrAuthDisabled
 	}
 
 	mechanisms := map[string]sasl.Server{}
-	for name, newSasl := range conn.Server.auths {
+	for name, newSasl := range conn.Server().auths {
 		mechanisms[name] = newSasl(conn)
 	}
 
-	err := cmd.Authenticate.Handle(mechanisms, conn.Reader, conn.Writer)
+	// TODO: do not use Reader and Writer here
+	err := cmd.Authenticate.Handle(mechanisms, conn.conn().Reader, conn.conn().Writer)
 	if err != nil {
 		return err
 	}

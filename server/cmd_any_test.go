@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/emersion/go-imap/common"
 	"github.com/emersion/go-imap/server"
 )
 
@@ -59,6 +60,36 @@ func TestLogout(t *testing.T) {
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "* BYE ") {
 		t.Fatal("Bad BYE response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
+type xnoop struct {}
+
+func (ext *xnoop) Capabilities(common.ConnState) []string {
+	return []string{"XNOOP"}
+}
+
+func (ext *xnoop) Command(string) server.HandlerFactory {
+	return nil
+}
+
+func TestServer_Enable(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer c.Close()
+	defer s.Close()
+
+	s.Enable(&xnoop{})
+
+	io.WriteString(c, "a001 CAPABILITY\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 XNOOP AUTH=PLAIN" {
+		t.Fatal("Bad capability:", scanner.Text())
 	}
 
 	scanner.Scan()
