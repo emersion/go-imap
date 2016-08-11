@@ -4,14 +4,14 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A FETCH command.
 // See RFC 3501 section 6.4.5
 type Fetch struct {
 	SeqSet *imap.SeqSet
-	Items []string
+	Items  []string
 }
 
 func (cmd *Fetch) Command() *imap.Command {
@@ -21,7 +21,7 @@ func (cmd *Fetch) Command() *imap.Command {
 	}
 
 	return &imap.Command{
-		Name: imap.Fetch,
+		Name:      imap.Fetch,
 		Arguments: []interface{}{cmd.SeqSet, items},
 	}
 }

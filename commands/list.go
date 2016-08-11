@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
@@ -12,7 +12,7 @@ import (
 // See RFC 3501 section 6.3.8
 type List struct {
 	Reference string
-	Mailbox string
+	Mailbox   string
 
 	Subscribed bool
 }
@@ -27,7 +27,7 @@ func (cmd *List) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: name,
+		Name:      name,
 		Arguments: []interface{}{ref, mailbox},
 	}
 }

@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"bufio"
 	"encoding/base64"
 	"errors"
+	"io"
 	"strings"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-sasl"
 )
 
@@ -17,7 +19,7 @@ type Authenticate struct {
 
 func (cmd *Authenticate) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Authenticate,
+		Name:      imap.Authenticate,
 		Arguments: []interface{}{cmd.Mechanism},
 	}
 }
@@ -36,12 +38,14 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reader, w *imap.Writer) (err error) {
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r io.Reader, w imap.Writer) (err error) {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
 		err = errors.New("Unsupported mechanism")
 		return
 	}
+
+	scanner := bufio.NewScanner(r)
 
 	var response []byte
 	for {
@@ -57,13 +61,13 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r *imap.Reade
 		if err = cont.WriteTo(w); err != nil {
 			return
 		}
-		if err = w.Flush(); err != nil {
+
+		scanner.Scan()
+		if err = scanner.Err(); err != nil {
 			return
 		}
 
-		if encoded, err = r.ReadInfo(); err != nil {
-			return
-		}
+		encoded = scanner.Text()
 		if encoded != "" {
 			response, err = base64.StdEncoding.DecodeString(encoded)
 			if err != nil {

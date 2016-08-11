@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
@@ -43,7 +43,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 		var key string
 		for i, f := range items {
-			if i % 2 == 0 {
+			if i%2 == 0 {
 				var ok bool
 				if key, ok = f.(string); !ok {
 					return errors.New("Key is not a string")
@@ -71,7 +71,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 	return nil
 }
 
-func (r *Status) WriteTo(w *imap.Writer) error {
+func (r *Status) WriteTo(w imap.Writer) error {
 	mbox := r.Mailbox
 
 	var fields []interface{}

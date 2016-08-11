@@ -1,8 +1,8 @@
-package common
+package imap
 
 // A response that can be either accepted or rejected by a handler.
 type RespHandling struct {
-	Resp interface{}
+	Resp    interface{}
 	Accepts chan bool
 }
 

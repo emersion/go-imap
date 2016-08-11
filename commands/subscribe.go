@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
@@ -17,7 +17,7 @@ func (cmd *Subscribe) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: imap.Subscribe,
+		Name:      imap.Subscribe,
 		Arguments: []interface{}{mailbox},
 	}
 }
@@ -49,7 +49,7 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: imap.Unsubscribe,
+		Name:      imap.Unsubscribe,
 		Arguments: []interface{}{mailbox},
 	}
 }

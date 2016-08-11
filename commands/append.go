@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
@@ -12,8 +12,8 @@ import (
 // See RFC 3501 section 6.3.11
 type Append struct {
 	Mailbox string
-	Flags []string
-	Date *time.Time
+	Flags   []string
+	Date    time.Time
 	Message *imap.Literal
 }
 
@@ -31,14 +31,14 @@ func (cmd *Append) Command() *imap.Command {
 		args = append(args, flags)
 	}
 
-	if cmd.Date != nil {
+	if !cmd.Date.IsZero() {
 		args = append(args, cmd.Date)
 	}
 
 	args = append(args, cmd.Message)
 
 	return &imap.Command{
-		Name: imap.Append,
+		Name:      imap.Append,
 		Arguments: args,
 	}
 }
@@ -81,7 +81,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 			if !ok {
 				return errors.New("Date must be a string")
 			}
-			if cmd.Date, err = imap.ParseDate(date); err != nil {
+			if cmd.Date, err = imap.ParseDateTime(date); err != nil {
 				return err
 			}
 		}

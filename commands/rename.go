@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
@@ -11,7 +11,7 @@ import (
 // See RFC 3501 section 6.3.5
 type Rename struct {
 	Existing string
-	New string
+	New      string
 }
 
 func (cmd *Rename) Command() *imap.Command {
@@ -19,7 +19,7 @@ func (cmd *Rename) Command() *imap.Command {
 	newName, _ := utf7.Encoder.String(cmd.New)
 
 	return &imap.Command{
-		Name: imap.Rename,
+		Name:      imap.Rename,
 		Arguments: []interface{}{existingName, newName},
 	}
 }

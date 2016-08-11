@@ -12,7 +12,7 @@ var Encoder = &encoding.Encoder{
 	Transformer: &encoder{},
 }
 
-type encoder struct {}
+type encoder struct{}
 
 func (e *encoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
 	for i := 0; i < len(src); {
@@ -43,7 +43,7 @@ func (e *encoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 			b = encode(src[start:i])
 		}
 
-		if nDst + len(b) > len(dst) {
+		if nDst+len(b) > len(dst) {
 			err = transform.ErrShortDst
 			return
 		}

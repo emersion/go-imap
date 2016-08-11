@@ -26,14 +26,14 @@ func TestSelect_Ok(t *testing.T) {
 	io.WriteString(c, "a001 SELECT INBOX\r\n")
 
 	got := map[string]bool{
-		"OK": false,
-		"FLAGS": false,
-		"EXISTS": false,
-		"RECENT": false,
-		"UNSEEN": false,
+		"OK":             false,
+		"FLAGS":          false,
+		"EXISTS":         false,
+		"RECENT":         false,
+		"UNSEEN":         false,
 		"PERMANENTFLAGS": false,
-		"UIDNEXT": false,
-		"UIDVALIDITY": false,
+		"UIDNEXT":        false,
+		"UIDVALIDITY":    false,
 	}
 
 	for scanner.Scan() {

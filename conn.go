@@ -1,9 +1,9 @@
-package common
+package imap
 
 import (
 	"bufio"
-	"net"
 	"io"
+	"net"
 	"os"
 )
 
@@ -29,7 +29,7 @@ const (
 	// In a selected state, a mailbox has been selected to access.
 	// This state is entered when a mailbox has been successfully
 	// selected.
-	SelectedState = AuthenticatedState + 1 << 2
+	SelectedState = AuthenticatedState + 1<<2
 
 	// In the logout state, the connection is being terminated. This
 	// state can be entered as a result of a client request (via the
@@ -51,7 +51,7 @@ type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 type Conn struct {
 	net.Conn
 	*Reader
-	*Writer
+	Writer
 
 	waits chan struct{}
 
@@ -69,16 +69,23 @@ func (c *Conn) init() {
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
-	c.Writer.writer = bufio.NewWriter(w)
+	c.writer().Writer = bufio.NewWriter(w)
+}
+
+func (c *Conn) Write(b []byte) (n int, err error) {
+	return c.Writer.Write(b)
 }
 
 // Write any buffered data to the underlying connection.
 func (c *Conn) Flush() (err error) {
-	if err = c.Writer.Flush(); err != nil {
+	if err = c.writer().Flush(); err != nil {
 		return
 	}
 
-	if f, ok := c.Conn.(Flusher); ok {
+	f, ok := c.Conn.(interface {
+		Flush() error
+	})
+	if ok {
 		if err = f.Flush(); err != nil {
 			return
 		}
@@ -118,7 +125,7 @@ func (c *Conn) SetDebug(debug bool) {
 }
 
 // Create a new IMAP connection.
-func NewConn(conn net.Conn, r *Reader, w *Writer) *Conn {
+func NewConn(conn net.Conn, r *Reader, w Writer) *Conn {
 	c := &Conn{Conn: conn, Reader: r, Writer: w}
 
 	c.init()

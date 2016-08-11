@@ -1,34 +1,21 @@
-package common_test
+package imap
 
 import (
 	"bytes"
 	"testing"
 	"time"
-
-	"github.com/emersion/go-imap/common"
 )
 
-func newWriter() (w *common.Writer, b *bytes.Buffer) {
+func newWriter() (w *writer, b *bytes.Buffer) {
 	b = &bytes.Buffer{}
-	w = common.NewWriter(b)
+	w = NewWriter(b).writer()
 	return
-}
-
-func TestWriter_WriteSp(t *testing.T) {
-	w, b := newWriter()
-
-	if _, err := w.WriteSp(); err != nil {
-		t.Error(err)
-	}
-	if b.String() != " " {
-		t.Error("Not a separator")
-	}
 }
 
 func TestWriter_WriteCrlf(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteCrlf(); err != nil {
+	if err := w.writeCrlf(); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\r\n" {
@@ -36,10 +23,10 @@ func TestWriter_WriteCrlf(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteNil(t *testing.T) {
+func TestWriter_WriteField_Nil(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteNil(); err != nil {
+	if err := w.writeField(nil); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "NIL" {
@@ -47,10 +34,10 @@ func TestWriter_WriteNil(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteNumber(t *testing.T) {
+func TestWriter_WriteField_Number(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteNumber(42); err != nil {
+	if err := w.writeField(uint32(42)); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "42" {
@@ -58,10 +45,10 @@ func TestWriter_WriteNumber(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteString_Atom(t *testing.T) {
+func TestWriter_WriteField_Atom(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString("BODY[]"); err != nil {
+	if err := w.writeField("BODY[]"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "BODY[]" {
@@ -72,7 +59,7 @@ func TestWriter_WriteString_Atom(t *testing.T) {
 func TestWriter_WriteString_Quoted(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString("I love potatoes!"); err != nil {
+	if err := w.writeField("I love potatoes!"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"I love potatoes!\"" {
@@ -83,7 +70,7 @@ func TestWriter_WriteString_Quoted(t *testing.T) {
 func TestWriter_WriteString_Quoted_WithSpecials(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString("I love \"1984\"!"); err != nil {
+	if err := w.writeField("I love \"1984\"!"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"I love \\\"1984\\\"!\"" {
@@ -91,10 +78,21 @@ func TestWriter_WriteString_Quoted_WithSpecials(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteString_8bit(t *testing.T) {
+func TestWriter_WriteField_ForcedQuoted(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString("☺"); err != nil {
+	if err := w.writeField(Quoted("dille")); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "\"dille\"" {
+		t.Error("Not the expected atom:", b.String())
+	}
+}
+
+func TestWriter_WriteField_8bitString(t *testing.T) {
+	w, b := newWriter()
+
+	if err := w.writeField("☺"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "{3}\r\n☺" {
@@ -102,10 +100,10 @@ func TestWriter_WriteString_8bit(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteString_Nil(t *testing.T) {
+func TestWriter_WriteField_NilString(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString("NIL"); err != nil {
+	if err := w.writeField("NIL"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"NIL\"" {
@@ -113,10 +111,10 @@ func TestWriter_WriteString_Nil(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteString_Empty(t *testing.T) {
+func TestWriter_WriteField_EmptyString(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteString(""); err != nil {
+	if err := w.writeField(""); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"\"" {
@@ -124,11 +122,11 @@ func TestWriter_WriteString_Empty(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteDate(t *testing.T) {
+func TestWriter_WriteField_DateTime(t *testing.T) {
 	w, b := newWriter()
 
-	date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-	if _, err := w.WriteDate(&date); err != nil {
+	dt := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+	if err := w.writeField(dt); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"10-Nov-2009 23:00:00 +0000\"" {
@@ -136,10 +134,11 @@ func TestWriter_WriteDate(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteDate_Nil(t *testing.T) {
+func TestWriter_WriteField_ZeroDateTime(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteDate(nil); err != nil {
+	dt := time.Time{}
+	if err := w.writeField(dt); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "NIL" {
@@ -150,7 +149,7 @@ func TestWriter_WriteDate_Nil(t *testing.T) {
 func TestWriter_WriteFields(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteFields([]interface{}{"hey", 42}); err != nil {
+	if err := w.writeFields([]interface{}{"hey", 42}); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "hey 42" {
@@ -158,10 +157,10 @@ func TestWriter_WriteFields(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteList_Simple(t *testing.T) {
+func TestWriter_WriteField_SimpleList(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteList([]interface{}{"hey", 42}); err != nil {
+	if err := w.writeField([]interface{}{"hey", 42}); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "(hey 42)" {
@@ -169,7 +168,7 @@ func TestWriter_WriteList_Simple(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteList_Nested(t *testing.T) {
+func TestWriter_WriteField_NestedList(t *testing.T) {
 	w, b := newWriter()
 
 	list := []interface{}{
@@ -181,7 +180,7 @@ func TestWriter_WriteList_Nested(t *testing.T) {
 		22,
 	}
 
-	if _, err := w.WriteList(list); err != nil {
+	if err := w.writeField(list); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "(toplevel (nested 0) 22)" {
@@ -189,12 +188,12 @@ func TestWriter_WriteList_Nested(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteLiteral(t *testing.T) {
+func TestWriter_WriteField_Literal(t *testing.T) {
 	w, b := newWriter()
 
-	literal := common.NewLiteral([]byte("hello world"))
+	literal := NewLiteral([]byte("hello world"))
 
-	if _, err := w.WriteLiteral(literal); err != nil {
+	if err := w.writeField(literal); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "{11}\r\nhello world" {
@@ -205,7 +204,7 @@ func TestWriter_WriteLiteral(t *testing.T) {
 func TestWriter_WriteRespCode_NoArgs(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteRespCode("READ-ONLY", nil); err != nil {
+	if err := w.writeRespCode("READ-ONLY", nil); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "[READ-ONLY]" {
@@ -217,7 +216,7 @@ func TestWriter_WriteRespCode_WithArgs(t *testing.T) {
 	w, b := newWriter()
 
 	args := []interface{}{"IMAP4rev1", "STARTTLS", "LOGINDISABLED"}
-	if _, err := w.WriteRespCode("CAPABILITY", args); err != nil {
+	if err := w.writeRespCode("CAPABILITY", args); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "[CAPABILITY IMAP4rev1 STARTTLS LOGINDISABLED]" {
@@ -225,13 +224,13 @@ func TestWriter_WriteRespCode_WithArgs(t *testing.T) {
 	}
 }
 
-func TestWriter_WriteInfo(t *testing.T) {
+func TestWriter_WriteLine(t *testing.T) {
 	w, b := newWriter()
 
-	if _, err := w.WriteInfo("NOOP completed"); err != nil {
+	if err := w.writeLine("*", "OK"); err != nil {
 		t.Error(err)
 	}
-	if b.String() != "NOOP completed\r\n" {
-		t.Error("Not the expected info")
+	if b.String() != "* OK\r\n" {
+		t.Error("Not the expected line:", b.String())
 	}
 }

@@ -1,7 +1,7 @@
 package responses
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // An EXPUNGE response.
@@ -30,7 +30,7 @@ func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *Expunge) WriteTo(w *imap.Writer) error {
+func (r *Expunge) WriteTo(w imap.Writer) error {
 	for seqNum := range r.SeqNums {
 		res := imap.NewUntaggedResp([]interface{}{seqNum, imap.Expunge})
 

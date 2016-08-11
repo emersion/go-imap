@@ -1,4 +1,4 @@
-package common
+package imap
 
 import (
 	"errors"
@@ -41,17 +41,17 @@ const (
 
 // Status response codes defined in RFC 3501 section 7.1.
 const (
-	CodeAlert = "ALERT"
-	CodeBadCharset = "BADCHARSET"
-	CodeCapability = "CAPABILITY"
-	CodeParse = "PARSE"
+	CodeAlert          = "ALERT"
+	CodeBadCharset     = "BADCHARSET"
+	CodeCapability     = "CAPABILITY"
+	CodeParse          = "PARSE"
 	CodePermanentFlags = "PERMANENTFLAGS"
-	CodeReadOnly = "READ-ONLY"
-	CodeReadWrite = "READ-WRITE"
-	CodeTryCreate = "TRYCREATE"
-	CodeUidNext = "UIDNEXT"
-	CodeUidValidity = "UIDVALIDITY"
-	CodeUnseen = "UNSEEN"
+	CodeReadOnly       = "READ-ONLY"
+	CodeReadWrite      = "READ-WRITE"
+	CodeTryCreate      = "TRYCREATE"
+	CodeUidNext        = "UIDNEXT"
+	CodeUidValidity    = "UIDVALIDITY"
+	CodeUnseen         = "UNSEEN"
 )
 
 // A status response.
@@ -79,7 +79,7 @@ type StatusResp struct {
 func (r *StatusResp) Err() error {
 	if r == nil {
 		// No status response, connection closed before we get one
-		return errors.New("Connection closed during command execution")
+		return errors.New("imap: connection closed during command execution")
 	}
 
 	if r.Type == StatusNo || r.Type == StatusBad {
@@ -88,30 +88,35 @@ func (r *StatusResp) Err() error {
 	return nil
 }
 
-func (r *StatusResp) WriteTo(w *Writer) (err error) {
+func (r *StatusResp) WriteTo(w Writer) error {
+	ww := w.writer()
+
 	tag := r.Tag
 	if tag == "" {
 		tag = "*"
 	}
 
-	if _, err = w.WriteFields([]interface{}{tag, string(r.Type)}); err != nil {
-		return
+	if err := ww.writeFields([]interface{}{tag, string(r.Type)}); err != nil {
+		return err
 	}
 
-	if _, err = w.WriteSp(); err != nil {
-		return
+	if err := ww.writeString(string(sp)); err != nil {
+		return err
 	}
 
 	if r.Code != "" {
-		if _, err = w.WriteRespCode(r.Code, r.Arguments); err != nil {
-			return
+		if err := ww.writeRespCode(r.Code, r.Arguments); err != nil {
+			return err
 		}
 
-		if _, err = w.WriteSp(); err != nil {
-			return
+		if err := ww.writeString(string(sp)); err != nil {
+			return err
 		}
 	}
 
-	_, err = w.WriteInfo(r.Info)
-	return
+	if err := ww.writeString(r.Info); err != nil {
+		return err
+	}
+
+	return ww.writeCrlf()
 }

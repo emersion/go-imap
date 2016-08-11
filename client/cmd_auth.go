@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -24,7 +24,7 @@ func (c *Client) Select(name string, readOnly bool) (mbox *imap.MailboxStatus, e
 	mbox = &imap.MailboxStatus{Name: name}
 
 	cmd := &commands.Select{
-		Mailbox: name,
+		Mailbox:  name,
 		ReadOnly: readOnly,
 	}
 	res := &responses.Select{
@@ -99,7 +99,7 @@ func (c *Client) Rename(existingName, newName string) (err error) {
 
 	cmd := &commands.Rename{
 		Existing: existingName,
-		New: newName,
+		New:      newName,
 	}
 
 	status, err := c.execute(cmd, nil)
@@ -169,7 +169,7 @@ func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 
 	cmd := &commands.List{
 		Reference: ref,
-		Mailbox: name,
+		Mailbox:   name,
 	}
 	res := &responses.List{Mailboxes: ch}
 
@@ -193,12 +193,12 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) (err error) {
 	}
 
 	cmd := &commands.List{
-		Reference: ref,
-		Mailbox: name,
+		Reference:  ref,
+		Mailbox:    name,
 		Subscribed: true,
 	}
 	res := &responses.List{
-		Mailboxes: ch,
+		Mailboxes:  ch,
 		Subscribed: true,
 	}
 
@@ -225,7 +225,7 @@ func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, 
 
 	cmd := &commands.Status{
 		Mailbox: name,
-		Items: items,
+		Items:   items,
 	}
 	res := &responses.Status{
 		Mailbox: mbox,
@@ -244,7 +244,7 @@ func (c *Client) Status(name string, items []string) (mbox *imap.MailboxStatus, 
 // destination mailbox. This argument SHOULD be in the format of an RFC 2822
 // message.
 // flags and date are optional arguments and can be set to nil.
-func (c *Client) Append(mbox string, flags []string, date *time.Time, msg *imap.Literal) (err error) {
+func (c *Client) Append(mbox string, flags []string, date time.Time, msg *imap.Literal) (err error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		err = ErrNotLoggedIn
 		return
@@ -252,8 +252,8 @@ func (c *Client) Append(mbox string, flags []string, date *time.Time, msg *imap.
 
 	cmd := &commands.Append{
 		Mailbox: mbox,
-		Flags: flags,
-		Date: date,
+		Flags:   flags,
+		Date:    date,
 		Message: msg,
 	}
 

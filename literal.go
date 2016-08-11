@@ -1,4 +1,4 @@
-package common
+package imap
 
 // A literal.
 type Literal struct {

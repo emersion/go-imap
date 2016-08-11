@@ -1,14 +1,14 @@
-package common_test
+package imap_test
 
 import (
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestRespHandling_Accept(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &common.RespHandling{
+	hdlr := &imap.RespHandling{
 		Accepts: ch,
 	}
 
@@ -22,7 +22,7 @@ func TestRespHandling_Accept(t *testing.T) {
 
 func TestRespHandling_Reject(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &common.RespHandling{
+	hdlr := &imap.RespHandling{
 		Accepts: ch,
 	}
 
@@ -36,9 +36,9 @@ func TestRespHandling_Reject(t *testing.T) {
 
 func TestRespHandling_AcceptNamedResp_Matching(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &common.RespHandling{
-		Resp: &common.Resp{
-			Tag: "*",
+	hdlr := &imap.RespHandling{
+		Resp: &imap.Resp{
+			Tag:    "*",
 			Fields: []interface{}{"SEARCH", "42"},
 		},
 		Accepts: ch,
@@ -63,9 +63,9 @@ func TestRespHandling_AcceptNamedResp_Matching(t *testing.T) {
 
 func TestRespHandling_AcceptNamedResp_NotMatching(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &common.RespHandling{
-		Resp: &common.Resp{
-			Tag: "*",
+	hdlr := &imap.RespHandling{
+		Resp: &imap.Resp{
+			Tag:    "*",
 			Fields: []interface{}{"26", "EXISTS"},
 		},
 		Accepts: ch,

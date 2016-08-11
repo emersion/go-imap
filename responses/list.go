@@ -1,14 +1,14 @@
 package responses
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A LIST response.
 // If Subscribed is set to true, LSUB will be used instead.
 // See RFC 3501 section 7.2.2
 type List struct {
-	Mailboxes chan *imap.MailboxInfo
+	Mailboxes  chan *imap.MailboxInfo
 	Subscribed bool
 }
 
@@ -40,7 +40,7 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *List) WriteTo(w *imap.Writer) (err error) {
+func (r *List) WriteTo(w imap.Writer) (err error) {
 	name := r.Name()
 
 	for mbox := range r.Mailboxes {

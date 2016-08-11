@@ -1,23 +1,13 @@
 package responses
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A CAPABILITY response.
 // See RFC 3501 section 7.2.1
 type Capability struct {
 	Caps []string
-}
-
-func (r *Capability) WriteTo(w *imap.Writer) error {
-	fields := []interface{}{imap.Capability}
-	for _, cap := range r.Caps {
-		fields = append(fields, cap)
-	}
-
-	res := &imap.Resp{Fields: fields}
-	return res.WriteTo(w)
 }
 
 func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
@@ -36,4 +26,14 @@ func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
 	}
 
 	return
+}
+
+func (r *Capability) WriteTo(w imap.Writer) error {
+	fields := []interface{}{imap.Capability}
+	for _, cap := range r.Caps {
+		fields = append(fields, cap)
+	}
+
+	res := &imap.Resp{Fields: fields}
+	return res.WriteTo(w)
 }

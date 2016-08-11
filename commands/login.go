@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A LOGIN command.
@@ -15,7 +15,7 @@ type Login struct {
 
 func (cmd *Login) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Login,
+		Name:      imap.Login,
 		Arguments: []interface{}{cmd.Username, cmd.Password},
 	}
 }

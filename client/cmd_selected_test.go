@@ -1,18 +1,18 @@
 package client_test
 
 import (
-	"io"
 	"fmt"
+	"io"
 	"net"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Check(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
 		err = c.Check()
 		return
@@ -26,7 +26,7 @@ func TestClient_Check(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CHECK completed\r\n")
+		io.WriteString(c, tag+" OK CHECK completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -34,15 +34,15 @@ func TestClient_Check(t *testing.T) {
 
 func TestClient_Close(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
-		c.Mailbox = &common.MailboxStatus{Name: "INBOX"}
+		c.State = imap.SelectedState
+		c.Mailbox = &imap.MailboxStatus{Name: "INBOX"}
 
 		err = c.Close()
 		if err != nil {
 			return
 		}
 
-		if c.State != common.AuthenticatedState {
+		if c.State != imap.AuthenticatedState {
 			return fmt.Errorf("Bad client state: %v", c.State)
 		}
 		if c.Mailbox != nil {
@@ -59,7 +59,7 @@ func TestClient_Close(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CLOSE completed\r\n")
+		io.WriteString(c, tag+" OK CLOSE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -67,7 +67,7 @@ func TestClient_Close(t *testing.T) {
 
 func TestClient_Expunge(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
 		expunged := make(chan uint32, 4)
 		err = c.Expunge(expunged)
@@ -99,7 +99,7 @@ func TestClient_Expunge(t *testing.T) {
 		io.WriteString(c, "* 3 EXPUNGE\r\n")
 		io.WriteString(c, "* 5 EXPUNGE\r\n")
 		io.WriteString(c, "* 8 EXPUNGE\r\n")
-		io.WriteString(c, tag + " OK EXPUNGE completed\r\n")
+		io.WriteString(c, tag+" OK EXPUNGE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -107,14 +107,14 @@ func TestClient_Expunge(t *testing.T) {
 
 func TestClient_Search(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		date, _ := common.ParseSearchDate("1-Feb-1994")
-		criteria := &common.SearchCriteria{
+		date, _ := imap.ParseDate("1-Feb-1994")
+		criteria := &imap.SearchCriteria{
 			Deleted: true,
-			From: "Smith",
-			Since: date,
-			Not: &common.SearchCriteria{To: "Pauline"},
+			From:    "Smith",
+			Since:   date,
+			Not:     &imap.SearchCriteria{To: "Pauline"},
 		}
 
 		results, err := c.Search(criteria)
@@ -138,7 +138,7 @@ func TestClient_Search(t *testing.T) {
 		}
 
 		io.WriteString(c, "* SEARCH 2 84 882\r\n")
-		io.WriteString(c, tag + " OK SEARCH completed\r\n")
+		io.WriteString(c, tag+" OK SEARCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -146,9 +146,9 @@ func TestClient_Search(t *testing.T) {
 
 func TestClient_Search_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		criteria := &common.SearchCriteria{
+		criteria := &imap.SearchCriteria{
 			Undeleted: true,
 		}
 
@@ -173,7 +173,7 @@ func TestClient_Search_Uid(t *testing.T) {
 		}
 
 		io.WriteString(c, "* SEARCH 1 78 2010\r\n")
-		io.WriteString(c, tag + " OK UID SEARCH completed\r\n")
+		io.WriteString(c, tag+" OK UID SEARCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -181,11 +181,11 @@ func TestClient_Search_Uid(t *testing.T) {
 
 func TestClient_Fetch(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("2:3")
+		seqset, _ := imap.NewSeqSet("2:3")
 		fields := []string{"UID", "BODY[]"}
-		messages := make(chan *common.Message, 2)
+		messages := make(chan *imap.Message, 2)
 
 		err = c.Fetch(seqset, fields, messages)
 		if err != nil {
@@ -235,7 +235,7 @@ func TestClient_Fetch(t *testing.T) {
 		io.WriteString(c, "Hello World!")
 		io.WriteString(c, ")\r\n")
 
-		io.WriteString(c, tag + " OK FETCH completed\r\n")
+		io.WriteString(c, tag+" OK FETCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -243,11 +243,11 @@ func TestClient_Fetch(t *testing.T) {
 
 func TestClient_Fetch_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("1:867")
+		seqset, _ := imap.NewSeqSet("1:867")
 		fields := []string{"FLAGS"}
-		messages := make(chan *common.Message, 1)
+		messages := make(chan *imap.Message, 1)
 
 		err = c.UidFetch(seqset, fields, messages)
 		if err != nil {
@@ -278,7 +278,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 
 		io.WriteString(c, "* 23 FETCH (UID 42 FLAGS (\\Seen))\r\n")
 
-		io.WriteString(c, tag + " OK UID FETCH completed\r\n")
+		io.WriteString(c, tag+" OK UID FETCH completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -286,11 +286,11 @@ func TestClient_Fetch_Uid(t *testing.T) {
 
 func TestClient_Store(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		updates := make(chan *common.Message, 1)
-		seqset, _ := common.NewSeqSet("2")
-		err = c.Store(seqset, common.AddFlags, []interface{}{"\\Seen"}, updates)
+		updates := make(chan *imap.Message, 1)
+		seqset, _ := imap.NewSeqSet("2")
+		err = c.Store(seqset, imap.AddFlags, []interface{}{"\\Seen"}, updates)
 		if err != nil {
 			return
 		}
@@ -312,7 +312,7 @@ func TestClient_Store(t *testing.T) {
 		}
 
 		io.WriteString(c, "* 2 FETCH (FLAGS (\\Seen))\r\n")
-		io.WriteString(c, tag + " OK STORE completed\r\n")
+		io.WriteString(c, tag+" OK STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -320,10 +320,10 @@ func TestClient_Store(t *testing.T) {
 
 func TestClient_Store_Silent(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("2:3")
-		err = c.Store(seqset, common.AddFlags, []interface{}{"\\Seen"}, nil)
+		seqset, _ := imap.NewSeqSet("2:3")
+		err = c.Store(seqset, imap.AddFlags, []interface{}{"\\Seen"}, nil)
 		return
 	}
 
@@ -335,7 +335,7 @@ func TestClient_Store_Silent(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK STORE completed\r\n")
+		io.WriteString(c, tag+" OK STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -343,10 +343,10 @@ func TestClient_Store_Silent(t *testing.T) {
 
 func TestClient_Store_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("27:901")
-		err = c.UidStore(seqset, common.AddFlags, []interface{}{"\\Deleted"}, nil)
+		seqset, _ := imap.NewSeqSet("27:901")
+		err = c.UidStore(seqset, imap.AddFlags, []interface{}{"\\Deleted"}, nil)
 		return
 	}
 
@@ -358,7 +358,7 @@ func TestClient_Store_Uid(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UID STORE completed\r\n")
+		io.WriteString(c, tag+" OK UID STORE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -366,9 +366,9 @@ func TestClient_Store_Uid(t *testing.T) {
 
 func TestClient_Copy(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("2:4")
+		seqset, _ := imap.NewSeqSet("2:4")
 		err = c.Copy(seqset, "Sent")
 		return
 	}
@@ -381,7 +381,7 @@ func TestClient_Copy(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK COPY completed\r\n")
+		io.WriteString(c, tag+" OK COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -389,9 +389,9 @@ func TestClient_Copy(t *testing.T) {
 
 func TestClient_Copy_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.SelectedState
+		c.State = imap.SelectedState
 
-		seqset, _ := common.NewSeqSet("78:102")
+		seqset, _ := imap.NewSeqSet("78:102")
 		err = c.UidCopy(seqset, "Drafts")
 		return
 	}
@@ -404,7 +404,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UID COPY completed\r\n")
+		io.WriteString(c, tag+" OK UID COPY completed\r\n")
 	}
 
 	testClient(t, ct, st)

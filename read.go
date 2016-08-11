@@ -1,30 +1,36 @@
-package common
+package imap
 
 import (
 	"errors"
 	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	sp = ' '
-	cr = '\r'
-	lf = '\n'
-	dquote = '"'
-	literalStart = '{'
-	literalEnd = '}'
-	listStart = '('
-	listEnd = ')'
+	sp            = ' '
+	cr            = '\r'
+	lf            = '\n'
+	dquote        = '"'
+	literalStart  = '{'
+	literalEnd    = '}'
+	listStart     = '('
+	listEnd       = ')'
 	respCodeStart = '['
-	respCodeEnd = ']'
+	respCodeEnd   = ']'
+)
+
+const (
+	crlf    = "\r\n"
+	nilAtom = "NIL"
 )
 
 // TODO: add CTL to atomSpecials
 var (
 	quotedSpecials = string([]rune{dquote, '\\'})
-	respSpecials = string([]rune{respCodeEnd})
-	atomSpecials = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
+	respSpecials   = string([]rune{respCodeEnd})
+	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
 )
 
 type parseError struct {
@@ -57,18 +63,38 @@ type reader interface {
 }
 
 // Convert a field to a number.
-func ParseNumber(input interface{}) (uint32, error) {
-	str, ok := input.(string)
+func ParseNumber(f interface{}) (uint32, error) {
+	s, ok := f.(string)
 	if !ok {
-		return 0, newParseError("Number is not an atom")
+		return 0, newParseError("imap: number is not a string")
 	}
 
-	nbr, err := strconv.ParseUint(str, 10, 32)
+	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
 		return 0, err
 	}
 
 	return uint32(nbr), nil
+}
+
+func ParseDate(f interface{}) (t time.Time, err error) {
+	s, ok := f.(string)
+	if !ok {
+		err = newParseError("imap: date is not a string")
+		return
+	}
+
+	return time.Parse("2-Jan-2006", s)
+}
+
+func ParseDateTime(f interface{}) (t time.Time, err error) {
+	s, ok := f.(string)
+	if !ok {
+		err = newParseError("imap: date-time is not a string")
+		return
+	}
+
+	return time.Parse("2-Jan-2006 15:04:05 -0700", s)
 }
 
 // Convert a field list to a string list.
@@ -91,9 +117,9 @@ func trimSuffix(str string, suffix rune) string {
 type Reader struct {
 	reader
 
-	brackets int
+	brackets   int
 	inRespCode bool
-	continues chan<- bool
+	continues  chan<- bool
 }
 
 func (r *Reader) ReadSp() error {

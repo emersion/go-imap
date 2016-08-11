@@ -3,14 +3,14 @@ package commands
 import (
 	"errors"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
 )
 
 // A COPY command.
 // See RFC 3501 section 6.4.7
 type Copy struct {
-	SeqSet *imap.SeqSet
+	SeqSet  *imap.SeqSet
 	Mailbox string
 }
 
@@ -18,7 +18,7 @@ func (cmd *Copy) Command() *imap.Command {
 	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name: imap.Copy,
+		Name:      imap.Copy,
 		Arguments: []interface{}{cmd.SeqSet, mailbox},
 	}
 }

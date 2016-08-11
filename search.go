@@ -1,4 +1,4 @@
-package common
+package imap
 
 import (
 	"errors"
@@ -6,59 +6,46 @@ import (
 	"time"
 )
 
-const searchDateLayout = "2-Jan-2006"
-
-// Parse a date in the search format.
-func ParseSearchDate(s string) (*time.Time, error) {
-	t, err := time.Parse(searchDateLayout, s)
-	return &t, err
-}
-
-// Format a date to the search format.
-func FormatSearchDate(t *time.Time) string {
-	return t.Format(searchDateLayout)
-}
-
 // TODO: support AND with same fields (e.g. BCC mickey BCC mouse)
 
 // A search criteria.
 // See RFC 3501 section 6.4.4 for a description of each field.
 type SearchCriteria struct {
-	SeqSet *SeqSet
-	Answered bool
-	Bcc string
-	Before *time.Time
-	Body string
-	Cc string
-	Deleted bool
-	Draft bool
-	Flagged bool
-	From string
-	Header [2]string
-	Keyword string
-	Larger uint32
-	New bool
-	Not *SearchCriteria
-	Old bool
-	On *time.Time
-	Or [2]*SearchCriteria
-	Recent bool
-	Seen bool
-	SentBefore *time.Time
-	SentOn *time.Time
-	SentSince *time.Time
-	Since *time.Time
-	Smaller uint32
-	Subject string
-	Text string
-	To string
-	Uid *SeqSet
+	SeqSet     *SeqSet
+	Answered   bool
+	Bcc        string
+	Before     time.Time
+	Body       string
+	Cc         string
+	Deleted    bool
+	Draft      bool
+	Flagged    bool
+	From       string
+	Header     [2]string
+	Keyword    string
+	Larger     uint32
+	New        bool
+	Not        *SearchCriteria
+	Old        bool
+	On         time.Time
+	Or         [2]*SearchCriteria
+	Recent     bool
+	Seen       bool
+	SentBefore time.Time
+	SentOn     time.Time
+	SentSince  time.Time
+	Since      time.Time
+	Smaller    uint32
+	Subject    string
+	Text       string
+	To         string
+	Uid        *SeqSet
 	Unanswered bool
-	Undeleted bool
-	Undraft bool
-	Unflagged bool
-	Unkeyword string
-	Unseen bool
+	Undeleted  bool
+	Undraft    bool
+	Unflagged  bool
+	Unkeyword  string
+	Unseen     bool
 }
 
 // Parse search criteria from fields.
@@ -81,9 +68,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Bcc, _ = fields[i].(string)
 		case "BEFORE":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.Before, _ = ParseSearchDate(date)
-			}
+			c.Before, _ = ParseDate(fields[i])
 		case "BODY":
 			i++
 			c.Body, _ = fields[i].(string)
@@ -126,9 +111,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Old = true
 		case "ON":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.On, _ = ParseSearchDate(date)
-			}
+			c.On, _ = ParseDate(fields[i])
 		case "OR":
 			i++
 			leftFields, _ := fields[i].([]interface{})
@@ -149,24 +132,16 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Seen = true
 		case "SENTBEFORE":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.SentBefore, _ = ParseSearchDate(date)
-			}
+			c.SentBefore, _ = ParseDate(fields[i])
 		case "SENTON":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.SentOn, _ = ParseSearchDate(date)
-			}
+			c.SentOn, _ = ParseDate(fields[i])
 		case "SENTSINCE":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.SentSince, _ = ParseSearchDate(date)
-			}
+			c.SentSince, _ = ParseDate(fields[i])
 		case "SINCE":
 			i++
-			if date, ok := fields[i].(string); ok {
-				c.Since, _ = ParseSearchDate(date)
-			}
+			c.Since, _ = ParseDate(fields[i])
 		case "SMALLER":
 			i++
 			c.Smaller, _ = ParseNumber(fields[i])
@@ -220,8 +195,8 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 	if c.Bcc != "" {
 		fields = append(fields, "BCC", c.Bcc)
 	}
-	if c.Before != nil {
-		fields = append(fields, "BEFORE", FormatSearchDate(c.Before))
+	if !c.Before.IsZero() {
+		fields = append(fields, "BEFORE", FormatDate(c.Before))
 	}
 	if c.Body != "" {
 		fields = append(fields, "BODY", c.Body)
@@ -259,8 +234,8 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 	if c.Old {
 		fields = append(fields, "OLD")
 	}
-	if c.On != nil {
-		fields = append(fields, "ON", FormatSearchDate(c.On))
+	if !c.On.IsZero() {
+		fields = append(fields, "ON", FormatDate(c.On))
 	}
 	if c.Or[0] != nil && c.Or[1] != nil {
 		fields = append(fields, "OR", c.Or[0].Format(), c.Or[1].Format())
@@ -271,17 +246,17 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 	if c.Seen {
 		fields = append(fields, "SEEN")
 	}
-	if c.SentBefore != nil {
-		fields = append(fields, "SENTBEFORE", FormatSearchDate(c.SentBefore))
+	if !c.SentBefore.IsZero() {
+		fields = append(fields, "SENTBEFORE", FormatDate(c.SentBefore))
 	}
-	if c.SentOn != nil {
-		fields = append(fields, "SENTON", FormatSearchDate(c.SentOn))
+	if !c.SentOn.IsZero() {
+		fields = append(fields, "SENTON", FormatDate(c.SentOn))
 	}
-	if c.SentSince != nil {
-		fields = append(fields, "SENTSINCE", FormatSearchDate(c.SentSince))
+	if !c.SentSince.IsZero() {
+		fields = append(fields, "SENTSINCE", FormatDate(c.SentSince))
 	}
-	if c.Since != nil {
-		fields = append(fields, "SINCE", FormatSearchDate(c.Since))
+	if !c.Since.IsZero() {
+		fields = append(fields, "SINCE", FormatDate(c.Since))
 	}
 	if c.Smaller != 0 {
 		fields = append(fields, "SMALLER", c.Smaller)

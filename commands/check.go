@@ -1,12 +1,12 @@
 package commands
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A CHECK command.
 // See RFC 3501 section 6.4.1
-type Check struct {}
+type Check struct{}
 
 func (cmd *Check) Command() *imap.Command {
 	return &imap.Command{

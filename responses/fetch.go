@@ -1,7 +1,7 @@
 package responses
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A FETCH response.
@@ -40,7 +40,7 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *Fetch) WriteTo(w *imap.Writer) error {
+func (r *Fetch) WriteTo(w imap.Writer) error {
 	for msg := range r.Messages {
 		res := imap.NewUntaggedResp([]interface{}{msg.SeqNum, imap.Fetch, msg.Format()})
 

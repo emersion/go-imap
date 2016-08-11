@@ -1,12 +1,12 @@
 package commands
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A CLOSE command.
 // See RFC 3501 section 6.4.2
-type Close struct {}
+type Close struct{}
 
 func (cmd *Close) Command() *imap.Command {
 	return &imap.Command{

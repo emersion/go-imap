@@ -1,4 +1,4 @@
-package common_test
+package imap_test
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestNewConn(t *testing.T) {
@@ -19,10 +19,10 @@ func TestNewConn(t *testing.T) {
 		done <- err
 	})()
 
-	r := common.NewReader(nil)
-	w := common.NewWriter(nil)
+	r := imap.NewReader(nil)
+	w := imap.NewWriter(nil)
 
-	ic := common.NewConn(c, r, w)
+	ic := imap.NewConn(c, r, w)
 
 	sent := []byte("hi")
 	ic.Write(sent)
@@ -73,10 +73,10 @@ func TestConn_Upgrade(t *testing.T) {
 		done <- err
 	})()
 
-	r := common.NewReader(nil)
-	w := common.NewWriter(nil)
+	r := imap.NewReader(nil)
+	w := imap.NewWriter(nil)
 
-	ic := common.NewConn(c, r, w)
+	ic := imap.NewConn(c, r, w)
 
 	began := make(chan struct{})
 	go ic.Upgrade(func(conn net.Conn) (net.Conn, error) {

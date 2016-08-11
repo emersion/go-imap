@@ -7,8 +7,8 @@ import (
 )
 
 type User struct {
-	username string
-	password string
+	username  string
+	password  string
 	mailboxes map[string]*Mailbox
 }
 
@@ -63,9 +63,9 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 	}
 
 	u.mailboxes[newName] = &Mailbox{
-		name: newName,
+		name:     newName,
 		messages: mbox.messages,
-		user: u,
+		user:     u,
 	}
 
 	mbox.messages = nil

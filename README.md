@@ -50,7 +50,7 @@ import (
 	"log"
 
 	"github.com/emersion/go-imap/client"
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func main() {

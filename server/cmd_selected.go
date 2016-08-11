@@ -4,15 +4,15 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
 
-// Common errors in Selected state.
+// imap errors in Selected state.
 var (
 	ErrNoMailboxSelected = errors.New("No mailbox selected")
-	ErrMailboxReadOnly = errors.New("Mailbox opened in read-only mode")
+	ErrMailboxReadOnly   = errors.New("Mailbox opened in read-only mode")
 )
 
 // A command handler that supports UIDs.
@@ -20,36 +20,38 @@ type UidHandler interface {
 	Handler
 
 	// Handle this command using UIDs for a given connection.
-	UidHandle(conn *Conn) error
+	UidHandle(conn Conn) error
 }
 
 type Check struct {
 	commands.Check
 }
 
-func (cmd *Check) Handle(conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Check) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
-	if conn.MailboxReadOnly {
+	if ctx.MailboxReadOnly {
 		return ErrMailboxReadOnly
 	}
 
-	return conn.Mailbox.Check()
+	return ctx.Mailbox.Check()
 }
 
 type Close struct {
 	commands.Close
 }
 
-func (cmd *Close) Handle(conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Close) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
 
-	mailbox := conn.Mailbox
-	conn.Mailbox = nil
-	conn.MailboxReadOnly = false
+	mailbox := ctx.Mailbox
+	ctx.Mailbox = nil
+	ctx.MailboxReadOnly = false
 
 	if err := mailbox.Expunge(); err != nil {
 		return err
@@ -63,38 +65,39 @@ type Expunge struct {
 	commands.Expunge
 }
 
-func (cmd *Expunge) Handle(conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Expunge) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
-	if conn.MailboxReadOnly {
+	if ctx.MailboxReadOnly {
 		return ErrMailboxReadOnly
 	}
 
 	// Get a list of messages that will be deleted
 	// That will allow us to send expunge updates if the backend doesn't support it
 	var seqnums []uint32
-	if conn.Server.Updates == nil {
+	if conn.Server().Updates == nil {
 		var err error
-		seqnums, err = conn.Mailbox.SearchMessages(false, &common.SearchCriteria{Deleted: true})
+		seqnums, err = ctx.Mailbox.SearchMessages(false, &imap.SearchCriteria{Deleted: true})
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := conn.Mailbox.Expunge(); err != nil {
+	if err := ctx.Mailbox.Expunge(); err != nil {
 		return err
 	}
 
 	// If the backend doesn't support expunge updates, let's do it ourselves
-	if conn.Server.Updates == nil {
+	if conn.Server().Updates == nil {
 		done := make(chan error)
 		defer close(done)
 
 		ch := make(chan uint32)
 		res := &responses.Expunge{SeqNums: ch}
 
-		go (func () {
+		go (func() {
 			done <- conn.WriteResp(res)
 		})()
 
@@ -117,12 +120,13 @@ type Search struct {
 	commands.Search
 }
 
-func (cmd *Search) handle(uid bool, conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Search) handle(uid bool, conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
 
-	ids, err := conn.Mailbox.SearchMessages(uid, cmd.Criteria)
+	ids, err := ctx.Mailbox.SearchMessages(uid, cmd.Criteria)
 	if err != nil {
 		return err
 	}
@@ -131,11 +135,11 @@ func (cmd *Search) handle(uid bool, conn *Conn) error {
 	return conn.WriteResp(res)
 }
 
-func (cmd *Search) Handle(conn *Conn) error {
+func (cmd *Search) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Search) UidHandle(conn *Conn) error {
+func (cmd *Search) UidHandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
@@ -143,22 +147,22 @@ type Fetch struct {
 	commands.Fetch
 }
 
-func (cmd *Fetch) handle(uid bool, conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Fetch) handle(uid bool, conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
 
-	ch := make(chan *common.Message)
+	ch := make(chan *imap.Message)
 	res := &responses.Fetch{Messages: ch}
 
-	// TODO: if ListMessages() fails, make sure the goroutine is stopped
-	done := make(chan error)
-	go (func () {
+	done := make(chan error, 1)
+	go (func() {
 		done <- conn.WriteResp(res)
 		close(done)
 	})()
 
-	err := conn.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch)
+	err := ctx.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch)
 	if err != nil {
 		return err
 	}
@@ -166,11 +170,11 @@ func (cmd *Fetch) handle(uid bool, conn *Conn) error {
 	return <-done
 }
 
-func (cmd *Fetch) Handle(conn *Conn) error {
+func (cmd *Fetch) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Fetch) UidHandle(conn *Conn) error {
+func (cmd *Fetch) UidHandle(conn Conn) error {
 	// Append UID to the list of requested items if it isn't already present
 	hasUid := false
 	for _, item := range cmd.Items {
@@ -190,22 +194,23 @@ type Store struct {
 	commands.Store
 }
 
-func (cmd *Store) handle(uid bool, conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Store) handle(uid bool, conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
-	if conn.MailboxReadOnly {
+	if ctx.MailboxReadOnly {
 		return ErrMailboxReadOnly
 	}
 
 	itemStr := cmd.Item
-	silent := strings.HasSuffix(itemStr, common.SilentOp)
+	silent := strings.HasSuffix(itemStr, imap.SilentOp)
 	if silent {
-		itemStr = strings.TrimSuffix(itemStr, common.SilentOp)
+		itemStr = strings.TrimSuffix(itemStr, imap.SilentOp)
 	}
-	item := common.FlagsOp(itemStr)
+	item := imap.FlagsOp(itemStr)
 
-	if item != common.SetFlags && item != common.AddFlags && item != common.RemoveFlags {
+	if item != imap.SetFlags && item != imap.AddFlags && item != imap.RemoveFlags {
 		return errors.New("Unsupported STORE operation")
 	}
 
@@ -213,23 +218,24 @@ func (cmd *Store) handle(uid bool, conn *Conn) error {
 	if !ok {
 		return errors.New("Flags must be a list")
 	}
-	flags, err := common.ParseStringList(flagsList)
+	flags, err := imap.ParseStringList(flagsList)
 	if err != nil {
 		return err
 	}
 
 	// If the backend supports message updates, this will prevent this connection
 	// from receiving them
-	conn.silent = silent
-	err = conn.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags)
-	conn.silent = false
+	// TODO: find a better way to do this, without conn.silent
+	*conn.silent() = silent
+	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags)
+	*conn.silent() = false
 	if err != nil {
 		return err
 	}
 
 	// Not silent: send FETCH updates if the backend doesn't support message
 	// updates
-	if conn.Server.Updates == nil && !silent {
+	if conn.Server().Updates == nil && !silent {
 		inner := &Fetch{}
 		inner.SeqSet = cmd.SeqSet
 		inner.Items = []string{"FLAGS"}
@@ -245,11 +251,11 @@ func (cmd *Store) handle(uid bool, conn *Conn) error {
 	return nil
 }
 
-func (cmd *Store) Handle(conn *Conn) error {
+func (cmd *Store) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Store) UidHandle(conn *Conn) error {
+func (cmd *Store) UidHandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
@@ -257,19 +263,20 @@ type Copy struct {
 	commands.Copy
 }
 
-func (cmd *Copy) handle(uid bool, conn *Conn) error {
-	if conn.Mailbox == nil {
+func (cmd *Copy) handle(uid bool, conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
 	}
 
-	return conn.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
+	return ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
 }
 
-func (cmd *Copy) Handle(conn *Conn) error {
+func (cmd *Copy) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Copy) UidHandle(conn *Conn) error {
+func (cmd *Copy) UidHandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
@@ -277,9 +284,9 @@ type Uid struct {
 	commands.Uid
 }
 
-func (cmd *Uid) Handle(conn *Conn) error {
+func (cmd *Uid) Handle(conn Conn) error {
 	inner := cmd.Cmd.Command()
-	hdlr, err := conn.Server.getCommandHandler(inner)
+	hdlr, err := conn.Server().commandHandler(inner)
 	if err != nil {
 		return err
 	}
@@ -293,8 +300,8 @@ func (cmd *Uid) Handle(conn *Conn) error {
 		return err
 	}
 
-	return ErrStatusResp(&common.StatusResp{
-		Type: common.StatusOk,
-		Info: common.Uid + " " + inner.Name + " completed",
+	return ErrStatusResp(&imap.StatusResp{
+		Type: imap.StatusOk,
+		Info: imap.Uid + " " + inner.Name + " completed",
 	})
 }

@@ -1,9 +1,9 @@
 package server_test
 
 import (
-	"io"
 	"bufio"
 	"crypto/tls"
+	"io"
 	"strings"
 	"testing"
 
@@ -22,7 +22,7 @@ func TestStartTLS(t *testing.T) {
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
-		Certificates: []tls.Certificate{cert},
+		Certificates:       []tls.Certificate{cert},
 	}
 
 	s.AllowInsecureAuth = false

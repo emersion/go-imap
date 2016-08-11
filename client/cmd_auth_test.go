@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Select(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		mbox, err := c.Select("INBOX", false)
 		if err != nil {
@@ -65,7 +65,7 @@ func TestClient_Select(t *testing.T) {
 		io.WriteString(c, "* OK [UIDNEXT 4392] Predicted next UID\r\n")
 		io.WriteString(c, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n")
 		io.WriteString(c, "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n")
-		io.WriteString(c, tag + " OK SELECT completed\r\n")
+		io.WriteString(c, tag+" OK SELECT completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -73,7 +73,7 @@ func TestClient_Select(t *testing.T) {
 
 func TestClient_Select_ReadOnly(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		mbox, err := c.Select("INBOX", true)
 		if err != nil {
@@ -97,7 +97,7 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK [READ-ONLY] EXAMINE completed\r\n")
+		io.WriteString(c, tag+" OK [READ-ONLY] EXAMINE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -105,7 +105,7 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 
 func TestClient_Create(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		err = c.Create("New Mailbox")
 		return
@@ -119,7 +119,7 @@ func TestClient_Create(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK CREATE completed\r\n")
+		io.WriteString(c, tag+" OK CREATE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -127,7 +127,7 @@ func TestClient_Create(t *testing.T) {
 
 func TestClient_Delete(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		err = c.Delete("Old Mailbox")
 		return
@@ -141,7 +141,7 @@ func TestClient_Delete(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK DELETE completed\r\n")
+		io.WriteString(c, tag+" OK DELETE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -149,7 +149,7 @@ func TestClient_Delete(t *testing.T) {
 
 func TestClient_Rename(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		err = c.Rename("Old Mailbox", "New Mailbox")
 		return
@@ -163,7 +163,7 @@ func TestClient_Rename(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK RENAME completed\r\n")
+		io.WriteString(c, tag+" OK RENAME completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -171,7 +171,7 @@ func TestClient_Rename(t *testing.T) {
 
 func TestClient_Subscribe(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		err = c.Subscribe("Mailbox")
 		return
@@ -185,7 +185,7 @@ func TestClient_Subscribe(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK SUBSCRIBE completed\r\n")
+		io.WriteString(c, tag+" OK SUBSCRIBE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -193,7 +193,7 @@ func TestClient_Subscribe(t *testing.T) {
 
 func TestClient_Unsubscribe(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		err = c.Unsubscribe("Mailbox")
 		return
@@ -207,7 +207,7 @@ func TestClient_Unsubscribe(t *testing.T) {
 			t.Fatal("Bad command:", cmd)
 		}
 
-		io.WriteString(c, tag + " OK UNSUBSCRIBE completed\r\n")
+		io.WriteString(c, tag+" OK UNSUBSCRIBE completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -215,16 +215,16 @@ func TestClient_Unsubscribe(t *testing.T) {
 
 func TestClient_List(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
-		mailboxes := make(chan *common.MailboxInfo, 3)
+		mailboxes := make(chan *imap.MailboxInfo, 3)
 		err = c.List("", "%", mailboxes)
 		if err != nil {
 			return
 		}
 
-		expected := []struct{
-			name string
+		expected := []struct {
+			name       string
 			attributes []string
 		}{
 			{"INBOX", []string{"flag1"}},
@@ -259,7 +259,7 @@ func TestClient_List(t *testing.T) {
 		io.WriteString(c, "* LIST (flag1) \"/\" INBOX\r\n")
 		io.WriteString(c, "* LIST (flag2 flag3) \"/\" Drafts\r\n")
 		io.WriteString(c, "* LIST () \"/\" Sent\r\n")
-		io.WriteString(c, tag + " OK LIST completed\r\n")
+		io.WriteString(c, tag+" OK LIST completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -267,9 +267,9 @@ func TestClient_List(t *testing.T) {
 
 func TestClient_Lsub(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
-		mailboxes := make(chan *common.MailboxInfo, 1)
+		mailboxes := make(chan *imap.MailboxInfo, 1)
 		err = c.Lsub("", "%", mailboxes)
 		if err != nil {
 			return
@@ -295,7 +295,7 @@ func TestClient_Lsub(t *testing.T) {
 		}
 
 		io.WriteString(c, "* LSUB () \"/\" INBOX\r\n")
-		io.WriteString(c, tag + " OK LIST completed\r\n")
+		io.WriteString(c, tag+" OK LIST completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -303,7 +303,7 @@ func TestClient_Lsub(t *testing.T) {
 
 func TestClient_Status(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		mbox, err := c.Status("INBOX", []string{"MESSAGES", "RECENT"})
 		if err != nil {
@@ -329,7 +329,7 @@ func TestClient_Status(t *testing.T) {
 		}
 
 		io.WriteString(c, "* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
-		io.WriteString(c, tag + " OK STATUS completed\r\n")
+		io.WriteString(c, tag+" OK STATUS completed\r\n")
 	}
 
 	testClient(t, ct, st)
@@ -339,11 +339,11 @@ func TestClient_Append(t *testing.T) {
 	msg := "Hello World!\r\nHello Gophers!\r\n"
 
 	ct := func(c *client.Client) (err error) {
-		c.State = common.AuthenticatedState
+		c.State = imap.AuthenticatedState
 
 		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-		literal := common.NewLiteral([]byte(msg))
-		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, &date, literal)
+		literal := imap.NewLiteral([]byte(msg))
+		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, date, literal)
 		return
 	}
 
@@ -366,7 +366,7 @@ func TestClient_Append(t *testing.T) {
 			t.Fatal("Bad literal:", string(b))
 		}
 
-		io.WriteString(c, tag + " OK APPEND completed\r\n")
+		io.WriteString(c, tag+" OK APPEND completed\r\n")
 	}
 
 	testClient(t, ct, st)

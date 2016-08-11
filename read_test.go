@@ -1,4 +1,4 @@
-package common_test
+package imap_test
 
 import (
 	"bytes"
@@ -6,13 +6,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestParseNumber(t *testing.T) {
-	tests := []struct{
-		f interface{}
-		n uint32
+	tests := []struct {
+		f   interface{}
+		n   uint32
 		err bool
 	}{
 		{f: "42", n: 42},
@@ -20,11 +20,11 @@ func TestParseNumber(t *testing.T) {
 		{f: "-1", err: true},
 		{f: "1.2", err: true},
 		{f: nil, err: true},
-		{f: common.NewLiteral([]byte("cc")), err: true},
+		{f: imap.NewLiteral([]byte("cc")), err: true},
 	}
 
 	for _, test := range tests {
-		n, err := common.ParseNumber(test.f)
+		n, err := imap.ParseNumber(test.f)
 		if err != nil {
 			if !test.err {
 				t.Errorf("Cannot parse number %v", test.f)
@@ -40,34 +40,34 @@ func TestParseNumber(t *testing.T) {
 }
 
 func TestParseStringList(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		fields []interface{}
-		list []string
+		list   []string
 	}{
 		{
 			fields: []interface{}{"a", "b", "c", "d"},
-			list: []string{"a", "b", "c", "d"},
+			list:   []string{"a", "b", "c", "d"},
 		},
 		{
 			fields: []interface{}{"a"},
-			list: []string{"a"},
+			list:   []string{"a"},
 		},
 		{
 			fields: []interface{}{},
-			list: []string{},
+			list:   []string{},
 		},
 		{
 			fields: []interface{}{"a", 42, "c", "d"},
-			list: nil,
+			list:   nil,
 		},
 		{
 			fields: []interface{}{"a", nil, "c", "d"},
-			list: nil,
+			list:   nil,
 		},
 	}
 
 	for _, test := range tests {
-		list, err := common.ParseStringList(test.fields)
+		list, err := imap.ParseStringList(test.fields)
 		if err != nil {
 			if test.list != nil {
 				t.Errorf("Cannot parse string list: %v", err)
@@ -78,9 +78,9 @@ func TestParseStringList(t *testing.T) {
 	}
 }
 
-func newReader(s string) (b *bytes.Buffer, r *common.Reader) {
+func newReader(s string) (b *bytes.Buffer, r *imap.Reader) {
 	b = bytes.NewBuffer([]byte(s))
-	r = common.NewReader(b)
+	r = imap.NewReader(b)
 	return
 }
 
@@ -326,7 +326,7 @@ func TestReader_ReadList(t *testing.T) {
 		t.Error("Field 1 has not the expected value:", fields[0])
 	} else if s, ok := fields[1].(string); !ok || s != "field2" {
 		t.Error("Field 2 has not the expected value:", fields[1])
-	} else if literal, ok := fields[2].(*common.Literal); !ok || literal.String() != "field3" {
+	} else if literal, ok := fields[2].(*imap.Literal); !ok || literal.String() != "field3" {
 		t.Error("Field 3 has not the expected value:", fields[2])
 	} else if s, ok := fields[3].(string); !ok || s != "field4" {
 		t.Error("Field 4 has not the expected value:", fields[3])

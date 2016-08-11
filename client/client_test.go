@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 )
 
@@ -24,7 +24,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 	defer l.Close()
 
 	done := make(chan error)
-	go (func () {
+	go (func() {
 		c, err := client.Dial(l.Addr().String())
 		if err != nil {
 			done <- err
@@ -38,7 +38,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 			return
 		}
 
-		c.State = common.LogoutState
+		c.State = imap.LogoutState
 		done <- nil
 	})()
 

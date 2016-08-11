@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A UID command.
@@ -20,7 +20,7 @@ func (cmd *Uid) Command() *imap.Command {
 	args = append(args, inner.Arguments...)
 
 	return &imap.Command{
-		Name: imap.Uid,
+		Name:      imap.Uid,
 		Arguments: args,
 	}
 }
@@ -36,7 +36,7 @@ func (cmd *Uid) Parse(fields []interface{}) error {
 	}
 
 	cmd.Cmd = &imap.Command{
-		Name: strings.ToUpper(name), // Command names are case-insensitive
+		Name:      strings.ToUpper(name), // Command names are case-insensitive
 		Arguments: fields[1:],
 	}
 

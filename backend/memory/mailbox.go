@@ -4,24 +4,24 @@ import (
 	"errors"
 	"time"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 type Mailbox struct {
-	name string
+	name       string
 	subscribed bool
-	messages []*Message
-	user *User
+	messages   []*Message
+	user       *User
 }
 
 func (mbox *Mailbox) Name() string {
 	return mbox.name
 }
 
-func (mbox *Mailbox) Info() (*common.MailboxInfo, error) {
-	info := &common.MailboxInfo{
-		Delimiter: "/",
-		Name: mbox.name,
+func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
+	info := &imap.MailboxInfo{
+		Delimiter:  "/",
+		Name:       mbox.name,
 		Attributes: []string{"\\Noinferiors"},
 	}
 	return info, nil
@@ -37,11 +37,11 @@ func (mbox *Mailbox) uidNext() (uid uint32) {
 	return
 }
 
-func (mbox *Mailbox) Status(items []string) (*common.MailboxStatus, error) {
-	status := &common.MailboxStatus{
-		Items: items,
-		Name: mbox.name,
-		Flags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"},
+func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
+	status := &imap.MailboxStatus{
+		Items:          items,
+		Name:           mbox.name,
+		Flags:          []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"},
 		PermanentFlags: []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"},
 	}
 
@@ -77,11 +77,11 @@ func (mbox *Mailbox) Check() error {
 	return nil
 }
 
-func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []string, ch chan<- *common.Message) (err error) {
+func (mbox *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
 	defer close(ch)
 
 	for i, msg := range mbox.messages {
-		seqNum := uint32(i+1)
+		seqNum := uint32(i + 1)
 
 		var id uint32
 		if uid {
@@ -101,7 +101,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *common.SeqSet, items []strin
 	return
 }
 
-func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (ids []uint32, err error) {
+func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
 	for i, msg := range mbox.messages {
 		if !msg.Matches(criteria) {
 			continue
@@ -111,7 +111,7 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		ids = append(ids, id)
 	}
@@ -119,44 +119,43 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *common.SearchCriteria) (
 	return
 }
 
-func (mbox *Mailbox) CreateMessage(flags []string, date *time.Time, body []byte) error {
-	if date == nil {
-		now := time.Now()
-		date = &now
+func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body []byte) error {
+	if date.IsZero() {
+		date = time.Now()
 	}
 
-	mbox.messages = append(mbox.messages, &Message{&common.Message{
-		Uid: mbox.uidNext(),
-		Envelope: &common.Envelope{},
-		BodyStructure: &common.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-		Size: uint32(len(body)),
-		InternalDate: date,
-		Flags: flags,
+	mbox.messages = append(mbox.messages, &Message{&imap.Message{
+		Uid:           mbox.uidNext(),
+		Envelope:      &imap.Envelope{},
+		BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
+		Size:          uint32(len(body)),
+		InternalDate:  date,
+		Flags:         flags,
 	}, body})
 
 	return nil
 }
 
-func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *common.SeqSet, op common.FlagsOp, flags []string) error {
+func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
 	for i, msg := range mbox.messages {
 		var id uint32
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		if !seqset.Contains(id) {
 			continue
 		}
 
 		switch op {
-		case common.SetFlags:
+		case imap.SetFlags:
 			// TODO: keep \Recent if it is present
 			msg.Flags = flags
-		case common.AddFlags:
+		case imap.AddFlags:
 			// TODO: check for duplicates
 			msg.Flags = append(msg.Flags, flags...)
-		case common.RemoveFlags:
+		case imap.RemoveFlags:
 			// Iterate through flags from the last one to the first one, to be able to
 			// delete some of them.
 			for i := len(msg.Flags) - 1; i >= 0; i-- {
@@ -175,7 +174,7 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *common.SeqSet, op com
 	return nil
 }
 
-func (mbox *Mailbox) CopyMessages(uid bool, seqset *common.SeqSet, destName string) error {
+func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string) error {
 	dest, ok := mbox.user.mailboxes[destName]
 	if !ok {
 		return errors.New("Destination mailbox doesn't exist")
@@ -186,7 +185,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *common.SeqSet, destName stri
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i+1)
+			id = uint32(i + 1)
 		}
 		if !seqset.Contains(id) {
 			continue

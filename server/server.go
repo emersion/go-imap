@@ -9,7 +9,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/responses"
 	"github.com/emersion/go-sasl"
@@ -17,13 +17,13 @@ import (
 
 // A command handler.
 type Handler interface {
-	common.Parser
+	imap.Parser
 
 	// Handle this command for a given connection.
 	//
 	// By default, after this function has returned a status response is sent. To
 	// prevent this behavior handlers can use ErrStatusResp or ErrNoStatusResp.
-	Handle(conn *Conn) error
+	Handle(conn Conn) error
 }
 
 // A connection upgrader. If a Handler is also an Upgrader, the connection will
@@ -33,17 +33,35 @@ type Handler interface {
 // COMPRESS).
 type Upgrader interface {
 	// Upgrade the connection. This method should call conn.Upgrade().
-	Upgrade(conn *Conn) error
+	Upgrade(conn Conn) error
 }
 
 // A function that creates handlers.
 type HandlerFactory func() Handler
 
 // A function that creates SASL servers.
-type SaslServerFactory func(conn *Conn) sasl.Server
+type SaslServerFactory func(conn Conn) sasl.Server
+
+// An IMAP extension.
+type Extension interface {
+	// Get capabilities provided by this extension for a given connection state.
+	Capabilities(state imap.ConnState) []string
+	// Get the command handler factory for the provided command name.
+	Command(name string) HandlerFactory
+}
+
+// An extension that provides additional features to each connection.
+type ConnExtension interface {
+	Extension
+
+	// This function will be called when a client connects to the server. It can
+	// be used to add new features to the default Conn interface by implementing
+	// new methods.
+	NewConn(c Conn) Conn
+}
 
 type errStatusResp struct {
-	resp *common.StatusResp
+	resp *imap.StatusResp
 }
 
 func (err *errStatusResp) Error() string {
@@ -54,7 +72,7 @@ func (err *errStatusResp) Error() string {
 // response. The response tag must be empty.
 //
 // To disable the default status response, use ErrNoStatusResp instead.
-func ErrStatusResp(res *common.StatusResp) error {
+func ErrStatusResp(res *imap.StatusResp) error {
 	return &errStatusResp{res}
 }
 
@@ -67,11 +85,11 @@ func ErrNoStatusResp() error {
 // An IMAP server.
 type Server struct {
 	listener net.Listener
-	conns []*Conn
+	conns    []Conn
 
-	caps map[string]common.ConnState
-	commands map[string]HandlerFactory
-	auths map[string]SaslServerFactory
+	commands   map[string]HandlerFactory
+	auths      map[string]SaslServerFactory
+	extensions []Extension
 
 	// TCP address to listen on.
 	Addr string
@@ -90,12 +108,11 @@ type Server struct {
 // Create a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
-		caps: map[string]common.ConnState{},
 		Backend: bkd,
 	}
 
 	s.auths = map[string]SaslServerFactory{
-		"PLAIN": func(conn *Conn) sasl.Server {
+		"PLAIN": func(conn Conn) sasl.Server {
 			return sasl.NewPlainServer(func(identity, username, password string) error {
 				if identity != "" && identity != username {
 					return errors.New("Identities not supported")
@@ -106,50 +123,51 @@ func New(bkd backend.Backend) *Server {
 					return err
 				}
 
-				conn.State = common.AuthenticatedState
-				conn.User = user
+				ctx := conn.Context()
+				ctx.State = imap.AuthenticatedState
+				ctx.User = user
 				return nil
 			})
 		},
 	}
 
 	s.commands = map[string]HandlerFactory{
-		common.Noop: func() Handler { return &Noop{} },
-		common.Capability: func() Handler { return &Capability{} },
-		common.Logout: func() Handler { return &Logout{} },
+		imap.Noop:       func() Handler { return &Noop{} },
+		imap.Capability: func() Handler { return &Capability{} },
+		imap.Logout:     func() Handler { return &Logout{} },
 
-		common.StartTLS: func() Handler { return &StartTLS{} },
-		common.Login: func() Handler { return &Login{} },
-		common.Authenticate: func() Handler { return &Authenticate{} },
+		imap.StartTLS:     func() Handler { return &StartTLS{} },
+		imap.Login:        func() Handler { return &Login{} },
+		imap.Authenticate: func() Handler { return &Authenticate{} },
 
-		common.Select: func() Handler { return &Select{} },
-		common.Examine: func() Handler {
+		imap.Select: func() Handler { return &Select{} },
+		imap.Examine: func() Handler {
 			hdlr := &Select{}
 			hdlr.ReadOnly = true
 			return hdlr
 		},
-		common.Create: func() Handler { return &Create{} },
-		common.Delete: func() Handler { return &Delete{} },
-		common.Rename: func() Handler { return &Rename{} },
-		common.Subscribe: func() Handler { return &Subscribe{} },
-		common.Unsubscribe: func() Handler { return &Unsubscribe{} },
-		common.List: func() Handler { return &List{} },
-		common.Lsub: func() Handler {
+		imap.Create:      func() Handler { return &Create{} },
+		imap.Delete:      func() Handler { return &Delete{} },
+		imap.Rename:      func() Handler { return &Rename{} },
+		imap.Subscribe:   func() Handler { return &Subscribe{} },
+		imap.Unsubscribe: func() Handler { return &Unsubscribe{} },
+		imap.List:        func() Handler { return &List{} },
+		imap.Lsub: func() Handler {
 			hdlr := &List{}
 			hdlr.Subscribed = true
 			return hdlr
 		},
-		common.Status: func() Handler { return &Status{} },
-		common.Append: func() Handler { return &Append{} },
+		imap.Status: func() Handler { return &Status{} },
+		imap.Append: func() Handler { return &Append{} },
 
-		common.Check: func() Handler { return &Check{} },
-		common.Close: func() Handler { return &Close{} },
-		common.Expunge: func() Handler { return &Expunge{} },
-		common.Search: func() Handler { return &Search{} },
-		common.Fetch: func() Handler { return &Fetch{} },
-		common.Store: func() Handler { return &Store{} },
-		common.Copy: func() Handler { return &Copy{} },
-		common.Uid: func() Handler { return &Uid{} },
+		imap.Check:   func() Handler { return &Check{} },
+		imap.Close:   func() Handler { return &Close{} },
+		imap.Expunge: func() Handler { return &Expunge{} },
+		imap.Search:  func() Handler { return &Search{} },
+		imap.Fetch:   func() Handler { return &Fetch{} },
+		imap.Store:   func() Handler { return &Store{} },
+		imap.Copy:    func() Handler { return &Copy{} },
+		imap.Uid:     func() Handler { return &Uid{} },
 	}
 
 	return s
@@ -168,9 +186,15 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		conn := newConn(s, c)
+		var conn Conn = newConn(s, c)
 		if s.Debug {
-			conn.SetDebug(true)
+			conn.conn().SetDebug(true)
+		}
+
+		for _, ext := range s.extensions {
+			if ext, ok := ext.(ConnExtension); ok {
+				conn = ext.NewConn(conn)
+			}
 		}
 
 		go s.handleConn(conn)
@@ -213,7 +237,7 @@ func (s *Server) ListenAndServeTLS() error {
 	return s.Serve(l)
 }
 
-func (s *Server) handleConn(conn *Conn) error {
+func (s *Server) handleConn(conn Conn) error {
 	s.conns = append(s.conns, conn)
 	defer (func() {
 		conn.Close()
@@ -232,22 +256,22 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 
 	for {
-		if conn.State == common.LogoutState {
+		if conn.Context().State == imap.LogoutState {
 			return nil
 		}
 
-		var res *common.StatusResp
+		var res *imap.StatusResp
 		var up Upgrader
 
-		conn.Wait()
-		fields, err := conn.ReadLine()
-		if err == io.EOF || conn.State == common.LogoutState {
+		conn.conn().Wait()
+		fields, err := conn.conn().ReadLine()
+		if err == io.EOF || conn.Context().State == imap.LogoutState {
 			return nil
 		}
 		if err != nil {
-			if common.IsParseError(err) {
-				res = &common.StatusResp{
-					Type: common.StatusBad,
+			if imap.IsParseError(err) {
+				res = &imap.StatusResp{
+					Type: imap.StatusBad,
 					Info: err.Error(),
 				}
 			} else {
@@ -255,20 +279,20 @@ func (s *Server) handleConn(conn *Conn) error {
 				return err
 			}
 		} else {
-			cmd := &common.Command{}
+			cmd := &imap.Command{}
 			if err := cmd.Parse(fields); err != nil {
-				res = &common.StatusResp{
-					Tag: cmd.Tag,
-					Type: common.StatusBad,
+				res = &imap.StatusResp{
+					Tag:  cmd.Tag,
+					Type: imap.StatusBad,
 					Info: err.Error(),
 				}
 			} else {
 				var err error
 				res, up, err = s.handleCommand(cmd, conn)
 				if err != nil {
-					res = &common.StatusResp{
-						Tag: cmd.Tag,
-						Type: common.StatusBad,
+					res = &imap.StatusResp{
+						Tag:  cmd.Tag,
+						Type: imap.StatusBad,
 						Info: err.Error(),
 					}
 				}
@@ -281,7 +305,7 @@ func (s *Server) handleConn(conn *Conn) error {
 				continue
 			}
 
-			if up != nil && res.Type == common.StatusOk {
+			if up != nil && res.Type == imap.StatusOk {
 				if err := up.Upgrade(conn); err != nil {
 					log.Println("Error upgrading connection:", err)
 					return err
@@ -291,9 +315,21 @@ func (s *Server) handleConn(conn *Conn) error {
 	}
 }
 
-func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error) {
-	newHandler, ok := s.commands[cmd.Name]
-	if !ok {
+// Get a command handler factory for the provided command name.
+func (s *Server) Command(name string) HandlerFactory {
+	// Extensions can override builtin commands
+	for _, ext := range s.extensions {
+		if h := ext.Command(name); h != nil {
+			return h
+		}
+	}
+
+	return s.commands[name]
+}
+
+func (s *Server) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
+	newHandler := s.Command(cmd.Name)
+	if newHandler == nil {
 		err = errors.New("Unknown command")
 		return
 	}
@@ -303,8 +339,8 @@ func (s *Server) getCommandHandler(cmd *common.Command) (hdlr Handler, err error
 	return
 }
 
-func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.StatusResp, up Upgrader, err error) {
-	hdlr, err := s.getCommandHandler(cmd)
+func (s *Server) handleCommand(cmd *imap.Command, conn Conn) (res *imap.StatusResp, up Upgrader, err error) {
+	hdlr, err := s.commandHandler(cmd)
 	if err != nil {
 		return
 	}
@@ -313,20 +349,20 @@ func (s *Server) handleCommand(cmd *common.Command, conn *Conn) (res *common.Sta
 	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
 		res = statusErr.resp
 	} else if hdlrErr != nil {
-		res = &common.StatusResp{
-			Type: common.StatusNo,
+		res = &imap.StatusResp{
+			Type: imap.StatusNo,
 			Info: hdlrErr.Error(),
 		}
 	} else {
-		res = &common.StatusResp{
-			Type: common.StatusOk,
+		res = &imap.StatusResp{
+			Type: imap.StatusOk,
 		}
 	}
 
 	if res != nil {
 		res.Tag = cmd.Tag
 
-		if res.Type == common.StatusOk && res.Info == "" {
+		if res.Type == imap.StatusOk && res.Info == "" {
 			res.Info = cmd.Name + " completed"
 		}
 	}
@@ -343,7 +379,7 @@ func (s *Server) listenUpdates() (err error) {
 	s.Updates = updater.Updates()
 
 	var update *backend.Update
-	var res common.WriterTo
+	var res imap.WriterTo
 	for {
 		// TODO: do not generate response if nobody will receive it
 
@@ -357,7 +393,7 @@ func (s *Server) listenUpdates() (err error) {
 		case message := <-s.Updates.Messages:
 			update = &message.Update
 
-			ch := make(chan *common.Message, 1)
+			ch := make(chan *imap.Message, 1)
 			ch <- message.Message
 			close(ch)
 
@@ -374,31 +410,33 @@ func (s *Server) listenUpdates() (err error) {
 
 		// Format response
 		b := &bytes.Buffer{}
-		w := common.NewWriter(b)
+		w := imap.NewWriter(b)
 		if err := res.WriteTo(w); err != nil {
 			log.Println("WARN: cannot format unlateral update:", err)
 		}
 
 		for _, conn := range s.conns {
-			if update.Username != "" && (conn.User == nil || conn.User.Username() != update.Username) {
+			ctx := conn.Context()
+
+			if update.Username != "" && (ctx.User == nil || ctx.User.Username() != update.Username) {
 				continue
 			}
-			if update.Mailbox != "" && (conn.Mailbox == nil || conn.Mailbox.Name() != update.Mailbox) {
+			if update.Mailbox != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox) {
 				continue
 			}
-			if conn.silent {
+			if *conn.silent() {
 				// If silent is set, do not send message updates
 				if _, ok := res.(*responses.Fetch); ok {
 					continue
 				}
 			}
 
-			conn.locker.Lock()
-			if _, err := conn.Writer.Write(b.Bytes()); err != nil {
+			conn.locker().Lock()
+			if _, err := conn.writer().Write(b.Bytes()); err != nil {
 				log.Println("WARN: error sending unilateral update:", err)
 			}
-			conn.Flush()
-			conn.locker.Unlock()
+			conn.conn().Flush()
+			conn.locker().Unlock()
 		}
 
 		if update.Done != nil {
@@ -407,11 +445,17 @@ func (s *Server) listenUpdates() (err error) {
 	}
 }
 
-func (s *Server) getCaps(currentState common.ConnState) (caps []string) {
-	for name, state := range s.caps {
-		if currentState & state != 0 {
-			caps = append(caps, name)
-		}
+// Get this server's capabilities for the provided connection state.
+func (s *Server) Capabilities(state imap.ConnState) (caps []string) {
+	caps = []string{"IMAP4rev1"}
+
+	if state == imap.AuthenticatedState {
+		// Also add capabilities for imap.SelectedState
+		state |= imap.SelectedState
+	}
+
+	for _, ext := range s.extensions {
+		caps = append(caps, ext.Capabilities(state)...)
 	}
 	return
 }
@@ -429,26 +473,18 @@ func (s *Server) Close() error {
 	return nil
 }
 
-// Register a new capability that will be advertised by this server.
+// Enable some IMAP extensions on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterCapability(name string, state common.ConnState) {
-	s.caps[name] = state
+func (s *Server) Enable(extensions ...Extension) {
+	s.extensions = append(s.extensions, extensions...)
 }
 
-// Register a new authentication mechanism for this server.
+// Enable an authentication mechanism on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterAuth(name string, f SaslServerFactory) {
+func (s *Server) EnableAuth(name string, f SaslServerFactory) {
 	s.auths[name] = f
-}
-
-// Register a new command for this server.
-//
-// This function should not be called directly, it must only be used by
-// libraries implementing extensions of the IMAP protocol.
-func (s *Server) RegisterCommand(name string, f HandlerFactory) {
-	s.commands[name] = f
 }
