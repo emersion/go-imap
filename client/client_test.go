@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 )
 
@@ -38,7 +38,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 			return
 		}
 
-		c.State = common.LogoutState
+		c.State = imap.LogoutState
 		done <- nil
 	})()
 

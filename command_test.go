@@ -1,14 +1,14 @@
-package common_test
+package imap_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestCommand_Command(t *testing.T) {
-	cmd := &common.Command{
+	cmd := &imap.Command{
 		Tag: "A001",
 		Name: "NOOP",
 	}
@@ -20,9 +20,9 @@ func TestCommand_Command(t *testing.T) {
 
 func TestCommand_WriteTo_NoArgs(t *testing.T) {
 	var b bytes.Buffer
-	w := common.NewWriter(&b)
+	w := imap.NewWriter(&b)
 
-	cmd := &common.Command{
+	cmd := &imap.Command{
 		Tag: "A001",
 		Name: "NOOP",
 	}
@@ -37,9 +37,9 @@ func TestCommand_WriteTo_NoArgs(t *testing.T) {
 
 func TestCommand_WriteTo_WithArgs(t *testing.T) {
 	var b bytes.Buffer
-	w := common.NewWriter(&b)
+	w := imap.NewWriter(&b)
 
-	cmd := &common.Command{
+	cmd := &imap.Command{
 		Tag: "A002",
 		Name: "LOGIN",
 		Arguments: []interface{}{"username", "password"},
@@ -56,7 +56,7 @@ func TestCommand_WriteTo_WithArgs(t *testing.T) {
 func TestCommand_Parse_NoArgs(t *testing.T) {
 	fields := []interface{}{"a", "NOOP"}
 
-	cmd := &common.Command{}
+	cmd := &imap.Command{}
 
 	if err := cmd.Parse(fields); err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestCommand_Parse_NoArgs(t *testing.T) {
 func TestCommand_Parse_WithArgs(t *testing.T) {
 	fields := []interface{}{"a", "LOGIN", "username", "password"}
 
-	cmd := &common.Command{}
+	cmd := &imap.Command{}
 
 	if err := cmd.Parse(fields); err != nil {
 		t.Fatal(err)

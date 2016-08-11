@@ -1,7 +1,7 @@
 package responses
 
 import (
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // A LIST response.

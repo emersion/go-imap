@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/emersion/go-imap/backend"
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -37,8 +37,8 @@ type Logout struct {
 }
 
 func (cmd *Logout) Handle(conn Conn) error {
-	res := &common.StatusResp{
-		Type: common.StatusBye,
+	res := &imap.StatusResp{
+		Type: imap.StatusBye,
 		Info: "Closing connection",
 	}
 
@@ -47,6 +47,6 @@ func (cmd *Logout) Handle(conn Conn) error {
 	}
 
 	// Request to close the connection
-	conn.Context().State = common.LogoutState
+	conn.Context().State = imap.LogoutState
 	return nil
 }

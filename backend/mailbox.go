@@ -3,7 +3,7 @@ package backend
 import (
 	"time"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // Mailbox represents a mailbox belonging to a user in the mail storage system.
@@ -13,11 +13,11 @@ type Mailbox interface {
 	Name() string
 
 	// Get this mailbox info.
-	Info() (*common.MailboxInfo, error)
+	Info() (*imap.MailboxInfo, error)
 
 	// Get this mailbox status.
 	// See RFC 3501 section 6.3.10 for a list of items that can be requested.
-	Status(items []string) (*common.MailboxStatus, error)
+	Status(items []string) (*imap.MailboxStatus, error)
 
 	// Add the mailbox to the server's set of "active" or "subscribed" mailboxes.
 	Subscribe() error
@@ -40,10 +40,10 @@ type Mailbox interface {
 	// See RFC 3501 section 6.4.5 for a list of items that can be requested.
 	//
 	// Messages must be sent to ch. When the function returns, ch must be closed.
-	ListMessages(uid bool, seqset *common.SeqSet, items []string, ch chan<- *common.Message) error
+	ListMessages(uid bool, seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) error
 
 	// Search messages.
-	SearchMessages(uid bool, criteria *common.SearchCriteria) ([]uint32, error)
+	SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error)
 
 	// Append a new message to this mailbox. The \Recent flag will be added no
 	// matter flags is empty or not. If date is nil, the current time will be
@@ -57,7 +57,7 @@ type Mailbox interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a message update.
-	UpdateMessagesFlags(uid bool, seqset *common.SeqSet, operation common.FlagsOp, flags []string) error
+	UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, operation imap.FlagsOp, flags []string) error
 
 	// Copy the specified message(s) to the end of the specified destination
 	// mailbox. The flags and internal date of the message(s) SHOULD be preserved,
@@ -68,7 +68,7 @@ type Mailbox interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a mailbox update.
-	CopyMessages(uid bool, seqset *common.SeqSet, dest string) error
+	CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error
 
 	// Permanently removes all messages that have the \Deleted flag set from the
 	// currently selected mailbox.

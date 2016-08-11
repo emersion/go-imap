@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
 
-// Common errors in Selected state.
+// imap errors in Selected state.
 var (
 	ErrNoMailboxSelected = errors.New("No mailbox selected")
 	ErrMailboxReadOnly = errors.New("Mailbox opened in read-only mode")
@@ -79,7 +79,7 @@ func (cmd *Expunge) Handle(conn Conn) error {
 	var seqnums []uint32
 	if conn.Server().Updates == nil {
 		var err error
-		seqnums, err = ctx.Mailbox.SearchMessages(false, &common.SearchCriteria{Deleted: true})
+		seqnums, err = ctx.Mailbox.SearchMessages(false, &imap.SearchCriteria{Deleted: true})
 		if err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 		return ErrNoMailboxSelected
 	}
 
-	ch := make(chan *common.Message)
+	ch := make(chan *imap.Message)
 	res := &responses.Fetch{Messages: ch}
 
 	done := make(chan error, 1)
@@ -204,13 +204,13 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	}
 
 	itemStr := cmd.Item
-	silent := strings.HasSuffix(itemStr, common.SilentOp)
+	silent := strings.HasSuffix(itemStr, imap.SilentOp)
 	if silent {
-		itemStr = strings.TrimSuffix(itemStr, common.SilentOp)
+		itemStr = strings.TrimSuffix(itemStr, imap.SilentOp)
 	}
-	item := common.FlagsOp(itemStr)
+	item := imap.FlagsOp(itemStr)
 
-	if item != common.SetFlags && item != common.AddFlags && item != common.RemoveFlags {
+	if item != imap.SetFlags && item != imap.AddFlags && item != imap.RemoveFlags {
 		return errors.New("Unsupported STORE operation")
 	}
 
@@ -218,7 +218,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	if !ok {
 		return errors.New("Flags must be a list")
 	}
-	flags, err := common.ParseStringList(flagsList)
+	flags, err := imap.ParseStringList(flagsList)
 	if err != nil {
 		return err
 	}
@@ -300,8 +300,8 @@ func (cmd *Uid) Handle(conn Conn) error {
 		return err
 	}
 
-	return ErrStatusResp(&common.StatusResp{
-		Type: common.StatusOk,
-		Info: common.Uid + " " + inner.Name + " completed",
+	return ErrStatusResp(&imap.StatusResp{
+		Type: imap.StatusOk,
+		Info: imap.Uid + " " + inner.Name + " completed",
 	})
 }

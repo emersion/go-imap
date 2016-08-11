@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // Update contains user and mailbox information about an unilateral backend
@@ -20,19 +20,19 @@ type Update struct {
 // A status update. See RFC 3501 section 7.1 for a list of status responses.
 type StatusUpdate struct {
 	Update
-	*common.StatusResp
+	*imap.StatusResp
 }
 
 // A mailbox update.
 type MailboxUpdate struct {
 	Update
-	*common.MailboxStatus
+	*imap.MailboxStatus
 }
 
 // A message update.
 type MessageUpdate struct {
 	Update
-	*common.Message
+	*imap.Message
 }
 
 // An expunge update.

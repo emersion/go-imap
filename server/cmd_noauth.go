@@ -5,13 +5,13 @@ import (
 	"errors"
 	"net"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 	"github.com/emersion/go-sasl"
 )
 
-// Common errors in Not Authenticated state.
+// imap errors in Not Authenticated state.
 var (
 	ErrAlreadyAuthenticated = errors.New("Already authenticated")
 	ErrAuthDisabled = errors.New("Authentication disabled")
@@ -23,7 +23,7 @@ type StartTLS struct {
 
 func (cmd *StartTLS) Handle(conn Conn) error {
 	ctx := conn.Context()
-	if ctx.State != common.NotAuthenticatedState {
+	if ctx.State != imap.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
 	if conn.IsTLS() {
@@ -35,8 +35,8 @@ func (cmd *StartTLS) Handle(conn Conn) error {
 
 	// Send an OK status response to let the client know that the TLS handshake
 	// can begin
-	return ErrStatusResp(&common.StatusResp{
-		Type: common.StatusOk,
+	return ErrStatusResp(&imap.StatusResp{
+		Type: imap.StatusOk,
 		Info: "Begin TLS negotiation now",
 	})
 }
@@ -61,10 +61,10 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 }
 
 func afterAuthStatus(conn Conn) error {
-	return ErrStatusResp(&common.StatusResp{
-		Type: common.StatusOk,
-		Code: common.CodeCapability,
-		Arguments: common.FormatStringList(conn.Capabilities()),
+	return ErrStatusResp(&imap.StatusResp{
+		Type: imap.StatusOk,
+		Code: imap.CodeCapability,
+		Arguments: imap.FormatStringList(conn.Capabilities()),
 	})
 }
 
@@ -83,7 +83,7 @@ type Login struct {
 
 func (cmd *Login) Handle(conn Conn) error {
 	ctx := conn.Context()
-	if ctx.State != common.NotAuthenticatedState {
+	if ctx.State != imap.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
 	if !canAuth(conn) {
@@ -95,7 +95,7 @@ func (cmd *Login) Handle(conn Conn) error {
 		return err
 	}
 
-	ctx.State = common.AuthenticatedState
+	ctx.State = imap.AuthenticatedState
 	ctx.User = user
 	return afterAuthStatus(conn)
 }
@@ -106,7 +106,7 @@ type Authenticate struct {
 
 func (cmd *Authenticate) Handle(conn Conn) error {
 	ctx := conn.Context()
-	if ctx.State != common.NotAuthenticatedState {
+	if ctx.State != imap.NotAuthenticatedState {
 		return ErrAlreadyAuthenticated
 	}
 	if !canAuth(conn) {

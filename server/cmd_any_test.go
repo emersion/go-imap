@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/server"
 )
 
@@ -70,7 +70,7 @@ func TestLogout(t *testing.T) {
 
 type xnoop struct {}
 
-func (ext *xnoop) Capabilities(common.ConnState) []string {
+func (ext *xnoop) Capabilities(imap.ConnState) []string {
 	return []string{"XNOOP"}
 }
 

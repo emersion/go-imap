@@ -1,10 +1,10 @@
-package common_test
+package imap_test
 
 import (
 	"testing"
 	"fmt"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestMailboxInfo(t *testing.T) {
@@ -13,7 +13,7 @@ func TestMailboxInfo(t *testing.T) {
 		"/",
 		"INBOX",
 	}
-	info := &common.MailboxInfo{
+	info := &imap.MailboxInfo{
 		Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
 		Delimiter: "/",
 		Name: "INBOX",
@@ -23,8 +23,8 @@ func TestMailboxInfo(t *testing.T) {
 	testMailboxInfo_Format(t, info, fields)
 }
 
-func testMailboxInfo_Parse(t *testing.T, input []interface{}, expected *common.MailboxInfo) {
-	output := &common.MailboxInfo{}
+func testMailboxInfo_Parse(t *testing.T, input []interface{}, expected *imap.MailboxInfo) {
+	output := &imap.MailboxInfo{}
 	if err := output.Parse(input); err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func testMailboxInfo_Parse(t *testing.T, input []interface{}, expected *common.M
 	}
 }
 
-func testMailboxInfo_Format(t *testing.T, input *common.MailboxInfo, expected []interface{}) {
+func testMailboxInfo_Format(t *testing.T, input *imap.MailboxInfo, expected []interface{}) {
 	output := input.Format()
 
 	if fmt.Sprint(output) != fmt.Sprint(expected) {

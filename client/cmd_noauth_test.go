@@ -9,7 +9,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap/internal"
 	"github.com/emersion/go-sasl"
@@ -94,7 +94,7 @@ func TestClient_Authenticate(t *testing.T) {
 			return
 		}
 
-		if c.State != common.AuthenticatedState {
+		if c.State != imap.AuthenticatedState {
 			return fmt.Errorf("Client is not in authenticated state after AUTENTICATE")
 		}
 
@@ -141,7 +141,7 @@ func TestClient_Login_Success(t *testing.T) {
 			return
 		}
 
-		if c.State != common.AuthenticatedState {
+		if c.State != imap.AuthenticatedState {
 			return fmt.Errorf("Client is not in authenticated state after login")
 		}
 
@@ -169,7 +169,7 @@ func TestClient_Login_Error(t *testing.T) {
 			return fmt.Errorf("Failed login didn't returned an error: %v", err)
 		}
 
-		if c.State != common.NotAuthenticatedState {
+		if c.State != imap.NotAuthenticatedState {
 			return fmt.Errorf("Client state must be NotAuthenticated after failed login, but is: %v", c.State)
 		}
 

@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
 
-// Common errors in Authenticated state.
+// imap errors in Authenticated state.
 var (
 	ErrNotAuthenticated = errors.New("Not authenticated")
 )
@@ -30,9 +30,9 @@ func (cmd *Select) Handle(conn Conn) error {
 	}
 
 	items := []string{
-		common.MailboxFlags, common.MailboxPermanentFlags,
-		common.MailboxMessages, common.MailboxRecent, common.MailboxUnseen,
-		common.MailboxUidNext, common.MailboxUidValidity,
+		imap.MailboxFlags, imap.MailboxPermanentFlags,
+		imap.MailboxMessages, imap.MailboxRecent, imap.MailboxUnseen,
+		imap.MailboxUidNext, imap.MailboxUidValidity,
 	}
 
 	status, err := mbox.Status(items)
@@ -48,12 +48,12 @@ func (cmd *Select) Handle(conn Conn) error {
 		return err
 	}
 
-	code := common.CodeReadWrite
+	code := imap.CodeReadWrite
 	if ctx.MailboxReadOnly {
-		code = common.CodeReadOnly
+		code = imap.CodeReadOnly
 	}
-	return ErrStatusResp(&common.StatusResp{
-		Type: common.StatusOk,
+	return ErrStatusResp(&imap.StatusResp{
+		Type: imap.StatusOk,
 		Code: code,
 	})
 }
@@ -145,7 +145,7 @@ func (cmd *List) Handle(conn Conn) error {
 
 	done := make(chan error, 1)
 
-	ch := make(chan *common.MailboxInfo)
+	ch := make(chan *imap.MailboxInfo)
 	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
 	go (func () {
@@ -237,7 +237,7 @@ func (cmd *Append) Handle(conn Conn) error {
 	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
 	// Do this only if the backend doesn't send updates itself
 	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == mbox.Name() {
-		status, err := mbox.Status([]string{common.MailboxMessages})
+		status, err := mbox.Status([]string{imap.MailboxMessages})
 		if err != nil {
 			return err
 		}

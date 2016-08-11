@@ -8,7 +8,7 @@ import (
 	"net"
 	"sync"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 // An IMAP client.

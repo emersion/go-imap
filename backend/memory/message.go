@@ -3,18 +3,18 @@ package memory
 import (
 	"bytes"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 type Message struct {
-	*common.Message
+	*imap.Message
 
 	body []byte
 }
 
-func (m *Message) Metadata(items []string) (metadata *common.Message) {
-	metadata = &common.Message{
-		Body: map[*common.BodySectionName]*common.Literal{},
+func (m *Message) Metadata(items []string) (metadata *imap.Message) {
+	metadata = &imap.Message{
+		Body: map[*imap.BodySectionName]*imap.Literal{},
 	}
 
 	for _, item := range items {
@@ -32,7 +32,7 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 		case "UID":
 			metadata.Uid = m.Uid
 		default:
-			section, err := common.NewBodySectionName(item)
+			section, err := imap.NewBodySectionName(item)
 			item = ""
 			if err != nil {
 				break
@@ -60,9 +60,9 @@ func (m *Message) Metadata(items []string) (metadata *common.Message) {
 			}
 
 			// If part doesn't exist, set the literal to nil
-			var literal *common.Literal
+			var literal *imap.Literal
 			if body != nil {
-				literal = common.NewLiteral(section.ExtractPartial(body))
+				literal = imap.NewLiteral(section.ExtractPartial(body))
 			}
 			metadata.Body[section] = literal
 		}
@@ -84,12 +84,12 @@ func (m *Message) hasFlag(flag string) bool {
 	return false
 }
 
-func (m *Message) Matches(criteria *common.SearchCriteria) bool {
+func (m *Message) Matches(criteria *imap.SearchCriteria) bool {
 	// TODO
 	if criteria.SeqSet != nil && !criteria.SeqSet.Contains(m.SeqNum) {
 		return false
 	}
-	if criteria.Deleted && !m.hasFlag(common.DeletedFlag) {
+	if criteria.Deleted && !m.hasFlag(imap.DeletedFlag) {
 		return false
 	}
 	return true

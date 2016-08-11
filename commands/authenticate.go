@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	imap "github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-sasl"
 )
 

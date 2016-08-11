@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 )
 
@@ -19,12 +19,12 @@ type Conn interface {
 	// Get a list of capabilities enabled for this connection.
 	Capabilities() []string
 	// Write a response to this connection.
-	WriteResp(res common.WriterTo) error
+	WriteResp(res imap.WriterTo) error
 	// Check if TLS is enabled on this connection.
 	IsTLS() bool
 	// Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
 	// tunnel.
-	Upgrade(upgrader common.ConnUpgrader) error
+	Upgrade(upgrader imap.ConnUpgrader) error
 	// Close this connection.
 	Close() error
 
@@ -34,7 +34,7 @@ type Conn interface {
 // A connection's context.
 type Context struct {
 	// This connection's current state.
-	State common.ConnState
+	State imap.ConnState
 	// If the client is logged in, the user.
 	User backend.User
 	// If the client has selected a mailbox, the mailbox.
@@ -44,7 +44,7 @@ type Context struct {
 }
 
 type conn struct {
-	*common.Conn
+	*imap.Conn
 
 	s *Server
 	ctx *Context
@@ -56,17 +56,17 @@ type conn struct {
 
 func newConn(s *Server, c net.Conn) *conn {
 	continues := make(chan bool)
-	r := common.NewServerReader(nil, continues)
-	w := common.NewWriter(nil)
+	r := imap.NewServerReader(nil, continues)
+	w := imap.NewWriter(nil)
 
 	tlsConn, _ := c.(*tls.Conn)
 
 	conn := &conn{
-		Conn: common.NewConn(c, r, w),
+		Conn: imap.NewConn(c, r, w),
 
 		s: s,
 		ctx: &Context{
-			State: common.NotAuthenticatedState,
+			State: imap.NotAuthenticatedState,
 		},
 		tlsConn: tlsConn,
 		continues: continues,
@@ -91,7 +91,7 @@ func (c *conn) Context() *Context {
 }
 
 // Write a response to this connection.
-func (c *conn) WriteResp(res common.WriterTo) error {
+func (c *conn) WriteResp(res imap.WriterTo) error {
 	c.locker.Lock()
 	defer c.locker.Unlock()
 
@@ -114,14 +114,14 @@ func (c *conn) Close() error {
 
 	close(c.continues)
 
-	c.ctx.State = common.LogoutState
+	c.ctx.State = imap.LogoutState
 	return nil
 }
 
 func (c *conn) Capabilities() (caps []string) {
 	caps = c.s.Capabilities(c.ctx.State)
 
-	if c.ctx.State == common.NotAuthenticatedState {
+	if c.ctx.State == imap.NotAuthenticatedState {
 		if !c.IsTLS() && c.s.TLSConfig != nil {
 			caps = append(caps, "STARTTLS")
 		}
@@ -138,7 +138,7 @@ func (c *conn) Capabilities() (caps []string) {
 
 func (c *conn) sendContinuationReqs() {
 	for range c.continues {
-		cont := &common.ContinuationResp{Info: "send literal"}
+		cont := &imap.ContinuationResp{Info: "send literal"}
 		if err := c.WriteResp(cont); err != nil {
 			log.Println("WARN: cannot send continuation request:", err)
 		}
@@ -152,9 +152,9 @@ func (c *conn) greet() error {
 		args[i] = cap
 	}
 
-	greeting := &common.StatusResp{
-		Type: common.StatusOk,
-		Code: common.CodeCapability,
+	greeting := &imap.StatusResp{
+		Type: imap.StatusOk,
+		Code: imap.CodeCapability,
 		Arguments: args,
 		Info: "IMAP4rev1 Service Ready",
 	}

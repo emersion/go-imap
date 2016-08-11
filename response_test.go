@@ -1,17 +1,17 @@
-package common_test
+package imap_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/emersion/go-imap/common"
+	"github.com/emersion/go-imap"
 )
 
 func TestResp_WriteTo(t *testing.T) {
 	var b bytes.Buffer
-	w := common.NewWriter(&b)
+	w := imap.NewWriter(&b)
 
-	resp := &common.Resp{
+	resp := &imap.Resp{
 		Fields: []interface{}{"76", "FETCH", []interface{}{"UID", 783}},
 	}
 
@@ -26,9 +26,9 @@ func TestResp_WriteTo(t *testing.T) {
 
 func TestContinuationResp_WriteTo(t *testing.T) {
 	var b bytes.Buffer
-	w := common.NewWriter(&b)
+	w := imap.NewWriter(&b)
 
-	resp := &common.ContinuationResp{}
+	resp := &imap.ContinuationResp{}
 
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
@@ -41,9 +41,9 @@ func TestContinuationResp_WriteTo(t *testing.T) {
 
 func TestContinuationResp_WriteTo_WithInfo(t *testing.T) {
 	var b bytes.Buffer
-	w := common.NewWriter(&b)
+	w := imap.NewWriter(&b)
 
-	resp := &common.ContinuationResp{Info: "send literal"}
+	resp := &imap.ContinuationResp{Info: "send literal"}
 
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
@@ -56,14 +56,14 @@ func TestContinuationResp_WriteTo_WithInfo(t *testing.T) {
 
 func TestReadResp_ContinuationResp(t *testing.T) {
 	b := bytes.NewBufferString("+ send literal\r\n")
-	r := common.NewReader(b)
+	r := imap.NewReader(b)
 
-	resp, err := common.ReadResp(r)
+	resp, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cont, ok := resp.(*common.ContinuationResp)
+	cont, ok := resp.(*imap.ContinuationResp)
 	if !ok {
 		t.Fatal("Response is not a continuation request")
 	}
@@ -75,14 +75,14 @@ func TestReadResp_ContinuationResp(t *testing.T) {
 
 func TestReadResp_ContinuationResp_NoInfo(t *testing.T) {
 	b := bytes.NewBufferString("+\r\n")
-	r := common.NewReader(b)
+	r := imap.NewReader(b)
 
-	resp, err := common.ReadResp(r)
+	resp, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cont, ok := resp.(*common.ContinuationResp)
+	cont, ok := resp.(*imap.ContinuationResp)
 	if !ok {
 		t.Fatal("Response is not a continuation request")
 	}
@@ -94,14 +94,14 @@ func TestReadResp_ContinuationResp_NoInfo(t *testing.T) {
 
 func TestReadResp_Resp(t *testing.T) {
 	b := bytes.NewBufferString("* 1 EXISTS\r\n")
-	r := common.NewReader(b)
+	r := imap.NewReader(b)
 
-	respi, err := common.ReadResp(r)
+	respi, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, ok := respi.(*common.Resp)
+	resp, ok := respi.(*imap.Resp)
 	if !ok {
 		t.Fatal("Invalid response type")
 	}
@@ -116,14 +116,14 @@ func TestReadResp_Resp(t *testing.T) {
 
 func TestReadResp_Resp_NoArgs(t *testing.T) {
 	b := bytes.NewBufferString("* SEARCH\r\n")
-	r := common.NewReader(b)
+	r := imap.NewReader(b)
 
-	respi, err := common.ReadResp(r)
+	respi, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, ok := respi.(*common.Resp)
+	resp, ok := respi.(*imap.Resp)
 	if !ok {
 		t.Fatal("Invalid response type")
 	}
@@ -139,46 +139,46 @@ func TestReadResp_Resp_NoArgs(t *testing.T) {
 func TestReadResp_StatusResp(t *testing.T) {
 	tests := []struct{
 		input string
-		expected *common.StatusResp
+		expected *imap.StatusResp
 	}{
 		{
 			input: "* OK IMAP4rev1 Service Ready\r\n",
-			expected: &common.StatusResp{
+			expected: &imap.StatusResp{
 				Tag: "*",
-				Type: common.StatusOk,
+				Type: imap.StatusOk,
 				Info: "IMAP4rev1 Service Ready",
 			},
 		},
 		{
 			input: "* PREAUTH Welcome Pauline!\r\n",
-			expected: &common.StatusResp{
+			expected: &imap.StatusResp{
 				Tag: "*",
-				Type: common.StatusPreauth,
+				Type: imap.StatusPreauth,
 				Info: "Welcome Pauline!",
 			},
 		},
 		{
 			input: "a001 OK NOOP completed\r\n",
-			expected: &common.StatusResp{
+			expected: &imap.StatusResp{
 				Tag: "a001",
-				Type: common.StatusOk,
+				Type: imap.StatusOk,
 				Info: "NOOP completed",
 			},
 		},
 		{
 			input: "a001 OK [READ-ONLY] SELECT completed\r\n",
-			expected: &common.StatusResp{
+			expected: &imap.StatusResp{
 				Tag: "a001",
-				Type: common.StatusOk,
+				Type: imap.StatusOk,
 				Code: "READ-ONLY",
 				Info: "SELECT completed",
 			},
 		},
 		{
 			input: "a001 OK [CAPABILITY IMAP4rev1 UIDPLUS] LOGIN completed\r\n",
-			expected: &common.StatusResp{
+			expected: &imap.StatusResp{
 				Tag: "a001",
-				Type: common.StatusOk,
+				Type: imap.StatusOk,
 				Code: "CAPABILITY",
 				Arguments: []interface{}{"IMAP4rev1", "UIDPLUS"},
 				Info: "LOGIN completed",
@@ -188,14 +188,14 @@ func TestReadResp_StatusResp(t *testing.T) {
 
 	for _, test := range tests {
 		b := bytes.NewBufferString(test.input)
-		r := common.NewReader(b)
+		r := imap.NewReader(b)
 
-		resp, err := common.ReadResp(r)
+		resp, err := imap.ReadResp(r)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		status, ok := resp.(*common.StatusResp)
+		status, ok := resp.(*imap.StatusResp)
 		if !ok {
 			t.Fatal("Response is not a status:", resp)
 		}

@@ -1,4 +1,4 @@
-package common
+package imap
 
 import (
 	"errors"
