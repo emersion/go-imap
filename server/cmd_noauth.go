@@ -118,8 +118,7 @@ func (cmd *Authenticate) Handle(conn Conn) error {
 		mechanisms[name] = newSasl(conn)
 	}
 
-	// TODO: do not use Reader and Writer here
-	err := cmd.Authenticate.Handle(mechanisms, conn.reader(), conn.writer())
+	err := cmd.Authenticate.Handle(mechanisms, conn, conn.writer())
 	if err != nil {
 		return err
 	}
