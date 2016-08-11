@@ -473,12 +473,12 @@ func (s *Server) Close() error {
 	return nil
 }
 
-// Enable an IMAP extension on this server.
+// Enable some IMAP extensions on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) Enable(extension Extension) {
-	s.extensions = append(s.extensions, extension)
+func (s *Server) Enable(extensions ...Extension) {
+	s.extensions = append(s.extensions, extensions...)
 }
 
 // Enable an authentication mechanism on this server.
