@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 
 	"github.com/emersion/go-imap"
@@ -43,6 +44,12 @@ type Client struct {
 	// TODO: support unilateral message updates
 	// A channel where messages updates from the server will be sent.
 	//MessageUpdates chan *imap.Message
+
+	// ErrorLog specifies an optional logger for errors accepting
+	// connections and unexpected behavior from handlers.
+	// If nil, logging goes to os.Stderr via the log package's
+	// standard logger.
+	ErrorLog *log.Logger
 }
 
 func (c *Client) read() error {
@@ -72,7 +79,7 @@ func (c *Client) read() error {
 			return nil
 		}
 		if err != nil {
-			log.Println("Error reading response:", err)
+			c.ErrorLog.Println("error reading response: ", err)
 			if imap.IsParseError(err) {
 				continue
 			} else {
@@ -104,7 +111,7 @@ func (c *Client) read() error {
 		c.handlersLocker.Unlock()
 
 		if !accepted {
-			log.Println("Response has not been handled", res)
+			c.ErrorLog.Println("response has not been handled: ", res)
 		}
 	}
 
@@ -388,6 +395,7 @@ func New(conn net.Conn) (c *Client, err error) {
 		handlersLocker: &sync.Mutex{},
 		loggedOut:      make(chan struct{}),
 		State:          imap.NotAuthenticatedState,
+		ErrorLog:       log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
 	go c.handleContinuationReqs(continues)

@@ -114,7 +114,8 @@ type Server struct {
 // Create a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
-		Backend: bkd,
+		Backend:  bkd,
+		ErrorLog: log.New(os.Stderr, "imap/server: ", log.LstdFlags),
 	}
 
 	s.auths = map[string]SaslServerFactory{
@@ -181,10 +182,6 @@ func New(bkd backend.Backend) *Server {
 
 // Serve accepts incoming connections on the Listener l.
 func (s *Server) Serve(l net.Listener) error {
-	if s.ErrorLog == nil {
-		s.ErrorLog = log.New(os.Stderr, "imap/server: ", log.LstdFlags)
-	}
-
 	s.listener = l
 	defer s.Close()
 
