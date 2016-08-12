@@ -129,8 +129,10 @@ func main() {
 	bkd := memory.New()
 
 	// Create a new server
-	s, err := server.Listen(":3000", bkd)
-	if err != nil {
+	s := server.New(bkd)
+	s.Addr = ":3000"
+
+	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 
