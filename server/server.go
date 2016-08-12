@@ -98,7 +98,7 @@ type Server struct {
 	// This server's backend.
 	Backend backend.Backend
 	// Backend updates that will be sent to connected clients.
-	Updates *backend.Updates
+	Updates <-chan interface{}
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 	// Print all network activity to STDOUT.
@@ -378,34 +378,42 @@ func (s *Server) listenUpdates() (err error) {
 	}
 	s.Updates = updater.Updates()
 
-	var update *backend.Update
-	var res imap.WriterTo
 	for {
 		// TODO: do not generate response if nobody will receive it
 
-		select {
-		case status := <-s.Updates.Statuses:
-			update = &status.Update
-			res = status.StatusResp
-		case mailbox := <-s.Updates.Mailboxes:
-			update = &mailbox.Update
-			res = &responses.Select{Mailbox: mailbox.MailboxStatus}
-		case message := <-s.Updates.Messages:
-			update = &message.Update
+		item := <-s.Updates
+
+		var update *backend.Update
+		var res imap.WriterTo
+		switch item := item.(type) {
+		case *backend.StatusUpdate:
+			update = &item.Update
+			res = item.StatusResp
+		case *backend.MailboxUpdate:
+			update = &item.Update
+			res = &responses.Select{Mailbox: item.MailboxStatus}
+		case *backend.MessageUpdate:
+			update = &item.Update
 
 			ch := make(chan *imap.Message, 1)
-			ch <- message.Message
+			ch <- item.Message
 			close(ch)
 
 			res = &responses.Fetch{Messages: ch}
-		case expunge := <-s.Updates.Expunges:
-			update = &expunge.Update
+		case *backend.ExpungeUpdate:
+			update = &item.Update
 
 			ch := make(chan uint32, 1)
-			ch <- expunge.SeqNum
+			ch <- item.SeqNum
 			close(ch)
 
 			res = &responses.Expunge{SeqNums: ch}
+		default:
+			log.Println("Unhandled update:", item)
+		}
+
+		if update == nil || res == nil {
+			continue
 		}
 
 		// Format response
@@ -439,9 +447,7 @@ func (s *Server) listenUpdates() (err error) {
 			conn.locker().Unlock()
 		}
 
-		if update.Done != nil {
-			close(update.Done)
-		}
+		backend.DoneUpdate(update)
 	}
 }
 
