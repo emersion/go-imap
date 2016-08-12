@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
@@ -103,6 +104,11 @@ type Server struct {
 	AllowInsecureAuth bool
 	// Print all network activity to STDOUT.
 	Debug bool
+	// ErrorLog specifies an optional logger for errors accepting
+	// connections and unexpected behavior from handlers.
+	// If nil, logging goes to os.Stderr via the log package's
+	// standard logger.
+	ErrorLog *log.Logger
 }
 
 // Create a new IMAP server from an existing listener.
@@ -175,6 +181,10 @@ func New(bkd backend.Backend) *Server {
 
 // Serve accepts incoming connections on the Listener l.
 func (s *Server) Serve(l net.Listener) error {
+	if s.ErrorLog == nil {
+		s.ErrorLog = log.New(os.Stderr, "imap/server: ", log.LstdFlags)
+	}
+
 	s.listener = l
 	defer s.Close()
 
@@ -275,7 +285,7 @@ func (s *Server) handleConn(conn Conn) error {
 					Info: err.Error(),
 				}
 			} else {
-				log.Println("Error reading command:", err)
+				s.ErrorLog.Println("cannot read command: ", err)
 				return err
 			}
 		} else {
@@ -301,13 +311,13 @@ func (s *Server) handleConn(conn Conn) error {
 
 		if res != nil {
 			if err := conn.WriteResp(res); err != nil {
-				log.Println("Error writing response:", err)
+				s.ErrorLog.Println("cannot write response: ", err)
 				continue
 			}
 
 			if up != nil && res.Type == imap.StatusOk {
 				if err := up.Upgrade(conn); err != nil {
-					log.Println("Error upgrading connection:", err)
+					s.ErrorLog.Println("cannot upgrade connection: ", err)
 					return err
 				}
 			}
@@ -409,7 +419,7 @@ func (s *Server) listenUpdates() (err error) {
 
 			res = &responses.Expunge{SeqNums: ch}
 		default:
-			log.Println("Unhandled update:", item)
+			s.ErrorLog.Printf("unhandled update: %T\n", item)
 		}
 
 		if update == nil || res == nil {
@@ -420,7 +430,7 @@ func (s *Server) listenUpdates() (err error) {
 		b := &bytes.Buffer{}
 		w := imap.NewWriter(b)
 		if err := res.WriteTo(w); err != nil {
-			log.Println("WARN: cannot format unlateral update:", err)
+			s.ErrorLog.Printf("cannot format unlateral update: ", err)
 		}
 
 		for _, conn := range s.conns {
@@ -441,7 +451,7 @@ func (s *Server) listenUpdates() (err error) {
 
 			conn.locker().Lock()
 			if _, err := conn.writer().Write(b.Bytes()); err != nil {
-				log.Println("WARN: error sending unilateral update:", err)
+				s.ErrorLog.Println("cannot send unilateral update:", err)
 			}
 			conn.conn().Flush()
 			conn.locker().Unlock()

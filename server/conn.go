@@ -3,7 +3,6 @@ package server
 import (
 	"crypto/tls"
 	"io"
-	"log"
 	"net"
 	"sync"
 
@@ -165,7 +164,7 @@ func (c *conn) sendContinuationReqs() {
 	for range c.continues {
 		cont := &imap.ContinuationResp{Info: "send literal"}
 		if err := c.WriteResp(cont); err != nil {
-			log.Println("WARN: cannot send continuation request:", err)
+			c.Server().ErrorLog.Println("cannot send continuation request: ", err)
 		}
 	}
 }
