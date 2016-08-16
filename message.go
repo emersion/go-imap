@@ -838,7 +838,17 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 		// Type-specific fields
 		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
-			fields = append(fields, bs.Envelope.Format(), bs.BodyStructure.Format(), bs.Lines)
+			var env interface{}
+			if bs.Envelope != nil {
+				env = bs.Envelope.Format()
+			}
+
+			var bsbs interface{}
+			if bs.BodyStructure != nil {
+				bsbs = bs.BodyStructure.Format()
+			}
+
+			fields = append(fields, env, bsbs, bs.Lines)
 		}
 		if bs.MimeType == "text" {
 			fields = append(fields, bs.Lines)
