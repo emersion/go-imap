@@ -85,6 +85,16 @@ func (c *Client) Expunge(ch chan uint32) (err error) {
 }
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
+	ids, status, err := c.executeSearch(uid, criteria, "UTF-8")
+	if status != nil && status.Code == imap.CodeBadCharset {
+		ids, _, err = c.executeSearch(uid, criteria, "US-ASCII")
+		return
+	}
+
+	return ids, err
+}
+
+func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset string) (ids []uint32, status *imap.StatusResp, err error) {
 	if c.State != imap.SelectedState {
 		err = ErrNoMailboxSelected
 		return
@@ -92,7 +102,7 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, 
 
 	var cmd imap.Commander
 	cmd = &commands.Search{
-		Charset:  "UTF-8",
+		Charset:  charset,
 		Criteria: criteria,
 	}
 	if uid {
@@ -101,13 +111,14 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, 
 
 	res := &responses.Search{}
 
-	status, err := c.execute(cmd, res)
+	status, err = c.execute(cmd, res)
 	if err != nil {
 		return
 	}
 
 	err = status.Err()
 	ids = res.Ids
+
 	return
 }
 
