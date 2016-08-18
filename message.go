@@ -18,6 +18,40 @@ const (
 	RecentFlag   = "\\Recent"
 )
 
+// Message attributes that can be fetched, defined in RFC 3501 section 6.4.5.
+// Attributes that fetches the message contents are defined with
+// BodySectionName.
+const (
+	// Non-extensible form of BODYSTRUCTURE.
+	BodyMsgAttr = "BODY"
+	// MIME body structure of the message.
+	BodyStructureMsgAttr = "BODYSTRUCTURE"
+	// The envelope structure of the message.
+	EnvelopeMsgAttr = "ENVELOPE"
+	// The flags that are set for the message.
+	FlagsMsgAttr = "FLAGS"
+	// The internal date of the message.
+	InternalDateMsgAttr = "INTERNALDATE"
+	// The RFC 822 size of the message.
+	SizeMsgAttr = "RFC822.SIZE"
+	// The unique identifier for the message.
+	UidMsgAttr = "UID"
+)
+
+// Part specifiers described in RFC 3501 page 55.
+const (
+	// Refers to the entire part, including headers.
+	EntireSpecifier = ""
+	// Refers to the header of the part. Must include the final CRLF delimiting
+	// the header and the body.
+	HeaderSpecifier = "HEADER"
+	// Refers to the text body of the part, omitting the header.
+	TextSpecifier = "TEXT"
+	// Refers to the MIME Internet Message Body header.  Must include the final
+	// CRLF delimiting the header and the body.
+	MimeSpecifier = "MIME"
+)
+
 // A message.
 type Message struct {
 	// The message sequence number. It must be greater than or equal to 1.
@@ -62,17 +96,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			item := strings.ToUpper(key)
 
 			switch item {
-			case "ENVELOPE":
-				env, ok := f.([]interface{})
-				if !ok {
-					return errors.New("ENVELOPE is not a list")
-				}
-
-				m.Envelope = &Envelope{}
-				if err := m.Envelope.Parse(env); err != nil {
-					return err
-				}
-			case "BODYSTRUCTURE", "BODY":
+			case BodyMsgAttr, BodyStructureMsgAttr:
 				bs, ok := f.([]interface{})
 				if !ok {
 					return errors.New("BODYSTRUCTURE is not a list")
@@ -82,7 +106,17 @@ func (m *Message) Parse(fields []interface{}) error {
 				if err := m.BodyStructure.Parse(bs); err != nil {
 					return err
 				}
-			case "FLAGS":
+			case EnvelopeMsgAttr:
+				env, ok := f.([]interface{})
+				if !ok {
+					return errors.New("ENVELOPE is not a list")
+				}
+
+				m.Envelope = &Envelope{}
+				if err := m.Envelope.Parse(env); err != nil {
+					return err
+				}
+			case FlagsMsgAttr:
 				flags, ok := f.([]interface{})
 				if !ok {
 					return errors.New("FLAGS is not a list")
@@ -92,12 +126,12 @@ func (m *Message) Parse(fields []interface{}) error {
 				for i, flag := range flags {
 					m.Flags[i], _ = flag.(string)
 				}
-			case "INTERNALDATE":
+			case InternalDateMsgAttr:
 				date, _ := f.(string)
 				m.InternalDate, _ = ParseDateTime(date)
-			case "RFC822.SIZE":
+			case SizeMsgAttr:
 				m.Size, _ = ParseNumber(f)
-			case "UID":
+			case UidMsgAttr:
 				m.Uid, _ = ParseNumber(f)
 			default:
 				// Likely to be a section of the body
@@ -134,25 +168,25 @@ func (m *Message) Format() (fields []interface{}) {
 		ok := true
 		var value interface{}
 		switch item {
-		case "ENVELOPE":
-			value = m.Envelope.Format()
-		case "BODYSTRUCTURE", "BODY":
-			if item == "BODY" {
+		case BodyMsgAttr, BodyStructureMsgAttr:
+			if item == BodyMsgAttr {
 				// Extension data is never returned with the BODY fetch
 				m.BodyStructure.Extended = false
 			}
 			value = m.BodyStructure.Format()
-		case "FLAGS":
+		case EnvelopeMsgAttr:
+			value = m.Envelope.Format()
+		case FlagsMsgAttr:
 			flags := make([]interface{}, len(m.Flags))
 			for i, v := range m.Flags {
 				flags[i] = v
 			}
 			value = flags
-		case "INTERNALDATE":
+		case InternalDateMsgAttr:
 			value = m.InternalDate
-		case "RFC822.SIZE":
+		case SizeMsgAttr:
 			value = m.Size
-		case "UID":
+		case UidMsgAttr:
 			value = m.Uid
 		default:
 			ok = false
@@ -332,20 +366,6 @@ func NewBodySectionName(s string) (section *BodySectionName, err error) {
 	return
 }
 
-// Part specifiers described in RFC 3501 page 55.
-const (
-	// Refers to the entire part, including headers.
-	EntireSpecifier = ""
-	// Refers to the header of the part. Must include the final CRLF delimiting
-	// the header and the body.
-	HeaderSpecifier = "HEADER"
-	// Refers to the text body of the part, omitting the header.
-	TextSpecifier = "TEXT"
-	// Refers to the MIME Internet Message Body header.  Must include the final
-	// CRLF delimiting the header and the body.
-	MimeSpecifier = "MIME"
-)
-
 // A body part name.
 type BodyPartName struct {
 	// The specifier of the requested part.
@@ -375,7 +395,7 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 
 	end := 0
 	for i, node := range path {
-		if node == "" || node == "HEADER" || node == "MIME" || node == "TEXT" {
+		if node == "" || node == HeaderSpecifier || node == MimeSpecifier || node == TextSpecifier {
 			part.Specifier = node
 			end = i + 1
 			break
@@ -392,7 +412,7 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 		part.Path = append(part.Path, index)
 	}
 
-	if part.Specifier == "HEADER" && len(path) > end && path[end] == "FIELDS" && len(args) > 0 {
+	if part.Specifier == HeaderSpecifier && len(path) > end && path[end] == "FIELDS" && len(args) > 0 {
 		end++
 		if len(path) > end && path[end] == "NOT" {
 			part.NotFields = true
@@ -423,7 +443,7 @@ func (part *BodyPartName) String() (s string) {
 		path = append(path, part.Specifier)
 	}
 
-	if part.Specifier == "HEADER" && len(part.Fields) > 0 {
+	if part.Specifier == HeaderSpecifier && len(part.Fields) > 0 {
 		path = append(path, "FIELDS")
 
 		if part.NotFields {

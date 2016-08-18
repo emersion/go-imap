@@ -19,17 +19,17 @@ func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 
 	for _, item := range items {
 		switch item {
-		case "ENVELOPE":
+		case imap.EnvelopeMsgAttr:
 			metadata.Envelope = m.Envelope
-		case "BODYSTRUCTURE", "BODY":
+		case imap.BodyMsgAttr, imap.BodyStructureMsgAttr:
 			metadata.BodyStructure = m.BodyStructure
-		case "FLAGS":
+		case imap.FlagsMsgAttr:
 			metadata.Flags = m.Flags
-		case "INTERNALDATE":
+		case imap.InternalDateMsgAttr:
 			metadata.InternalDate = m.InternalDate
-		case "RFC822.SIZE":
+		case imap.SizeMsgAttr:
 			metadata.Size = m.Size
-		case "UID":
+		case imap.UidMsgAttr:
 			metadata.Uid = m.Uid
 		default:
 			section, err := imap.NewBodySectionName(item)
@@ -49,11 +49,11 @@ func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 						parts = [][]byte{nil, parts[0]}
 					}
 
-					if section.Specifier == "HEADER" {
+					if section.Specifier == imap.HeaderSpecifier {
 						body = parts[0]
 						body = append(body, sep...)
 					}
-					if section.Specifier == "TEXT" {
+					if section.Specifier == imap.TextSpecifier {
 						body = parts[1]
 					}
 				}

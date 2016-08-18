@@ -22,7 +22,7 @@ func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 	info := &imap.MailboxInfo{
 		Delimiter:  "/",
 		Name:       mbox.name,
-		Attributes: []string{"\\Noinferiors"},
+		Attributes: []string{imap.NoInferiorsAttr},
 	}
 	return info, nil
 }
@@ -47,15 +47,15 @@ func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
 
 	for _, name := range items {
 		switch name {
-		case "MESSAGES":
+		case imap.MailboxMessages:
 			status.Messages = uint32(len(mbox.messages))
-		case "UIDNEXT":
+		case imap.MailboxUidNext:
 			status.UidNext = mbox.uidNext()
-		case "UIDVALIDITY":
+		case imap.MailboxUidValidity:
 			status.UidValidity = 1
-		case "RECENT":
+		case imap.MailboxRecent:
 			status.Recent = 0
-		case "UNSEEN":
+		case imap.MailboxUnseen:
 			status.Unseen = 0
 		}
 	}
