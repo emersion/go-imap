@@ -85,7 +85,7 @@ func WaitUpdates(updates ...interface{}) <-chan struct{} {
 
 	var chs []<-chan struct{}
 	for _, u := range updates {
-		uu, ok := u.(interface{
+		uu, ok := u.(interface {
 			Done() <-chan struct{}
 		})
 		if !ok {
