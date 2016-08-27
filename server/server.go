@@ -45,8 +45,8 @@ type SaslServerFactory func(conn Conn) sasl.Server
 
 // An IMAP extension.
 type Extension interface {
-	// Get capabilities provided by this extension for a given connection state.
-	Capabilities(state imap.ConnState) []string
+	// Get capabilities provided by this extension for a given connection.
+	Capabilities(c Conn) []string
 	// Get the command handler factory for the provided command name.
 	Command(name string) HandlerFactory
 }
@@ -456,21 +456,6 @@ func (s *Server) listenUpdates() (err error) {
 
 		backend.DoneUpdate(update)
 	}
-}
-
-// Get this server's capabilities for the provided connection state.
-func (s *Server) Capabilities(state imap.ConnState) (caps []string) {
-	caps = []string{"IMAP4rev1"}
-
-	if state == imap.AuthenticatedState {
-		// Also add capabilities for imap.SelectedState
-		state |= imap.SelectedState
-	}
-
-	for _, ext := range s.extensions {
-		caps = append(caps, ext.Capabilities(state)...)
-	}
-	return
 }
 
 // Stops listening and closes all current connections.

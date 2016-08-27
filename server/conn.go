@@ -140,8 +140,8 @@ func (c *conn) Close() error {
 	return nil
 }
 
-func (c *conn) Capabilities() (caps []string) {
-	caps = c.s.Capabilities(c.ctx.State)
+func (c *conn) Capabilities() []string {
+	caps := []string{"IMAP4rev1"}
 
 	if c.ctx.State == imap.NotAuthenticatedState {
 		if !c.IsTLS() && c.s.TLSConfig != nil {
@@ -157,7 +157,11 @@ func (c *conn) Capabilities() (caps []string) {
 		}
 	}
 
-	return
+	for _, ext := range c.s.extensions {
+		caps = append(caps, ext.Capabilities(c)...)
+	}
+
+	return caps
 }
 
 func (c *conn) sendContinuationReqs() {

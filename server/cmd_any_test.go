@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/server"
 	"github.com/emersion/go-sasl"
 )
@@ -71,7 +70,7 @@ func TestLogout(t *testing.T) {
 
 type xnoop struct{}
 
-func (ext *xnoop) Capabilities(imap.ConnState) []string {
+func (ext *xnoop) Capabilities(server.Conn) []string {
 	return []string{"XNOOP"}
 }
 
@@ -89,7 +88,7 @@ func TestServer_Enable(t *testing.T) {
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 XNOOP AUTH=PLAIN" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 AUTH=PLAIN XNOOP" {
 		t.Fatal("Bad capability:", scanner.Text())
 	}
 
