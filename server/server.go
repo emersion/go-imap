@@ -102,8 +102,8 @@ type Server struct {
 	Updates <-chan interface{}
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
-	// Print all network activity to STDOUT.
-	Debug bool
+	// An io.Writer to which all network activity will be mirrored.
+	Debug io.Writer
 	// ErrorLog specifies an optional logger for errors accepting
 	// connections and unexpected behavior from handlers.
 	// If nil, logging goes to os.Stderr via the log package's
@@ -194,8 +194,8 @@ func (s *Server) Serve(l net.Listener) error {
 		}
 
 		var conn Conn = newConn(s, c)
-		if s.Debug {
-			conn.conn().SetDebug(true)
+		if s.Debug != nil {
+			conn.conn().SetDebug(s.Debug)
 		}
 
 		for _, ext := range s.extensions {

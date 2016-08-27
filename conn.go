@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"io"
 	"net"
-	"os"
 )
 
 // A connection state.
@@ -55,28 +54,29 @@ type Conn struct {
 
 	waits chan struct{}
 
-	// Set to true to print all commands and responses to STDOUT.
-	debug bool
+	// Print all commands and responses to this io.Writer.
+	debug io.Writer
 }
 
 func (c *Conn) init() {
 	r := io.Reader(c.Conn)
 	w := io.Writer(c.Conn)
 
-	if c.debug {
-		r = io.TeeReader(c.Conn, os.Stdout)
-		w = io.MultiWriter(c.Conn, os.Stdout)
+	if c.debug != nil {
+		r = io.TeeReader(c.Conn, c.debug)
+		w = io.MultiWriter(c.Conn, c.debug)
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
 	c.writer().Writer = bufio.NewWriter(w)
 }
 
+// Write implements io.Writer.
 func (c *Conn) Write(b []byte) (n int, err error) {
 	return c.Writer.Write(b)
 }
 
-// Write any buffered data to the underlying connection.
+// Flush writes any buffered data to the underlying connection.
 func (c *Conn) Flush() (err error) {
 	if err = c.writer().Flush(); err != nil {
 		return
@@ -111,20 +111,21 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	return nil
 }
 
-// Wait for the connection to be ready for reads and writes.
+// Wait waits for the connection to be ready for reads and writes.
 func (c *Conn) Wait() {
 	if c.waits != nil {
 		<-c.waits
 	}
 }
 
-// Enable or disable debugging.
-func (c *Conn) SetDebug(debug bool) {
-	c.debug = debug
+// SetDebug defines an io.Writer to which all network activity will be logged.
+// If nil is provided, network activity will not be logged.
+func (c *Conn) SetDebug(w io.Writer) {
+	c.debug = w
 	c.init()
 }
 
-// Create a new IMAP connection.
+// NewConn creates a new IMAP connection.
 func NewConn(conn net.Conn, r *Reader, w Writer) *Conn {
 	c := &Conn{Conn: conn, Reader: r, Writer: w}
 
