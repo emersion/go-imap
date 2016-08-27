@@ -10,7 +10,7 @@ import (
 
 func formatFields(fields []interface{}) (string, error) {
 	b := &bytes.Buffer{}
-	w := NewWriter(b).writer()
+	w := NewWriter(b)
 
 	if err := w.writeList(fields); err != nil {
 		return "", fmt.Errorf("Cannot format %v: %v", fields, err)

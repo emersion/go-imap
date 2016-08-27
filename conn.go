@@ -50,12 +50,20 @@ type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 type Conn struct {
 	net.Conn
 	*Reader
-	Writer
+	*Writer
 
 	waits chan struct{}
 
 	// Print all commands and responses to this io.Writer.
 	debug io.Writer
+}
+
+// NewConn creates a new IMAP connection.
+func NewConn(conn net.Conn, r *Reader, w *Writer) *Conn {
+	c := &Conn{Conn: conn, Reader: r, Writer: w}
+
+	c.init()
+	return c
 }
 
 func (c *Conn) init() {
@@ -68,7 +76,7 @@ func (c *Conn) init() {
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
-	c.writer().Writer = bufio.NewWriter(w)
+	c.Writer.Writer = bufio.NewWriter(w)
 }
 
 // Write implements io.Writer.
@@ -78,7 +86,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 
 // Flush writes any buffered data to the underlying connection.
 func (c *Conn) Flush() (err error) {
-	if err = c.writer().Flush(); err != nil {
+	if err = c.Writer.Flush(); err != nil {
 		return
 	}
 
@@ -123,12 +131,4 @@ func (c *Conn) Wait() {
 func (c *Conn) SetDebug(w io.Writer) {
 	c.debug = w
 	c.init()
-}
-
-// NewConn creates a new IMAP connection.
-func NewConn(conn net.Conn, r *Reader, w Writer) *Conn {
-	c := &Conn{Conn: conn, Reader: r, Writer: w}
-
-	c.init()
-	return c
 }

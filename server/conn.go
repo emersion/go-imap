@@ -34,7 +34,7 @@ type Conn interface {
 
 	conn() *imap.Conn
 	reader() *imap.Reader
-	writer() imap.Writer
+	writer() *imap.Writer
 	locker() sync.Locker
 	greet() error
 	setTLSConn(*tls.Conn)
@@ -96,7 +96,7 @@ func (c *conn) reader() *imap.Reader {
 	return c.Reader
 }
 
-func (c *conn) writer() imap.Writer {
+func (c *conn) writer() *imap.Writer {
 	return c.Writer
 }
 

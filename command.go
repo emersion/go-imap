@@ -58,9 +58,7 @@ func (cmd *Command) Command() *Command {
 	return cmd
 }
 
-func (cmd *Command) WriteTo(w Writer) error {
-	ww := w.writer()
-
+func (cmd *Command) WriteTo(w *Writer) error {
 	tag := cmd.Tag
 	if tag == "" {
 		tag = "*"
@@ -68,7 +66,7 @@ func (cmd *Command) WriteTo(w Writer) error {
 
 	fields := []interface{}{tag, cmd.Name}
 	fields = append(fields, cmd.Arguments...)
-	return ww.writeLine(fields...)
+	return w.writeLine(fields...)
 }
 
 // Parse a command from fields.

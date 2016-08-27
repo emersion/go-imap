@@ -71,7 +71,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 	return nil
 }
 
-func (r *Status) WriteTo(w imap.Writer) error {
+func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
 
 	var fields []interface{}

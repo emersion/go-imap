@@ -11,7 +11,7 @@ import (
 type Authenticate struct {
 	Mechanism       sasl.Client
 	InitialResponse []byte
-	Writer          imap.Writer
+	Writer          *imap.Writer
 }
 
 func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {

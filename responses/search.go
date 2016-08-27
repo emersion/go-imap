@@ -26,7 +26,7 @@ func (r *Search) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *Search) WriteTo(w imap.Writer) (err error) {
+func (r *Search) WriteTo(w *imap.Writer) (err error) {
 	fields := []interface{}{imap.Search}
 	for _, id := range r.Ids {
 		fields = append(fields, id)

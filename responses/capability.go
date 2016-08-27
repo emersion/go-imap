@@ -28,7 +28,7 @@ func (r *Capability) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *Capability) WriteTo(w imap.Writer) error {
+func (r *Capability) WriteTo(w *imap.Writer) error {
 	fields := []interface{}{imap.Capability}
 	for _, cap := range r.Caps {
 		fields = append(fields, cap)

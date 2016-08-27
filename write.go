@@ -12,17 +12,8 @@ import (
 // A string that will be quoted.
 type Quoted string
 
-// An IMAP writer.
-type Writer interface {
-	io.Writer
-
-	Flush() error
-
-	writer() *writer
-}
-
 type WriterTo interface {
-	WriteTo(w Writer) error
+	WriteTo(w *Writer) error
 }
 
 func formatNumber(num uint32) string {
@@ -56,23 +47,20 @@ func isAscii(s string) bool {
 	return true
 }
 
-type writer struct {
+// An IMAP writer.
+type Writer struct {
 	io.Writer
 
 	continues <-chan bool
 }
 
-func (w *writer) writer() *writer {
-	return w
-}
-
 // Helper function to write a string to w.
-func (w *writer) writeString(s string) error {
+func (w *Writer) writeString(s string) error {
 	_, err := io.WriteString(w.Writer, s)
 	return err
 }
 
-func (w *writer) writeCrlf() error {
+func (w *Writer) writeCrlf() error {
 	if err := w.writeString(crlf); err != nil {
 		return err
 	}
@@ -80,19 +68,19 @@ func (w *writer) writeCrlf() error {
 	return w.Flush()
 }
 
-func (w *writer) writeNumber(num uint32) error {
+func (w *Writer) writeNumber(num uint32) error {
 	return w.writeString(formatNumber(num))
 }
 
-func (w *writer) writeQuoted(s string) error {
+func (w *Writer) writeQuoted(s string) error {
 	return w.writeString(strconv.Quote(s))
 }
 
-func (w *writer) writeAtom(s string) error {
+func (w *Writer) writeAtom(s string) error {
 	return w.writeString(s)
 }
 
-func (w *writer) writeAstring(s string) error {
+func (w *Writer) writeAstring(s string) error {
 	if !isAscii(s) {
 		// IMAP doesn't allow 8-bit data outside literals
 		return w.writeLiteral(NewLiteral([]byte(s)))
@@ -106,14 +94,14 @@ func (w *writer) writeAstring(s string) error {
 	return w.writeAtom(s)
 }
 
-func (w *writer) writeDateTime(t time.Time) error {
+func (w *Writer) writeDateTime(t time.Time) error {
 	if t.IsZero() {
 		return w.writeAtom(nilAtom)
 	}
 	return w.writeQuoted(FormatDateTime(t))
 }
 
-func (w *writer) writeFields(fields []interface{}) error {
+func (w *Writer) writeFields(fields []interface{}) error {
 	for i, field := range fields {
 		if i > 0 { // Write separator
 			if err := w.writeString(string(sp)); err != nil {
@@ -129,7 +117,7 @@ func (w *writer) writeFields(fields []interface{}) error {
 	return nil
 }
 
-func (w *writer) writeList(fields []interface{}) error {
+func (w *Writer) writeList(fields []interface{}) error {
 	if err := w.writeString(string(listStart)); err != nil {
 		return err
 	}
@@ -141,7 +129,7 @@ func (w *writer) writeList(fields []interface{}) error {
 	return w.writeString(string(listEnd))
 }
 
-func (w *writer) writeLiteral(l *Literal) error {
+func (w *Writer) writeLiteral(l *Literal) error {
 	if l == nil {
 		return w.writeString(nilAtom)
 	}
@@ -167,7 +155,7 @@ func (w *writer) writeLiteral(l *Literal) error {
 	return err
 }
 
-func (w *writer) writeField(field interface{}) error {
+func (w *Writer) writeField(field interface{}) error {
 	if field == nil {
 		return w.writeAtom(nilAtom)
 	}
@@ -196,7 +184,7 @@ func (w *writer) writeField(field interface{}) error {
 	return fmt.Errorf("imap: cannot format field: %v", field)
 }
 
-func (w *writer) writeRespCode(code string, args []interface{}) error {
+func (w *Writer) writeRespCode(code string, args []interface{}) error {
 	if err := w.writeString(string(respCodeStart)); err != nil {
 		return err
 	}
@@ -211,7 +199,7 @@ func (w *writer) writeRespCode(code string, args []interface{}) error {
 	return w.writeString(string(respCodeEnd))
 }
 
-func (w *writer) writeLine(fields ...interface{}) error {
+func (w *Writer) writeLine(fields ...interface{}) error {
 	if err := w.writeFields(fields); err != nil {
 		return err
 	}
@@ -219,7 +207,7 @@ func (w *writer) writeLine(fields ...interface{}) error {
 	return w.writeCrlf()
 }
 
-func (w *writer) Flush() error {
+func (w *Writer) Flush() error {
 	f, ok := w.Writer.(interface {
 		Flush() error
 	})
@@ -229,10 +217,10 @@ func (w *writer) Flush() error {
 	return nil
 }
 
-func NewWriter(w io.Writer) Writer {
-	return &writer{Writer: w}
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{Writer: w}
 }
 
-func NewClientWriter(w io.Writer, continues <-chan bool) Writer {
-	return &writer{Writer: w, continues: continues}
+func NewClientWriter(w io.Writer, continues <-chan bool) *Writer {
+	return &Writer{Writer: w, continues: continues}
 }

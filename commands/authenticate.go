@@ -38,7 +38,7 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r io.Reader, w imap.Writer) (err error) {
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r io.Reader, w *imap.Writer) (err error) {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
 		err = errors.New("Unsupported mechanism")

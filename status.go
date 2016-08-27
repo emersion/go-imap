@@ -88,35 +88,33 @@ func (r *StatusResp) Err() error {
 	return nil
 }
 
-func (r *StatusResp) WriteTo(w Writer) error {
-	ww := w.writer()
-
+func (r *StatusResp) WriteTo(w *Writer) error {
 	tag := r.Tag
 	if tag == "" {
 		tag = "*"
 	}
 
-	if err := ww.writeFields([]interface{}{tag, string(r.Type)}); err != nil {
+	if err := w.writeFields([]interface{}{tag, string(r.Type)}); err != nil {
 		return err
 	}
 
-	if err := ww.writeString(string(sp)); err != nil {
+	if err := w.writeString(string(sp)); err != nil {
 		return err
 	}
 
 	if r.Code != "" {
-		if err := ww.writeRespCode(r.Code, r.Arguments); err != nil {
+		if err := w.writeRespCode(r.Code, r.Arguments); err != nil {
 			return err
 		}
 
-		if err := ww.writeString(string(sp)); err != nil {
+		if err := w.writeString(string(sp)); err != nil {
 			return err
 		}
 	}
 
-	if err := ww.writeString(r.Info); err != nil {
+	if err := w.writeString(r.Info); err != nil {
 		return err
 	}
 
-	return ww.writeCrlf()
+	return w.writeCrlf()
 }

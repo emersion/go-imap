@@ -19,7 +19,7 @@ type Resp struct {
 	Fields []interface{}
 }
 
-func (r *Resp) WriteTo(w Writer) error {
+func (r *Resp) WriteTo(w *Writer) error {
 	tag := r.Tag
 	if tag == "" {
 		tag = "*"
@@ -27,7 +27,7 @@ func (r *Resp) WriteTo(w Writer) error {
 
 	fields := []interface{}{tag}
 	fields = append(fields, r.Fields...)
-	return w.writer().writeLine(fields...)
+	return w.writeLine(fields...)
 }
 
 // Create a new untagged response.
@@ -44,20 +44,18 @@ type ContinuationResp struct {
 	Info string
 }
 
-func (r *ContinuationResp) WriteTo(w Writer) error {
-	ww := w.writer()
-
-	if err := ww.writeString("+"); err != nil {
+func (r *ContinuationResp) WriteTo(w *Writer) error {
+	if err := w.writeString("+"); err != nil {
 		return err
 	}
 
 	if r.Info != "" {
-		if err := ww.writeString(string(sp) + r.Info); err != nil {
+		if err := w.writeString(string(sp) + r.Info); err != nil {
 			return err
 		}
 	}
 
-	return ww.writeCrlf()
+	return w.writeCrlf()
 }
 
 // Read a single response from a Reader. Returns either a continuation request,

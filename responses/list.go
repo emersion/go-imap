@@ -40,7 +40,7 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 	return
 }
 
-func (r *List) WriteTo(w imap.Writer) (err error) {
+func (r *List) WriteTo(w *imap.Writer) (err error) {
 	name := r.Name()
 
 	for mbox := range r.Mailboxes {

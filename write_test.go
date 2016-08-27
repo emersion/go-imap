@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-func newWriter() (w *writer, b *bytes.Buffer) {
+func newWriter() (w *Writer, b *bytes.Buffer) {
 	b = &bytes.Buffer{}
-	w = NewWriter(b).writer()
+	w = NewWriter(b)
 	return
 }
 

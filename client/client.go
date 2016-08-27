@@ -148,7 +148,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	c.addHandler(statusHdlr)
 	defer c.removeHandler(statusHdlr)
 
-	if err = cmd.WriteTo(c.conn); err != nil {
+	if err = cmd.WriteTo(c.conn.Writer); err != nil {
 		return
 	}
 
