@@ -22,7 +22,7 @@ func (c *Client) SupportsStartTLS() bool {
 	return c.Caps[imap.StartTLS]
 }
 
-// If the connection to the IMAP server isn't secure, starts TLS negociation.
+// If the connection to the IMAP server isn't secure, starts TLS negotiation.
 //
 // This function also resets c.Caps because capabilities change when TLS is
 // enabled.

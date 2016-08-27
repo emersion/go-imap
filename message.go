@@ -219,7 +219,7 @@ func (m *Message) GetBody(s string) *Literal {
 type BodySectionName struct {
 	*BodyPartName
 
-	// If set to true, do not implicitely set the \Seen flag.
+	// If set to true, do not implicitly set the \Seen flag.
 	Peek bool
 	// The substring of the section requested. The first value is the position of
 	// the first desired octet and the second value is the maximum number of

@@ -283,10 +283,10 @@ func TestStore(t *testing.T) {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 
-	io.WriteString(c, "a001 STORE 1 FLAGS (\\Anwsered)\r\n")
+	io.WriteString(c, "a001 STORE 1 FLAGS (\\Answered)\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* 1 FETCH (FLAGS (\\Anwsered))" {
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Answered))" {
 		t.Fatal("Invalid FETCH response:", scanner.Text())
 	}
 
@@ -295,7 +295,7 @@ func TestStore(t *testing.T) {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 
-	io.WriteString(c, "a001 STORE 1 -FLAGS (\\Anwsered)\r\n")
+	io.WriteString(c, "a001 STORE 1 -FLAGS (\\Answered)\r\n")
 
 	scanner.Scan()
 	if scanner.Text() != "* 1 FETCH (FLAGS ())" {
