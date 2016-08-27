@@ -32,12 +32,13 @@ own tests.
 
 Commands defined in IMAP extensions are available in other packages.
 
+* [APPENDLIMIT](https://github.com/emersion/go-imap-appendlimit)
 * [COMPRESS](https://github.com/emersion/go-imap-compress)
-* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
-* [MOVE](https://github.com/emersion/go-imap-move)
-* [IDLE](https://github.com/emersion/go-imap-idle)
-* [QUOTA](https://github.com/emersion/go-imap-quota)
 * [ID](https://github.com/ProtonMail/go-imap-id)
+* [IDLE](https://github.com/emersion/go-imap-idle)
+* [MOVE](https://github.com/emersion/go-imap-move)
+* [QUOTA](https://github.com/emersion/go-imap-quota)
+* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 
 ## Usage
 
