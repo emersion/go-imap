@@ -14,4 +14,6 @@ const (
 	RemoveFlags = "-FLAGS"
 )
 
+// Appending this to a FlagsOp makes the operation not trigger unilateral
+// message updates.
 const SilentOp = ".SILENT"
