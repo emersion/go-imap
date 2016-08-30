@@ -46,6 +46,19 @@ const (
 // COMPRESS).
 type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 
+type debugWriter struct {
+	io.Writer
+
+	local io.Writer
+	remote io.Writer
+}
+
+// NewDebugWriter creates a new io.Writer that will write local network activity
+// to local and remote network activity to remote.
+func NewDebugWriter(local, remote io.Writer) io.Writer {
+	return &debugWriter{Writer: local, local: local, remote: remote}
+}
+
 // An IMAP connection.
 type Conn struct {
 	net.Conn
@@ -71,8 +84,13 @@ func (c *Conn) init() {
 	w := io.Writer(c.Conn)
 
 	if c.debug != nil {
-		r = io.TeeReader(c.Conn, c.debug)
-		w = io.MultiWriter(c.Conn, c.debug)
+		localDebug, remoteDebug := c.debug, c.debug
+		if debug, ok := c.debug.(*debugWriter); ok {
+			localDebug, remoteDebug = debug.local, debug.remote
+		}
+
+		r = io.TeeReader(c.Conn, remoteDebug)
+		w = io.MultiWriter(c.Conn, localDebug)
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
