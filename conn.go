@@ -89,8 +89,12 @@ func (c *Conn) init() {
 			localDebug, remoteDebug = debug.local, debug.remote
 		}
 
-		r = io.TeeReader(c.Conn, remoteDebug)
-		w = io.MultiWriter(c.Conn, localDebug)
+		if localDebug != nil {
+			w = io.MultiWriter(c.Conn, localDebug)
+		}
+		if remoteDebug != nil {
+			r = io.TeeReader(c.Conn, remoteDebug)
+		}
 	}
 
 	c.Reader.reader = bufio.NewReader(r)
