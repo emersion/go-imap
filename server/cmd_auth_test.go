@@ -412,6 +412,24 @@ func TestList_NotAuthenticated(t *testing.T) {
 	}
 }
 
+func TestList_Delimiter(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 LIST \"\" \"\"\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* LIST (\\Noselect) \"/\" /" {
+		t.Fatal("Invalid LIST response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestStatus(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
 	defer c.Close()

@@ -143,11 +143,10 @@ func (cmd *List) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	done := make(chan error, 1)
-
 	ch := make(chan *imap.MailboxInfo)
 	res := &responses.List{Mailboxes: ch, Subscribed: cmd.Subscribed}
 
+	done := make(chan error, 1)
 	go (func() {
 		done <- conn.WriteResp(res)
 		close(done)
@@ -164,6 +163,18 @@ func (cmd *List) Handle(conn Conn) error {
 		if err != nil {
 			close(ch)
 			return err
+		}
+
+		// An empty ("" string) mailbox name argument is a special request to return
+		// the hierarchy delimiter and the root name of the name given in the
+		// reference.
+		if cmd.Mailbox == "" {
+			ch <- &imap.MailboxInfo{
+				Attributes: []string{imap.NoSelectAttr},
+				Delimiter: info.Delimiter,
+				Name: info.Delimiter,
+			}
+			break
 		}
 
 		name := info.Name
