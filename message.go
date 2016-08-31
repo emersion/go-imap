@@ -102,7 +102,7 @@ func (m *Message) Parse(fields []interface{}) error {
 					return errors.New("BODYSTRUCTURE is not a list")
 				}
 
-				m.BodyStructure = &BodyStructure{}
+				m.BodyStructure = &BodyStructure{Extended: item == BodyStructureMsgAttr}
 				if err := m.BodyStructure.Parse(bs); err != nil {
 					return err
 				}
@@ -169,10 +169,8 @@ func (m *Message) Format() (fields []interface{}) {
 		var value interface{}
 		switch item {
 		case BodyMsgAttr, BodyStructureMsgAttr:
-			if item == BodyMsgAttr {
-				// Extension data is never returned with the BODY fetch
-				m.BodyStructure.Extended = false
-			}
+			// Extension data is only returned with the BODYSTRUCTURE fetch
+			m.BodyStructure.Extended = item == BodyStructureMsgAttr
 			value = m.BodyStructure.Format()
 		case EnvelopeMsgAttr:
 			value = m.Envelope.Format()
@@ -835,8 +833,22 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		fields = append(fields, bs.MimeSubType)
 
 		if bs.Extended {
-			fields = append(fields, FormatParamList(bs.Params), bs.Disposition,
-				FormatStringList(bs.Language), FormatStringList(bs.Location))
+			extended := make([]interface{}, 4)
+
+			if bs.Params != nil {
+				extended[0] = FormatParamList(bs.Params)
+			}
+			if bs.Disposition != "" {
+				extended[1] = bs.Disposition
+			}
+			if bs.Language != nil {
+				extended[2] = FormatStringList(bs.Language)
+			}
+			if bs.Location != nil {
+				extended[3] = FormatStringList(bs.Location)
+			}
+
+			fields = append(fields, extended...)
 		}
 	} else {
 		fields = make([]interface{}, 7)
@@ -876,8 +888,22 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 		// Extension data
 		if bs.Extended {
-			fields = append(fields, bs.Md5, bs.Disposition,
-				FormatStringList(bs.Language), FormatStringList(bs.Location))
+			extended := make([]interface{}, 4)
+
+			if bs.Md5 != "" {
+				extended[0] = bs.Md5
+			}
+			if bs.Disposition != "" {
+				extended[1] = bs.Disposition
+			}
+			if bs.Language != nil {
+				extended[2] = FormatStringList(bs.Language)
+			}
+			if bs.Location != nil {
+				extended[3] = FormatStringList(bs.Location)
+			}
+
+			fields = append(fields, extended...)
 		}
 	}
 

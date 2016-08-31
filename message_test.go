@@ -47,7 +47,7 @@ var messageTests = []struct {
 }{
 	{
 		message: &Message{
-			Items:         []string{"ENVELOPE", "BODYSTRUCTURE", "FLAGS", "RFC822.SIZE", "UID"},
+			Items:         []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
 			Body:          map[*BodySectionName]*Literal{},
 			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
@@ -57,7 +57,7 @@ var messageTests = []struct {
 		},
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
-			"BODYSTRUCTURE", bodyStructureTests[0].fields,
+			"BODY", bodyStructureTests[0].fields,
 			"FLAGS", []interface{}{SeenFlag, AnsweredFlag},
 			"RFC822.SIZE", "4242",
 			"UID", "2424",
@@ -71,7 +71,7 @@ func TestMessage_Parse(t *testing.T) {
 		if err := m.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse message for #%v:", i, err)
 		} else if !reflect.DeepEqual(m, test.message) {
-			t.Errorf("Invalid parsed message for #%v: got %v but expected %v", i, m, test.message)
+			t.Errorf("Invalid parsed message for #%v: got %+v but expected %+v", i, m, test.message)
 		}
 	}
 }
@@ -534,7 +534,7 @@ func TestBodyStructure_Parse(t *testing.T) {
 		if err := bs.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
 		} else if !reflect.DeepEqual(bs, test.bodyStructure) {
-			t.Errorf("Invalid body structure for #%v: got %v but expected %v", i, bs, test.bodyStructure)
+			t.Errorf("Invalid body structure for #%v: got %+v but expected %+v", i, bs, test.bodyStructure)
 		}
 	}
 }
