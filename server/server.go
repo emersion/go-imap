@@ -2,7 +2,6 @@
 package server
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"io"
@@ -307,8 +306,11 @@ func (s *Server) handleConn(conn Conn) error {
 		}
 
 		if res != nil {
+			conn.locker().Unlock()
+
 			if err := conn.WriteResp(res); err != nil {
 				s.ErrorLog.Println("cannot write response: ", err)
+				conn.locker().Lock()
 				continue
 			}
 
@@ -318,6 +320,8 @@ func (s *Server) handleConn(conn Conn) error {
 					return err
 				}
 			}
+
+			conn.locker().Lock()
 		}
 	}
 }
@@ -351,6 +355,9 @@ func (s *Server) handleCommand(cmd *imap.Command, conn Conn) (res *imap.StatusRe
 	if err != nil {
 		return
 	}
+
+	conn.locker().Unlock()
+	defer conn.locker().Lock()
 
 	hdlrErr := hdlr.Handle(conn)
 	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
@@ -386,12 +393,13 @@ func (s *Server) listenUpdates() (err error) {
 	s.Updates = updater.Updates()
 
 	for {
-		// TODO: do not generate response if nobody will receive it
-
 		item := <-s.Updates
 
-		var update *backend.Update
-		var res imap.WriterTo
+		var (
+			update *backend.Update
+			res imap.WriterTo
+		)
+
 		switch item := item.(type) {
 		case *backend.StatusUpdate:
 			update = &item.Update
@@ -423,13 +431,8 @@ func (s *Server) listenUpdates() (err error) {
 			continue
 		}
 
-		// Format response
-		b := &bytes.Buffer{}
-		w := imap.NewWriter(b)
-		if err := res.WriteTo(w); err != nil {
-			s.ErrorLog.Printf("cannot format unlateral update: ", err)
-		}
-
+		sends := make(chan struct{})
+		wait := 0
 		for _, conn := range s.conns {
 			ctx := conn.Context()
 
@@ -446,15 +449,31 @@ func (s *Server) listenUpdates() (err error) {
 				}
 			}
 
-			conn.locker().Lock()
-			if _, err := conn.writer().Write(b.Bytes()); err != nil {
-				s.ErrorLog.Println("cannot send unilateral update:", err)
-			}
-			conn.conn().Flush()
-			conn.locker().Unlock()
+			go func() {
+				done := make(chan struct{})
+				conn.Context().Responses <- &response{
+					response: res,
+					done: done,
+				}
+				<-done
+				sends <- struct{}{}
+			}()
+
+			wait++
 		}
 
-		backend.DoneUpdate(update)
+		if wait > 0 {
+			go func() {
+				for done := 0; done < wait; done++ {
+					<-sends
+				}
+				close(sends)
+
+				backend.DoneUpdate(update)
+			}()
+		} else {
+			backend.DoneUpdate(update)
+		}
 	}
 }
 

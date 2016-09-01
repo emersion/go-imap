@@ -51,6 +51,8 @@ type Context struct {
 	Mailbox backend.Mailbox
 	// True if the currently selected mailbox has been opened in read-only mode.
 	MailboxReadOnly bool
+	// Responses to send to the client.
+	Responses chan<- imap.WriterTo
 }
 
 type conn struct {
@@ -61,6 +63,7 @@ type conn struct {
 	l         sync.Locker
 	tlsConn   *tls.Conn
 	continues chan bool
+	responses chan imap.WriterTo
 	silentVal bool
 }
 
@@ -68,6 +71,8 @@ func newConn(s *Server, c net.Conn) *conn {
 	continues := make(chan bool)
 	r := imap.NewServerReader(nil, continues)
 	w := imap.NewWriter(nil)
+
+	responses := make(chan imap.WriterTo)
 
 	tlsConn, _ := c.(*tls.Conn)
 
@@ -78,12 +83,15 @@ func newConn(s *Server, c net.Conn) *conn {
 		l: &sync.Mutex{},
 		ctx: &Context{
 			State: imap.ConnectingState,
+			Responses: responses,
 		},
 		tlsConn:   tlsConn,
 		continues: continues,
+		responses: responses,
 	}
 
-	go conn.sendContinuationReqs()
+	conn.l.Lock()
+	go conn.send()
 
 	return conn
 }
@@ -112,16 +120,23 @@ func (c *conn) Context() *Context {
 	return c.ctx
 }
 
+type response struct {
+	response imap.WriterTo
+	done chan struct{}
+}
+
+func (r *response) WriteTo(w *imap.Writer) error {
+	err := r.response.WriteTo(w)
+	close(r.done)
+	return err
+}
+
 // Write a response to this connection.
-func (c *conn) WriteResp(res imap.WriterTo) error {
-	c.l.Lock()
-	defer c.l.Unlock()
-
-	if err := res.WriteTo(c.Writer); err != nil {
-		return err
-	}
-
-	return c.Writer.Flush()
+func (c *conn) WriteResp(r imap.WriterTo) error {
+	done := make(chan struct{})
+	c.responses <- &response{r, done}
+	<-done
+	return nil
 }
 
 // Close this connection.
@@ -164,12 +179,37 @@ func (c *conn) Capabilities() []string {
 	return caps
 }
 
-func (c *conn) sendContinuationReqs() {
-	for range c.continues {
-		cont := &imap.ContinuationResp{Info: "send literal"}
-		if err := c.WriteResp(cont); err != nil {
-			c.Server().ErrorLog.Println("cannot send continuation request: ", err)
+func (c *conn) send() {
+	// Send continuation requests
+	go func() {
+		for range c.continues {
+			res := &imap.ContinuationResp{Info: "send literal"}
+			if err := res.WriteTo(c.Writer); err != nil {
+				c.Server().ErrorLog.Println("cannot send continuation request: ", err)
+			}
+			if err := c.Writer.Flush(); err != nil {
+				c.Server().ErrorLog.Println("cannot flush connection: ", err)
+			}
 		}
+	}()
+
+	// Send responses
+	for {
+		// Get a response that needs to be sent
+		res := <-c.responses
+
+		// Request to send the response
+		c.l.Lock()
+
+		// Send the response
+		if err := res.WriteTo(c.Writer); err != nil {
+			c.Server().ErrorLog.Println("cannot send response: ", err)
+		}
+		if err := c.Writer.Flush(); err != nil {
+			c.Server().ErrorLog.Println("cannot flush connection: ", err)
+		}
+
+		c.l.Unlock()
 	}
 }
 
@@ -188,6 +228,9 @@ func (c *conn) greet() error {
 		Arguments: args,
 		Info:      "IMAP4rev1 Service Ready",
 	}
+
+	c.l.Unlock()
+	defer c.l.Lock()
 
 	return c.WriteResp(greeting)
 }
