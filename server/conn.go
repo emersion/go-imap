@@ -77,7 +77,7 @@ func newConn(s *Server, c net.Conn) *conn {
 		s: s,
 		l: &sync.Mutex{},
 		ctx: &Context{
-			State: imap.NotAuthenticatedState,
+			State: imap.ConnectingState,
 		},
 		tlsConn:   tlsConn,
 		continues: continues,
@@ -174,6 +174,8 @@ func (c *conn) sendContinuationReqs() {
 }
 
 func (c *conn) greet() error {
+	c.ctx.State = imap.NotAuthenticatedState
+
 	caps := c.Capabilities()
 	args := make([]interface{}, len(caps))
 	for i, cap := range caps {

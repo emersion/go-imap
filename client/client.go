@@ -19,6 +19,7 @@ type Client struct {
 
 	handlers       []imap.RespHandler
 	handlersLocker sync.Locker
+	greeted        chan struct{}
 	loggedOut      chan struct{}
 
 	// The server capabilities.
@@ -52,7 +53,7 @@ type Client struct {
 	ErrorLog *log.Logger
 }
 
-func (c *Client) read() error {
+func (c *Client) read(greeted chan struct{}) error {
 	r := c.conn.Reader
 
 	defer (func() {
@@ -67,12 +68,23 @@ func (c *Client) read() error {
 		close(c.loggedOut)
 	})()
 
+	first := true
 	for {
 		if c.State == imap.LogoutState {
 			return nil
 		}
 
 		c.conn.Wait()
+
+		if first {
+			first = false
+		} else {
+			<-greeted
+			if c.greeted != nil {
+				close(c.greeted)
+				c.greeted = nil
+			}
+		}
 
 		res, err := imap.ReadResp(r)
 		if err == io.EOF || c.State == imap.LogoutState {
@@ -154,22 +166,17 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	var hdlr imap.RespHandler
 	var done chan error
-	defer (func() {
-		if hdlr != nil {
-			close(hdlr)
-		}
-		if done != nil {
-			close(done)
-		}
-	})()
-
 	if res != nil {
 		hdlr = make(imap.RespHandler)
-		done = make(chan error)
+		done = make(chan error, 1)
 
 		go (func() {
-			err := res.HandleFrom(hdlr)
-			done <- err
+			done <- res.HandleFrom(hdlr)
+
+			if hdlr != nil {
+				close(hdlr)
+				hdlr = nil
+			}
 		})()
 	}
 
@@ -236,59 +243,49 @@ func (c *Client) gotStatusCaps(args []interface{}) {
 	}
 }
 
-func (c *Client) handleGreeting() *imap.StatusResp {
-	hdlr := make(imap.RespHandler)
-	c.addHandler(hdlr)
-	defer c.removeHandler(hdlr)
-
-	// Make sure to start reading after we have set up the base handlers,
-	// otherwise some messages will be lost.
-	go c.read()
-
-	for h := range hdlr {
-		status, ok := h.Resp.(*imap.StatusResp)
-		if !ok || status.Tag != "*" || (status.Type != imap.StatusOk && status.Type != imap.StatusPreauth && status.Type != imap.StatusBye) {
-			h.Reject()
-			continue
-		}
-
-		h.Accept()
-
-		if status.Code == imap.CodeCapability {
-			c.gotStatusCaps(status.Arguments)
-		}
-
-		if status.Type == imap.StatusPreauth {
-			c.State = imap.AuthenticatedState
-		}
-		if status.Type == imap.StatusBye {
-			c.State = imap.LogoutState
-		}
-
-		go c.handleUnilateral()
-
-		return status
-	}
-
-	return nil
-}
-
 // The server can send unilateral data. This function handles it.
 func (c *Client) handleUnilateral() {
 	hdlr := make(imap.RespHandler)
 	c.addHandler(hdlr)
 	defer c.removeHandler(hdlr)
 
+	greeted := make(chan struct{})
+
+	// Make sure to start reading after we have set up the base handlers,
+	// otherwise some messages will be lost.
+	go c.read(greeted)
+
 	for h := range hdlr {
 		switch res := h.Resp.(type) {
 		case *imap.StatusResp:
 			if res.Tag != "*" ||
 				(res.Type != imap.StatusOk && res.Type != imap.StatusNo && res.Type != imap.StatusBad && res.Type != imap.StatusBye) ||
-				(res.Code != "" && res.Code != imap.CodeAlert) {
+				(res.Code != "" && res.Code != imap.CodeAlert && res.Code != imap.CodeCapability) {
 				h.Reject()
 				break
 			}
 			h.Accept()
+
+			if greeted != nil {
+				switch res.Type {
+				case imap.StatusPreauth:
+					c.State = imap.AuthenticatedState
+				case imap.StatusBye:
+					c.State = imap.LogoutState
+				case imap.StatusOk:
+					c.State = imap.NotAuthenticatedState
+				default:
+					c.ErrorLog.Println("invalid greeting: ", res.Type)
+					c.State = imap.LogoutState
+				}
+
+				if res.Code == imap.CodeCapability {
+					c.gotStatusCaps(res.Arguments)
+				}
+
+				close(greeted)
+				greeted = nil
+			}
 
 			switch res.Type {
 			case imap.StatusOk:
@@ -393,15 +390,18 @@ func New(conn net.Conn) (c *Client, err error) {
 	c = &Client{
 		conn:           imap.NewConn(conn, r, w),
 		handlersLocker: &sync.Mutex{},
+		greeted:        make(chan struct{}),
 		loggedOut:      make(chan struct{}),
-		State:          imap.NotAuthenticatedState,
+		State:          imap.ConnectingState,
 		ErrorLog:       log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
 	go c.handleContinuationReqs(continues)
+	go c.handleUnilateral()
 
-	greeting := c.handleGreeting()
-	greeting.Err()
+	// greeting := c.handleGreeting()
+	// greeting.Err()
+	<-c.greeted
 	return
 }
 
