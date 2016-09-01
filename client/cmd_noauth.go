@@ -35,24 +35,25 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	cmd := &commands.StartTLS{}
 
 	err = c.Upgrade(func(conn net.Conn) (net.Conn, error) {
-		status, err := c.execute(cmd, nil)
-		if err != nil {
+		if status, err := c.execute(cmd, nil); err != nil {
 			return nil, err
-		}
-		if err = status.Err(); err != nil {
+		} else if err := status.Err(); err != nil {
 			return nil, err
 		}
 
 		tlsConn := tls.Client(conn, tlsConfig)
-		err = tlsConn.Handshake()
-		return tlsConn, err
+		if err := tlsConn.Handshake(); err != nil {
+			return nil, err
+		}
+
+		c.Caps = nil
+		return tlsConn, nil
 	})
 	if err != nil {
 		return
 	}
 
 	c.isTLS = true
-	c.Caps = nil
 	return
 }
 

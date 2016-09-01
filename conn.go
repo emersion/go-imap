@@ -11,11 +11,15 @@ import (
 type ConnState int
 
 const (
+	// In the connecting state, the server has not yet sent a greeting and no
+	// command can be issued.
+	ConnectingState = 0
+
 	// In the not authenticated state, the client MUST supply
 	// authentication credentials before most commands will be
 	// permitted.  This state is entered when a connection starts
 	// unless the connection has been pre-authenticated.
-	NotAuthenticatedState ConnState = 1
+	NotAuthenticatedState ConnState = 1<<0
 
 	// In the authenticated state, the client is authenticated and MUST
 	// select a mailbox to access before commands that affect messages
@@ -23,7 +27,7 @@ const (
 	// pre-authenticated connection starts, when acceptable
 	// authentication credentials have been provided, after an error in
 	// selecting a mailbox, or after a successful CLOSE command.
-	AuthenticatedState = 1 << 1
+	AuthenticatedState = 1<<1
 
 	// In a selected state, a mailbox has been selected to access.
 	// This state is entered when a mailbox has been successfully
@@ -34,9 +38,10 @@ const (
 	// state can be entered as a result of a client request (via the
 	// LOGOUT command) or by unilateral action on the part of either
 	// the client or server.
-	LogoutState = 0
+	LogoutState = 1<<3
 
-	// ConnectedState is any state except LogoutState.
+	// ConnectedState is either NotAuthenticatedState, AuthenticatedState or
+	// SelectedState.
 	ConnectedState = NotAuthenticatedState | AuthenticatedState | SelectedState
 )
 
@@ -127,6 +132,11 @@ func (c *Conn) Flush() (err error) {
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
 // tunnel.
 func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
+	// Flush all buffered data
+	if err := c.Flush(); err != nil {
+		return err
+	}
+
 	// Block reads and writes during the upgrading process
 	c.waits = make(chan struct{})
 	defer close(c.waits)
