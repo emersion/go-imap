@@ -477,6 +477,13 @@ func (s *Server) listenUpdates() (err error) {
 	}
 }
 
+// ForEachConn iterates through all opened connections.
+func (s *Server) ForEachConn(f func(Conn)) {
+	for _, conn := range s.conns {
+		f(conn)
+	}
+}
+
 // Stops listening and closes all current connections.
 func (s *Server) Close() error {
 	if err := s.listener.Close(); err != nil {
