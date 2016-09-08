@@ -449,6 +449,7 @@ func (s *Server) listenUpdates() (err error) {
 				}
 			}
 
+			conn := conn // Copy conn to a local variable
 			go func() {
 				done := make(chan struct{})
 				conn.Context().Responses <- &response{
