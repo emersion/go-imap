@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -218,7 +217,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	if !ok {
 		return errors.New("Flags must be a list")
 	}
-	flags, err := imap.ParseStringList(flagsList)
+	flags, err := imap.ParseStringListToUpper(flagsList)
 	if err != nil {
 		return err
 	}

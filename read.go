@@ -109,6 +109,19 @@ func ParseStringList(fields []interface{}) ([]string, error) {
 	return list, nil
 }
 
+// ParseStringListToUpper parse fields to string list with upper case
+func ParseStringListToUpper(fields []interface{}) ([]string, error) {
+	list := make([]string, len(fields))
+	for i, f := range fields {
+		var ok bool
+		if list[i], ok = f.(string); !ok {
+			return nil, newParseError("String list contains a non-string")
+		}
+		list[i] = strings.ToUpper(list[i])
+	}
+	return list, nil
+}
+
 func trimSuffix(str string, suffix rune) string {
 	return str[:len(str)-1]
 }
