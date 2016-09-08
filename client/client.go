@@ -381,6 +381,12 @@ func (c *Client) LoggedOut() <-chan struct{} {
 	return c.loggedOut
 }
 
+// SetDebug defines an io.Writer to which all network activity will be logged.
+// If nil is provided, network activity will not be logged.
+func (c *Client) SetDebug(w io.Writer) {
+	c.conn.SetDebug(w)
+}
+
 // New creates a new client from an existing connection.
 func New(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
