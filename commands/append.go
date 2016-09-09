@@ -72,6 +72,11 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 			if cmd.Flags, err = imap.ParseStringList(flags); err != nil {
 				return err
 			}
+
+			for i, flag := range cmd.Flags {
+				cmd.Flags[i] = imap.CanonicalFlag(flag)
+			}
+
 			fields = fields[1:]
 		}
 

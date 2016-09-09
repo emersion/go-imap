@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+func TestCanonicalFlag(t *testing.T) {
+	if got := CanonicalFlag("\\SEEN"); got != SeenFlag {
+		t.Errorf("Invalid canonical flag: expected %q but got %q", got, SeenFlag)
+	}
+
+	if got := CanonicalFlag("Junk"); got != "junk" {
+		t.Errorf("Invalid canonical flag: expected %q but got %q", got, "junk")
+	}
+}
+
 func formatFields(fields []interface{}) (string, error) {
 	b := &bytes.Buffer{}
 	w := NewWriter(b)

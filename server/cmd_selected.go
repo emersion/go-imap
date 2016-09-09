@@ -222,6 +222,9 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	if err != nil {
 		return err
 	}
+	for i, flag := range flags {
+		flags[i] = imap.CanonicalFlag(flag)
+	}
 
 	// If the backend supports message updates, this will prevent this connection
 	// from receiving them

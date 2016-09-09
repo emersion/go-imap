@@ -18,6 +18,15 @@ const (
 	RecentFlag   = "\\Recent"
 )
 
+var flags = []string{
+	SeenFlag,
+	AnsweredFlag,
+	FlaggedFlag,
+	DeletedFlag,
+	DraftFlag,
+	RecentFlag,
+}
+
 // Message attributes that can be fetched, defined in RFC 3501 section 6.4.5.
 // Attributes that fetches the message contents are defined with
 // BodySectionName.
@@ -51,6 +60,20 @@ const (
 	// CRLF delimiting the header and the body.
 	MimeSpecifier = "MIME"
 )
+
+// Returns the canonical form of a flag. Flags are case-insensitive.
+//
+// If the flag is defined in RFC 3501, it returns the flag with the case of the
+// RFC. Otherwise, it returns the lowercase version of the flag.
+func CanonicalFlag(flag string) string {
+	flag = strings.ToLower(flag)
+	for _, f := range flags {
+		if strings.ToLower(f) == flag {
+			return f
+		}
+	}
+	return flag
+}
 
 // A message.
 type Message struct {
@@ -124,7 +147,8 @@ func (m *Message) Parse(fields []interface{}) error {
 
 				m.Flags = make([]string, len(flags))
 				for i, flag := range flags {
-					m.Flags[i], _ = flag.(string)
+					s, _ := flag.(string)
+					m.Flags[i] = CanonicalFlag(s)
 				}
 			case InternalDateMsgAttr:
 				date, _ := f.(string)
