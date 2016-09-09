@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -96,6 +97,37 @@ func TestClient(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {}
+
+	testClient(t, ct, st)
+}
+
+func TestClient_SetDebug(t *testing.T) {
+	ct := func(c *client.Client) error {
+		b := &bytes.Buffer{}
+		c.SetDebug(b)
+
+		if _, err := c.Capability(); err != nil {
+			return err
+		}
+
+		if b.Len() == 0 {
+			return errors.New("Empty debug buffer")
+		}
+
+		return nil
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "CAPABILITY" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* CAPABILITY IMAP4rev1\r\n")
+		io.WriteString(c, tag+" OK CAPABILITY completed.\r\n")
+	}
 
 	testClient(t, ct, st)
 }

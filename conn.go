@@ -70,6 +70,9 @@ type Conn struct {
 	*Reader
 	*Writer
 
+	br *bufio.Reader
+	bw *bufio.Writer
+
 	waits chan struct{}
 
 	// Print all commands and responses to this io.Writer.
@@ -102,8 +105,19 @@ func (c *Conn) init() {
 		}
 	}
 
-	c.Reader.reader = bufio.NewReader(r)
-	c.Writer.Writer = bufio.NewWriter(w)
+	if c.br == nil {
+		c.br = bufio.NewReader(r)
+		c.Reader.reader = c.br
+	} else {
+		c.br.Reset(r)
+	}
+
+	if c.bw == nil {
+		c.bw = bufio.NewWriter(w)
+		c.Writer.Writer = c.bw
+	} else {
+		c.bw.Reset(w)
+	}
 }
 
 // Write implements io.Writer.
@@ -112,21 +126,18 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 }
 
 // Flush writes any buffered data to the underlying connection.
-func (c *Conn) Flush() (err error) {
-	if err = c.Writer.Flush(); err != nil {
-		return
+func (c *Conn) Flush() error {
+	if err := c.Writer.Flush(); err != nil {
+		return err
 	}
 
-	f, ok := c.Conn.(interface {
-		Flush() error
-	})
-	if ok {
-		if err = f.Flush(); err != nil {
-			return
+	if f, ok := c.Conn.(flusher); ok {
+		if err := f.Flush(); err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted

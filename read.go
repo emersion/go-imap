@@ -216,6 +216,7 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 
 	l, err := strconv.Atoi(lstr)
 	if err != nil {
+		err = newParseError("Cannot parse literal length: " + err.Error())
 		return
 	}
 

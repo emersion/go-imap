@@ -9,6 +9,10 @@ import (
 	"unicode"
 )
 
+type flusher interface {
+	Flush() error
+}
+
 // A string that will be quoted.
 type Quoted string
 
@@ -208,10 +212,7 @@ func (w *Writer) writeLine(fields ...interface{}) error {
 }
 
 func (w *Writer) Flush() error {
-	f, ok := w.Writer.(interface {
-		Flush() error
-	})
-	if ok {
+	if f, ok := w.Writer.(flusher); ok {
 		return f.Flush()
 	}
 	return nil
