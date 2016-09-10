@@ -2,9 +2,23 @@ package imap
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/emersion/go-imap/utf7"
 )
+
+// The primary mailbox, as defined in RFC 3501 section 5.1.
+const InboxName = "INBOX"
+
+// Returns the canonical form of a mailbox name. Mailbox names can be
+// case-sensitive or case-insensitive depending on the backend implementation.
+// The spacial INBOX mailbox is case-insensitive.
+func CanonicalMailboxName(name string) string {
+	if strings.ToUpper(name) == InboxName {
+		return InboxName
+	}
+	return name
+}
 
 // Mailbox attributes definied in RFC 3501 section 7.2.2.
 const (

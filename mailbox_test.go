@@ -7,6 +7,15 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+func TestCanonicalMailboxName(t *testing.T) {
+	if got := imap.CanonicalMailboxName("Inbox"); got != imap.InboxName {
+		t.Errorf("Invalid canonical mailbox name: expected %q but got %q", imap.InboxName, got)
+	}
+	if got := imap.CanonicalMailboxName("Drafts"); got != "Drafts" {
+		t.Errorf("Invalid canonical mailbox name: expected %q but got %q", "Drafts", got)
+	}
+}
+
 func TestMailboxInfo(t *testing.T) {
 	fields := []interface{}{
 		[]interface{}{"\\Noselect", "\\Recent", "\\Unseen"},
