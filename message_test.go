@@ -10,11 +10,11 @@ import (
 
 func TestCanonicalFlag(t *testing.T) {
 	if got := CanonicalFlag("\\SEEN"); got != SeenFlag {
-		t.Errorf("Invalid canonical flag: expected %q but got %q", got, SeenFlag)
+		t.Errorf("Invalid canonical flag: expected %q but got %q", SeenFlag, got)
 	}
 
 	if got := CanonicalFlag("Junk"); got != "junk" {
-		t.Errorf("Invalid canonical flag: expected %q but got %q", got, "junk")
+		t.Errorf("Invalid canonical flag: expected %q but got %q", "junk", got)
 	}
 }
 
