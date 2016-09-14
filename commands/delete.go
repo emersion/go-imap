@@ -22,18 +22,18 @@ func (cmd *Delete) Command() *imap.Command {
 	}
 }
 
-func (cmd *Delete) Parse(fields []interface{}) (err error) {
+func (cmd *Delete) Parse(fields []interface{}) error {
 	if len(fields) < 1 {
 		return errors.New("No enough arguments")
 	}
 
-	mailbox, ok := fields[0].(string)
-	if !ok {
-		return errors.New("Mailbox must be a string")
-	}
-	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	if mailbox, ok := fields[0].(string); !ok {
+		return errors.New("Mailbox name must be a string")
+	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
+	} else {
+		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
-	return
+	return nil
 }

@@ -23,26 +23,26 @@ func (cmd *Copy) Command() *imap.Command {
 	}
 }
 
-func (cmd *Copy) Parse(fields []interface{}) (err error) {
+func (cmd *Copy) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
 		return errors.New("No enough arguments")
 	}
 
-	seqset, ok := fields[0].(string)
-	if !ok {
+	if seqSet, ok := fields[0].(string); !ok {
 		return errors.New("Invaliud sequence set")
-	}
-	if cmd.SeqSet, err = imap.NewSeqSet(seqset); err != nil {
+	} else if seqSet, err := imap.NewSeqSet(seqSet); err != nil {
 		return err
+	} else {
+		cmd.SeqSet = seqSet
 	}
 
-	mailbox, ok := fields[1].(string)
-	if !ok {
+	if mailbox, ok := fields[1].(string); !ok {
 		return errors.New("Mailbox name must be a string")
-	}
-	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
+	} else {
+		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
-	return
+	return nil
 }

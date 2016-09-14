@@ -59,6 +59,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 	name, _ := fields[2].(string)
 	info.Name, _ = utf7.Decoder.String(name)
+	info.Name = CanonicalMailboxName(info.Name)
 
 	return nil
 }

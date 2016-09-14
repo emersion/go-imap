@@ -37,22 +37,21 @@ func (cmd *List) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	ref, ok := fields[0].(string)
-	if !ok {
-		return errors.New("Reference must be a string")
+	if mailbox, ok := fields[0].(string); !ok {
+		return errors.New("Reference name must be a string")
+	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
+		return err
+	} else {
+		// TODO: canonical mailbox path
+		cmd.Reference = imap.CanonicalMailboxName(mailbox)
 	}
 
-	mailbox, ok := fields[1].(string)
-	if !ok {
-		return errors.New("Mailbox must be a string")
-	}
-
-	var err error
-	if cmd.Reference, err = utf7.Decoder.String(ref); err != nil {
+	if mailbox, ok := fields[1].(string); !ok {
+		return errors.New("Mailbox name must be a string")
+	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
-	}
-	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
-		return err
+	} else {
+		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
 	return nil

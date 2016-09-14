@@ -49,18 +49,18 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	}
 
 	// Parse mailbox name
-	mailbox, ok := fields[0].(string)
-	if !ok {
+	if mailbox, ok := fields[0].(string); !ok {
 		return errors.New("Mailbox name must be a string")
-	}
-	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	} else if mailbox, err = utf7.Decoder.String(mailbox); err != nil {
 		return err
+	} else {
+		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
 	// Parse message literal
 	litIndex := len(fields) - 1
-	cmd.Message, ok = fields[litIndex].(*imap.Literal)
-	if !ok {
+	var ok bool
+	if cmd.Message, ok = fields[litIndex].(*imap.Literal); !ok {
 		return errors.New("Message must be a literal")
 	}
 

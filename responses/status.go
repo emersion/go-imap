@@ -35,6 +35,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 			return errors.New("STATUS response expects a string as first argument")
 		}
 		mbox.Name, _ = utf7.Decoder.String(name)
+		mbox.Name = imap.CanonicalMailboxName(mbox.Name)
 
 		var items []interface{}
 		if items, ok = fields[1].([]interface{}); !ok {

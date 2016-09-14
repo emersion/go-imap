@@ -34,25 +34,22 @@ func (cmd *Status) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	mailbox, ok := fields[0].(string)
-	if !ok {
-		return errors.New("Mailbox name is not a string")
-	}
-
-	var err error
-	if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	if mailbox, ok := fields[0].(string); !ok {
+		return errors.New("Mailbox name must be a string")
+	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
+	} else {
+		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
-	items, ok := fields[1].([]interface{})
-	if !ok {
+	if items, ok := fields[1].([]interface{}); !ok {
 		return errors.New("Items must be a list")
-	}
-
-	cmd.Items = make([]string, len(items))
-	for i, v := range items {
-		item, _ := v.(string)
-		cmd.Items[i] = strings.ToUpper(item)
+	} else {
+		cmd.Items = make([]string, len(items))
+		for i, v := range items {
+			item, _ := v.(string)
+			cmd.Items[i] = strings.ToUpper(item)
+		}
 	}
 
 	return nil
