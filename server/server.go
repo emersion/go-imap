@@ -8,12 +8,16 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/responses"
 	"github.com/emersion/go-sasl"
 )
+
+// The minimum autologout duration defined in RFC 3501 section 5.4.
+const MinAutoLogout = 30*time.Minute
 
 // A command handler.
 type Handler interface {
@@ -99,6 +103,10 @@ type Server struct {
 	Backend backend.Backend
 	// Backend updates that will be sent to connected clients.
 	Updates <-chan interface{}
+	// Automatically logout clients after a duration. To do not logout users
+	// automatically, set this to zero. The duration MUST be at least
+	// MinAutoLogout (as stated in RFC 3501 section 5.4).
+	AutoLogout time.Duration
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 	// An io.Writer to which all network activity will be mirrored.
@@ -274,6 +282,8 @@ func (s *Server) handleConn(conn Conn) error {
 		if err == io.EOF || conn.Context().State == imap.LogoutState {
 			return nil
 		}
+		conn.setDeadline()
+
 		if err != nil {
 			if imap.IsParseError(err) {
 				res = &imap.StatusResp{
