@@ -76,7 +76,7 @@ func main() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo)
-  done := make(chan error, 1)
+	done := make(chan error, 1)
 	go func () {
 		done <- c.List("", "*", mailboxes)
 	}()
@@ -102,16 +102,16 @@ func main() {
 	seqset.AddRange(mbox.Messages - 3, mbox.Messages)
 
 	messages := make(chan *imap.Message)
-  done = make(chan error, 1)
-  go func() {
-    done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
-  }()
+	done = make(chan error, 1)
+	go func() {
+		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
+	}()
 
 	for msg := range messages {
 		log.Println(msg.Envelope.Subject)
 	}
 
-  if err := <-done; err != nil {
+	if err := <-done; err != nil {
 		log.Fatal(err)
 	}
 
@@ -138,11 +138,11 @@ func main() {
 	// Create a new server
 	s := server.New(bkd)
 	s.Addr = ":3000"
-  // Since we will use this server for testing only, we can allow plain text
+	// Since we will use this server for testing only, we can allow plain text
 	// authentication over unencrypted connections
 	s.AllowInsecureAuth = true
 
-  log.Println("Starting IMAP server at localhost:3000")
+	log.Println("Starting IMAP server at localhost:3000")
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
