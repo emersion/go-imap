@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
@@ -33,6 +34,7 @@ type Conn interface {
 	Close() error
 
 	conn() *imap.Conn
+	setDeadline()
 	reader() *imap.Reader
 	writer() *imap.Writer
 	locker() sync.Locker
@@ -131,11 +133,26 @@ func (r *response) WriteTo(w *imap.Writer) error {
 	return err
 }
 
+func (c *conn) setDeadline() {
+	if c.s.AutoLogout == 0 {
+		return
+	}
+
+	dur := c.s.AutoLogout
+	if dur < MinAutoLogout {
+		dur = MinAutoLogout
+	}
+	t := time.Now().Add(dur)
+
+	c.Conn.SetDeadline(t)
+}
+
 // Write a response to this connection.
 func (c *conn) WriteResp(r imap.WriterTo) error {
 	done := make(chan struct{})
 	c.responses <- &response{r, done}
 	<-done
+	c.setDeadline()
 	return nil
 }
 
