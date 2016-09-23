@@ -32,7 +32,7 @@ own tests.
 
 Commands defined in IMAP extensions are available in other packages. See [the
 wiki](https://github.com/emersion/go-imap/wiki/Using-extensions#using-client-extensions)
-to see how to use them.
+to learn how to use them.
 
 * [APPENDLIMIT](https://github.com/emersion/go-imap-appendlimit)
 * [COMPRESS](https://github.com/emersion/go-imap-compress)
