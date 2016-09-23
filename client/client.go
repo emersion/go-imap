@@ -370,6 +370,14 @@ func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
 	return c.conn.Upgrade(upgrader)
 }
 
+// Get an imap.Writer for this client's connection.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (c *Client) Writer() *imap.Writer {
+	return c.conn.Writer
+}
+
 // Check if this client's connection has TLS enabled.
 func (c *Client) IsTLS() bool {
 	return c.isTLS

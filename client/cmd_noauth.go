@@ -83,7 +83,7 @@ func (c *Client) Authenticate(auth sasl.Client) (err error) {
 	res := &responses.Authenticate{
 		Mechanism:       auth,
 		InitialResponse: ir,
-		Writer:          c.conn.Writer,
+		Writer:          c.Writer(),
 	}
 
 	status, err := c.execute(cmd, res)
