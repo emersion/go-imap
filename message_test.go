@@ -145,6 +145,10 @@ var bodySectionNameTests = []struct {
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Partial: []int{0, 512}},
 	},
 	{
+		raw:    "BODY[]<512>",
+		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Partial: []int{512}},
+	},
+	{
 		raw:    "BODY[1.2.3]",
 		parsed: &BodySectionName{BodyPartName: &BodyPartName{Path: []int{1, 2, 3}}},
 	},
