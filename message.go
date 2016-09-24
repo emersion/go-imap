@@ -303,21 +303,19 @@ func (section *BodySectionName) parse(s string) (err error) {
 		partial = partial[1 : len(partial)-1]
 
 		partialParts := strings.SplitN(partial, ".", 2)
-		if len(partialParts) < 2 {
-			return errors.New("Invalid body section name: partial must have two fields")
-		}
 
 		var from, length int
 		if from, err = strconv.Atoi(partialParts[0]); err != nil {
-			return errors.New("Invalid body section name: invalid partial: " + err.Error())
+			return errors.New("Invalid body section name: invalid partial: invalid from: " + err.Error())
 		}
-		if length, err = strconv.Atoi(partialParts[1]); err != nil {
-			return errors.New("Invalid body section name: invalid partial: " + err.Error())
+		section.Partial = []int{from}
+
+		if len(partialParts) == 2 {
+			if length, err = strconv.Atoi(partialParts[1]); err != nil {
+				return errors.New("Invalid body section name: invalid partial: invalid length: " + err.Error())
+			}
+			section.Partial = append(section.Partial, length)
 		}
-		if from < 0 || length < 0 {
-			return errors.New("Invalid body section name: invalid partial: negative number")
-		}
-		section.Partial = []int{from, length}
 	}
 
 	return nil
@@ -351,14 +349,22 @@ func (section *BodySectionName) String() (s string) {
 }
 
 func (section *BodySectionName) resp() *BodySectionName {
-	if !strings.HasPrefix(section.value, "RFC822") {
+	var reset bool
+
+	if section.Peek != false {
+		section.Peek = false
+		reset = true
+	}
+
+	if len(section.Partial) == 2 {
+		section.Partial = []int{section.Partial[0]}
+		reset = true
+	}
+
+	if reset && !strings.HasPrefix(section.value, "RFC822") {
 		section.value = "" // Reset cached value
 	}
 
-	section.Peek = false
-	if len(section.Partial) == 2 {
-		section.Partial = []int{section.Partial[0]}
-	}
 	return section
 }
 

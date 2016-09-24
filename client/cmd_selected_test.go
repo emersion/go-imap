@@ -241,6 +241,46 @@ func TestClient_Fetch(t *testing.T) {
 	testClient(t, ct, st)
 }
 
+func TestClient_Fetch_Partial(t *testing.T) {
+	ct := func(c *client.Client) (err error) {
+		c.State = imap.SelectedState
+
+		seqset, _ := imap.NewSeqSet("1")
+		fields := []string{"BODY.PEEK[]<0.10>"}
+		messages := make(chan *imap.Message, 1)
+
+		err = c.Fetch(seqset, fields, messages)
+		if err != nil {
+			return
+		}
+
+		msg := <-messages
+		body := msg.GetBody("BODY[]<0>").String()
+		if body != "I love pot" {
+			return fmt.Errorf("Message has bad body: %v", body)
+		}
+
+		return
+	}
+
+	st := func(c net.Conn) {
+		scanner := NewCmdScanner(c)
+
+		tag, cmd := scanner.Scan()
+		if cmd != "FETCH 1 (BODY.PEEK[]<0.10>)" {
+			t.Fatal("Bad command:", cmd)
+		}
+
+		io.WriteString(c, "* 1 FETCH (BODY[]<0> {10}\r\n")
+		io.WriteString(c, "I love pot")
+		io.WriteString(c, ")\r\n")
+
+		io.WriteString(c, tag+" OK FETCH completed\r\n")
+	}
+
+	testClient(t, ct, st)
+}
+
 func TestClient_Fetch_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
