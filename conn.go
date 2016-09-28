@@ -64,6 +64,23 @@ func NewDebugWriter(local, remote io.Writer) io.Writer {
 	return &debugWriter{Writer: local, local: local, remote: remote}
 }
 
+type multiFlusher struct {
+	flushers []flusher
+}
+
+func (mf *multiFlusher) Flush() error {
+	for _, f := range mf.flushers {
+		if err := f.Flush(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func newMultiFlusher(flushers ...flusher) flusher {
+	return &multiFlusher{flushers}
+}
+
 // An IMAP connection.
 type Conn struct {
 	net.Conn
@@ -118,6 +135,16 @@ func (c *Conn) init() {
 	} else {
 		c.bw.Reset(w)
 	}
+
+	if f, ok := c.Conn.(flusher); ok {
+		c.Writer.Writer = struct{
+			io.Writer
+			flusher
+		}{
+			c.bw,
+			newMultiFlusher(c.bw, f),
+		}
+	}
 }
 
 // Write implements io.Writer.
@@ -130,13 +157,6 @@ func (c *Conn) Flush() error {
 	if err := c.Writer.Flush(); err != nil {
 		return err
 	}
-
-	if f, ok := c.Conn.(flusher); ok {
-		if err := f.Flush(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
