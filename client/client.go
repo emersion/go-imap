@@ -333,9 +333,8 @@ func (c *Client) handleUnilateral() {
 				}
 				c.Mailbox.Messages, _ = imap.ParseNumber(res.Fields[0])
 
-				select {
-				case c.MailboxUpdates <- c.Mailbox:
-				default:
+				if c.MailboxUpdates != nil {
+					c.MailboxUpdates <- c.Mailbox
 				}
 			case "RECENT":
 				if c.Mailbox == nil {
@@ -343,16 +342,14 @@ func (c *Client) handleUnilateral() {
 				}
 				c.Mailbox.Recent, _ = imap.ParseNumber(res.Fields[0])
 
-				select {
-				case c.MailboxUpdates <- c.Mailbox:
-				default:
+				if c.MailboxUpdates != nil {
+					c.MailboxUpdates <- c.Mailbox
 				}
 			case "EXPUNGE":
 				seqNum, _ := imap.ParseNumber(res.Fields[0])
 
-				select {
-				case c.Expunges <- seqNum:
-				default:
+				if c.Expunges != nil {
+					c.Expunges <- seqNum
 				}
 			}
 		default:
