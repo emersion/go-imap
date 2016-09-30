@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
@@ -109,7 +110,7 @@ func TestClient_Search(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		date, _ := imap.ParseDate("1-Feb-1994")
+		date, _ := time.Parse(imap.DateFormat, "1-Feb-1994")
 		criteria := &imap.SearchCriteria{
 			Deleted: true,
 			From:    "Smith",

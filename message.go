@@ -61,6 +61,22 @@ const (
 	MimeSpecifier = "MIME"
 )
 
+// Date and time formats used as examples in RFC 3501 section 8.
+const (
+	// The date format described in RFC 2822 section 3.3.
+	EnvelopeDateTimeFormat = "Mon, 02 Jan 2006 15:04:05 -0700"
+	// Described in RFC 1730 on page 55.
+	DateFormat = "2-Jan-2006"
+	// Described in RFC 1730 on page 55.
+	DateTimeFormat = "2-Jan-2006 15:04:05 -0700"
+)
+
+// A time.Time with a specific layout
+type timeLayout struct {
+	date   time.Time
+	layout string
+}
+
 // Returns the canonical form of a flag. Flags are case-insensitive.
 //
 // If the flag is defined in RFC 3501, it returns the flag with the case of the
@@ -90,7 +106,7 @@ type Message struct {
 	BodyStructure *BodyStructure
 	// The message flags.
 	Flags []string
-	// The date the message was received by th server.
+	// The date the message was received by the server.
 	InternalDate time.Time
 	// The message size.
 	Size uint32
@@ -152,7 +168,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				}
 			case InternalDateMsgAttr:
 				date, _ := f.(string)
-				m.InternalDate, _ = ParseDateTime(date)
+				m.InternalDate, _ = time.Parse(DateTimeFormat, date)
 			case SizeMsgAttr:
 				m.Size, _ = ParseNumber(f)
 			case UidMsgAttr:
@@ -520,7 +536,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	}
 
 	if date, ok := fields[0].(string); ok {
-		e.Date, _ = ParseDateTime(date)
+		e.Date, _ = time.Parse(EnvelopeDateTimeFormat, date)
 	}
 	if subject, ok := fields[1].(string); ok {
 		e.Subject = subject
@@ -556,7 +572,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 // Format an envelope to fields.
 func (e *Envelope) Format() (fields []interface{}) {
 	return []interface{}{
-		e.Date,
+		&timeLayout{date: e.Date, layout: EnvelopeDateTimeFormat},
 		e.Subject,
 		FormatAddressList(e.From),
 		FormatAddressList(e.Sender),

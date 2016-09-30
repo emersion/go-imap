@@ -24,14 +24,6 @@ func formatNumber(num uint32) string {
 	return strconv.FormatUint(uint64(num), 10)
 }
 
-func FormatDate(t time.Time) string {
-	return t.Format("2-Jan-2006")
-}
-
-func FormatDateTime(t time.Time) string {
-	return t.Format("2-Jan-2006 15:04:05 -0700")
-}
-
 // Convert a string list to a field list.
 func FormatStringList(list []string) (fields []interface{}) {
 	fields = make([]interface{}, len(list))
@@ -98,11 +90,11 @@ func (w *Writer) writeAstring(s string) error {
 	return w.writeAtom(s)
 }
 
-func (w *Writer) writeDateTime(t time.Time) error {
+func (w *Writer) writeDateTime(t time.Time, layout string) error {
 	if t.IsZero() {
 		return w.writeAtom(nilAtom)
 	}
-	return w.writeQuoted(FormatDateTime(t))
+	return w.writeQuoted(t.Format(layout))
 }
 
 func (w *Writer) writeFields(fields []interface{}) error {
@@ -177,8 +169,10 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeLiteral(field)
 	case []interface{}:
 		return w.writeList(field)
+	case *timeLayout:
+		return w.writeDateTime(field.date, field.layout)
 	case time.Time:
-		return w.writeDateTime(field)
+		return w.writeDateTime(field, DateTimeFormat)
 	case *SeqSet:
 		return w.writeString(field.String())
 	case *BodySectionName:
