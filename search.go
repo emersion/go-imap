@@ -48,6 +48,15 @@ type SearchCriteria struct {
 	Unseen     bool
 }
 
+func maybeString(mystery interface{}) string {
+	s, ok := mystery.(string)
+	if ok {
+		return s
+	}
+
+	return ""
+}
+
 // Parse search criteria from fields.
 func (c *SearchCriteria) Parse(fields []interface{}) error {
 	// TODO: do not panic when criteria is malformed
@@ -68,7 +77,8 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Bcc, _ = fields[i].(string)
 		case "BEFORE":
 			i++
-			c.Before, _ = time.Parse(DateFormat, fields[i].(string))
+
+			c.Before, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "BODY":
 			i++
 			c.Body, _ = fields[i].(string)
@@ -111,7 +121,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Old = true
 		case "ON":
 			i++
-			c.On, _ = time.Parse(DateFormat, fields[i].(string))
+			c.On, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "OR":
 			i++
 			leftFields, _ := fields[i].([]interface{})
@@ -132,19 +142,19 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Seen = true
 		case "SENTBEFORE":
 			i++
-			c.SentBefore, _ = time.Parse(DateFormat, fields[i].(string))
+			c.SentBefore, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "SENTON":
 			i++
-			c.SentOn, _ = time.Parse(DateFormat, fields[i].(string))
+			c.SentOn, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "SENTSINCE":
 			i++
-			c.SentSince, _ = time.Parse(DateFormat, fields[i].(string))
+			c.SentSince, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "SINCE":
 			i++
-			c.Since, _ = time.Parse(DateFormat, fields[i].(string))
+			c.Since, _ = time.Parse(DateFormat, maybeString(fields[i]))
 		case "SMALLER":
 			i++
-			c.Smaller, _ = ParseNumber(fields[i].(string))
+			c.Smaller, _ = ParseNumber(fields[i])
 		case "SUBJECT":
 			i++
 			c.Subject, _ = fields[i].(string)
