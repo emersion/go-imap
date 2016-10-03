@@ -86,7 +86,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 			if !ok {
 				return errors.New("Date must be a string")
 			}
-			if cmd.Date, err = time.Parse(imap.DateTimeFormat, date); err != nil {
+			if cmd.Date, err = time.Parse(imap.DateTimeLayout, date); err != nil {
 				return err
 			}
 		}

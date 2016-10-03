@@ -9,6 +9,21 @@ import (
 	"unicode"
 )
 
+// Date and time layouts.
+const (
+	// Described in RFC 1730 on page 55.
+	DateLayout = "2-Jan-2006"
+	// Described in RFC 1730 on page 55.
+	DateTimeLayout = "2-Jan-2006 15:04:05 -0700"
+	// Described in RFC 5322 section 3.3.
+	MessageDateTimeLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
+)
+
+// time.Time with a specific layout.
+type Date time.Time
+type DateTime time.Time
+type MessageDateTime time.Time
+
 type flusher interface {
 	Flush() error
 }
@@ -169,10 +184,13 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeLiteral(field)
 	case []interface{}:
 		return w.writeList(field)
-	case *timeLayout:
-		return w.writeDateTime(field.date, field.layout)
+	case MessageDateTime:
+		return w.writeDateTime(time.Time(field), MessageDateTimeLayout)
+	case Date:
+		return w.writeDateTime(time.Time(field), DateLayout)
+	case DateTime:
 	case time.Time:
-		return w.writeDateTime(field, DateTimeFormat)
+		return w.writeDateTime(field, DateTimeLayout)
 	case *SeqSet:
 		return w.writeString(field.String())
 	case *BodySectionName:
