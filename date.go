@@ -6,6 +6,10 @@ import (
 )
 
 // Date and time layouts.
+// Dovecot adds a leading zero to dates:
+//   https://github.com/dovecot/core/blob/4fbd5c5e113078e72f29465ccc96d44955ceadc2/src/lib-imap/imap-date.c#L166
+// Cyrus adds a leading space to dates:
+//   https://github.com/cyrusimap/cyrus-imapd/blob/1cb805a3bffbdf829df0964f3b802cdc917e76db/lib/times.c#L543
 const (
 	// Described in RFC 1730 on page 55.
 	DateLayout = "_2-Jan-2006"
@@ -37,18 +41,6 @@ var messageDateTimeLayouts = [...]string{
 	"_2 Jan 06 15:04 -0700",
 	"_2 Jan 06 15:04 MST",
 	"_2 Jan 06 15:04 -0700 (MST)",
-	"02 Jan 2006 15:04:05 -0700",
-	"02 Jan 2006 15:04:05 MST",
-	"02 Jan 2006 15:04:05 -0700 (MST)",
-	"02 Jan 2006 15:04 -0700",
-	"02 Jan 2006 15:04 MST",
-	"02 Jan 2006 15:04 -0700 (MST)",
-	"02 Jan 06 15:04:05 -0700",
-	"02 Jan 06 15:04:05 MST",
-	"02 Jan 06 15:04:05 -0700 (MST)",
-	"02 Jan 06 15:04 -0700",
-	"02 Jan 06 15:04 MST",
-	"02 Jan 06 15:04 -0700 (MST)",
 	"Mon, _2 Jan 2006 15:04:05 -0700",
 	"Mon, _2 Jan 2006 15:04:05 MST",
 	"Mon, _2 Jan 2006 15:04:05 -0700 (MST)",
@@ -61,17 +53,6 @@ var messageDateTimeLayouts = [...]string{
 	"Mon, _2 Jan 06 15:04 -0700",
 	"Mon, _2 Jan 06 15:04 MST",
 	"Mon, _2 Jan 06 15:04 -0700 (MST)",
-	"Mon, 02 Jan 2006 15:04:05 MST",
-	"Mon, 02 Jan 2006 15:04:05 -0700 (MST)",
-	"Mon, 02 Jan 2006 15:04 -0700",
-	"Mon, 02 Jan 2006 15:04 MST",
-	"Mon, 02 Jan 2006 15:04 -0700 (MST)",
-	"Mon, 02 Jan 06 15:04:05 -0700",
-	"Mon, 02 Jan 06 15:04:05 MST",
-	"Mon, 02 Jan 06 15:04:05 -0700 (MST)",
-	"Mon, 02 Jan 06 15:04 -0700",
-	"Mon, 02 Jan 06 15:04 MST",
-	"Mon, 02 Jan 06 15:04 -0700 (MST)",
 }
 
 // Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
