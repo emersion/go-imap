@@ -77,7 +77,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Bcc, _ = fields[i].(string)
 		case "BEFORE":
 			i++
-			c.Before, _ = ParseDate(maybeString(fields[i]))
+			c.Before, _ = parseDate(maybeString(fields[i]))
 		case "BODY":
 			i++
 			c.Body, _ = fields[i].(string)
@@ -120,7 +120,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Old = true
 		case "ON":
 			i++
-			c.On, _ = ParseDate(maybeString(fields[i]))
+			c.On, _ = parseDate(maybeString(fields[i]))
 		case "OR":
 			i++
 			leftFields, _ := fields[i].([]interface{})
@@ -141,16 +141,16 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Seen = true
 		case "SENTBEFORE":
 			i++
-			c.SentBefore, _ = ParseDate(maybeString(fields[i]))
+			c.SentBefore, _ = parseDate(maybeString(fields[i]))
 		case "SENTON":
 			i++
-			c.SentOn, _ = ParseDate(maybeString(fields[i]))
+			c.SentOn, _ = parseDate(maybeString(fields[i]))
 		case "SENTSINCE":
 			i++
-			c.SentSince, _ = ParseDate(maybeString(fields[i]))
+			c.SentSince, _ = parseDate(maybeString(fields[i]))
 		case "SINCE":
 			i++
-			c.Since, _ = ParseDate(maybeString(fields[i]))
+			c.Since, _ = parseDate(maybeString(fields[i]))
 		case "SMALLER":
 			i++
 			c.Smaller, _ = ParseNumber(fields[i])

@@ -169,8 +169,8 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeLiteral(field)
 	case []interface{}:
 		return w.writeList(field)
-	case MessageDateTime:
-		return w.writeDateTime(time.Time(field), MessageDateTimeLayout)
+	case messageDateTime:
+		return w.writeDateTime(time.Time(field), messageDateTimeLayout)
 	case Date:
 		return w.writeDateTime(time.Time(field), DateLayout)
 	case DateTime:

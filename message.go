@@ -152,7 +152,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				}
 			case InternalDateMsgAttr:
 				date, _ := f.(string)
-				m.InternalDate, _ = ParseDateTime(date)
+				m.InternalDate, _ = parseDateTime(date)
 			case SizeMsgAttr:
 				m.Size, _ = ParseNumber(f)
 			case UidMsgAttr:
@@ -520,7 +520,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	}
 
 	if date, ok := fields[0].(string); ok {
-		e.Date, _ = ParseMessageDateTime(date)
+		e.Date, _ = parseMessageDateTime(date)
 	}
 	if subject, ok := fields[1].(string); ok {
 		e.Subject = subject
@@ -556,7 +556,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 // Format an envelope to fields.
 func (e *Envelope) Format() (fields []interface{}) {
 	return []interface{}{
-		MessageDateTime(e.Date),
+		messageDateTime(e.Date),
 		e.Subject,
 		FormatAddressList(e.From),
 		FormatAddressList(e.Sender),
