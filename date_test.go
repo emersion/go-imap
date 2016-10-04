@@ -58,7 +58,7 @@ func TestParseDateTime(t *testing.T) {
 		{"abc10-Nov-2009 23:00:00 -0600123", time.Time{}, false},
 	}
 	for _, test := range tests {
-		out, err := parseDateTime(test.in)
+		out, err := time.Parse(DateTimeLayout, test.in)
 		if !test.ok {
 			if err == nil {
 				t.Errorf("ParseDateTime(%q) expected error; got %q", test.in, out)
@@ -81,7 +81,7 @@ func TestParseDate(t *testing.T) {
 		{" 2-Nov-2009", expectedDate, true},
 	}
 	for _, test := range tests {
-		out, err := parseDate(test.in)
+		out, err := time.Parse(DateLayout, test.in)
 		if !test.ok {
 			if err == nil {
 				t.Errorf("ParseDate(%q) expected error; got %q", test.in, out)

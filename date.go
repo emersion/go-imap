@@ -11,24 +11,24 @@ import (
 // Cyrus adds a leading space to dates:
 //   https://github.com/cyrusimap/cyrus-imapd/blob/1cb805a3bffbdf829df0964f3b802cdc917e76db/lib/times.c#L543
 const (
-	// Described in RFC 1730 on page 55.
+	// Defined in RFC 3501 as date-text on page 83.
 	DateLayout = "_2-Jan-2006"
-	// Described in RFC 1730 on page 55.
+	// Defined in RFC 3501 as date-time on page 83.
 	DateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
-	// Described in RFC 5322 section 3.3.
-	messageDateTimeLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
+	// Defined in RFC 5322 section 3.3, mentioned as env-date in RFC 3501 page 84.
+	envelopeDateTimeLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
 )
 
 // time.Time with a specific layout.
 type (
-	Date            time.Time
-	DateTime        time.Time
-	messageDateTime time.Time
+	Date             time.Time
+	DateTime         time.Time
+	envelopeDateTime time.Time
 )
 
 // Permutations of the layouts defined in RFC 5322, section 3.3.
-var messageDateTimeLayouts = [...]string{
-	messageDateTimeLayout, // popular, try it first
+var envelopeDateTimeLayouts = [...]string{
+	envelopeDateTimeLayout, // popular, try it first
 	"_2 Jan 2006 15:04:05 -0700",
 	"_2 Jan 2006 15:04:05 MST",
 	"_2 Jan 2006 15:04:05 -0700 (MST)",
@@ -58,31 +58,11 @@ var messageDateTimeLayouts = [...]string{
 // Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
 // Inspired by https://github.com/golang/go/blob/master/src/net/mail/message.go
 func parseMessageDateTime(maybeDate string) (time.Time, error) {
-	for _, layout := range messageDateTimeLayouts {
+	for _, layout := range envelopeDateTimeLayouts {
 		parsed, err := time.Parse(layout, maybeDate)
 		if err == nil {
 			return parsed, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("date %s could not be parsed", maybeDate)
-}
-
-// Try parsing an IMAP date with time.
-func parseDateTime(maybeDate string) (time.Time, error) {
-	parsed, err := time.Parse(DateTimeLayout, maybeDate)
-	if err == nil {
-		return parsed, nil
-	}
-
-	return time.Time{}, fmt.Errorf("date %s could not be parsed", maybeDate)
-}
-
-// Try parsing an IMAP date.
-func parseDate(maybeDate string) (time.Time, error) {
-	parsed, err := time.Parse(DateLayout, maybeDate)
-	if err == nil {
-		return parsed, nil
-	}
-
 	return time.Time{}, fmt.Errorf("date %s could not be parsed", maybeDate)
 }
