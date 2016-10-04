@@ -17,9 +17,11 @@ const (
 )
 
 // time.Time with a specific layout.
-type Date time.Time
-type DateTime time.Time
-type MessageDateTime time.Time
+type (
+	Date            time.Time
+	DateTime        time.Time
+	MessageDateTime time.Time
+)
 
 // Permutations of the layouts defined in RFC 5322, section 3.3.
 var messageDateTimeLayouts = [...]string{

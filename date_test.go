@@ -80,6 +80,7 @@ func TestParseDate(t *testing.T) {
 		ok  bool
 	}{
 		{"10-Nov-2009", expectedDate, true},
+
 		// whitespace
 		{" 10-Nov-2009 ", expectedDate, true},
 		{" 10-Nov-2009\n\n ", expectedDate, true},
