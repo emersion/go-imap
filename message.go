@@ -152,7 +152,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				}
 			case InternalDateMsgAttr:
 				date, _ := f.(string)
-				m.InternalDate, _ = time.Parse(DateTimeLayout, date)
+				m.InternalDate, _ = ParseDateTime(date)
 			case SizeMsgAttr:
 				m.Size, _ = ParseNumber(f)
 			case UidMsgAttr:
@@ -513,70 +513,6 @@ type Envelope struct {
 	MessageId string
 }
 
-// Permutations of the layouts defined in RFC 5322, section 3.3.
-var dateLayouts = [...]string{
-	MessageDateTimeLayout, // popular, try it first
-	"2 Jan 2006 15:04:05 -0700",
-	"2 Jan 2006 15:04:05 MST",
-	"2 Jan 2006 15:04:05 -0700 (MST)",
-	"2 Jan 2006 15:04 -0700",
-	"2 Jan 2006 15:04 MST",
-	"2 Jan 2006 15:04 -0700 (MST)",
-	"2 Jan 06 15:04:05 -0700",
-	"2 Jan 06 15:04:05 MST",
-	"2 Jan 06 15:04:05 -0700 (MST)",
-	"2 Jan 06 15:04 -0700",
-	"2 Jan 06 15:04 MST",
-	"2 Jan 06 15:04 -0700 (MST)",
-	"02 Jan 2006 15:04:05 -0700",
-	"02 Jan 2006 15:04:05 MST",
-	"02 Jan 2006 15:04:05 -0700 (MST)",
-	"02 Jan 2006 15:04 -0700",
-	"02 Jan 2006 15:04 MST",
-	"02 Jan 2006 15:04 -0700 (MST)",
-	"02 Jan 06 15:04:05 -0700",
-	"02 Jan 06 15:04:05 MST",
-	"02 Jan 06 15:04:05 -0700 (MST)",
-	"02 Jan 06 15:04 -0700",
-	"02 Jan 06 15:04 MST",
-	"02 Jan 06 15:04 -0700 (MST)",
-	"Mon, 2 Jan 2006 15:04:05 -0700",
-	"Mon, 2 Jan 2006 15:04:05 MST",
-	"Mon, 2 Jan 2006 15:04:05 -0700 (MST)",
-	"Mon, 2 Jan 2006 15:04 -0700",
-	"Mon, 2 Jan 2006 15:04 MST",
-	"Mon, 2 Jan 2006 15:04 -0700 (MST)",
-	"Mon, 2 Jan 06 15:04:05 -0700",
-	"Mon, 2 Jan 06 15:04:05 MST",
-	"Mon, 2 Jan 06 15:04:05 -0700 (MST)",
-	"Mon, 2 Jan 06 15:04 -0700",
-	"Mon, 2 Jan 06 15:04 MST",
-	"Mon, 2 Jan 06 15:04 -0700 (MST)",
-	"Mon, 02 Jan 2006 15:04:05 MST",
-	"Mon, 02 Jan 2006 15:04:05 -0700 (MST)",
-	"Mon, 02 Jan 2006 15:04 -0700",
-	"Mon, 02 Jan 2006 15:04 MST",
-	"Mon, 02 Jan 2006 15:04 -0700 (MST)",
-	"Mon, 02 Jan 06 15:04:05 -0700",
-	"Mon, 02 Jan 06 15:04:05 MST",
-	"Mon, 02 Jan 06 15:04:05 -0700 (MST)",
-	"Mon, 02 Jan 06 15:04 -0700",
-	"Mon, 02 Jan 06 15:04 MST",
-	"Mon, 02 Jan 06 15:04 -0700 (MST)",
-}
-
-// Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
-// Inspired by https://github.com/golang/go/blob/master/src/net/mail/message.go
-func (e *Envelope) ParseDate(maybeDate string) (time.Time, error) {
-	for _, layout := range dateLayouts {
-		parsed, err := time.Parse(layout, maybeDate)
-		if err == nil {
-			return parsed, nil
-		}
-	}
-	return time.Time{}, errors.New("date could not be parsed")
-}
-
 // Parse an envelope from fields.
 func (e *Envelope) Parse(fields []interface{}) error {
 	if len(fields) < 10 {
@@ -584,7 +520,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	}
 
 	if date, ok := fields[0].(string); ok {
-		e.Date, _ = e.ParseDate(date)
+		e.Date, _ = ParseMessageDateTime(date)
 	}
 	if subject, ok := fields[1].(string); ok {
 		e.Subject = subject

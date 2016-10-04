@@ -9,21 +9,6 @@ import (
 	"unicode"
 )
 
-// Date and time layouts.
-const (
-	// Described in RFC 1730 on page 55.
-	DateLayout = "2-Jan-2006"
-	// Described in RFC 1730 on page 55.
-	DateTimeLayout = "2-Jan-2006 15:04:05 -0700"
-	// Described in RFC 5322 section 3.3.
-	MessageDateTimeLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
-)
-
-// time.Time with a specific layout.
-type Date time.Time
-type DateTime time.Time
-type MessageDateTime time.Time
-
 type flusher interface {
 	Flush() error
 }
