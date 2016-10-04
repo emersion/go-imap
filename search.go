@@ -1,7 +1,7 @@
 package imap
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -64,7 +64,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 	for i := 0; i < len(fields); i++ {
 		f, ok := fields[i].(string)
 		if !ok {
-			return errors.New("Invalid search criteria field")
+			return fmt.Errorf("Invalid search criteria field: %v", fields[i])
 		}
 
 		switch strings.ToUpper(f) {
@@ -205,7 +205,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "BCC", c.Bcc)
 	}
 	if !c.Before.IsZero() {
-		fields = append(fields, "BEFORE", c.Before.Format(DateLayout))
+		fields = append(fields, "BEFORE", Date(c.Before))
 	}
 	if c.Body != "" {
 		fields = append(fields, "BODY", c.Body)
@@ -244,7 +244,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "OLD")
 	}
 	if !c.On.IsZero() {
-		fields = append(fields, "ON", c.On.Format(DateLayout))
+		fields = append(fields, "ON", Date(c.On))
 	}
 	if c.Or[0] != nil && c.Or[1] != nil {
 		fields = append(fields, "OR", c.Or[0].Format(), c.Or[1].Format())
@@ -256,16 +256,16 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "SEEN")
 	}
 	if !c.SentBefore.IsZero() {
-		fields = append(fields, "SENTBEFORE", c.SentBefore.Format(DateLayout))
+		fields = append(fields, "SENTBEFORE", Date(c.SentBefore))
 	}
 	if !c.SentOn.IsZero() {
-		fields = append(fields, "SENTON", c.SentOn.Format(DateLayout))
+		fields = append(fields, "SENTON", Date(c.SentOn))
 	}
 	if !c.SentSince.IsZero() {
-		fields = append(fields, "SENTSINCE", c.SentSince.Format(DateLayout))
+		fields = append(fields, "SENTSINCE", Date(c.SentSince))
 	}
 	if !c.Since.IsZero() {
-		fields = append(fields, "SINCE", c.Since.Format(DateLayout))
+		fields = append(fields, "SINCE", Date(c.Since))
 	}
 	if c.Smaller != 0 {
 		fields = append(fields, "SMALLER", c.Smaller)
