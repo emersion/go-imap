@@ -44,6 +44,11 @@ to learn how to use them.
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 * [UNSELECT](https://github.com/emersion/go-imap-unselect)
 
+## Server backends
+
+* [In-memory backend](https://github.com/emersion/go-imap/tree/master/backend/memory) for testing
+* [Proxy](https://github.com/emersion/go-imap-proxy)
+
 ## Usage
 
 ### Client
