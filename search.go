@@ -1,7 +1,7 @@
 package imap
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -48,6 +48,15 @@ type SearchCriteria struct {
 	Unseen     bool
 }
 
+func maybeString(mystery interface{}) string {
+	s, ok := mystery.(string)
+	if ok {
+		return s
+	}
+
+	return ""
+}
+
 // Parse search criteria from fields.
 func (c *SearchCriteria) Parse(fields []interface{}) error {
 	// TODO: do not panic when criteria is malformed
@@ -55,7 +64,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 	for i := 0; i < len(fields); i++ {
 		f, ok := fields[i].(string)
 		if !ok {
-			return errors.New("Invalid search criteria field")
+			return fmt.Errorf("Invalid search criteria field: %v", fields[i])
 		}
 
 		switch strings.ToUpper(f) {
@@ -68,7 +77,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Bcc, _ = fields[i].(string)
 		case "BEFORE":
 			i++
-			c.Before, _ = ParseDate(fields[i])
+			c.Before, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "BODY":
 			i++
 			c.Body, _ = fields[i].(string)
@@ -111,7 +120,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Old = true
 		case "ON":
 			i++
-			c.On, _ = ParseDate(fields[i])
+			c.On, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "OR":
 			i++
 			leftFields, _ := fields[i].([]interface{})
@@ -132,16 +141,16 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			c.Seen = true
 		case "SENTBEFORE":
 			i++
-			c.SentBefore, _ = ParseDate(fields[i])
+			c.SentBefore, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "SENTON":
 			i++
-			c.SentOn, _ = ParseDate(fields[i])
+			c.SentOn, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "SENTSINCE":
 			i++
-			c.SentSince, _ = ParseDate(fields[i])
+			c.SentSince, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "SINCE":
 			i++
-			c.Since, _ = ParseDate(fields[i])
+			c.Since, _ = time.Parse(DateLayout, maybeString(fields[i]))
 		case "SMALLER":
 			i++
 			c.Smaller, _ = ParseNumber(fields[i])
@@ -196,7 +205,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "BCC", c.Bcc)
 	}
 	if !c.Before.IsZero() {
-		fields = append(fields, "BEFORE", FormatDate(c.Before))
+		fields = append(fields, "BEFORE", Date(c.Before))
 	}
 	if c.Body != "" {
 		fields = append(fields, "BODY", c.Body)
@@ -235,7 +244,7 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "OLD")
 	}
 	if !c.On.IsZero() {
-		fields = append(fields, "ON", FormatDate(c.On))
+		fields = append(fields, "ON", Date(c.On))
 	}
 	if c.Or[0] != nil && c.Or[1] != nil {
 		fields = append(fields, "OR", c.Or[0].Format(), c.Or[1].Format())
@@ -247,16 +256,16 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "SEEN")
 	}
 	if !c.SentBefore.IsZero() {
-		fields = append(fields, "SENTBEFORE", FormatDate(c.SentBefore))
+		fields = append(fields, "SENTBEFORE", Date(c.SentBefore))
 	}
 	if !c.SentOn.IsZero() {
-		fields = append(fields, "SENTON", FormatDate(c.SentOn))
+		fields = append(fields, "SENTON", Date(c.SentOn))
 	}
 	if !c.SentSince.IsZero() {
-		fields = append(fields, "SENTSINCE", FormatDate(c.SentSince))
+		fields = append(fields, "SENTSINCE", Date(c.SentSince))
 	}
 	if !c.Since.IsZero() {
-		fields = append(fields, "SINCE", FormatDate(c.Since))
+		fields = append(fields, "SINCE", Date(c.Since))
 	}
 	if c.Smaller != 0 {
 		fields = append(fields, "SMALLER", c.Smaller)

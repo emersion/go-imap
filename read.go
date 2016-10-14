@@ -5,7 +5,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -75,26 +74,6 @@ func ParseNumber(f interface{}) (uint32, error) {
 	}
 
 	return uint32(nbr), nil
-}
-
-func ParseDate(f interface{}) (t time.Time, err error) {
-	s, ok := f.(string)
-	if !ok {
-		err = newParseError("imap: date is not a string")
-		return
-	}
-
-	return time.Parse("2-Jan-2006", s)
-}
-
-func ParseDateTime(f interface{}) (t time.Time, err error) {
-	s, ok := f.(string)
-	if !ok {
-		err = newParseError("imap: date-time is not a string")
-		return
-	}
-
-	return time.Parse("2-Jan-2006 15:04:05 -0700", s)
 }
 
 // Convert a field list to a string list.

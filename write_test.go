@@ -129,7 +129,7 @@ func TestWriter_WriteField_DateTime(t *testing.T) {
 	if err := w.writeField(dt); err != nil {
 		t.Error(err)
 	}
-	if b.String() != "\"10-Nov-2009 23:00:00 +0000\"" {
+	if b.String() != `"10-Nov-2009 23:00:00 +0000"` {
 		t.Error("Invalid date:", b.String())
 	}
 }
