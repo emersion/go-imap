@@ -141,23 +141,23 @@ import (
 
 func main() {
 	// Create a memory backend
-	bkd := memory.New()
+	be := memory.New()
 
 	// Create a new server
-	s := server.New(bkd)
-	s.Addr = ":3000"
+	s := server.New(be)
+	s.Addr = ":1143"
 	// Since we will use this server for testing only, we can allow plain text
 	// authentication over unencrypted connections
 	s.AllowInsecureAuth = true
 
-	log.Println("Starting IMAP server at localhost:3000")
+	log.Println("Starting IMAP server at localhost:1143")
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
 ```
 
-You can now use `telnet localhost 3000` to manually connect to the server.
+You can now use `telnet localhost 1143` to manually connect to the server.
 
 ## License
 
