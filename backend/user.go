@@ -1,5 +1,17 @@
 package backend
 
+import "errors"
+
+var (
+	// An error returned by User.GetMailbox, User.DeleteMailbox and
+	// User.RenameMailbox when retrieving, deleting or renaming a mailbox that
+	// doesn't exist.
+	ErrNoSuchMailbox = errors.New("No such mailbox")
+	// An error returned by User.CreateMailbox and User.RenameMailbox when
+	// creating or renaming mailbox that already exists.
+	ErrMailboxAlreadyExists = errors.New("Mailbox already exists")
+)
+
 // User represents a user in the mail storage system.
 // A user operation always deals with mailboxes.
 type User interface {
@@ -10,7 +22,7 @@ type User interface {
 	// If subscribed is set to true, only returns subscribed mailboxes.
 	ListMailboxes(subscribed bool) ([]Mailbox, error)
 
-	// Get a mailbox.
+	// Get a mailbox. If it doesn't exist, return ErrNoSuchMailbox.
 	GetMailbox(name string) (Mailbox, error)
 
 	// Create a new mailbox.
