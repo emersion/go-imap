@@ -46,8 +46,9 @@ to learn how to use them.
 
 ## Server backends
 
-* [In-memory backend](https://github.com/emersion/go-imap/tree/master/backend/memory) for testing
+* [Memory](https://github.com/emersion/go-imap/tree/master/backend/memory) (for testing)
 * [Proxy](https://github.com/emersion/go-imap-proxy)
+* [Multi](https://github.com/emersion/go-imap-multi)
 
 ## Usage
 
