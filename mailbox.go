@@ -88,8 +88,9 @@ type MailboxStatus struct {
 	Name string
 	// True if the mailbox is open in read-only mode.
 	ReadOnly bool
-	// A map containing all items that are filled in and additional ones. It
-	// should only be used by extensions.
+	// The mailbox items that are currently filled in. This map's values
+	// should not be used directly, they must only be used by libraries
+	// implementing extensions of the IMAP protocol.
 	Items map[string]interface{}
 
 	// The mailbox flags.
@@ -110,6 +111,20 @@ type MailboxStatus struct {
 	UidValidity uint32
 }
 
+// Create a new mailbox status that will contain the specified items.
+func NewMailboxStatus(name string, items []string) *MailboxStatus {
+	status := &MailboxStatus{
+		Name: name,
+		Items: make(map[string]interface{}),
+	}
+
+	for _, k := range items {
+		status.Items[k] = nil
+	}
+
+	return status
+}
+
 func (status *MailboxStatus) Parse(fields []interface{}) error {
 	status.Items = make(map[string]interface{})
 
@@ -126,16 +141,16 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 
 			var err error
 			switch k {
-			case imap.MailboxMessages:
-				status.Messages, err = imap.ParseNumber(f)
-			case imap.MailboxRecent:
-				status.Recent, err = imap.ParseNumber(f)
-			case imap.MailboxUnseen:
-				status.Unseen, err = imap.ParseNumber(f)
-			case imap.MailboxUidNext:
-				status.UidNext, err = imap.ParseNumber(f)
-			case imap.MailboxUidValidity:
-				status.UidValidity, err = imap.ParseNumber(f)
+			case MailboxMessages:
+				status.Messages, err = ParseNumber(f)
+			case MailboxRecent:
+				status.Recent, err = ParseNumber(f)
+			case MailboxUnseen:
+				status.Unseen, err = ParseNumber(f)
+			case MailboxUidNext:
+				status.UidNext, err = ParseNumber(f)
+			case MailboxUidValidity:
+				status.UidValidity, err = ParseNumber(f)
 			default:
 				status.Items[k] = f
 			}
@@ -145,38 +160,27 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 			}
 		}
 	}
+
+	return nil
 }
 
 func (status *MailboxStatus) Format() []interface{} {
 	var fields []interface{}
-	for k, v := range mbox.Items {
-		var f interface{}
+	for k, v := range status.Items {
 		switch k {
-		case imap.MailboxMessages:
-			f = status.Messages
-		case imap.MailboxRecent:
-			f = status.Recent
-		case imap.MailboxUnseen:
-			f = status.Unseen
-		case imap.MailboxUidNext:
-			f = status.UidNext
-		case imap.MailboxUidValidity:
-			f = status.UidValidity
-		default:
-			f = v
+		case MailboxMessages:
+			v = status.Messages
+		case MailboxRecent:
+			v = status.Recent
+		case MailboxUnseen:
+			v = status.Unseen
+		case MailboxUidNext:
+			v = status.UidNext
+		case MailboxUidValidity:
+			v = status.UidValidity
 		}
 
-		fields = append(fields, k, f)
+		fields = append(fields, k, v)
 	}
 	return fields
-}
-
-func NewMailboxStatus(items []string) *MailboxStatus {
-	status := &MailboxStatus{Items: make(map[string]interface{})}
-
-	for _, k := range items {
-		status.Items[k] = nil
-	}
-
-	return status
 }

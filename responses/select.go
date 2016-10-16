@@ -15,39 +15,39 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 	}
 	mbox := r.Mailbox
 
+	mbox.Items = make(map[string]interface{})
 	for h := range hdlr {
 		switch res := h.Resp.(type) {
 		case *imap.Resp:
-			fields, ok := h.AcceptNamedResp("FLAGS")
+			fields, ok := h.AcceptNamedResp(imap.MailboxFlags)
 			if !ok {
 				break
 			}
 
 			flags, _ := fields[0].([]interface{})
-			mbox.Flags = make([]string, len(flags))
-			for i, f := range flags {
-				mbox.Flags[i], _ = f.(string)
-			}
-			mbox.Items = append(mbox.Items, imap.MailboxFlags)
+			mbox.Flags, _ = imap.ParseStringList(flags)
+			mbox.Items[imap.MailboxFlags] = nil
 		case *imap.StatusResp:
+			if len(res.Arguments) < 1 {
+				h.Accepts <- false
+				break
+			}
+
 			accepted := true
 			switch res.Code {
-			case "UNSEEN":
+			case imap.MailboxUnseen:
 				mbox.Unseen, _ = imap.ParseNumber(res.Arguments[0])
-				mbox.Items = append(mbox.Items, imap.MailboxUnseen)
-			case "PERMANENTFLAGS":
+				mbox.Items[imap.MailboxUnseen] = nil
+			case imap.MailboxPermanentFlags:
 				flags, _ := res.Arguments[0].([]interface{})
-				mbox.PermanentFlags = make([]string, len(flags))
-				for i, f := range flags {
-					mbox.PermanentFlags[i], _ = f.(string)
-				}
-				mbox.Items = append(mbox.Items, imap.MailboxPermanentFlags)
-			case "UIDNEXT":
+				mbox.PermanentFlags, _ = imap.ParseStringList(flags)
+				mbox.Items[imap.MailboxPermanentFlags] = nil
+			case imap.MailboxUidNext:
 				mbox.UidNext, _ = imap.ParseNumber(res.Arguments[0])
-				mbox.Items = append(mbox.Items, imap.MailboxUidNext)
-			case "UIDVALIDITY":
+				mbox.Items[imap.MailboxUidNext] = nil
+			case imap.MailboxUidValidity:
 				mbox.UidValidity, _ = imap.ParseNumber(res.Arguments[0])
-				mbox.Items = append(mbox.Items, imap.MailboxUidValidity)
+				mbox.Items[imap.MailboxUidValidity] = nil
 			default:
 				accepted = false
 			}
@@ -61,8 +61,8 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 func (r *Select) WriteTo(w *imap.Writer) (err error) {
 	status := r.Mailbox
 
-	for _, item := range r.Mailbox.Items {
-		switch item {
+	for k, _ := range r.Mailbox.Items {
+		switch k {
 		case imap.MailboxFlags:
 			flags := make([]interface{}, len(status.Flags))
 			for i, f := range status.Flags {

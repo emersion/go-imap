@@ -180,8 +180,6 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeDateTime(field, DateTimeLayout)
 	case *SeqSet:
 		return w.writeString(field.String())
-	case *BodySectionName:
-		return w.writeString(field.String())
 	}
 
 	return fmt.Errorf("imap: cannot format field: %v", field)

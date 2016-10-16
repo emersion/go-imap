@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 )
@@ -35,7 +36,13 @@ var messageTests = []struct {
 }{
 	{
 		message: &Message{
-			Items:         []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
+			Items:         map[string]interface{}{
+				"ENVELOPE": nil,
+				"BODY": nil,
+				"FLAGS": nil,
+				"RFC822.SIZE": nil,
+				"UID": nil,
+			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
@@ -55,25 +62,42 @@ var messageTests = []struct {
 
 func TestMessage_Parse(t *testing.T) {
 	for i, test := range messageTests {
-		m := NewMessage()
+		m := &Message{}
 		if err := m.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse message for #%v:", i, err)
 		} else if !reflect.DeepEqual(m, test.message) {
-			t.Errorf("Invalid parsed message for #%v: got %+v but expected %+v", i, m, test.message)
+			t.Errorf("Invalid parsed message for #%v: got \n%+v\n but expected \n%+v", i, m, test.message)
 		}
 	}
+}
+
+type mapListSorter []interface{}
+
+func (s mapListSorter) Len() int {
+	return len(s)/2
+}
+
+func (s mapListSorter) Less(i, j int) bool {
+	return s[i*2].(string) < s[j*2].(string)
+}
+
+func (s mapListSorter) Swap(i, j int) {
+	s[i*2], s[j*2] = s[j*2], s[i*2]
+	s[i*2+1], s[j*2+1] = s[j*2+1], s[i*2+1]
 }
 
 func TestMessage_Format(t *testing.T) {
 	for i, test := range messageTests {
 		fields := test.message.Format()
 
+		sort.Sort(mapListSorter(fields))
 		got, err := formatFields(fields)
 		if err != nil {
 			t.Error(err)
 			continue
 		}
 
+		sort.Sort(mapListSorter(test.fields))
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {

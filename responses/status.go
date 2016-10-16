@@ -2,7 +2,6 @@ package responses
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/utf7"
@@ -42,30 +41,8 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 			return errors.New("STATUS response expects a list as second argument")
 		}
 
-		var key string
-		for i, f := range items {
-			if i%2 == 0 {
-				var ok bool
-				if key, ok = f.(string); !ok {
-					return errors.New("Key is not a string")
-				}
-			} else {
-				key = strings.ToUpper(key)
-				mbox.Items = append(mbox.Items, key)
-
-				switch key {
-				case imap.MailboxMessages:
-					mbox.Messages, _ = imap.ParseNumber(f)
-				case imap.MailboxRecent:
-					mbox.Recent, _ = imap.ParseNumber(f)
-				case imap.MailboxUnseen:
-					mbox.Unseen, _ = imap.ParseNumber(f)
-				case imap.MailboxUidNext:
-					mbox.UidNext, _ = imap.ParseNumber(f)
-				case imap.MailboxUidValidity:
-					mbox.UidValidity, _ = imap.ParseNumber(f)
-				}
-			}
+		if err := mbox.Parse(items); err != nil {
+			return err
 		}
 	}
 
@@ -75,28 +52,8 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
 
-	var fields []interface{}
-	for _, item := range mbox.Items {
-		var value interface{}
-		switch strings.ToUpper(item) {
-		case imap.MailboxMessages:
-			value = mbox.Messages
-		case imap.MailboxRecent:
-			value = mbox.Recent
-		case imap.MailboxUnseen:
-			value = mbox.Unseen
-		case imap.MailboxUidNext:
-			value = mbox.UidNext
-		case imap.MailboxUidValidity:
-			value = mbox.UidValidity
-		}
+	fields := []interface{}{imap.Status, mbox.Name, mbox.Format()}
 
-		fields = append(fields, item, value)
-	}
-
-	name, _ := utf7.Encoder.String(mbox.Name)
-
-	fields = append([]interface{}{imap.Status, name}, fields)
 	res := imap.NewUntaggedResp(fields)
 	if err := res.WriteTo(w); err != nil {
 		return err

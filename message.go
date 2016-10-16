@@ -79,10 +79,10 @@ func CanonicalFlag(flag string) string {
 type Message struct {
 	// The message sequence number. It must be greater than or equal to 1.
 	SeqNum uint32
-	// The message items that are currently filled in.
-	Items []string
-	// The message body sections.
-	Body map[*BodySectionName]Literal
+	// The mailbox items that are currently filled in. This map's values
+	// should not be used directly, they must only be used by libraries
+	// implementing extensions of the IMAP protocol.
+	Items map[string]interface{}
 
 	// The message envelope.
 	Envelope *Envelope
@@ -96,36 +96,49 @@ type Message struct {
 	Size uint32
 	// The message unique identifier. It must be greater than or equal to 1.
 	Uid uint32
+	// The message body sections.
+	Body map[*BodySectionName]Literal
 }
 
-// Create a new empty message.
-func NewMessage() *Message {
-	return &Message{Body: map[*BodySectionName]Literal{}}
+// Create a new empty message that will contain the specified items.
+func NewMessage(seqNum uint32, items []string) *Message {
+	msg := &Message{
+		SeqNum: seqNum,
+		Items: make(map[string]interface{}),
+		Body: make(map[*BodySectionName]Literal),
+	}
+
+	for _, k := range items {
+		msg.Items[k] = nil
+	}
+
+	return msg
 }
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
-	m.Items = nil
+	m.Items = make(map[string]interface{})
 	m.Body = map[*BodySectionName]Literal{}
 
-	var key string
+	var k string
 	for i, f := range fields {
 		if i%2 == 0 { // It's a key
 			var ok bool
-			if key, ok = f.(string); !ok {
+			if k, ok = f.(string); !ok {
 				return errors.New("Key is not a string")
 			}
+			k = strings.ToUpper(k)
 		} else { // It's a value
-			item := strings.ToUpper(key)
+			m.Items[k] = nil
 
-			switch item {
+			switch k {
 			case BodyMsgAttr, BodyStructureMsgAttr:
 				bs, ok := f.([]interface{})
 				if !ok {
 					return errors.New("BODYSTRUCTURE is not a list")
 				}
 
-				m.BodyStructure = &BodyStructure{Extended: item == BodyStructureMsgAttr}
+				m.BodyStructure = &BodyStructure{Extended: k == BodyStructureMsgAttr}
 				if err := m.BodyStructure.Parse(bs); err != nil {
 					return err
 				}
@@ -160,67 +173,47 @@ func (m *Message) Parse(fields []interface{}) error {
 			default:
 				// Likely to be a section of the body
 				// First check that the section name is correct
-				section, err := NewBodySectionName(item)
-				if err != nil {
-					return err
+				if section, err := NewBodySectionName(k); err != nil {
+					// Not a section name, maybe an attribute defined in an IMAP extension
+					m.Items[k] = f
+				} else {
+					m.Body[section], _ = f.(Literal)
 				}
-
-				// Then check that the value is a correct literal
-				literal, ok := f.(Literal)
-				if !ok {
-					break
-				}
-
-				m.Body[section] = literal
-
-				// Do not include this in the list of items
-				item = ""
-			}
-
-			if item != "" {
-				m.Items = append(m.Items, item)
 			}
 		}
 	}
+
 	return nil
 }
 
 func (m *Message) Format() (fields []interface{}) {
-	for _, item := range m.Items {
-		item = strings.ToUpper(item)
-
-		ok := true
-		var value interface{}
-		switch item {
+	for k, v := range m.Items {
+		switch strings.ToUpper(k) {
 		case BodyMsgAttr, BodyStructureMsgAttr:
 			// Extension data is only returned with the BODYSTRUCTURE fetch
-			m.BodyStructure.Extended = item == BodyStructureMsgAttr
-			value = m.BodyStructure.Format()
+			m.BodyStructure.Extended = k == BodyStructureMsgAttr
+			v = m.BodyStructure.Format()
 		case EnvelopeMsgAttr:
-			value = m.Envelope.Format()
+			v = m.Envelope.Format()
 		case FlagsMsgAttr:
-			flags := make([]interface{}, len(m.Flags))
-			for i, v := range m.Flags {
-				flags[i] = v
-			}
-			value = flags
+			v = FormatStringList(m.Flags)
 		case InternalDateMsgAttr:
-			value = m.InternalDate
+			v = m.InternalDate
 		case SizeMsgAttr:
-			value = m.Size
+			v = m.Size
 		case UidMsgAttr:
-			value = m.Uid
+			v = m.Uid
 		default:
-			ok = false
+			for section, literal := range m.Body {
+				if section.value == k {
+					k = section.resp().String()
+					v = literal
+					break
+				}
+			}
 		}
 
-		if ok {
-			fields = append(fields, item, value)
-		}
-	}
-
-	for section, literal := range m.Body {
-		fields = append(fields, section.resp(), literal)
+		fields = append(fields, k, v)
 	}
 
 	return
@@ -705,7 +698,7 @@ type BodyStructure struct {
 func ParseParamList(fields []interface{}) (params map[string]string, err error) {
 	params = map[string]string{}
 
-	var key string
+	var k string
 	for i, f := range fields {
 		p, ok := f.(string)
 		if !ok {
@@ -714,14 +707,14 @@ func ParseParamList(fields []interface{}) (params map[string]string, err error) 
 		}
 
 		if i%2 == 0 {
-			key = p
+			k = p
 		} else {
-			params[key] = p
-			key = ""
+			params[k] = p
+			k = ""
 		}
 	}
 
-	if key != "" {
+	if k != "" {
 		err = errors.New("Parameter list contains a key without a value")
 	}
 	return
