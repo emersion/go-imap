@@ -171,8 +171,8 @@ func (cmd *List) Handle(conn Conn) error {
 		if cmd.Mailbox == "" {
 			ch <- &imap.MailboxInfo{
 				Attributes: []string{imap.NoSelectAttr},
-				Delimiter: info.Delimiter,
-				Name: info.Delimiter,
+				Delimiter:  info.Delimiter,
+				Name:       info.Delimiter,
 			}
 			break
 		}
@@ -241,7 +241,7 @@ func (cmd *Append) Handle(conn Conn) error {
 		return err
 	}
 
-	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message.Bytes()); err != nil {
+	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message); err != nil {
 		return err
 	}
 

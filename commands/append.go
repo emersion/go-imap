@@ -14,7 +14,7 @@ type Append struct {
 	Mailbox string
 	Flags   []string
 	Date    time.Time
-	Message *imap.Literal
+	Message imap.Literal
 }
 
 func (cmd *Append) Command() *imap.Command {
@@ -60,7 +60,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	// Parse message literal
 	litIndex := len(fields) - 1
 	var ok bool
-	if cmd.Message, ok = fields[litIndex].(*imap.Literal); !ok {
+	if cmd.Message, ok = fields[litIndex].(imap.Literal); !ok {
 		return errors.New("Message must be a literal")
 	}
 

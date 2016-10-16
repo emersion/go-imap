@@ -19,7 +19,7 @@ const (
 	// authentication credentials before most commands will be
 	// permitted.  This state is entered when a connection starts
 	// unless the connection has been pre-authenticated.
-	NotAuthenticatedState ConnState = 1<<0
+	NotAuthenticatedState ConnState = 1 << 0
 
 	// In the authenticated state, the client is authenticated and MUST
 	// select a mailbox to access before commands that affect messages
@@ -27,7 +27,7 @@ const (
 	// pre-authenticated connection starts, when acceptable
 	// authentication credentials have been provided, after an error in
 	// selecting a mailbox, or after a successful CLOSE command.
-	AuthenticatedState = 1<<1
+	AuthenticatedState = 1 << 1
 
 	// In a selected state, a mailbox has been selected to access.
 	// This state is entered when a mailbox has been successfully
@@ -38,7 +38,7 @@ const (
 	// state can be entered as a result of a client request (via the
 	// LOGOUT command) or by unilateral action on the part of either
 	// the client or server.
-	LogoutState = 1<<3
+	LogoutState = 1 << 3
 
 	// ConnectedState is either NotAuthenticatedState, AuthenticatedState or
 	// SelectedState.
@@ -54,7 +54,7 @@ type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 type debugWriter struct {
 	io.Writer
 
-	local io.Writer
+	local  io.Writer
 	remote io.Writer
 }
 
@@ -137,7 +137,7 @@ func (c *Conn) init() {
 	}
 
 	if f, ok := c.Conn.(flusher); ok {
-		c.Writer.Writer = struct{
+		c.Writer.Writer = struct {
 			io.Writer
 			flusher
 		}{

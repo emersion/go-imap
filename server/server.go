@@ -17,7 +17,7 @@ import (
 )
 
 // The minimum autologout duration defined in RFC 3501 section 5.4.
-const MinAutoLogout = 30*time.Minute
+const MinAutoLogout = 30 * time.Minute
 
 // A command handler.
 type Handler interface {
@@ -407,7 +407,7 @@ func (s *Server) listenUpdates() (err error) {
 
 		var (
 			update *backend.Update
-			res imap.WriterTo
+			res    imap.WriterTo
 		)
 
 		switch item := item.(type) {
@@ -464,7 +464,7 @@ func (s *Server) listenUpdates() (err error) {
 				done := make(chan struct{})
 				conn.Context().Responses <- &response{
 					response: res,
-					done: done,
+					done:     done,
 				}
 				<-done
 				sends <- struct{}{}

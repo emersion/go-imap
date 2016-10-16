@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -342,7 +343,7 @@ func TestClient_Append(t *testing.T) {
 		c.State = imap.AuthenticatedState
 
 		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-		literal := imap.NewLiteral([]byte(msg))
+		literal := bytes.NewBufferString(msg)
 		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, date, literal)
 		return
 	}

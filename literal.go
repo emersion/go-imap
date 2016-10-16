@@ -1,26 +1,13 @@
 package imap
 
-// A literal.
-type Literal struct {
-	// The literal length.
-	len int
-	// The literal contents.
-	contents []byte
-}
+import (
+	"io"
+)
 
-func (l *Literal) Len() int {
-	return l.len
-}
+// A literal, as defined in RFC 3501 section 4.3.
+type Literal interface {
+	io.Reader
 
-func (l *Literal) Bytes() []byte {
-	return l.contents
-}
-
-func (l *Literal) String() string {
-	return string(l.contents)
-}
-
-// Create a new literal.
-func NewLiteral(b []byte) *Literal {
-	return &Literal{len: len(b), contents: b}
+	// Len returns the number of bytes of the literal.
+	Len() int
 }

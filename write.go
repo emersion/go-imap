@@ -1,6 +1,7 @@
 package imap
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -79,7 +80,7 @@ func (w *Writer) writeAtom(s string) error {
 func (w *Writer) writeAstring(s string) error {
 	if !isAscii(s) {
 		// IMAP doesn't allow 8-bit data outside literals
-		return w.writeLiteral(NewLiteral([]byte(s)))
+		return w.writeLiteral(bytes.NewBufferString(s))
 	}
 
 	specials := string([]rune{dquote, listStart, listEnd, literalStart, sp})
@@ -125,7 +126,7 @@ func (w *Writer) writeList(fields []interface{}) error {
 	return w.writeString(string(listEnd))
 }
 
-func (w *Writer) writeLiteral(l *Literal) error {
+func (w *Writer) writeLiteral(l Literal) error {
 	if l == nil {
 		return w.writeString(nilAtom)
 	}
@@ -147,7 +148,7 @@ func (w *Writer) writeLiteral(l *Literal) error {
 		}
 	}
 
-	_, err := w.Write(l.Bytes())
+	_, err := io.Copy(w, l)
 	return err
 }
 
@@ -165,7 +166,7 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeNumber(uint32(field))
 	case uint32:
 		return w.writeNumber(field)
-	case *Literal:
+	case Literal:
 		return w.writeLiteral(field)
 	case []interface{}:
 		return w.writeList(field)

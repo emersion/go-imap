@@ -2,6 +2,7 @@ package memory
 
 import (
 	"errors"
+	"io/ioutil"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -119,19 +120,24 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) (id
 	return
 }
 
-func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body []byte) error {
+func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Literal) error {
 	if date.IsZero() {
 		date = time.Now()
+	}
+
+	b, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
 	}
 
 	mbox.messages = append(mbox.messages, &Message{&imap.Message{
 		Uid:           mbox.uidNext(),
 		Envelope:      &imap.Envelope{},
 		BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-		Size:          uint32(len(body)),
+		Size:          uint32(body.Len()),
 		InternalDate:  date,
 		Flags:         flags,
-	}, body})
+	}, b})
 
 	return nil
 }

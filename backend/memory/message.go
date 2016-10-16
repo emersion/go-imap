@@ -14,7 +14,7 @@ type Message struct {
 
 func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 	metadata = &imap.Message{
-		Body: map[*imap.BodySectionName]*imap.Literal{},
+		Body: map[*imap.BodySectionName]imap.Literal{},
 	}
 
 	for _, item := range items {
@@ -60,9 +60,9 @@ func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 			}
 
 			// If part doesn't exist, set the literal to nil
-			var literal *imap.Literal
+			var literal imap.Literal
 			if body != nil {
-				literal = imap.NewLiteral(section.ExtractPartial(body))
+				literal = bytes.NewBuffer(section.ExtractPartial(body))
 			}
 			metadata.Body[section] = literal
 		}

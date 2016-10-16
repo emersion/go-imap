@@ -3,6 +3,7 @@ package imap_test
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"reflect"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestParseNumber(t *testing.T) {
 		{f: "-1", err: true},
 		{f: "1.2", err: true},
 		{f: nil, err: true},
-		{f: imap.NewLiteral([]byte("cc")), err: true},
+		{f: bytes.NewBufferString("cc"), err: true},
 	}
 
 	for _, test := range tests {
@@ -89,7 +90,7 @@ func TestReader_ReadSp(t *testing.T) {
 	if err := r.ReadSp(); err != nil {
 		t.Error(err)
 	}
-	if len(b.Bytes()) > 0 {
+	if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -104,7 +105,7 @@ func TestReader_ReadCrlf(t *testing.T) {
 	if err := r.ReadCrlf(); err != nil {
 		t.Error(err)
 	}
-	if len(b.Bytes()) > 0 {
+	if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -134,7 +135,7 @@ func TestReader_ReadAtom(t *testing.T) {
 		if err := r.ReadCrlf(); err != nil && err != io.EOF {
 			t.Error("Cannot read CRLF after atom:", err)
 		}
-		if len(b.Bytes()) > 0 {
+		if b.Len() > 0 {
 			t.Error("Buffer is not empty after read")
 		}
 	}
@@ -148,7 +149,7 @@ func TestReader_ReadAtom(t *testing.T) {
 		if err := r.ReadCrlf(); err != nil && err != io.EOF {
 			t.Error("Cannot read CRLF after atom:", err)
 		}
-		if len(b.Bytes()) > 0 {
+		if b.Len() > 0 {
 			t.Error("Buffer is not empty after read")
 		}
 	}
@@ -188,10 +189,16 @@ func TestReader_ReadLiteral(t *testing.T) {
 	b, r := newReader("{7}\r\nabcdefg")
 	if literal, err := r.ReadLiteral(); err != nil {
 		t.Error(err)
-	} else if literal.String() != "abcdefg" {
-		t.Error("Literal has not the expected value:", literal.String())
-	} else if len(b.Bytes()) > 0 {
-		t.Error("Buffer is not empty after read")
+	} else if literal.Len() != 7 {
+		t.Error("Invalid literal length:", literal.Len())
+	} else {
+		if contents, err := ioutil.ReadAll(literal); err != nil {
+			t.Error(err)
+		} else if string(contents) != "abcdefg" {
+			t.Error("Literal has not the expected value:", string(contents))
+		} else if b.Len() > 0 {
+			t.Error("Buffer is not empty after read")
+		}
 	}
 
 	b, r = newReader("")
@@ -245,7 +252,7 @@ func TestReader_ReadQuotedString(t *testing.T) {
 		if err := r.ReadCrlf(); err != nil && err != io.EOF {
 			t.Error("Cannot read CRLF after quoted string:", err)
 		}
-		if len(b.Bytes()) > 0 {
+		if b.Len() > 0 {
 			t.Error("Buffer is not empty after read")
 		}
 	}
@@ -280,7 +287,7 @@ func TestReader_ReadFields(t *testing.T) {
 		if err := r.ReadCrlf(); err != nil && err != io.EOF {
 			t.Error("Cannot read CRLF after fields:", err)
 		}
-		if len(b.Bytes()) > 0 {
+		if b.Len() > 0 {
 			t.Error("Buffer is not empty after read")
 		}
 	}
@@ -326,11 +333,15 @@ func TestReader_ReadList(t *testing.T) {
 		t.Error("Field 1 has not the expected value:", fields[0])
 	} else if s, ok := fields[1].(string); !ok || s != "field2" {
 		t.Error("Field 2 has not the expected value:", fields[1])
-	} else if literal, ok := fields[2].(*imap.Literal); !ok || literal.String() != "field3" {
+	} else if literal, ok := fields[2].(imap.Literal); !ok {
 		t.Error("Field 3 has not the expected value:", fields[2])
+	} else if contents, err := ioutil.ReadAll(literal); err != nil {
+		t.Error(err)
+	} else if string(contents) != "field3" {
+		t.Error("Field 3 has not the expected value:", string(contents))
 	} else if s, ok := fields[3].(string); !ok || s != "field4" {
 		t.Error("Field 4 has not the expected value:", fields[3])
-	} else if len(b.Bytes()) > 0 {
+	} else if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -339,7 +350,7 @@ func TestReader_ReadList(t *testing.T) {
 		t.Error(err)
 	} else if len(fields) != 0 {
 		t.Error("Expected 0 fields, but got", len(fields))
-	} else if len(b.Bytes()) > 0 {
+	} else if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -374,7 +385,7 @@ func TestReader_ReadLine(t *testing.T) {
 		t.Error("Field 1 has not the expected value:", fields[0])
 	} else if s, ok := fields[1].(string); !ok || s != "field2" {
 		t.Error("Field 2 has not the expected value:", fields[1])
-	} else if len(b.Bytes()) > 0 {
+	} else if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -401,7 +412,7 @@ func TestReader_ReadRespCode(t *testing.T) {
 		t.Error("Field 1 has not the expected value:", fields[0])
 	} else if s, ok := fields[1].(string); !ok || s != "STARTTLS" {
 		t.Error("Field 2 has not the expected value:", fields[1])
-	} else if len(b.Bytes()) > 0 {
+	} else if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
@@ -442,7 +453,7 @@ func TestReader_ReadInfo(t *testing.T) {
 		t.Error(err)
 	} else if info != "I love potatoes." {
 		t.Error("Info has not the expected value:", info)
-	} else if len(b.Bytes()) > 0 {
+	} else if b.Len() > 0 {
 		t.Error("Buffer is not empty after read")
 	}
 
