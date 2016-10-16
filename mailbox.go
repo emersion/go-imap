@@ -12,7 +12,7 @@ const InboxName = "INBOX"
 
 // Returns the canonical form of a mailbox name. Mailbox names can be
 // case-sensitive or case-insensitive depending on the backend implementation.
-// The spacial INBOX mailbox is case-insensitive.
+// The special INBOX mailbox is case-insensitive.
 func CanonicalMailboxName(name string) string {
 	if strings.ToUpper(name) == InboxName {
 		return InboxName
