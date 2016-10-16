@@ -88,8 +88,9 @@ type MailboxStatus struct {
 	Name string
 	// True if the mailbox is open in read-only mode.
 	ReadOnly bool
-	// The mailbox items that are currently filled in.
-	Items []string
+	// A map containing all items that are filled in and additional ones. It
+	// should only be used by extensions.
+	Items map[string]interface{}
 
 	// The mailbox flags.
 	Flags []string
@@ -107,4 +108,75 @@ type MailboxStatus struct {
 	// Together with a UID, it is a unique identifier for a message.
 	// Must be greater than or equal to 1.
 	UidValidity uint32
+}
+
+func (status *MailboxStatus) Parse(fields []interface{}) error {
+	status.Items = make(map[string]interface{})
+
+	var k string
+	for i, f := range fields {
+		if i%2 == 0 {
+			var ok bool
+			if k, ok = f.(string); !ok {
+				return errors.New("Key is not a string")
+			}
+			k = strings.ToUpper(k)
+		} else {
+			status.Items[k] = nil
+
+			var err error
+			switch k {
+			case imap.MailboxMessages:
+				status.Messages, err = imap.ParseNumber(f)
+			case imap.MailboxRecent:
+				status.Recent, err = imap.ParseNumber(f)
+			case imap.MailboxUnseen:
+				status.Unseen, err = imap.ParseNumber(f)
+			case imap.MailboxUidNext:
+				status.UidNext, err = imap.ParseNumber(f)
+			case imap.MailboxUidValidity:
+				status.UidValidity, err = imap.ParseNumber(f)
+			default:
+				status.Items[k] = f
+			}
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (status *MailboxStatus) Format() []interface{} {
+	var fields []interface{}
+	for k, v := range mbox.Items {
+		var f interface{}
+		switch k {
+		case imap.MailboxMessages:
+			f = status.Messages
+		case imap.MailboxRecent:
+			f = status.Recent
+		case imap.MailboxUnseen:
+			f = status.Unseen
+		case imap.MailboxUidNext:
+			f = status.UidNext
+		case imap.MailboxUidValidity:
+			f = status.UidValidity
+		default:
+			f = v
+		}
+
+		fields = append(fields, k, f)
+	}
+	return fields
+}
+
+func NewMailboxStatus(items []string) *MailboxStatus {
+	status := &MailboxStatus{Items: make(map[string]interface{})}
+
+	for _, k := range items {
+		status.Items[k] = nil
+	}
+
+	return status
 }
