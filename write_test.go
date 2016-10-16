@@ -191,7 +191,7 @@ func TestWriter_WriteField_NestedList(t *testing.T) {
 func TestWriter_WriteField_Literal(t *testing.T) {
 	w, b := newWriter()
 
-	literal := NewLiteral([]byte("hello world"))
+	literal := bytes.NewBufferString("hello world")
 
 	if err := w.writeField(literal); err != nil {
 		t.Error(err)

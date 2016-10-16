@@ -1,6 +1,7 @@
 package imap
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"strconv"
@@ -177,7 +178,7 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 	return atom, nil
 }
 
-func (r *Reader) ReadLiteral() (literal *Literal, err error) {
+func (r *Reader) ReadLiteral() (literal Literal, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -213,7 +214,7 @@ func (r *Reader) ReadLiteral() (literal *Literal, err error) {
 		return
 	}
 
-	literal = NewLiteral(b)
+	literal = bytes.NewBuffer(b)
 	return
 }
 

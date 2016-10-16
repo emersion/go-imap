@@ -36,7 +36,7 @@ var messageTests = []struct {
 	{
 		message: &Message{
 			Items:         []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
-			Body:          map[*BodySectionName]*Literal{},
+			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
 			Flags:         []string{SeenFlag, AnsweredFlag},

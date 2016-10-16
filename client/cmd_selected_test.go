@@ -3,6 +3,7 @@ package client_test
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"testing"
 	"time"
@@ -194,27 +195,25 @@ func TestClient_Fetch(t *testing.T) {
 		}
 
 		msg := <-messages
-		body := msg.GetBody("BODY[]").String()
 		if msg.SeqNum != 2 {
 			return fmt.Errorf("First message has bad sequence number: %v", msg.SeqNum)
 		}
 		if msg.Uid != 42 {
 			return fmt.Errorf("First message has bad UID: %v", msg.Uid)
 		}
-		if body != "I love potatoes." {
-			return fmt.Errorf("First message has bad body: %v", body)
+		if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]")); string(body) != "I love potatoes." {
+			return fmt.Errorf("First message has bad body: %q", body)
 		}
 
 		msg = <-messages
-		body = msg.GetBody("BODY[]").String()
 		if msg.SeqNum != 3 {
 			return fmt.Errorf("First message has bad sequence number: %v", msg.SeqNum)
 		}
 		if msg.Uid != 28 {
 			return fmt.Errorf("Second message has bad UID: %v", msg.Uid)
 		}
-		if body != "Hello World!" {
-			return fmt.Errorf("Second message has bad body: %v", body)
+		if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]")); string(body) != "Hello World!" {
+			return fmt.Errorf("Second message has bad body: %q", body)
 		}
 
 		return
@@ -256,9 +255,8 @@ func TestClient_Fetch_Partial(t *testing.T) {
 		}
 
 		msg := <-messages
-		body := msg.GetBody("BODY[]<0>").String()
-		if body != "I love pot" {
-			return fmt.Errorf("Message has bad body: %v", body)
+		if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]<0>")); string(body) != "I love pot" {
+			return fmt.Errorf("Message has bad body: %q", body)
 		}
 
 		return

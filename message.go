@@ -82,7 +82,7 @@ type Message struct {
 	// The message items that are currently filled in.
 	Items []string
 	// The message body sections.
-	Body map[*BodySectionName]*Literal
+	Body map[*BodySectionName]Literal
 
 	// The message envelope.
 	Envelope *Envelope
@@ -100,13 +100,13 @@ type Message struct {
 
 // Create a new empty message.
 func NewMessage() *Message {
-	return &Message{Body: map[*BodySectionName]*Literal{}}
+	return &Message{Body: map[*BodySectionName]Literal{}}
 }
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
 	m.Items = nil
-	m.Body = map[*BodySectionName]*Literal{}
+	m.Body = map[*BodySectionName]Literal{}
 
 	var key string
 	for i, f := range fields {
@@ -166,7 +166,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				}
 
 				// Then check that the value is a correct literal
-				literal, ok := f.(*Literal)
+				literal, ok := f.(Literal)
 				if !ok {
 					break
 				}
@@ -227,7 +227,7 @@ func (m *Message) Format() (fields []interface{}) {
 }
 
 // Get the body section with the specified name. Returns nil if it's not found.
-func (m *Message) GetBody(s string) *Literal {
+func (m *Message) GetBody(s string) Literal {
 	for section, body := range m.Body {
 		if section.value == s {
 			return body

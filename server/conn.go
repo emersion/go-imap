@@ -84,7 +84,7 @@ func newConn(s *Server, c net.Conn) *conn {
 		s: s,
 		l: &sync.Mutex{},
 		ctx: &Context{
-			State: imap.ConnectingState,
+			State:     imap.ConnectingState,
 			Responses: responses,
 		},
 		tlsConn:   tlsConn,
@@ -124,7 +124,7 @@ func (c *conn) Context() *Context {
 
 type response struct {
 	response imap.WriterTo
-	done chan struct{}
+	done     chan struct{}
 }
 
 func (r *response) WriteTo(w *imap.Writer) error {
