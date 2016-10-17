@@ -89,6 +89,20 @@ var mailboxStatusTests = [...]struct{
 	},
 }
 
+func TestMailboxStatus_Parse(t *testing.T) {
+	for i, test := range mailboxStatusTests {
+		status := &imap.MailboxStatus{}
+		if err := status.Parse(test.fields); err != nil {
+			t.Errorf("Expected no error while parsing mailbox status #%v, got: %v", i, err)
+			continue
+		}
+
+		if !reflect.DeepEqual(status, test.status) {
+			t.Errorf("Invalid parsed mailbox status for #%v: got \n%+v\n but expected \n%+v", i, status, test.status)
+		}
+	}
+}
+
 func TestMailboxStatus_Format(t *testing.T) {
 	for i, test := range mailboxStatusTests {
 		fields := test.status.Format()

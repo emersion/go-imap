@@ -64,14 +64,19 @@ type reader interface {
 
 // Convert a field to a number.
 func ParseNumber(f interface{}) (uint32, error) {
+	// Useful for tests
+	if n, ok := f.(uint32); ok {
+		return n, nil
+	}
+
 	s, ok := f.(string)
 	if !ok {
-		return 0, newParseError("imap: number is not a string")
+		return 0, newParseError("number is not a string")
 	}
 
 	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, &parseError{err}
 	}
 
 	return uint32(nbr), nil
@@ -83,7 +88,7 @@ func ParseStringList(fields []interface{}) ([]string, error) {
 	for i, f := range fields {
 		var ok bool
 		if list[i], ok = f.(string); !ok {
-			return nil, newParseError("String list contains a non-string")
+			return nil, newParseError("string list contains a non-string")
 		}
 	}
 	return list, nil
