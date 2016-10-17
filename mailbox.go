@@ -52,8 +52,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 		return errors.New("Mailbox info needs at least 3 fields")
 	}
 
-	attrs, _ := fields[0].([]interface{})
-	info.Attributes, _ = ParseStringList(attrs)
+	info.Attributes, _ = ParseStringList(fields[0])
 
 	info.Delimiter, _ = fields[1].(string)
 
