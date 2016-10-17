@@ -83,7 +83,12 @@ func ParseNumber(f interface{}) (uint32, error) {
 }
 
 // Convert a field list to a string list.
-func ParseStringList(fields []interface{}) ([]string, error) {
+func ParseStringList(f interface{}) ([]string, error) {
+	fields, ok := f.([]interface{})
+	if !ok {
+		return nil, newParseError("string list is not a list")
+	}
+
 	list := make([]string, len(fields))
 	for i, f := range fields {
 		var ok bool
