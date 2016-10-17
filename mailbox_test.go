@@ -2,9 +2,12 @@ package imap_test
 
 import (
 	"fmt"
+	"sort"
+	"reflect"
 	"testing"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/internal"
 )
 
 func TestCanonicalMailboxName(t *testing.T) {
@@ -54,5 +57,47 @@ func testMailboxInfo_Format(t *testing.T, input *imap.MailboxInfo, expected []in
 
 	if fmt.Sprint(output) != fmt.Sprint(expected) {
 		t.Fatal("Invalid output:", output)
+	}
+}
+
+var mailboxStatusTests = [...]struct{
+	fields []interface{}
+	status *imap.MailboxStatus
+}{
+	{
+		fields: []interface{}{
+			"MESSAGES", uint32(42),
+			"RECENT", uint32(1),
+			"UNSEEN", uint32(6),
+			"UIDNEXT", uint32(65536),
+			"UIDVALIDITY", uint32(4242),
+		},
+		status: &imap.MailboxStatus{
+			Items: map[string]interface{}{
+				"MESSAGES": nil,
+				"RECENT": nil,
+				"UNSEEN": nil,
+				"UIDNEXT": nil,
+				"UIDVALIDITY": nil,
+			},
+			Messages: 42,
+			Recent: 1,
+			Unseen: 6,
+			UidNext: 65536,
+			UidValidity: 4242,
+		},
+	},
+}
+
+func TestMailboxStatus_Format(t *testing.T) {
+	for i, test := range mailboxStatusTests {
+		fields := test.status.Format()
+		sort.Sort(internal.MapListSorter(fields))
+
+		sort.Sort(internal.MapListSorter(test.fields))
+
+		if !reflect.DeepEqual(fields, test.fields) {
+			t.Errorf("Invalid mailbox status fields for #%v: got \n%+v\n but expected \n%+v", i, fields, test.fields)
+		}
 	}
 }

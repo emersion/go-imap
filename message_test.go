@@ -7,6 +7,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/emersion/go-imap/internal"
 )
 
 func TestCanonicalFlag(t *testing.T) {
@@ -71,33 +73,18 @@ func TestMessage_Parse(t *testing.T) {
 	}
 }
 
-type mapListSorter []interface{}
-
-func (s mapListSorter) Len() int {
-	return len(s)/2
-}
-
-func (s mapListSorter) Less(i, j int) bool {
-	return s[i*2].(string) < s[j*2].(string)
-}
-
-func (s mapListSorter) Swap(i, j int) {
-	s[i*2], s[j*2] = s[j*2], s[i*2]
-	s[i*2+1], s[j*2+1] = s[j*2+1], s[i*2+1]
-}
-
 func TestMessage_Format(t *testing.T) {
 	for i, test := range messageTests {
 		fields := test.message.Format()
 
-		sort.Sort(mapListSorter(fields))
+		sort.Sort(internal.MapListSorter(fields))
 		got, err := formatFields(fields)
 		if err != nil {
 			t.Error(err)
 			continue
 		}
 
-		sort.Sort(mapListSorter(test.fields))
+		sort.Sort(internal.MapListSorter(test.fields))
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {

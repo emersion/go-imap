@@ -75,6 +75,8 @@ func (info *MailboxInfo) Format() []interface{} {
 const (
 	MailboxFlags          = "FLAGS"
 	MailboxPermanentFlags = "PERMANENTFLAGS"
+
+	// Defined in RFC 3501 section 6.3.10.
 	MailboxMessages       = "MESSAGES"
 	MailboxRecent         = "RECENT"
 	MailboxUnseen         = "UNSEEN"

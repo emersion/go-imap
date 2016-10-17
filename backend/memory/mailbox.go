@@ -40,13 +40,11 @@ func (mbox *Mailbox) uidNext() (uid uint32) {
 
 func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
 	status := imap.NewMailboxStatus(mbox.name, items)
+	status.Flags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"}
+	status.PermanentFlags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"}
 
 	for _, name := range items {
 		switch name {
-		case imap.MailboxFlags:
-			status.Flags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"}
-		case imap.MailboxPermanentFlags:
-			status.PermanentFlags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"}
 		case imap.MailboxMessages:
 			status.Messages = uint32(len(mbox.messages))
 		case imap.MailboxUidNext:
