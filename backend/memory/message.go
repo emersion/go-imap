@@ -13,9 +13,7 @@ type Message struct {
 }
 
 func (m *Message) Metadata(items []string) (metadata *imap.Message) {
-	metadata = &imap.Message{
-		Body: map[*imap.BodySectionName]imap.Literal{},
-	}
+	metadata = imap.NewMessage(0, items)
 
 	for _, item := range items {
 		switch item {
@@ -65,10 +63,6 @@ func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 				literal = bytes.NewBuffer(section.ExtractPartial(body))
 			}
 			metadata.Body[section] = literal
-		}
-
-		if item != "" {
-			metadata.Items = append(metadata.Items, item)
 		}
 	}
 

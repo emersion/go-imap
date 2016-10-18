@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
+
+	"github.com/emersion/go-imap/internal"
 )
 
 func TestCanonicalFlag(t *testing.T) {
@@ -15,6 +18,20 @@ func TestCanonicalFlag(t *testing.T) {
 
 	if got := CanonicalFlag("Junk"); got != "junk" {
 		t.Errorf("Invalid canonical flag: expected %q but got %q", "junk", got)
+	}
+}
+
+func TestNewMessage(t *testing.T) {
+	msg := NewMessage(42, []string{"BODYSTRUCTURE", "FLAGS"})
+
+	expected := &Message{
+		SeqNum: 42,
+		Items: map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
+		Body: make(map[*BodySectionName]Literal),
+	}
+
+	if !reflect.DeepEqual(expected, msg) {
+		t.Errorf("Invalid message: expected \n%+v\n but got \n%+v", expected, msg)
 	}
 }
 
@@ -35,7 +52,13 @@ var messageTests = []struct {
 }{
 	{
 		message: &Message{
-			Items:         []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
+			Items:         map[string]interface{}{
+				"ENVELOPE": nil,
+				"BODY": nil,
+				"FLAGS": nil,
+				"RFC822.SIZE": nil,
+				"UID": nil,
+			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
@@ -55,11 +78,11 @@ var messageTests = []struct {
 
 func TestMessage_Parse(t *testing.T) {
 	for i, test := range messageTests {
-		m := NewMessage()
+		m := &Message{}
 		if err := m.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse message for #%v:", i, err)
 		} else if !reflect.DeepEqual(m, test.message) {
-			t.Errorf("Invalid parsed message for #%v: got %+v but expected %+v", i, m, test.message)
+			t.Errorf("Invalid parsed message for #%v: got \n%+v\n but expected \n%+v", i, m, test.message)
 		}
 	}
 }
@@ -68,12 +91,14 @@ func TestMessage_Format(t *testing.T) {
 	for i, test := range messageTests {
 		fields := test.message.Format()
 
+		sort.Sort(internal.MapListSorter(fields))
 		got, err := formatFields(fields)
 		if err != nil {
 			t.Error(err)
 			continue
 		}
 
+		sort.Sort(internal.MapListSorter(test.fields))
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {

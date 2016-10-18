@@ -64,26 +64,36 @@ type reader interface {
 
 // Convert a field to a number.
 func ParseNumber(f interface{}) (uint32, error) {
+	// Useful for tests
+	if n, ok := f.(uint32); ok {
+		return n, nil
+	}
+
 	s, ok := f.(string)
 	if !ok {
-		return 0, newParseError("imap: number is not a string")
+		return 0, newParseError("number is not a string")
 	}
 
 	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, &parseError{err}
 	}
 
 	return uint32(nbr), nil
 }
 
 // Convert a field list to a string list.
-func ParseStringList(fields []interface{}) ([]string, error) {
+func ParseStringList(f interface{}) ([]string, error) {
+	fields, ok := f.([]interface{})
+	if !ok {
+		return nil, newParseError("string list is not a list")
+	}
+
 	list := make([]string, len(fields))
 	for i, f := range fields {
 		var ok bool
 		if list[i], ok = f.(string); !ok {
-			return nil, newParseError("String list contains a non-string")
+			return nil, newParseError("string list contains a non-string")
 		}
 	}
 	return list, nil
@@ -108,7 +118,7 @@ func (r *Reader) ReadSp() error {
 		return err
 	}
 	if char != sp {
-		return newParseError("Not a space")
+		return newParseError("not a space")
 	}
 	return nil
 }
@@ -120,14 +130,14 @@ func (r *Reader) ReadCrlf() (err error) {
 		return
 	}
 	if char != cr {
-		err = newParseError("Line doesn't end with a CR")
+		err = newParseError("line doesn't end with a CR")
 	}
 
 	if char, _, err = r.ReadRune(); err != nil {
 		return
 	}
 	if char != lf {
-		err = newParseError("Line doesn't end with a LF")
+		err = newParseError("line doesn't end with a LF")
 	}
 
 	return
@@ -145,7 +155,7 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 
 		// TODO: list-wildcards and \
 		if r.brackets == 0 && (char == listStart || char == literalStart || char == dquote) {
-			return nil, newParseError("Atom contains forbidden char: " + string(char))
+			return nil, newParseError("atom contains forbidden char: " + string(char))
 		}
 		if char == cr {
 			break
@@ -158,7 +168,7 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 				if r.inRespCode {
 					break
 				} else {
-					return nil, newParseError("Atom contains bad brackets nesting")
+					return nil, newParseError("atom contains bad brackets nesting")
 				}
 			}
 			r.brackets--
@@ -184,7 +194,7 @@ func (r *Reader) ReadLiteral() (literal Literal, err error) {
 		return
 	}
 	if char != literalStart {
-		err = newParseError("Literal string doesn't start with an open brace")
+		err = newParseError("literal string doesn't start with an open brace")
 		return
 	}
 
@@ -196,7 +206,7 @@ func (r *Reader) ReadLiteral() (literal Literal, err error) {
 
 	l, err := strconv.Atoi(lstr)
 	if err != nil {
-		err = newParseError("Cannot parse literal length: " + err.Error())
+		err = newParseError("cannot parse literal length: " + err.Error())
 		return
 	}
 
@@ -224,7 +234,7 @@ func (r *Reader) ReadQuotedString() (str string, err error) {
 		return
 	}
 	if char != dquote {
-		err = newParseError("Quoted string doesn't start with a double quote")
+		err = newParseError("quoted string doesn't start with a double quote")
 		return
 	}
 
@@ -281,7 +291,7 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 			continue
 		}
 		if char != sp {
-			err = newParseError("Fields are not separated by a space")
+			err = newParseError("fields are not separated by a space")
 			return
 		}
 	}
@@ -293,7 +303,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 		return
 	}
 	if char != listStart {
-		err = newParseError("List doesn't start with an open parenthesis")
+		err = newParseError("list doesn't start with an open parenthesis")
 		return
 	}
 
@@ -307,7 +317,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 		return
 	}
 	if char != listEnd {
-		err = newParseError("List doesn't end with a close parenthesis")
+		err = newParseError("list doesn't end with a close parenthesis")
 	}
 	return
 }
@@ -329,7 +339,7 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 		return
 	}
 	if char != respCodeStart {
-		err = newParseError("Response code doesn't start with an open bracket")
+		err = newParseError("response code doesn't start with an open bracket")
 		return
 	}
 
@@ -341,17 +351,17 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 	}
 
 	if len(fields) == 0 {
-		err = newParseError("Response code doesn't contain any field")
+		err = newParseError("response code doesn't contain any field")
 		return
 	}
 
 	code, ok := fields[0].(string)
 	if !ok {
-		err = newParseError("Response code doesn't start with a string atom")
+		err = newParseError("response code doesn't start with a string atom")
 		return
 	}
 	if code == "" {
-		err = newParseError("Response code is empty")
+		err = newParseError("response code is empty")
 		return
 	}
 
@@ -363,7 +373,7 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 		return
 	}
 	if char != respCodeEnd {
-		err = newParseError("Response code doesn't end with a close bracket")
+		err = newParseError("response code doesn't end with a close bracket")
 	}
 	return
 }
@@ -381,7 +391,7 @@ func (r *Reader) ReadInfo() (info string, err error) {
 		return
 	}
 	if char != lf {
-		err = newParseError("Line doesn't end with a LF")
+		err = newParseError("line doesn't end with a LF")
 	}
 	return
 }

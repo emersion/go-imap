@@ -438,8 +438,15 @@ func TestStatus(t *testing.T) {
 	io.WriteString(c, "a001 STATUS INBOX (MESSAGES RECENT UIDNEXT UIDVALIDITY UNSEEN)\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* STATUS INBOX (MESSAGES 1 RECENT 0 UIDNEXT 7 UIDVALIDITY 1 UNSEEN 0)" {
-		t.Fatal("Invalid STATUS response:", scanner.Text())
+	line := scanner.Text()
+	if !strings.HasPrefix(line, "* STATUS INBOX (") {
+		t.Fatal("Invalid STATUS response:", line)
+	}
+	parts := []string{"MESSAGES 1", "RECENT 0", "UIDNEXT 7", "UIDVALIDITY 1", "UNSEEN 0"}
+	for _, p := range parts {
+		if !strings.Contains(line, p) {
+			t.Fatal("Invalid STATUS response:", line)
+		}
 	}
 
 	scanner.Scan()

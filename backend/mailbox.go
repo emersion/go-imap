@@ -15,7 +15,9 @@ type Mailbox interface {
 	// Get this mailbox info.
 	Info() (*imap.MailboxInfo, error)
 
-	// Get this mailbox status.
+	// Get this mailbox status. The fields Name, Flags and PermanentFlags in the
+	// returned MailboxStatus must be always populated. This function does not
+	// affect the state of any messages in the mailbox.
 	// See RFC 3501 section 6.3.10 for a list of items that can be requested.
 	Status(items []string) (*imap.MailboxStatus, error)
 
