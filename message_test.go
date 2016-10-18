@@ -21,6 +21,20 @@ func TestCanonicalFlag(t *testing.T) {
 	}
 }
 
+func TestNewMessage(t *testing.T) {
+	msg := NewMessage(42, []string{"BODYSTRUCTURE", "FLAGS"})
+
+	expected := &Message{
+		SeqNum: 42,
+		Items: map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
+		Body: make(map[*BodySectionName]Literal),
+	}
+
+	if !reflect.DeepEqual(expected, msg) {
+		t.Errorf("Invalid message: expected \n%+v\n but got \n%+v", expected, msg)
+	}
+}
+
 func formatFields(fields []interface{}) (string, error) {
 	b := &bytes.Buffer{}
 	w := NewWriter(b)
