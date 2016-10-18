@@ -60,6 +60,19 @@ func testMailboxInfo_Format(t *testing.T, input *imap.MailboxInfo, expected []in
 	}
 }
 
+func TestNewMailboxStatus(t *testing.T) {
+	status := imap.NewMailboxStatus("INBOX", []string{"MESSAGES", "UNSEEN"})
+
+	expected := &imap.MailboxStatus{
+		Name: "INBOX",
+		Items: map[string]interface{}{"MESSAGES": nil, "UNSEEN": nil},
+	}
+
+	if !reflect.DeepEqual(expected, status) {
+		t.Errorf("Invalid mailbox status: expected \n%+v\n but got \n%+v", expected, status)
+	}
+}
+
 var mailboxStatusTests = [...]struct{
 	fields []interface{}
 	status *imap.MailboxStatus
