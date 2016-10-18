@@ -42,39 +42,43 @@ func TestParseNumber(t *testing.T) {
 
 func TestParseStringList(t *testing.T) {
 	tests := []struct {
-		fields []interface{}
-		list   []string
+		field interface{}
+		list  []string
 	}{
 		{
-			fields: []interface{}{"a", "b", "c", "d"},
+			field: []interface{}{"a", "b", "c", "d"},
 			list:   []string{"a", "b", "c", "d"},
 		},
 		{
-			fields: []interface{}{"a"},
+			field: []interface{}{"a"},
 			list:   []string{"a"},
 		},
 		{
-			fields: []interface{}{},
+			field: []interface{}{},
 			list:   []string{},
 		},
 		{
-			fields: []interface{}{"a", 42, "c", "d"},
+			field: []interface{}{"a", 42, "c", "d"},
 			list:   nil,
 		},
 		{
-			fields: []interface{}{"a", nil, "c", "d"},
+			field: []interface{}{"a", nil, "c", "d"},
+			list:   nil,
+		},
+		{
+			field: "Asuka FTW",
 			list:   nil,
 		},
 	}
 
 	for _, test := range tests {
-		list, err := imap.ParseStringList(test.fields)
+		list, err := imap.ParseStringList(test.field)
 		if err != nil {
 			if test.list != nil {
 				t.Errorf("Cannot parse string list: %v", err)
 			}
 		} else if !reflect.DeepEqual(list, test.list) {
-			t.Errorf("Invalid parsed string list: got %v but expected %v", list, test.list)
+			t.Errorf("Invalid parsed string list: got \n%+v\n but expected \n%+v", list, test.list)
 		}
 	}
 }
