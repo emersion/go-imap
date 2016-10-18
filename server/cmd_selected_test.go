@@ -377,7 +377,7 @@ func TestStore_Uid(t *testing.T) {
 	io.WriteString(c, "a001 UID STORE 6 +FLAGS (\\Flagged)\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen \\Flagged) UID 6)" {
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen \\Flagged) UID 6)" && scanner.Text() != "* 1 FETCH (UID 6 FLAGS (\\Seen \\Flagged))" {
 		t.Fatal("Invalid FETCH response:", scanner.Text())
 	}
 
