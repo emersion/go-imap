@@ -126,7 +126,7 @@ func New(bkd backend.Backend) *Server {
 	}
 
 	s.auths = map[string]SaslServerFactory{
-		"PLAIN": func(conn Conn) sasl.Server {
+		sasl.Plain: func(conn Conn) sasl.Server {
 			return sasl.NewPlainServer(func(identity, username, password string) error {
 				if identity != "" && identity != username {
 					return errors.New("Identities not supported")
