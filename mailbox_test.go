@@ -88,6 +88,7 @@ var mailboxInfoMatchTests = []struct{
 	{name: "Neon Genesis Evangelion/Misato", pattern: "Neon Genesis Evangelion/Mi%too", result: false},
 	{name: "Misato/Misato", pattern: "Mis*to/Misato", result: true},
 	{name: "Misato/Misato", pattern: "Mis*to", result: true},
+	{name: "Misato/Misato/Misato", pattern: "Mis*to/Mis%to", result: true},
 }
 
 func TestMailboxInfo_Match(t *testing.T) {
