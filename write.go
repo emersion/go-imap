@@ -180,6 +180,9 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeDateTime(field, DateTimeLayout)
 	case *SeqSet:
 		return w.writeString(field.String())
+	case *BodySectionName:
+		// Can contain spaces - that's why we don't just pass it as a string
+		return w.writeString(field.String())
 	}
 
 	return fmt.Errorf("imap: cannot format field: %v", field)

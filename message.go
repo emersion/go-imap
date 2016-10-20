@@ -188,6 +188,7 @@ func (m *Message) Parse(fields []interface{}) error {
 
 func (m *Message) Format() (fields []interface{}) {
 	for k, v := range m.Items {
+		var kk interface{} = k
 		switch strings.ToUpper(k) {
 		case BodyMsgAttr, BodyStructureMsgAttr:
 			// Extension data is only returned with the BODYSTRUCTURE fetch
@@ -206,14 +207,15 @@ func (m *Message) Format() (fields []interface{}) {
 		default:
 			for section, literal := range m.Body {
 				if section.value == k {
-					k = section.resp().String()
+					// This can contain spaces, so we can't pass it as a string directly
+					kk = section.resp()
 					v = literal
 					break
 				}
 			}
 		}
 
-		fields = append(fields, k, v)
+		fields = append(fields, kk, v)
 	}
 
 	return

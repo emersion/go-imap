@@ -201,6 +201,32 @@ func TestWriter_WriteField_Literal(t *testing.T) {
 	}
 }
 
+func TestWriter_WriteField_SeqSet(t *testing.T) {
+	w, b := newWriter()
+
+	seqSet, _ := NewSeqSet("3:4,6,42:*")
+
+	if err := w.writeField(seqSet); err != nil {
+		t.Error(err)
+	}
+	if s := b.String(); s != "3:4,6,42:*" {
+		t.Error("Not the expected sequence set", s)
+	}
+}
+
+func TestWriter_WriteField_BodySectionName(t *testing.T) {
+	w, b := newWriter()
+
+	name, _ := NewBodySectionName("BODY.PEEK[HEADER.FIELDS (date subject from to cc)]")
+
+	if err := w.writeField(name.resp()); err != nil {
+		t.Error(err)
+	}
+	if s := b.String(); s != "BODY[HEADER.FIELDS (date subject from to cc)]" {
+		t.Error("Not the expected body section name", s)
+	}
+}
+
 func TestWriter_WriteRespCode_NoArgs(t *testing.T) {
 	w, b := newWriter()
 
