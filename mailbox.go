@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/emersion/go-imap/utf7"
+
+	"fmt"
 )
 
 // The primary mailbox, as defined in RFC 3501 section 5.1.
@@ -68,6 +70,48 @@ func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoder.String(info.Name)
 	// Thunderbird doesn't understand delimiters if not quoted
 	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
+}
+
+func (info *MailboxInfo) match(name, pattern string) bool {
+	for len(pattern) > 0 {
+		fmt.Println("name, pattern =", name, pattern)
+
+		i := strings.IndexAny(pattern, "*%")
+		if i == -1 {
+			return name == pattern
+		}
+
+		chunk, char, rest := pattern[0:i], pattern[i], pattern[i+1:]
+		fmt.Println("chunk, char, rest =", chunk, string(char), rest)
+		if len(chunk) > 0 && !strings.HasPrefix(name, chunk) {
+			return false
+		}
+		name = strings.TrimPrefix(name, chunk)
+
+		for i = 0; i < len(name); i++ {
+			if char == '%' && string(name[i]) == info.Delimiter {
+				break
+			}
+			if len(rest) > 0 && name[i] == rest[0] && info.match(name[i:], rest) {
+				return true
+			}
+		}
+		name = name[i:]
+
+		if len(rest) == 0 {
+			break
+		}
+		pattern = rest
+	}
+
+	fmt.Println("name =", name)
+	fmt.Println("")
+
+	return len(name) == 0
+}
+
+func (info *MailboxInfo) Match(pattern string) bool {
+	return info.match(info.Name, pattern)
 }
 
 // Mailbox status items.
