@@ -90,6 +90,8 @@ var mailboxInfoMatchTests = []struct{
 	{name: "Misato/Misato", pattern: "Mis*to", result: true},
 	{name: "Misato/Misato/Misato", pattern: "Mis*to/Mis%to", result: true},
 	{name: "Misato/Misato", pattern: "Mis**to/Misato", result: true},
+	{name: "Misato/Misato", pattern: "Misat%/Misato", result: true},
+	{name: "Misato/Misato", pattern: "Misat%Misato", result: false},
 }
 
 func TestMailboxInfo_Match(t *testing.T) {

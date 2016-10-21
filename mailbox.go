@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/emersion/go-imap/utf7"
-
-	"fmt"
 )
 
 // The primary mailbox, as defined in RFC 3501 section 5.1.
@@ -72,44 +70,39 @@ func (info *MailboxInfo) Format() []interface{} {
 	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
 }
 
+// TODO: optimize this
 func (info *MailboxInfo) match(name, pattern string) bool {
-	for len(pattern) > 0 {
-		fmt.Println("name, pattern =", name, pattern)
-
-		i := strings.IndexAny(pattern, "*%")
-		if i == -1 {
-			return name == pattern
-		}
-
-		chunk, char, rest := pattern[0:i], pattern[i], pattern[i+1:]
-		fmt.Println("chunk, char, rest =", chunk, string(char), rest)
-		if len(chunk) > 0 && !strings.HasPrefix(name, chunk) {
-			return false
-		}
-		name = strings.TrimPrefix(name, chunk)
-
-		for i = 0; i < len(name); i++ {
-			if char == '%' && string(name[i]) == info.Delimiter {
-				break
-			}
-			if len(rest) > 0 && name[i] == rest[0] && info.match(name[i:], rest) {
-				return true
-			}
-		}
-		name = name[i:]
-
-		if len(rest) == 0 {
-			break
-		}
-		pattern = rest
+	i := strings.IndexAny(pattern, "*%")
+	if i == -1 {
+		// No more wildcards
+		return name == pattern
 	}
 
-	fmt.Println("name =", name)
-	fmt.Println("")
+	// Get parts before and after wildcard
+	chunk, wildcard, rest := pattern[0:i], pattern[i], pattern[i+1:]
 
-	return len(name) == 0
+	// Check that name begins with chunk
+	if len(chunk) > 0 && !strings.HasPrefix(name, chunk) {
+		return false
+	}
+	name = strings.TrimPrefix(name, chunk)
+
+	// Expand wildcard
+	var j int
+	for j = 0; j < len(name); j++ {
+		if wildcard == '%' && string(name[j]) == info.Delimiter {
+			break // Stop on delimiter if wildcard is %
+		}
+		// Try to match the rest from here
+		if info.match(name[j:], rest) {
+			return true
+		}
+	}
+
+	return info.match(name[j:], rest)
 }
 
+// Match checks if a pattern matches this mailbox name.
 func (info *MailboxInfo) Match(pattern string) bool {
 	return info.match(info.Name, pattern)
 }
