@@ -67,7 +67,7 @@ func TestMailboxInfo_Format(t *testing.T) {
 }
 
 var mailboxInfoMatchTests = []struct{
-	name, pattern string
+	name, ref, pattern string
 	result bool
 }{
 	{name: "INBOX", pattern: "INBOX", result: true},
@@ -92,14 +92,20 @@ var mailboxInfoMatchTests = []struct{
 	{name: "Misato/Misato", pattern: "Mis**to/Misato", result: true},
 	{name: "Misato/Misato", pattern: "Misat%/Misato", result: true},
 	{name: "Misato/Misato", pattern: "Misat%Misato", result: false},
+	{name: "Misato/Misato", ref: "Misato", pattern: "Misato", result: true},
+	{name: "Misato/Misato", ref: "Misato/", pattern: "Misato", result: true},
+	{name: "Misato/Misato", ref: "Shinji", pattern: "/Misato/*", result: true},
+	{name: "Misato/Misato", ref: "Misato", pattern: "/Misato", result: false},
+	{name: "Misato/Misato", ref: "Misato", pattern: "Shinji", result: false},
+	{name: "Misato/Misato", ref: "Shinji", pattern: "Misato", result: false},
 }
 
 func TestMailboxInfo_Match(t *testing.T) {
 	for _, test := range mailboxInfoMatchTests {
 		info := &imap.MailboxInfo{Name: test.name, Delimiter: "/"}
-		result := info.Match(test.pattern)
+		result := info.Match(test.ref, test.pattern)
 		if result != test.result {
-			t.Errorf("Matching name %q with pattern %q returns %v, but expected %v", test.name, test.pattern, result, test.result)
+			t.Errorf("Matching name %q with pattern %q and reference %q returns %v, but expected %v", test.name, test.pattern, test.ref, result, test.result)
 		}
 	}
 }

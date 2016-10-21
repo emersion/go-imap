@@ -102,9 +102,26 @@ func (info *MailboxInfo) match(name, pattern string) bool {
 	return info.match(name[j:], rest)
 }
 
-// Match checks if a pattern matches this mailbox name.
-func (info *MailboxInfo) Match(pattern string) bool {
-	return info.match(info.Name, pattern)
+// Match checks if a reference and a pattern matches this mailbox name, as
+// defined in RFC 3501 section 6.3.8.
+func (info *MailboxInfo) Match(reference, pattern string) bool {
+	name := info.Name
+
+	if strings.HasPrefix(pattern, info.Delimiter) {
+		reference = ""
+		pattern = strings.TrimPrefix(pattern, info.Delimiter)
+	}
+	if reference != "" {
+		if !strings.HasSuffix(reference, info.Delimiter) {
+			reference += info.Delimiter
+		}
+		if !strings.HasPrefix(name, reference) {
+			return false
+		}
+		name = strings.TrimPrefix(name, reference)
+	}
+
+	return info.match(name, pattern)
 }
 
 // Mailbox status items.
