@@ -70,6 +70,60 @@ func (info *MailboxInfo) Format() []interface{} {
 	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
 }
 
+// TODO: optimize this
+func (info *MailboxInfo) match(name, pattern string) bool {
+	i := strings.IndexAny(pattern, "*%")
+	if i == -1 {
+		// No more wildcards
+		return name == pattern
+	}
+
+	// Get parts before and after wildcard
+	chunk, wildcard, rest := pattern[0:i], pattern[i], pattern[i+1:]
+
+	// Check that name begins with chunk
+	if len(chunk) > 0 && !strings.HasPrefix(name, chunk) {
+		return false
+	}
+	name = strings.TrimPrefix(name, chunk)
+
+	// Expand wildcard
+	var j int
+	for j = 0; j < len(name); j++ {
+		if wildcard == '%' && string(name[j]) == info.Delimiter {
+			break // Stop on delimiter if wildcard is %
+		}
+		// Try to match the rest from here
+		if info.match(name[j:], rest) {
+			return true
+		}
+	}
+
+	return info.match(name[j:], rest)
+}
+
+// Match checks if a reference and a pattern matches this mailbox name, as
+// defined in RFC 3501 section 6.3.8.
+func (info *MailboxInfo) Match(reference, pattern string) bool {
+	name := info.Name
+
+	if strings.HasPrefix(pattern, info.Delimiter) {
+		reference = ""
+		pattern = strings.TrimPrefix(pattern, info.Delimiter)
+	}
+	if reference != "" {
+		if !strings.HasSuffix(reference, info.Delimiter) {
+			reference += info.Delimiter
+		}
+		if !strings.HasPrefix(name, reference) {
+			return false
+		}
+		name = strings.TrimPrefix(name, reference)
+	}
+
+	return info.match(name, pattern)
+}
+
 // Mailbox status items.
 const (
 	MailboxFlags          = "FLAGS"

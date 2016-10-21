@@ -19,44 +19,94 @@ func TestCanonicalMailboxName(t *testing.T) {
 	}
 }
 
-func TestMailboxInfo(t *testing.T) {
-	fields := []interface{}{
-		[]interface{}{"\\Noselect", "\\Recent", "\\Unseen"},
-		"/",
-		"INBOX",
-	}
-	info := &imap.MailboxInfo{
-		Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
-		Delimiter:  "/",
-		Name:       "INBOX",
-	}
-
-	testMailboxInfo_Parse(t, fields, info)
-	testMailboxInfo_Format(t, info, fields)
+var mailboxInfoTests = []struct{
+	fields []interface{}
+	info *imap.MailboxInfo
+}{
+	{
+		fields: []interface{}{
+			[]interface{}{"\\Noselect", "\\Recent", "\\Unseen"},
+			"/",
+			"INBOX",
+		},
+		info: &imap.MailboxInfo{
+			Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
+			Delimiter:  "/",
+			Name:       "INBOX",
+		},
+	},
 }
 
-func testMailboxInfo_Parse(t *testing.T, input []interface{}, expected *imap.MailboxInfo) {
-	output := &imap.MailboxInfo{}
-	if err := output.Parse(input); err != nil {
-		t.Fatal(err)
-	}
+func TestMailboxInfo_Parse(t *testing.T) {
+	for _, test := range mailboxInfoTests {
+		info := &imap.MailboxInfo{}
+		if err := info.Parse(test.fields); err != nil {
+			t.Fatal(err)
+		}
 
-	if fmt.Sprint(output.Attributes) != fmt.Sprint(expected.Attributes) {
-		t.Fatal("Invalid flags:", output.Attributes)
-	}
-	if output.Delimiter != expected.Delimiter {
-		t.Fatal("Invalid delimiter:", output.Delimiter)
-	}
-	if output.Name != expected.Name {
-		t.Fatal("Invalid name:", output.Name)
+		if fmt.Sprint(info.Attributes) != fmt.Sprint(test.info.Attributes) {
+			t.Fatal("Invalid flags:", info.Attributes)
+		}
+		if info.Delimiter != test.info.Delimiter {
+			t.Fatal("Invalid delimiter:", info.Delimiter)
+		}
+		if info.Name != test.info.Name {
+			t.Fatal("Invalid name:", info.Name)
+		}
 	}
 }
 
-func testMailboxInfo_Format(t *testing.T, input *imap.MailboxInfo, expected []interface{}) {
-	output := input.Format()
+func TestMailboxInfo_Format(t *testing.T) {
+	for _, test := range mailboxInfoTests {
+		fields := test.info.Format()
 
-	if fmt.Sprint(output) != fmt.Sprint(expected) {
-		t.Fatal("Invalid output:", output)
+		if fmt.Sprint(fields) != fmt.Sprint(test.fields) {
+			t.Fatal("Invalid fields:", fields)
+		}
+	}
+}
+
+var mailboxInfoMatchTests = []struct{
+	name, ref, pattern string
+	result bool
+}{
+	{name: "INBOX", pattern: "INBOX", result: true},
+	{name: "INBOX", pattern: "Asuka", result: false},
+	{name: "INBOX", pattern: "*", result: true},
+	{name: "INBOX", pattern: "%", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "*", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "%", result: false},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neon Genesis Evangelion/*", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neon Genesis Evangelion/%", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neo* Evangelion/Misato", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neo% Evangelion/Misato", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "*Eva*/Misato", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "%Eva%/Misato", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "*X*/Misato", result: false},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "%X%/Misato", result: false},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neon Genesis Evangelion/Mi%o", result: true},
+	{name: "Neon Genesis Evangelion/Misato", pattern: "Neon Genesis Evangelion/Mi%too", result: false},
+	{name: "Misato/Misato", pattern: "Mis*to/Misato", result: true},
+	{name: "Misato/Misato", pattern: "Mis*to", result: true},
+	{name: "Misato/Misato/Misato", pattern: "Mis*to/Mis%to", result: true},
+	{name: "Misato/Misato", pattern: "Mis**to/Misato", result: true},
+	{name: "Misato/Misato", pattern: "Misat%/Misato", result: true},
+	{name: "Misato/Misato", pattern: "Misat%Misato", result: false},
+	{name: "Misato/Misato", ref: "Misato", pattern: "Misato", result: true},
+	{name: "Misato/Misato", ref: "Misato/", pattern: "Misato", result: true},
+	{name: "Misato/Misato", ref: "Shinji", pattern: "/Misato/*", result: true},
+	{name: "Misato/Misato", ref: "Misato", pattern: "/Misato", result: false},
+	{name: "Misato/Misato", ref: "Misato", pattern: "Shinji", result: false},
+	{name: "Misato/Misato", ref: "Shinji", pattern: "Misato", result: false},
+}
+
+func TestMailboxInfo_Match(t *testing.T) {
+	for _, test := range mailboxInfoMatchTests {
+		info := &imap.MailboxInfo{Name: test.name, Delimiter: "/"}
+		result := info.Match(test.ref, test.pattern)
+		if result != test.result {
+			t.Errorf("Matching name %q with pattern %q and reference %q returns %v, but expected %v", test.name, test.pattern, test.ref, result, test.result)
+		}
 	}
 }
 

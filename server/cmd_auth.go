@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
@@ -177,23 +176,9 @@ func (cmd *List) Handle(conn Conn) error {
 			break
 		}
 
-		name := info.Name
-		if cmd.Reference != "" {
-			if !strings.HasSuffix(cmd.Reference, info.Delimiter) {
-				cmd.Reference += info.Delimiter
-			}
-			if !strings.HasPrefix(info.Name, cmd.Reference) {
-				continue
-			}
-			name = strings.TrimPrefix(info.Name, cmd.Reference)
+		if info.Match(cmd.Reference, cmd.Mailbox) {
+			ch <- info
 		}
-
-		// TODO: support mixed patterns such as test% or abc*def
-		if cmd.Mailbox != name && cmd.Mailbox != "*" && (cmd.Mailbox != "%" || strings.Contains(name, info.Delimiter)) {
-			continue
-		}
-
-		ch <- info
 	}
 
 	close(ch)
