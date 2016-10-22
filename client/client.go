@@ -81,7 +81,7 @@ func (c *Client) read(greeted chan struct{}) error {
 			return nil
 		}
 		if err != nil {
-			c.ErrorLog.Println("error reading response: ", err)
+			c.ErrorLog.Println("error reading response:", err)
 			if imap.IsParseError(err) {
 				continue
 			} else {
@@ -95,7 +95,7 @@ func (c *Client) read(greeted chan struct{}) error {
 		}
 		c.handles <- rh
 		if accepted := <-rh.Accepts; !accepted {
-			c.ErrorLog.Println("response has not been handled: ", res)
+			c.ErrorLog.Println("response has not been handled:", res)
 		}
 	}
 
@@ -234,7 +234,7 @@ func (c *Client) handleUnilateral() {
 				case imap.StatusOk:
 					c.State = imap.NotAuthenticatedState
 				default:
-					c.ErrorLog.Println("invalid greeting: ", res.Type)
+					c.ErrorLog.Println("invalid greeting:", res.Type)
 					c.State = imap.LogoutState
 				}
 

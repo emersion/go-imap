@@ -291,7 +291,7 @@ func (s *Server) handleConn(conn Conn) error {
 					Info: err.Error(),
 				}
 			} else {
-				s.ErrorLog.Println("cannot read command: ", err)
+				s.ErrorLog.Println("cannot read command:", err)
 				return err
 			}
 		} else {
@@ -319,14 +319,14 @@ func (s *Server) handleConn(conn Conn) error {
 			conn.locker().Unlock()
 
 			if err := conn.WriteResp(res); err != nil {
-				s.ErrorLog.Println("cannot write response: ", err)
+				s.ErrorLog.Println("cannot write response:", err)
 				conn.locker().Lock()
 				continue
 			}
 
 			if up != nil && res.Type == imap.StatusOk {
 				if err := up.Upgrade(conn); err != nil {
-					s.ErrorLog.Println("cannot upgrade connection: ", err)
+					s.ErrorLog.Println("cannot upgrade connection:", err)
 					return err
 				}
 			}
