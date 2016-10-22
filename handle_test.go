@@ -82,7 +82,7 @@ func TestRespHandle_AcceptNamedResp_NotMatching(t *testing.T) {
 	}
 }
 
-func MultiRespHandler(t *testing.T) {
+func TestMultiRespHandler(t *testing.T) {
 	mh := imap.NewMultiRespHandler()
 
 	h1 := make(imap.RespHandler)
