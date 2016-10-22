@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"sync"
 
 	"github.com/emersion/go-imap"
 )
@@ -17,10 +16,10 @@ type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
-	handlers       []imap.RespHandler
-	handlersLocker sync.Locker
-	greeted        chan struct{}
-	loggedOut      chan struct{}
+	handles   imap.RespHandler
+	handler   *imap.MultiRespHandler
+	greeted   chan struct{}
+	loggedOut chan struct{}
 
 	// The server capabilities.
 	Caps map[string]bool
@@ -54,19 +53,10 @@ type Client struct {
 }
 
 func (c *Client) read(greeted chan struct{}) error {
-	r := c.conn.Reader
-
-	defer (func() {
-		c.handlersLocker.Lock()
-		defer c.handlersLocker.Unlock()
-
-		for _, hdlr := range c.handlers {
-			close(hdlr)
-		}
-		c.handlers = nil
-
+	defer func() {
+		close(c.handles)
 		close(c.loggedOut)
-	})()
+	}()
 
 	first := true
 	for {
@@ -86,7 +76,7 @@ func (c *Client) read(greeted chan struct{}) error {
 			}
 		}
 
-		res, err := imap.ReadResp(r)
+		res, err := imap.ReadResp(c.conn.Reader)
 		if err == io.EOF || c.State == imap.LogoutState {
 			return nil
 		}
@@ -99,54 +89,17 @@ func (c *Client) read(greeted chan struct{}) error {
 			}
 		}
 
-		c.handlersLocker.Lock()
-
-		var accepted bool
-		for _, hdlr := range c.handlers {
-			if hdlr == nil {
-				continue
-			}
-
-			h := &imap.RespHandling{
-				Resp:    res,
-				Accepts: make(chan bool),
-			}
-
-			hdlr <- h
-
-			accepted = <-h.Accepts
-			if accepted {
-				break
-			}
+		rh := &imap.RespHandle{
+			Resp:    res,
+			Accepts: make(chan bool),
 		}
-
-		c.handlersLocker.Unlock()
-
-		if !accepted {
+		c.handles <- rh
+		if accepted := <-rh.Accepts; !accepted {
 			c.ErrorLog.Println("response has not been handled: ", res)
 		}
 	}
 
 	return nil
-}
-
-func (c *Client) addHandler(hdlr imap.RespHandler) {
-	c.handlersLocker.Lock()
-	defer c.handlersLocker.Unlock()
-
-	c.handlers = append(c.handlers, hdlr)
-}
-
-func (c *Client) removeHandler(hdlr imap.RespHandler) {
-	c.handlersLocker.Lock()
-	defer c.handlersLocker.Unlock()
-
-	for i, h := range c.handlers {
-		if h == hdlr {
-			close(hdlr)
-			c.handlers = append(c.handlers[:i], c.handlers[i+1:]...)
-		}
-	}
 }
 
 func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
@@ -157,12 +110,13 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	// (in tests, the response is sent right after our command is received, so
 	// sometimes the response was received before the setup of this handler)
 	statusHdlr := make(imap.RespHandler)
-	c.addHandler(statusHdlr)
-	defer c.removeHandler(statusHdlr)
+	c.handler.Add(statusHdlr)
+	defer c.handler.Del(statusHdlr)
 
-	if err = cmd.WriteTo(c.conn.Writer); err != nil {
-		return
-	}
+	written := make(chan error, 1)
+	go func() {
+		written <- cmd.WriteTo(c.conn.Writer)
+	}()
 
 	var hdlr imap.RespHandler
 	var done chan error
@@ -170,37 +124,47 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		hdlr = make(imap.RespHandler)
 		done = make(chan error, 1)
 
-		go (func() {
+		go func() {
 			done <- res.HandleFrom(hdlr)
 
 			if hdlr != nil {
 				close(hdlr)
 				hdlr = nil
 			}
-		})()
+		}()
 	}
 
-	for h := range statusHdlr {
-		if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
-			h.Accept()
-			status = s
-
-			if hdlr != nil {
-				close(hdlr)
-				hdlr = nil
+	for {
+		select {
+		case err = <-written:
+			if err != nil {
+				return
 			}
-			break
-		} else if hdlr != nil {
-			hdlr <- h
-		} else {
-			h.Reject()
+		case h, more := <-statusHdlr:
+			if !more {
+				if done != nil {
+					err = <-done
+				}
+				return
+			}
+
+			if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
+				h.Accept()
+				status = s
+
+				if hdlr != nil {
+					close(hdlr)
+					hdlr = nil
+				}
+
+				return
+			} else if hdlr != nil {
+				hdlr <- h
+			} else {
+				h.Reject()
+			}
 		}
 	}
-
-	if done != nil {
-		err = <-done
-	}
-	return
 }
 
 // Execute a generic command. cmdr is a value that can be converted to a raw
@@ -214,22 +178,17 @@ func (c *Client) Execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	return c.execute(cmdr, res)
 }
 
-func (c *Client) handleContinuationReqs(continues chan bool) {
+func (c *Client) handleContinuationReqs(continues chan<- bool) {
 	hdlr := make(imap.RespHandler)
-	c.addHandler(hdlr)
-	defer c.removeHandler(hdlr)
+	c.handler.Add(hdlr)
+	defer c.handler.Del(hdlr)
 
 	defer close(continues)
 
 	for h := range hdlr {
 		if _, ok := h.Resp.(*imap.ContinuationResp); ok {
-			// Only accept if waiting for a continuation request
-			select {
-			case continues <- true:
-				h.Accept()
-			default:
-				h.Reject()
-			}
+			h.Accept()
+			continues <- true
 		} else {
 			h.Reject()
 		}
@@ -246,8 +205,8 @@ func (c *Client) gotStatusCaps(args []interface{}) {
 // The server can send unilateral data. This function handles it.
 func (c *Client) handleUnilateral() {
 	hdlr := make(imap.RespHandler)
-	c.addHandler(hdlr)
-	defer c.removeHandler(hdlr)
+	c.handler.Add(hdlr)
+	defer c.handler.Del(hdlr)
 
 	greeted := make(chan struct{})
 
@@ -400,7 +359,8 @@ func New(conn net.Conn) (c *Client, err error) {
 
 	c = &Client{
 		conn:           imap.NewConn(conn, r, w),
-		handlersLocker: &sync.Mutex{},
+		handles:        make(imap.RespHandler),
+		handler:        imap.NewMultiRespHandler(),
 		greeted:        make(chan struct{}),
 		loggedOut:      make(chan struct{}),
 		State:          imap.ConnectingState,
@@ -409,9 +369,8 @@ func New(conn net.Conn) (c *Client, err error) {
 
 	go c.handleContinuationReqs(continues)
 	go c.handleUnilateral()
+	go c.handler.HandleFrom(c.handles)
 
-	// greeting := c.handleGreeting()
-	// greeting.Err()
 	<-c.greeted
 	return
 }

@@ -6,9 +6,9 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-func TestRespHandling_Accept(t *testing.T) {
+func TestRespHandle_Accept(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &imap.RespHandling{
+	hdlr := &imap.RespHandle{
 		Accepts: ch,
 	}
 
@@ -20,9 +20,9 @@ func TestRespHandling_Accept(t *testing.T) {
 	}
 }
 
-func TestRespHandling_Reject(t *testing.T) {
+func TestRespHandle_Reject(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &imap.RespHandling{
+	hdlr := &imap.RespHandle{
 		Accepts: ch,
 	}
 
@@ -34,9 +34,9 @@ func TestRespHandling_Reject(t *testing.T) {
 	}
 }
 
-func TestRespHandling_AcceptNamedResp_Matching(t *testing.T) {
+func TestRespHandle_AcceptNamedResp_Matching(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &imap.RespHandling{
+	hdlr := &imap.RespHandle{
 		Resp: &imap.Resp{
 			Tag:    "*",
 			Fields: []interface{}{"SEARCH", "42"},
@@ -61,9 +61,9 @@ func TestRespHandling_AcceptNamedResp_Matching(t *testing.T) {
 	}
 }
 
-func TestRespHandling_AcceptNamedResp_NotMatching(t *testing.T) {
+func TestRespHandle_AcceptNamedResp_NotMatching(t *testing.T) {
 	ch := make(chan bool, 1)
-	hdlr := &imap.RespHandling{
+	hdlr := &imap.RespHandle{
 		Resp: &imap.Resp{
 			Tag:    "*",
 			Fields: []interface{}{"26", "EXISTS"},
@@ -79,5 +79,47 @@ func TestRespHandling_AcceptNamedResp_NotMatching(t *testing.T) {
 	v := <-ch
 	if v != false {
 		t.Error("Invalid return value:", v)
+	}
+}
+
+func MultiRespHandler(t *testing.T) {
+	mh := imap.NewMultiRespHandler()
+
+	h1 := make(imap.RespHandler)
+	mh.Add(h1)
+	go func() {
+		(<-h1).Accept()
+		(<-h1).Reject()
+		mh.Del(h1)
+	}()
+
+	h2 := make(imap.RespHandler)
+	mh.Add(h2)
+	go func() {
+		(<-h2).Reject()
+		(<-h2).Reject()
+		mh.Del(h2)
+	}()
+
+	// Should not add it, or will block forever
+	var h3 imap.RespHandler
+	mh.Add(h3)
+
+	rh1 := &imap.RespHandle{Accepts: make(chan bool, 1)}
+	rh2 := &imap.RespHandle{Accepts: make(chan bool, 1)}
+
+	h := make(imap.RespHandler, 2)
+	h <- rh1
+	h <- rh2
+	close(h)
+
+	if err := mh.HandleFrom(h); err != nil {
+		t.Fatal("Expected no error while handling response, got:", err)
+	}
+	if accepted := <-rh1.Accepts; !accepted {
+		t.Error("First response was not accepted")
+	}
+	if accepted := <-rh2.Accepts; accepted {
+		t.Error("First response was not rejected")
 	}
 }

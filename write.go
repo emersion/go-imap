@@ -131,28 +131,19 @@ func (w *Writer) writeLiteral(l Literal) error {
 		return w.writeString(nilAtom)
 	}
 
-	// If we expect a continuation request, start to wait for it now
-	var continues chan bool
-	if w.continues != nil {
-		continues = make(chan bool, 1)
-		go func() {
-			continues <- <-w.continues
-		}()
-	}
-
 	header := string(literalStart) + strconv.Itoa(l.Len()) + string(literalEnd) + crlf
 	if err := w.writeString(header); err != nil {
 		return err
 	}
 
 	// If a channel is available, wait for a continuation request before sending data
-	if continues != nil {
+	if w.continues != nil {
 		// Make sure to flush the writer, otherwise we may never receive a continuation request
 		if err := w.Flush(); err != nil {
 			return err
 		}
 
-		if !<-continues {
+		if !<-w.continues {
 			return fmt.Errorf("imap: cannot send literal: no continuation request received")
 		}
 	}
