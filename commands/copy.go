@@ -29,7 +29,7 @@ func (cmd *Copy) Parse(fields []interface{}) error {
 	}
 
 	if seqSet, ok := fields[0].(string); !ok {
-		return errors.New("Invaliud sequence set")
+		return errors.New("Invalid sequence set")
 	} else if seqSet, err := imap.NewSeqSet(seqSet); err != nil {
 		return err
 	} else {

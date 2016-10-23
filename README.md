@@ -43,6 +43,7 @@ to learn how to use them.
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 * [UNSELECT](https://github.com/emersion/go-imap-unselect)
+* [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
 
 ## Server backends
 
