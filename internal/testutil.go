@@ -3,7 +3,7 @@ package internal
 type MapListSorter []interface{}
 
 func (s MapListSorter) Len() int {
-	return len(s)/2
+	return len(s) / 2
 }
 
 func (s MapListSorter) Less(i, j int) bool {

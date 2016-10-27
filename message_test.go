@@ -26,8 +26,8 @@ func TestNewMessage(t *testing.T) {
 
 	expected := &Message{
 		SeqNum: 42,
-		Items: map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
-		Body: make(map[*BodySectionName]Literal),
+		Items:  map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
+		Body:   make(map[*BodySectionName]Literal),
 	}
 
 	if !reflect.DeepEqual(expected, msg) {
@@ -52,12 +52,12 @@ var messageTests = []struct {
 }{
 	{
 		message: &Message{
-			Items:         map[string]interface{}{
-				"ENVELOPE": nil,
-				"BODY": nil,
-				"FLAGS": nil,
+			Items: map[string]interface{}{
+				"ENVELOPE":    nil,
+				"BODY":        nil,
+				"FLAGS":       nil,
 				"RFC822.SIZE": nil,
-				"UID": nil,
+				"UID":         nil,
 			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,

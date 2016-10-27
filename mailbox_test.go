@@ -2,8 +2,8 @@ package imap_test
 
 import (
 	"fmt"
-	"sort"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/emersion/go-imap"
@@ -19,9 +19,9 @@ func TestCanonicalMailboxName(t *testing.T) {
 	}
 }
 
-var mailboxInfoTests = []struct{
+var mailboxInfoTests = []struct {
 	fields []interface{}
-	info *imap.MailboxInfo
+	info   *imap.MailboxInfo
 }{
 	{
 		fields: []interface{}{
@@ -66,9 +66,9 @@ func TestMailboxInfo_Format(t *testing.T) {
 	}
 }
 
-var mailboxInfoMatchTests = []struct{
+var mailboxInfoMatchTests = []struct {
 	name, ref, pattern string
-	result bool
+	result             bool
 }{
 	{name: "INBOX", pattern: "INBOX", result: true},
 	{name: "INBOX", pattern: "Asuka", result: false},
@@ -114,7 +114,7 @@ func TestNewMailboxStatus(t *testing.T) {
 	status := imap.NewMailboxStatus("INBOX", []string{"MESSAGES", "UNSEEN"})
 
 	expected := &imap.MailboxStatus{
-		Name: "INBOX",
+		Name:  "INBOX",
 		Items: map[string]interface{}{"MESSAGES": nil, "UNSEEN": nil},
 	}
 
@@ -123,7 +123,7 @@ func TestNewMailboxStatus(t *testing.T) {
 	}
 }
 
-var mailboxStatusTests = [...]struct{
+var mailboxStatusTests = [...]struct {
 	fields []interface{}
 	status *imap.MailboxStatus
 }{
@@ -137,16 +137,16 @@ var mailboxStatusTests = [...]struct{
 		},
 		status: &imap.MailboxStatus{
 			Items: map[string]interface{}{
-				"MESSAGES": nil,
-				"RECENT": nil,
-				"UNSEEN": nil,
-				"UIDNEXT": nil,
+				"MESSAGES":    nil,
+				"RECENT":      nil,
+				"UNSEEN":      nil,
+				"UIDNEXT":     nil,
 				"UIDVALIDITY": nil,
 			},
-			Messages: 42,
-			Recent: 1,
-			Unseen: 6,
-			UidNext: 65536,
+			Messages:    42,
+			Recent:      1,
+			Unseen:      6,
+			UidNext:     65536,
 			UidValidity: 4242,
 		},
 	},

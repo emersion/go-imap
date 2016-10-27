@@ -130,11 +130,11 @@ const (
 	MailboxPermanentFlags = "PERMANENTFLAGS"
 
 	// Defined in RFC 3501 section 6.3.10.
-	MailboxMessages       = "MESSAGES"
-	MailboxRecent         = "RECENT"
-	MailboxUnseen         = "UNSEEN"
-	MailboxUidNext        = "UIDNEXT"
-	MailboxUidValidity    = "UIDVALIDITY"
+	MailboxMessages    = "MESSAGES"
+	MailboxRecent      = "RECENT"
+	MailboxUnseen      = "UNSEEN"
+	MailboxUidNext     = "UIDNEXT"
+	MailboxUidValidity = "UIDVALIDITY"
 )
 
 // A mailbox status.
@@ -169,7 +169,7 @@ type MailboxStatus struct {
 // Create a new mailbox status that will contain the specified items.
 func NewMailboxStatus(name string, items []string) *MailboxStatus {
 	status := &MailboxStatus{
-		Name: name,
+		Name:  name,
 		Items: make(map[string]interface{}),
 	}
 

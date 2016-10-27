@@ -357,13 +357,13 @@ func New(conn net.Conn) (c *Client, err error) {
 	r := imap.NewReader(nil)
 
 	c = &Client{
-		conn:           imap.NewConn(conn, r, w),
-		handles:        make(imap.RespHandler),
-		handler:        imap.NewMultiRespHandler(),
-		greeted:        make(chan struct{}),
-		loggedOut:      make(chan struct{}),
-		State:          imap.ConnectingState,
-		ErrorLog:       log.New(os.Stderr, "imap/client: ", log.LstdFlags),
+		conn:      imap.NewConn(conn, r, w),
+		handles:   make(imap.RespHandler),
+		handler:   imap.NewMultiRespHandler(),
+		greeted:   make(chan struct{}),
+		loggedOut: make(chan struct{}),
+		State:     imap.ConnectingState,
+		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
 	go c.handleContinuationReqs(continues)
