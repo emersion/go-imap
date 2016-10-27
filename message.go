@@ -104,8 +104,8 @@ type Message struct {
 func NewMessage(seqNum uint32, items []string) *Message {
 	msg := &Message{
 		SeqNum: seqNum,
-		Items: make(map[string]interface{}),
-		Body: make(map[*BodySectionName]Literal),
+		Items:  make(map[string]interface{}),
+		Body:   make(map[*BodySectionName]Literal),
 	}
 
 	for _, k := range items {

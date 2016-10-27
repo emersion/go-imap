@@ -66,7 +66,7 @@ func (mh *MultiRespHandler) HandleFrom(ch RespHandler) error {
 		mh.locker.Lock()
 
 		accepted := false
-		for i := len(mh.handlers)-1; i >= 0; i-- {
+		for i := len(mh.handlers) - 1; i >= 0; i-- {
 			hdlr := mh.handlers[i]
 
 			rh := &RespHandle{

@@ -47,27 +47,27 @@ func TestParseStringList(t *testing.T) {
 	}{
 		{
 			field: []interface{}{"a", "b", "c", "d"},
-			list:   []string{"a", "b", "c", "d"},
+			list:  []string{"a", "b", "c", "d"},
 		},
 		{
 			field: []interface{}{"a"},
-			list:   []string{"a"},
+			list:  []string{"a"},
 		},
 		{
 			field: []interface{}{},
-			list:   []string{},
+			list:  []string{},
 		},
 		{
 			field: []interface{}{"a", 42, "c", "d"},
-			list:   nil,
+			list:  nil,
 		},
 		{
 			field: []interface{}{"a", nil, "c", "d"},
-			list:   nil,
+			list:  nil,
 		},
 		{
 			field: "Asuka FTW",
-			list:   nil,
+			list:  nil,
 		},
 	}
 
