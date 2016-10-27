@@ -111,7 +111,6 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	// sometimes the response was received before the setup of this handler)
 	statusHdlr := make(imap.RespHandler)
 	c.handler.Add(statusHdlr)
-	defer c.handler.Del(statusHdlr)
 
 	written := make(chan error, 1)
 	go func() {
@@ -157,7 +156,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 					hdlr = nil
 				}
 
-				return
+				c.handler.Del(statusHdlr)
 			} else if hdlr != nil {
 				hdlr <- h
 			} else {
