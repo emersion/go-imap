@@ -159,7 +159,6 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 	done := make(chan error, 1)
 	go (func() {
 		done <- conn.WriteResp(res)
-		close(done)
 	})()
 
 	err := ctx.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch)
