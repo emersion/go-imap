@@ -111,7 +111,6 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	// sometimes the response was received before the setup of this handler)
 	statusHdlr := make(imap.RespHandler)
 	c.handler.Add(statusHdlr)
-	defer c.handler.Del(statusHdlr)
 
 	written := make(chan error, 1)
 	go func() {
@@ -157,7 +156,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 					hdlr = nil
 				}
 
-				return
+				c.handler.Del(statusHdlr)
 			} else if hdlr != nil {
 				hdlr <- h
 			} else {
@@ -290,7 +289,11 @@ func (c *Client) handleUnilateral() {
 				if c.Mailbox == nil {
 					break
 				}
-				c.Mailbox.Messages, _ = imap.ParseNumber(res.Fields[0])
+
+				if messages, err := imap.ParseNumber(res.Fields[0]); err == nil {
+					c.Mailbox.Messages = messages
+					c.Mailbox.Items[imap.MailboxMessages] = nil
+				}
 
 				if c.MailboxUpdates != nil {
 					c.MailboxUpdates <- c.Mailbox
@@ -299,7 +302,11 @@ func (c *Client) handleUnilateral() {
 				if c.Mailbox == nil {
 					break
 				}
-				c.Mailbox.Recent, _ = imap.ParseNumber(res.Fields[0])
+
+				if recent, err := imap.ParseNumber(res.Fields[0]); err == nil {
+					c.Mailbox.Recent = recent
+					c.Mailbox.Items[imap.MailboxRecent] = nil
+				}
 
 				if c.MailboxUpdates != nil {
 					c.MailboxUpdates <- c.Mailbox

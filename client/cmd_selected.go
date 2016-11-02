@@ -61,7 +61,9 @@ func (c *Client) Close() (err error) {
 // currently selected mailbox.
 // If ch is not nil, sends sequence IDs of each deleted message to this channel.
 func (c *Client) Expunge(ch chan uint32) (err error) {
-	defer close(ch)
+	if ch != nil {
+		defer close(ch)
+	}
 
 	if c.State != imap.SelectedState {
 		err = ErrNoMailboxSelected

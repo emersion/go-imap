@@ -203,8 +203,7 @@ func (c *conn) send() {
 			res := &imap.ContinuationResp{Info: "send literal"}
 			if err := res.WriteTo(c.Writer); err != nil {
 				c.Server().ErrorLog.Println("cannot send continuation request: ", err)
-			}
-			if err := c.Writer.Flush(); err != nil {
+			} else if err := c.Writer.Flush(); err != nil {
 				c.Server().ErrorLog.Println("cannot flush connection: ", err)
 			}
 		}
@@ -221,8 +220,7 @@ func (c *conn) send() {
 		// Send the response
 		if err := res.WriteTo(c.Writer); err != nil {
 			c.Server().ErrorLog.Println("cannot send response: ", err)
-		}
-		if err := c.Writer.Flush(); err != nil {
+		} else if err := c.Writer.Flush(); err != nil {
 			c.Server().ErrorLog.Println("cannot flush connection: ", err)
 		}
 

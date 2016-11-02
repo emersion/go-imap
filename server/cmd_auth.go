@@ -206,6 +206,13 @@ func (cmd *Status) Handle(conn Conn) error {
 		return err
 	}
 
+	// Only keep items thqat have been requested
+	items := make(map[string]interface{})
+	for _, k := range cmd.Items {
+		items[k] = status.Items[k]
+	}
+	status.Items = items
+
 	res := &responses.Status{Mailbox: status}
 	return conn.WriteResp(res)
 }
