@@ -247,28 +247,24 @@ func (c *Client) handleUnilateral() {
 
 			switch res.Type {
 			case imap.StatusOk:
-				select {
-				case c.Infos <- res:
-				default:
+				if c.Infos != nil {
+					c.Infos <- res
 				}
 			case imap.StatusNo:
-				select {
-				case c.Warnings <- res:
-				default:
+				if c.Warnings != nil {
+					c.Warnings <- res
 				}
 			case imap.StatusBad:
-				select {
-				case c.Errors <- res:
-				default:
+				if c.Errors != nil {
+					c.Errors <- res
 				}
 			case imap.StatusBye:
 				c.State = imap.LogoutState
 				c.Mailbox = nil
 				c.conn.Close()
 
-				select {
-				case c.Byes <- res:
-				default:
+				if c.Byes != nil {
+					c.Byes <- res
 				}
 			}
 		case *imap.Resp:

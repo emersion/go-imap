@@ -131,3 +131,72 @@ func TestClient_SetDebug(t *testing.T) {
 
 	testClient(t, ct, st)
 }
+
+func TestClient_unilateral(t *testing.T) {
+	steps := make(chan struct{})
+
+	ct := func(c *client.Client) error {
+		c.State = imap.SelectedState
+		c.Mailbox = imap.NewMailboxStatus("INBOX", nil)
+
+		statuses := make(chan *imap.MailboxStatus)
+		c.MailboxUpdates = statuses
+		steps <- struct{}{}
+
+		if status := <-statuses; status.Messages != 42 {
+			return fmt.Errorf("Invalid messages count: expected %v but got %v", 42, status.Messages)
+		}
+
+		steps <- struct{}{}
+		if status := <-statuses; status.Recent != 587 {
+			return fmt.Errorf("Invalid recent count: expected %v but got %v", 587, status.Recent)
+		}
+
+		expunges := make(chan uint32)
+		c.Expunges = expunges
+		steps <- struct{}{}
+		if seqNum := <-expunges; seqNum != 65535 {
+			return fmt.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, seqNum)
+		}
+
+		infos := make(chan *imap.StatusResp)
+		c.Infos = infos
+		steps <- struct{}{}
+		if status := <-infos; status.Info != "Reticulating splines..." {
+			return fmt.Errorf("Invalid info: got %v", status.Info)
+		}
+
+		warns := make(chan *imap.StatusResp)
+		c.Warnings = warns
+		steps <- struct{}{}
+		if status := <-warns; status.Info != "Kansai band competition is in 30 seconds !" {
+			return fmt.Errorf("Invalid warning: got %v", status.Info)
+		}
+
+		errors := make(chan *imap.StatusResp)
+		c.Errors = errors
+		steps <- struct{}{}
+		if status := <-errors; status.Info != "Battery level too low, shutting down." {
+			return fmt.Errorf("Invalid error: got %v", status.Info)
+		}
+
+		return nil
+	}
+
+	st := func(c net.Conn) {
+		<-steps
+		io.WriteString(c, "* 42 EXISTS\r\n")
+		<-steps
+		io.WriteString(c, "* 587 RECENT\r\n")
+		<-steps
+		io.WriteString(c, "* 65535 EXPUNGE\r\n")
+		<-steps
+		io.WriteString(c, "* OK Reticulating splines...\r\n")
+		<-steps
+		io.WriteString(c, "* NO Kansai band competition is in 30 seconds !\r\n")
+		<-steps
+		io.WriteString(c, "* BAD Battery level too low, shutting down.\r\n")
+	}
+
+	testClient(t, ct, st)
+}
