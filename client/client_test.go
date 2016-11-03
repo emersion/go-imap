@@ -159,6 +159,13 @@ func TestClient_unilateral(t *testing.T) {
 			return fmt.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, seqNum)
 		}
 
+		messages := make(chan *imap.Message)
+		c.MessageUpdates = messages
+		steps <- struct{}{}
+		if msg := <-messages; msg.SeqNum != 431 {
+			return fmt.Errorf("Invalid expunged sequence number: expected %v but got %v", 431, msg.SeqNum)
+		}
+
 		infos := make(chan *imap.StatusResp)
 		c.Infos = infos
 		steps <- struct{}{}
@@ -190,6 +197,8 @@ func TestClient_unilateral(t *testing.T) {
 		io.WriteString(c, "* 587 RECENT\r\n")
 		<-steps
 		io.WriteString(c, "* 65535 EXPUNGE\r\n")
+		<-steps
+		io.WriteString(c, "* 431 FETCH (FLAGS (\\Seen))\r\n")
 		<-steps
 		io.WriteString(c, "* OK Reticulating splines...\r\n")
 		<-steps

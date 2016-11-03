@@ -40,10 +40,8 @@ type Client struct {
 	MailboxUpdates chan *imap.MailboxStatus
 	// A channel where deleted message IDs will be sent.
 	Expunges chan uint32
-
-	// TODO: support unilateral message updates
 	// A channel where messages updates from the server will be sent.
-	//MessageUpdates chan *imap.Message
+	MessageUpdates chan *imap.Message
 
 	// ErrorLog specifies an optional logger for errors accepting
 	// connections and unexpected behavior from handlers.
@@ -274,7 +272,7 @@ func (c *Client) handleUnilateral() {
 			}
 
 			name, ok := res.Fields[1].(string)
-			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE") {
+			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE" && name != "FETCH") {
 				h.Reject()
 				break
 			}
@@ -312,6 +310,20 @@ func (c *Client) handleUnilateral() {
 
 				if c.Expunges != nil {
 					c.Expunges <- seqNum
+				}
+			case "FETCH":
+				seqNum, _ := imap.ParseNumber(res.Fields[0])
+				fields, _ := res.Fields[2].([]interface{})
+
+				msg := &imap.Message{
+					SeqNum: seqNum,
+				}
+				if err := msg.Parse(fields); err != nil {
+					break
+				}
+
+				if c.MessageUpdates != nil {
+					c.MessageUpdates <- msg
 				}
 			}
 		default:
