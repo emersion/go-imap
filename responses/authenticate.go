@@ -21,6 +21,7 @@ func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
 	defer (func() {
 		if err != nil {
 			w.Write([]byte("*\r\n"))
+			w.Flush()
 		}
 	})()
 
