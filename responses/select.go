@@ -26,7 +26,9 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 
 			flags, _ := fields[0].([]interface{})
 			mbox.Flags, _ = imap.ParseStringList(flags)
+			mbox.ItemsLocker.Lock()
 			mbox.Items[imap.MailboxFlags] = nil
+			mbox.ItemsLocker.Unlock()
 		case *imap.StatusResp:
 			if len(res.Arguments) < 1 {
 				h.Accepts <- false
