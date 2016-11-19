@@ -3,6 +3,7 @@ package imap
 import (
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/emersion/go-imap/utf7"
 )
@@ -147,6 +148,10 @@ type MailboxStatus struct {
 	// should not be used directly, they must only be used by libraries
 	// implementing extensions of the IMAP protocol.
 	Items map[string]interface{}
+
+	// The Items map may be accessed in different goroutines. Protect
+	// concurrent writes.
+	ItemsLocker sync.Mutex
 
 	// The mailbox flags.
 	Flags []string

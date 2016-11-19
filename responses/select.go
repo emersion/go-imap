@@ -37,17 +37,25 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 			switch res.Code {
 			case imap.MailboxUnseen:
 				mbox.Unseen, _ = imap.ParseNumber(res.Arguments[0])
+				mbox.ItemsLocker.Lock()
 				mbox.Items[imap.MailboxUnseen] = nil
+				mbox.ItemsLocker.Unlock()
 			case imap.MailboxPermanentFlags:
 				flags, _ := res.Arguments[0].([]interface{})
 				mbox.PermanentFlags, _ = imap.ParseStringList(flags)
+				mbox.ItemsLocker.Lock()
 				mbox.Items[imap.MailboxPermanentFlags] = nil
+				mbox.ItemsLocker.Unlock()
 			case imap.MailboxUidNext:
 				mbox.UidNext, _ = imap.ParseNumber(res.Arguments[0])
+				mbox.ItemsLocker.Lock()
 				mbox.Items[imap.MailboxUidNext] = nil
+				mbox.ItemsLocker.Unlock()
 			case imap.MailboxUidValidity:
 				mbox.UidValidity, _ = imap.ParseNumber(res.Arguments[0])
+				mbox.ItemsLocker.Lock()
 				mbox.Items[imap.MailboxUidValidity] = nil
+				mbox.ItemsLocker.Unlock()
 			default:
 				accepted = false
 			}

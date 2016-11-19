@@ -286,7 +286,9 @@ func (c *Client) handleUnilateral() {
 
 				if messages, err := imap.ParseNumber(res.Fields[0]); err == nil {
 					c.Mailbox.Messages = messages
+					c.Mailbox.ItemsLocker.Lock()
 					c.Mailbox.Items[imap.MailboxMessages] = nil
+					c.Mailbox.ItemsLocker.Unlock()
 				}
 
 				if c.MailboxUpdates != nil {
@@ -299,7 +301,9 @@ func (c *Client) handleUnilateral() {
 
 				if recent, err := imap.ParseNumber(res.Fields[0]); err == nil {
 					c.Mailbox.Recent = recent
+					c.Mailbox.ItemsLocker.Lock()
 					c.Mailbox.Items[imap.MailboxRecent] = nil
+					c.Mailbox.ItemsLocker.Unlock()
 				}
 
 				if c.MailboxUpdates != nil {
