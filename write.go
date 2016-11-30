@@ -172,6 +172,8 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeList(field)
 	case envelopeDateTime:
 		return w.writeDateTime(time.Time(field), envelopeDateTimeLayout)
+	case searchDate:
+		return w.writeDateTime(time.Time(field), searchDateLayout)
 	case Date:
 		return w.writeDateTime(time.Time(field), DateLayout)
 	case DateTime:

@@ -135,7 +135,7 @@ func TestClient_Search(t *testing.T) {
 		scanner := NewCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
-		if cmd != `SEARCH CHARSET UTF-8 DELETED FROM Smith NOT (TO Pauline) SINCE " 1-Feb-1994"` {
+		if cmd != `SEARCH CHARSET UTF-8 DELETED FROM Smith NOT (TO Pauline) SINCE "1-Feb-1994"` {
 			t.Fatal("Bad command:", cmd)
 		}
 

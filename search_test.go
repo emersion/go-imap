@@ -19,7 +19,7 @@ var searchCriteriaTests = []struct {
 	criteria *SearchCriteria
 }{
 	{
-		expected: `(1:42 ANSWERED BCC root@nsa.gov BEFORE "21-Nov-1997" BODY "hey there" CC root@gchq.gov.uk DELETED DRAFT FLAGGED FROM root@protonmail.com HEADER Content-Type text/csv KEYWORD cc LARGER 4242 NEW NOT (OLD ON " 5-Nov-1984") OR (RECENT SENTON "21-Nov-1997") (SEEN SENTBEFORE " 5-Nov-1984") SENTSINCE "21-Nov-1997" SINCE " 5-Nov-1984" SMALLER 643 SUBJECT "saucisse royale" TEXT DILLE TO cc@dille.cc UID 743:938 UNANSWERED UNDELETED UNDRAFT UNFLAGGED UNKEYWORD microsoft UNSEEN)`,
+		expected: `(1:42 ANSWERED BCC root@nsa.gov BEFORE "21-Nov-1997" BODY "hey there" CC root@gchq.gov.uk DELETED DRAFT FLAGGED FROM root@protonmail.com HEADER Content-Type text/csv KEYWORD cc LARGER 4242 NEW NOT (OLD ON "5-Nov-1984") OR (RECENT SENTON "21-Nov-1997") (SEEN SENTBEFORE "5-Nov-1984") SENTSINCE "21-Nov-1997" SINCE "5-Nov-1984" SMALLER 643 SUBJECT "saucisse royale" TEXT DILLE TO cc@dille.cc UID 743:938 UNANSWERED UNDELETED UNDRAFT UNFLAGGED UNKEYWORD microsoft UNSEEN)`,
 		criteria: &SearchCriteria{
 			SeqSet:   searchSeqSet1,
 			Answered: true,
