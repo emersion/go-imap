@@ -47,7 +47,7 @@ type Client struct {
 	// connections and unexpected behavior from handlers.
 	// If nil, logging goes to os.Stderr via the log package's
 	// standard logger.
-	ErrorLog *log.Logger
+	ErrorLog imap.Logger
 }
 
 func (c *Client) read(greeted chan struct{}) error {
