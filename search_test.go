@@ -37,8 +37,8 @@ var searchCriteriaTests = []struct {
 			New:      true,
 			Not:      &SearchCriteria{Old: true, On: searchDate2},
 			Or: [2]*SearchCriteria{
-				&SearchCriteria{Recent: true, SentOn: searchDate1},
-				&SearchCriteria{Seen: true, SentBefore: searchDate2},
+				{Recent: true, SentOn: searchDate1},
+				{Seen: true, SentBefore: searchDate2},
 			},
 			SentSince:  searchDate1,
 			Since:      searchDate2,
