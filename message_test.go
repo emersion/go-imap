@@ -80,7 +80,7 @@ func TestMessage_Parse(t *testing.T) {
 	for i, test := range messageTests {
 		m := &Message{}
 		if err := m.Parse(test.fields); err != nil {
-			t.Errorf("Cannot parse message for #%v:", i, err)
+			t.Errorf("Cannot parse message for #%v: %v", i, err)
 		} else if !reflect.DeepEqual(m, test.message) {
 			t.Errorf("Invalid parsed message for #%v: got \n%+v\n but expected \n%+v", i, m, test.message)
 		}
@@ -498,7 +498,7 @@ var bodyStructureTests = []struct {
 			MimeSubType: "alternative",
 			Params:      map[string]string{},
 			Parts: []*BodyStructure{
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "plain",
 					Params:      map[string]string{},
@@ -506,7 +506,7 @@ var bodyStructureTests = []struct {
 					Size:        87,
 					Lines:       22,
 				},
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "html",
 					Params:      map[string]string{},
@@ -527,7 +527,7 @@ var bodyStructureTests = []struct {
 			MimeSubType: "alternative",
 			Params:      map[string]string{"hello": "world"},
 			Parts: []*BodyStructure{
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "plain",
 					Params:      map[string]string{},

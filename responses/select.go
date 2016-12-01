@@ -71,7 +71,7 @@ func (r *Select) HandleFrom(hdlr imap.RespHandler) (err error) {
 func (r *Select) WriteTo(w *imap.Writer) (err error) {
 	status := r.Mailbox
 
-	for k, _ := range r.Mailbox.Items {
+	for k := range r.Mailbox.Items {
 		switch k {
 		case imap.MailboxFlags:
 			flags := make([]interface{}, len(status.Flags))
