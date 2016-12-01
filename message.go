@@ -763,7 +763,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[end].(string)
 		end++
 
-		if len(fields)-end+1 >= 4 { // Contains extension data
+		if len(fields)-end >= 4 { // Contains extension data
 			bs.Extended = true
 
 			params, _ := fields[end].([]interface{})
@@ -827,7 +827,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end++
 		}
 
-		if len(fields)-end+1 >= 4 { // Contains extension data
+		if len(fields)-end >= 4 { // Contains extension data
 			bs.Extended = true
 
 			bs.Md5, _ = fields[end].(string)
