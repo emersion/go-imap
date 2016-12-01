@@ -128,7 +128,7 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 			i++
 			rightFields, _ := fields[i].([]interface{})
 
-			c.Or = [2]*SearchCriteria{&SearchCriteria{}, &SearchCriteria{}}
+			c.Or = [2]*SearchCriteria{{}, {}}
 			if err := c.Or[0].Parse(leftFields); err != nil {
 				return err
 			}

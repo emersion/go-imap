@@ -498,7 +498,7 @@ var bodyStructureTests = []struct {
 			MimeSubType: "alternative",
 			Params:      map[string]string{},
 			Parts: []*BodyStructure{
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "plain",
 					Params:      map[string]string{},
@@ -506,7 +506,7 @@ var bodyStructureTests = []struct {
 					Size:        87,
 					Lines:       22,
 				},
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "html",
 					Params:      map[string]string{},
@@ -527,7 +527,7 @@ var bodyStructureTests = []struct {
 			MimeSubType: "alternative",
 			Params:      map[string]string{"hello": "world"},
 			Parts: []*BodyStructure{
-				&BodyStructure{
+				{
 					MimeType:    "text",
 					MimeSubType: "plain",
 					Params:      map[string]string{},

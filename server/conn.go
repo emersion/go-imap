@@ -183,7 +183,7 @@ func (c *conn) Capabilities() []string {
 		if !c.canAuth() {
 			caps = append(caps, "LOGINDISABLED")
 		} else {
-			for name, _ := range c.s.auths {
+			for name := range c.s.auths {
 				caps = append(caps, "AUTH="+name)
 			}
 		}

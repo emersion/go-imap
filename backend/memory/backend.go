@@ -36,10 +36,10 @@ Hi there :)`
 
 	now := time.Now()
 	user.mailboxes = map[string]*Mailbox{
-		"INBOX": &Mailbox{
+		"INBOX": {
 			name: "INBOX",
 			messages: []*Message{
-				&Message{&imap.Message{
+				{&imap.Message{
 					Uid:   6,
 					Flags: []string{"\\Seen"},
 					Envelope: &imap.Envelope{
