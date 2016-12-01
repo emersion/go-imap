@@ -96,8 +96,6 @@ func (c *Client) read(greeted chan struct{}) error {
 			c.ErrorLog.Println("response has not been handled:", res)
 		}
 	}
-
-	return nil
 }
 
 func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
