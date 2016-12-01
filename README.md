@@ -57,7 +57,7 @@ to learn how to use them.
 
 ## Usage
 
-### Client
+### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
 
 ```go
 package main
@@ -133,7 +133,7 @@ func main() {
 }
 ```
 
-### Server
+### Server [![GoDoc](https://godoc.org/github.com/emersion/go-imap/server?status.svg)](https://godoc.org/github.com/emersion/go-imap/server)
 
 ```go
 package main
