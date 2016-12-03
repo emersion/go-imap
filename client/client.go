@@ -1,4 +1,4 @@
-// An IMAP client.
+// Package client provides an IMAP client.
 package client
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// An IMAP client.
+// Client represents an IMAP client.
 type Client struct {
 	conn  *imap.Conn
 	isTLS bool
@@ -343,7 +343,7 @@ func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
 	return c.conn.Upgrade(upgrader)
 }
 
-// Get an imap.Writer for this client's connection.
+// Writer returns the imap.Writer for this client's connection.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
@@ -351,7 +351,7 @@ func (c *Client) Writer() *imap.Writer {
 	return c.conn.Writer
 }
 
-// Check if this client's connection has TLS enabled.
+// IsTLS checks if this client's connection has TLS enabled.
 func (c *Client) IsTLS() bool {
 	return c.isTLS
 }
@@ -392,7 +392,7 @@ func New(conn net.Conn) (c *Client, err error) {
 	return
 }
 
-// Connect to an IMAP server using an unencrypted connection.
+// Dial connects to an IMAP server using an unencrypted connection.
 func Dial(addr string) (c *Client, err error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -417,7 +417,7 @@ func DialWithDialer(dialer *net.Dialer, address string) (c *Client, err error) {
 	return
 }
 
-// Connect to an IMAP server using an encrypted connection.
+// DialTLS connects to an IMAP server using an encrypted connection.
 func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 	conn, err := tls.Dial("tcp", addr, tlsConfig)
 	if err != nil {
