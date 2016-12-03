@@ -368,6 +368,11 @@ func (c *Client) SetDebug(w io.Writer) {
 	c.conn.SetDebug(w)
 }
 
+// Conn returns the client's imap.Conn.
+func (c *Client) Conn() *imap.Conn {
+	return c.conn
+}
+
 // New creates a new client from an existing connection.
 func New(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
