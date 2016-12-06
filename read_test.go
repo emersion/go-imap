@@ -261,6 +261,13 @@ func TestReader_ReadQuotedString(t *testing.T) {
 		}
 	}
 
+	b, r = newReader("\"here's a backslash: \\\\, and here's a double quote: \\\" !\"\r\n")
+	if s, err := r.ReadQuotedString(); err != nil {
+		t.Error(err)
+	} else if s != "here's a backslash: \\, and here's a double quote: \" !" {
+		t.Error("Quoted string has not the expected value:", s)
+	}
+
 	b, r = newReader("")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
@@ -272,6 +279,11 @@ func TestReader_ReadQuotedString(t *testing.T) {
 	}
 
 	b, r = newReader("\"hello gopher\r\n")
+	if _, err := r.ReadQuotedString(); err == nil {
+		t.Error("Invalid read didn't fail")
+	}
+
+	b, r = newReader("\"hello \\gopher\"\r\n")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
