@@ -3,10 +3,12 @@ package client
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/emersion/go-imap"
 )
@@ -48,10 +50,21 @@ type Client struct {
 	// If nil, logging goes to os.Stderr via the log package's
 	// standard logger.
 	ErrorLog imap.Logger
+
+	// Timeout specifies a maximum amount of time to wait on a command.
+	//
+	// A Timeout of zero means no timeout. This is the default.
+	Timeout time.Duration
 }
 
 func (c *Client) read(greeted chan struct{}) error {
 	defer func() {
+		// Ensure we close the greeted channel. New may be waiting on an indication
+		// that we've seen the greeting.
+		if c.greeted != nil {
+			close(c.greeted)
+			c.greeted = nil
+		}
 		close(c.handles)
 		close(c.loggedOut)
 	}()
@@ -102,6 +115,20 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
+	if c.Timeout > 0 {
+		err = c.conn.SetDeadline(time.Now().Add(c.Timeout))
+		if err != nil {
+			return
+		}
+	} else {
+		// It's possible the client had a timeout set from a previous command, but no
+		// longer does. Ensure we respect that. The zero time means no deadline.
+		err = c.conn.SetDeadline(time.Time{})
+		if err != nil {
+			return
+		}
+	}
+
 	// Add handler before sending command, to be sure to get the response in time
 	// (in tests, the response is sent right after our command is received, so
 	// sometimes the response was received before the setup of this handler)
@@ -131,6 +158,12 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	for {
 		select {
+		// If the connection is closed (such as from an I/O error), ensure we realize
+		// this and don't block waiting on a response that will never come. loggedOut
+		// is a channel that closes when the reader goroutine ends.
+		case <-c.loggedOut:
+			err = fmt.Errorf("Connection closed")
+			return
 		case err = <-written:
 			if err != nil {
 				return
@@ -368,11 +401,6 @@ func (c *Client) SetDebug(w io.Writer) {
 	c.conn.SetDebug(w)
 }
 
-// Conn returns the client's imap.Conn.
-func (c *Client) Conn() *imap.Conn {
-	return c.conn
-}
-
 // New creates a new client from an existing connection.
 func New(conn net.Conn) (c *Client, err error) {
 	continues := make(chan bool)
@@ -418,6 +446,17 @@ func DialWithDialer(dialer *net.Dialer, address string) (c *Client, err error) {
 		return nil, err
 	}
 
+	// We don't return to the caller until we try to receive a greeting. As such,
+	// there is no way to set the client's Timeout for that action. As a
+	// workaround, if the dialer has a timeout set, use that for the connection's
+	// deadline.
+	if dialer.Timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(dialer.Timeout))
+		if err != nil {
+			return
+		}
+	}
+
 	c, err = New(conn)
 	return
 }
@@ -443,6 +482,17 @@ func DialWithDialerTLS(dialer *net.Dialer, addr string,
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
 	if err != nil {
 		return
+	}
+
+	// We don't return to the caller until we try to receive a greeting. As such,
+	// there is no way to set the client's Timeout for that action. As a
+	// workaround, if the dialer has a timeout set, use that for the connection's
+	// deadline.
+	if dialer.Timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(dialer.Timeout))
+		if err != nil {
+			return
+		}
 	}
 
 	c, err = New(conn)
