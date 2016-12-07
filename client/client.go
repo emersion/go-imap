@@ -13,6 +13,9 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+// Used when a connection is closed while waiting for a command response.
+var errClosed = fmt.Errorf("imap: connection closed")
+
 // Client represents an IMAP client.
 type Client struct {
 	conn  *imap.Conn
@@ -162,7 +165,7 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		// this and don't block waiting on a response that will never come. loggedOut
 		// is a channel that closes when the reader goroutine ends.
 		case <-c.loggedOut:
-			err = fmt.Errorf("Connection closed")
+			err = errClosed
 			return
 		case err = <-written:
 			if err != nil {
@@ -195,10 +198,10 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	}
 }
 
-// Execute a generic command. cmdr is a value that can be converted to a raw
-// command and res is a value that can handle responses. The function returns
-// when the command has completed or failed, in this case err is nil. A non-nil
-// err value indicates a network error.
+// Execute executes a generic command. cmdr is a value that can be converted to
+// a raw command and res is a value that can handle responses. The function
+// returns when the command has completed or failed, in this case err is nil. A
+// non-nil err value indicates a network error.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
