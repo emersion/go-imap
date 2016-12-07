@@ -763,24 +763,34 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[end].(string)
 		end++
 
-		if len(fields)-end >= 4 { // Contains extension data
-			bs.Extended = true
+		// GMail seems to return only 3 extension data fields. Parse as many fields
+		// as we can.
+		if len(fields) > end {
+			bs.Extended = true // Contains extension data
 
 			params, _ := fields[end].([]interface{})
 			bs.Params, _ = ParseParamList(params)
-
-			bs.Disposition, _ = fields[end+1].(string)
-
-			switch langs := fields[end+2].(type) {
+			end++
+		}
+		if len(fields) > end {
+			bs.Disposition, _ = fields[end].(string)
+			end++
+		}
+		if len(fields) > end {
+			switch langs := fields[end].(type) {
 			case string:
 				bs.Language = []string{langs}
 			case []interface{}:
 				bs.Language, _ = ParseStringList(langs)
+			default:
+				bs.Language = nil
 			}
-
-			if location, ok := fields[end+3].([]interface{}); ok {
-				bs.Location, _ = ParseStringList(location)
-			}
+			end++
+		}
+		if len(fields) > end {
+			location, _ := fields[end].([]interface{})
+			bs.Location, _ = ParseStringList(location)
+			end++
 		}
 	case string: // A non-multipart body part
 		if len(fields) < 7 {
@@ -827,22 +837,33 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end++
 		}
 
-		if len(fields)-end >= 4 { // Contains extension data
-			bs.Extended = true
+		// GMail seems to return only 3 extension data fields. Parse as many fields
+		// as we can.
+		if len(fields) > end {
+			bs.Extended = true // Contains extension data
 
 			bs.Md5, _ = fields[end].(string)
-			bs.Disposition, _ = fields[end+1].(string)
-
-			switch langs := fields[end+2].(type) {
+			end++
+		}
+		if len(fields) > end {
+			bs.Disposition, _ = fields[end].(string)
+			end++
+		}
+		if len(fields) > end {
+			switch langs := fields[end].(type) {
 			case string:
 				bs.Language = []string{langs}
 			case []interface{}:
 				bs.Language, _ = ParseStringList(langs)
+			default:
+				bs.Language = nil
 			}
-
-			if location, ok := fields[end+3].([]interface{}); ok {
-				bs.Location, _ = ParseStringList(location)
-			}
+			end++
+		}
+		if len(fields) > end {
+			location, _ := fields[end].([]interface{})
+			bs.Location, _ = ParseStringList(location)
+			end++
 		}
 	}
 
