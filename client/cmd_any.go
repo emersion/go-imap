@@ -53,21 +53,20 @@ func (c *Client) Noop() (err error) {
 }
 
 // Close the connection.
-func (c *Client) Logout() (err error) {
+func (c *Client) Logout() error {
 	if c.State == imap.LogoutState {
-		err = ErrAlreadyLoggedOut
-		return
+		return ErrAlreadyLoggedOut
 	}
 
 	cmd := &commands.Logout{}
 
-	status, err := c.execute(cmd, nil)
-	if err != nil {
-		return
+	if status, err := c.execute(cmd, nil); err == errClosed {
+		// Server closed connection, that's what we want anyway
+		return nil
+	} else if err != nil {
+		return err
+	} else if status != nil {
+		return status.Err()
 	}
-
-	if status != nil {
-		err = status.Err()
-	}
-	return
+	return nil
 }
