@@ -58,9 +58,8 @@ func TestClient_Noop(t *testing.T) {
 }
 
 func TestClient_Logout(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		err = c.Logout()
-		return
+	ct := func(c *client.Client) error {
+		return c.Logout()
 	}
 
 	st := func(c net.Conn) {
