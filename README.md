@@ -115,18 +115,16 @@ func main() {
 	seqset, _ := imap.NewSeqSet("")
 	seqset.AddRange(mbox.Messages - 3, mbox.Messages)
 
-	messages := make(chan *imap.Message)
-	done = make(chan error, 1)
+	messages := make(chan *imap.Message, 10)
 	go func() {
-		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
+		// c.Fetch would close the messages channel when done.
+		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	for msg := range messages {
 		log.Println(msg.Envelope.Subject)
-	}
-
-	if err := <-done; err != nil {
-		log.Fatal(err)
 	}
 
 	log.Println("Done!")
