@@ -89,7 +89,7 @@ func main() {
 	log.Println("Logged in")
 
 	// List mailboxes
-	mailboxes := make(chan *imap.MailboxInfo)
+	mailboxes := make(chan *imap.MailboxInfo, 10)
 	go func () {
 		if err := c.List("", "*", mailboxes); err != nil {
 			log.Fatal(err)
