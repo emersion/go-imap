@@ -90,18 +90,15 @@ func main() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo)
-	done := make(chan error, 1)
 	go func () {
-		done <- c.List("", "*", mailboxes)
+		if err := c.List("", "*", mailboxes); err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
 		log.Println("* " + m.Name)
-	}
-
-	if err := <-done; err != nil {
-		log.Fatal(err)
 	}
 
 	// Select INBOX
