@@ -21,13 +21,11 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 	if err != nil {
 		return
 	}
-
-	err = status.Err()
-	if err != nil {
+	if err = status.Err(); err != nil {
 		return
 	}
 
-	caps = map[string]bool{}
+	caps = make(map[string]bool)
 	for _, name := range res.Caps {
 		caps[name] = true
 	}

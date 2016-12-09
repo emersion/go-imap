@@ -191,9 +191,11 @@ func (c *Client) handleContinuationReqs(continues chan<- bool) {
 }
 
 func (c *Client) gotStatusCaps(args []interface{}) {
-	c.Caps = map[string]bool{}
+	c.Caps = make(map[string]bool)
 	for _, cap := range args {
-		c.Caps[cap.(string)] = true
+		if cap, ok := cap.(string); ok {
+			c.Caps[cap] = true
+		}
 	}
 }
 
@@ -269,6 +271,14 @@ func (c *Client) handleUnilateral() {
 				break
 			}
 
+			// A CAPABILITY response
+			if name, ok := res.Fields[0].(string); ok && name == imap.Capability {
+				h.Accept()
+				c.gotStatusCaps(res.Fields[1:len(res.Fields)])
+				break
+			}
+
+			// An unilateral EXISTS, RECENT, EXPUNGE or FETCH response
 			name, ok := res.Fields[1].(string)
 			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE" && name != "FETCH") {
 				h.Reject()
