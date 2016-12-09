@@ -228,22 +228,42 @@ func (r *Reader) ReadLiteral() (literal Literal, err error) {
 	return
 }
 
-func (r *Reader) ReadQuotedString() (str string, err error) {
-	char, _, err := r.ReadRune()
-	if err != nil {
-		return
-	}
-	if char != dquote {
-		err = newParseError("quoted string doesn't start with a double quote")
-		return
+func (r *Reader) ReadQuotedString() (string, error) {
+	if char, _, err := r.ReadRune(); err != nil {
+		return "", err
+	} else if char != dquote {
+		return "", newParseError("quoted string doesn't start with a double quote")
 	}
 
-	str, err = r.ReadString(byte(dquote))
-	if err != nil {
-		return
+	var buf bytes.Buffer
+	var escaped bool
+	for {
+		char, _, err := r.ReadRune()
+		if err != nil {
+			return "", err
+		}
+
+		if char == '\\' && !escaped {
+			escaped = true
+		} else {
+			if char == cr || char == lf {
+				r.UnreadRune()
+				return "", newParseError("CR or LF not allowed in quoted string")
+			}
+			if char == dquote && !escaped {
+				break
+			}
+
+			if !strings.ContainsRune(quotedSpecials, char) && escaped {
+				return "", newParseError("quoted string cannot contain backslash followed by a non-quoted-specials char")
+			}
+
+			buf.WriteRune(char)
+			escaped = false
+		}
 	}
-	str = trimSuffix(str, dquote)
-	return
+
+	return buf.String(), nil
 }
 
 func (r *Reader) ReadFields() (fields []interface{}, err error) {

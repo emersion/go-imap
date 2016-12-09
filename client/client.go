@@ -1,17 +1,22 @@
-// An IMAP client.
+// Package client provides an IMAP client.
 package client
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/emersion/go-imap"
 )
 
-// An IMAP client.
+// Used when a connection is closed while waiting for a command response.
+var errClosed = fmt.Errorf("imap: connection closed")
+
+// Client represents an IMAP client.
 type Client struct {
 	conn  *imap.Conn
 	isTLS bool
@@ -48,10 +53,21 @@ type Client struct {
 	// If nil, logging goes to os.Stderr via the log package's
 	// standard logger.
 	ErrorLog imap.Logger
+
+	// Timeout specifies a maximum amount of time to wait on a command.
+	//
+	// A Timeout of zero means no timeout. This is the default.
+	Timeout time.Duration
 }
 
 func (c *Client) read(greeted chan struct{}) error {
 	defer func() {
+		// Ensure we close the greeted channel. New may be waiting on an indication
+		// that we've seen the greeting.
+		if c.greeted != nil {
+			close(c.greeted)
+			c.greeted = nil
+		}
 		close(c.handles)
 		close(c.loggedOut)
 	}()
@@ -102,6 +118,20 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
+	if c.Timeout > 0 {
+		err = c.conn.SetDeadline(time.Now().Add(c.Timeout))
+		if err != nil {
+			return
+		}
+	} else {
+		// It's possible the client had a timeout set from a previous command, but no
+		// longer does. Ensure we respect that. The zero time means no deadline.
+		err = c.conn.SetDeadline(time.Time{})
+		if err != nil {
+			return
+		}
+	}
+
 	// Add handler before sending command, to be sure to get the response in time
 	// (in tests, the response is sent right after our command is received, so
 	// sometimes the response was received before the setup of this handler)
@@ -131,6 +161,12 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	for {
 		select {
+		// If the connection is closed (such as from an I/O error), ensure we realize
+		// this and don't block waiting on a response that will never come. loggedOut
+		// is a channel that closes when the reader goroutine ends.
+		case <-c.loggedOut:
+			err = errClosed
+			return
 		case err = <-written:
 			if err != nil {
 				return
@@ -162,10 +198,10 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	}
 }
 
-// Execute a generic command. cmdr is a value that can be converted to a raw
-// command and res is a value that can handle responses. The function returns
-// when the command has completed or failed, in this case err is nil. A non-nil
-// err value indicates a network error.
+// Execute executes a generic command. cmdr is a value that can be converted to
+// a raw command and res is a value that can handle responses. The function
+// returns when the command has completed or failed, in this case err is nil. A
+// non-nil err value indicates a network error.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
@@ -353,7 +389,7 @@ func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
 	return c.conn.Upgrade(upgrader)
 }
 
-// Get an imap.Writer for this client's connection.
+// Writer returns the imap.Writer for this client's connection.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
@@ -361,7 +397,7 @@ func (c *Client) Writer() *imap.Writer {
 	return c.conn.Writer
 }
 
-// Check if this client's connection has TLS enabled.
+// IsTLS checks if this client's connection has TLS enabled.
 func (c *Client) IsTLS() bool {
 	return c.isTLS
 }
@@ -402,7 +438,7 @@ func New(conn net.Conn) (c *Client, err error) {
 	return
 }
 
-// Connect to an IMAP server using an unencrypted connection.
+// Dial connects to an IMAP server using an unencrypted connection.
 func Dial(addr string) (c *Client, err error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -413,11 +449,63 @@ func Dial(addr string) (c *Client, err error) {
 	return
 }
 
-// Connect to an IMAP server using an encrypted connection.
+// DialWithDialer connects to an IMAP server using an unencrypted connection
+// using dialer.Dial.
+//
+// Among other uses, this allows us to apply a connection timeout.
+func DialWithDialer(dialer *net.Dialer, address string) (c *Client, err error) {
+	conn, err := dialer.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	// We don't return to the caller until we try to receive a greeting. As such,
+	// there is no way to set the client's Timeout for that action. As a
+	// workaround, if the dialer has a timeout set, use that for the connection's
+	// deadline.
+	if dialer.Timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(dialer.Timeout))
+		if err != nil {
+			return
+		}
+	}
+
+	c, err = New(conn)
+	return
+}
+
+// DialTLS connects to an IMAP server using an encrypted connection.
 func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 	conn, err := tls.Dial("tcp", addr, tlsConfig)
 	if err != nil {
 		return
+	}
+
+	c, err = New(conn)
+	c.isTLS = true
+	return
+}
+
+// DialWithDialerTLS connects to an IMAP server using an encrypted connection
+// using dialer.Dial.
+//
+// Among other uses, this allows us to apply a connection timeout.
+func DialWithDialerTLS(dialer *net.Dialer, addr string,
+	tlsConfig *tls.Config) (c *Client, err error) {
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+	if err != nil {
+		return
+	}
+
+	// We don't return to the caller until we try to receive a greeting. As such,
+	// there is no way to set the client's Timeout for that action. As a
+	// workaround, if the dialer has a timeout set, use that for the connection's
+	// deadline.
+	if dialer.Timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(dialer.Timeout))
+		if err != nil {
+			return
+		}
 	}
 
 	c, err = New(conn)
