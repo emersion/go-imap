@@ -91,6 +91,7 @@ func main() {
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	go func () {
+		// c.List will send mailboxes to the channel and close it when done
 		if err := c.List("", "*", mailboxes); err != nil {
 			log.Fatal(err)
 		}
@@ -109,12 +110,18 @@ func main() {
 	log.Println("Flags for INBOX:", mbox.Flags)
 
 	// Get the last 4 messages
-	seqset, _ := imap.NewSeqSet("")
-	seqset.AddRange(mbox.Messages - 3, mbox.Messages)
+	from := uint32(1)
+	to := mbox.Messages
+	if mbox.Messages > 3 {
+		// We're using unsigned integers here, only substract if the result is > 0
+		from = mbox.Messages - 3
+	}
+
+	seqset := &imap.SeqSet{}
+	seqset.AddRange(from, to)
 
 	messages := make(chan *imap.Message, 10)
 	go func() {
-		// c.Fetch would close the messages channel when done.
 		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
 			log.Fatal(err)
 		}
