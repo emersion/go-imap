@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
-	"sort"
 	"testing"
 	"time"
-
-	"github.com/emersion/go-imap/internal"
 )
 
 func TestCanonicalFlag(t *testing.T) {
@@ -25,9 +22,10 @@ func TestNewMessage(t *testing.T) {
 	msg := NewMessage(42, []string{"BODYSTRUCTURE", "FLAGS"})
 
 	expected := &Message{
-		SeqNum: 42,
-		Items:  map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
-		Body:   make(map[*BodySectionName]Literal),
+		SeqNum:     42,
+		Items:      map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
+		Body:       make(map[*BodySectionName]Literal),
+		itemsOrder: []string{"BODYSTRUCTURE", "FLAGS"},
 	}
 
 	if !reflect.DeepEqual(expected, msg) {
@@ -65,6 +63,7 @@ var messageTests = []struct {
 			Flags:         []string{SeenFlag, AnsweredFlag},
 			Size:          4242,
 			Uid:           2424,
+			itemsOrder:    []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
 		},
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
@@ -91,14 +90,12 @@ func TestMessage_Format(t *testing.T) {
 	for i, test := range messageTests {
 		fields := test.message.Format()
 
-		sort.Sort(internal.MapListSorter(fields))
 		got, err := formatFields(fields)
 		if err != nil {
 			t.Error(err)
 			continue
 		}
 
-		sort.Sort(internal.MapListSorter(test.fields))
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {

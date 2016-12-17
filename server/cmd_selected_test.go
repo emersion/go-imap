@@ -211,7 +211,7 @@ func TestFetch(t *testing.T) {
 
 	io.WriteString(c, "a001 FETCH 1 (UID FLAGS)\r\n")
 	scanner.Scan()
-	if scanner.Text() != "* 1 FETCH (UID 6 FLAGS (\\Seen))" && scanner.Text() != "* 1 FETCH (FLAGS (\\Seen) UID 6)" {
+	if scanner.Text() != "* 1 FETCH (UID 6 FLAGS (\\Seen))" {
 		t.Fatal("Invalid FETCH response:", scanner.Text())
 	}
 	scanner.Scan()
@@ -257,7 +257,7 @@ func TestFetch_Uid_UidNotRequested(t *testing.T) {
 
 	io.WriteString(c, "a001 UID FETCH 6 (FLAGS)\r\n")
 	scanner.Scan()
-	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen) UID 6)" && scanner.Text() != "* 1 FETCH (UID 6 FLAGS (\\Seen))" {
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen) UID 6)" {
 		t.Fatal("Invalid FETCH response:", scanner.Text())
 	}
 	scanner.Scan()
@@ -377,7 +377,7 @@ func TestStore_Uid(t *testing.T) {
 	io.WriteString(c, "a001 UID STORE 6 +FLAGS (\\Flagged)\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen \\Flagged) UID 6)" && scanner.Text() != "* 1 FETCH (UID 6 FLAGS (\\Seen \\Flagged))" {
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Seen \\Flagged) UID 6)" {
 		t.Fatal("Invalid FETCH response:", scanner.Text())
 	}
 
