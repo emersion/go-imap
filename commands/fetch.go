@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A FETCH command.
-// See RFC 3501 section 6.4.5
+// Fetch is a FETCH command, as defined in RFC 3501 section 6.4.5.
 type Fetch struct {
 	SeqSet *imap.SeqSet
 	Items  []string

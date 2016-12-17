@@ -4,8 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A CHECK command.
-// See RFC 3501 section 6.4.1
+// Check is a CHECK command, as defined in RFC 3501 section 6.4.1.
 type Check struct{}
 
 func (cmd *Check) Command() *imap.Command {

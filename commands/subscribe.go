@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A SUBSCRIBE command.
-// See RFC 3501 section 6.3.6
+// Subscribe is a SUBSCRIBE command, as defined in RFC 3501 section 6.3.6.
 type Subscribe struct {
 	Mailbox string
 }

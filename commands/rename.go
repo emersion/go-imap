@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A RENAME command.
-// See RFC 3501 section 6.3.5
+// Rename is a RENAME command, as defined in RFC 3501 section 6.3.5.
 type Rename struct {
 	Existing string
 	New      string

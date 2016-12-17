@@ -7,9 +7,8 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A SELECT command.
-// If ReadOnly is set to true, the EXAMINE command will be used instead.
-// See RFC 3501 section 6.3.1
+// Select is a SELECT command, as defined in RFC 3501 section 6.3.1. If ReadOnly
+// is set to true, the EXAMINE command will be used instead.
 type Select struct {
 	Mailbox  string
 	ReadOnly bool

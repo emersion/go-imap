@@ -8,11 +8,14 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+// ErrAlreadyLoggedOut is returned if Logout is called when the client is
+// already logged out.
 var ErrAlreadyLoggedOut = errors.New("Already logged out")
 
-// Request a listing of capabilities that the server supports. Capabilities are
-// often returned by the server with the greeting or with the STARTTLS and LOGIN
-// responses, so usually explicitly requesting capabilities isn't needed.
+// Capability requests a listing of capabilities that the server supports.
+// Capabilities are often returned by the server with the greeting or with the
+// STARTTLS and LOGIN responses, so usually explicitly requesting capabilities
+// isn't needed.
 func (c *Client) Capability() (caps map[string]bool, err error) {
 	cmd := &commands.Capability{}
 	res := &responses.Capability{}
@@ -34,9 +37,10 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 	return
 }
 
-// This command always succeeds. It does nothing.
-// Can be used as a periodic poll for new messages or message status updates
-// during a period of inactivity. Can also be used to reset any inactivity
+// Noop always succeeds and does nothing.
+//
+// It can be used as a periodic poll for new messages or message status updates
+// during a period of inactivity. It can also be used to reset any inactivity
 // autologout timer on the server.
 func (c *Client) Noop() (err error) {
 	cmd := &commands.Noop{}
@@ -50,7 +54,7 @@ func (c *Client) Noop() (err error) {
 	return
 }
 
-// Close the connection.
+// Logout gracefully closes the connection.
 func (c *Client) Logout() error {
 	if c.State == imap.LogoutState {
 		return ErrAlreadyLoggedOut

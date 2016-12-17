@@ -7,9 +7,8 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A LIST command.
-// If Subscribed is set to true, LSUB will be used instead.
-// See RFC 3501 section 6.3.8
+// List is a LIST command, as defined in RFC 3501 section 6.3.8. If Subscribed
+// is set to true, LSUB will be used instead.
 type List struct {
 	Reference string
 	Mailbox   string

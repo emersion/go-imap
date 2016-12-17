@@ -27,7 +27,7 @@ func (u *Update) Done() <-chan struct{} {
 	return u.done
 }
 
-// Marks an update as done.
+// DoneUpdate marks an update as done.
 // TODO: remove this function
 func DoneUpdate(u *Update) {
 	if u.done != nil {
@@ -35,43 +35,45 @@ func DoneUpdate(u *Update) {
 	}
 }
 
-// A status update. See RFC 3501 section 7.1 for a list of status responses.
+// StatusUpdate is a status update. See RFC 3501 section 7.1 for a list of
+// status responses.
 type StatusUpdate struct {
 	Update
 	*imap.StatusResp
 }
 
-// A mailbox update.
+// MailboxUpdate is a mailbox update.
 type MailboxUpdate struct {
 	Update
 	*imap.MailboxStatus
 }
 
-// A message update.
+// MessageUpdate is a message update.
 type MessageUpdate struct {
 	Update
 	*imap.Message
 }
 
-// An expunge update.
+// ExpungeUpdate is an expunge update.
 type ExpungeUpdate struct {
 	Update
 	SeqNum uint32
 }
 
-// A Backend that implements Updater is able to send unilateral backend updates.
-// Backends not implementing this interface don't correctly send unilateral
-// updates, for instance if a user logs in from two connections and deletes a
-// message from one of them, the over is not aware that such a mesage has been
-// deleted. More importantly, backends implementing Updater can notify the user
-// for external updates such as new message notifications.
+// Updater is a Backend that implements Updater is able to send unilateral
+// backend updates. Backends not implementing this interface don't correctly
+// send unilateral updates, for instance if a user logs in from two connections
+// and deletes a message from one of them, the over is not aware that such a
+// mesage has been deleted. More importantly, backends implementing Updater can
+// notify the user for external updates such as new message notifications.
 type Updater interface {
 	// Updates returns a set of channels where updates are sent to.
 	Updates() <-chan interface{}
 }
 
-// A Mailbox that implements UpdaterMailbox is able to poll updates for new
-// messages or message status updates during a period of inactivity.
+// UpdaterMailbox is a Mailbox that implements UpdaterMailbox is able to poll
+// updates for new messages or message status updates during a period of
+// inactivity.
 type UpdaterMailbox interface {
 	// Poll requests mailbox updates.
 	Poll() error

@@ -8,8 +8,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A STATUS command.
-// See RFC 3501 section 6.3.10
+// Status is a STATUS command, as defined in RFC 3501 section 6.3.10.
 type Status struct {
 	Mailbox string
 	Items   []string

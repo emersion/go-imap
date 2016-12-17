@@ -11,8 +11,8 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// An AUTHENTICATE command.
-// See RFC 3501 section 6.2.2
+// Authenticate is an AUTHENTICATE command, as defined in RFC 3501 section
+// 6.2.2.
 type Authenticate struct {
 	Mechanism string
 }

@@ -6,8 +6,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A SEARCH command.
-// See RFC 3501 section 6.4.4
+// Search is a SEARCH command, as defined in RFC 3501 section 6.4.4.
 type Search struct {
 	Charset  string
 	Criteria *imap.SearchCriteria
