@@ -99,6 +99,9 @@ type Message struct {
 	// The message body sections.
 	Body map[*BodySectionName]Literal
 
+	// The order in which items were requested. This order must be preserved
+	// because some bad IMAP clients (looking at you, Outlook!) refuse responses
+	// containing items in a different order.
 	itemsOrder []string
 }
 
@@ -227,6 +230,7 @@ func (m *Message) formatItem(k string) []interface{} {
 func (m *Message) Format() []interface{} {
 	var fields []interface{}
 
+	// First send ordered items
 	processed := make(map[string]bool)
 	for _, k := range m.itemsOrder {
 		if _, ok := m.Items[k]; ok {
@@ -235,6 +239,7 @@ func (m *Message) Format() []interface{} {
 		}
 	}
 
+	// Then send other remaining items
 	for k := range m.Items {
 		if !processed[k] {
 			fields = append(fields, m.formatItem(k)...)
