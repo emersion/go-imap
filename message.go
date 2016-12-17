@@ -108,9 +108,9 @@ type Message struct {
 // Create a new empty message that will contain the specified items.
 func NewMessage(seqNum uint32, items []string) *Message {
 	msg := &Message{
-		SeqNum:    seqNum,
-		Items:     make(map[string]interface{}),
-		Body:      make(map[*BodySectionName]Literal),
+		SeqNum:     seqNum,
+		Items:      make(map[string]interface{}),
+		Body:       make(map[*BodySectionName]Literal),
 		itemsOrder: items,
 	}
 
