@@ -98,14 +98,17 @@ type Message struct {
 	Uid uint32
 	// The message body sections.
 	Body map[*BodySectionName]Literal
+
+	itemsOrder []string
 }
 
 // Create a new empty message that will contain the specified items.
 func NewMessage(seqNum uint32, items []string) *Message {
 	msg := &Message{
-		SeqNum: seqNum,
-		Items:  make(map[string]interface{}),
-		Body:   make(map[*BodySectionName]Literal),
+		SeqNum:    seqNum,
+		Items:     make(map[string]interface{}),
+		Body:      make(map[*BodySectionName]Literal),
+		itemsOrder: items,
 	}
 
 	for _, k := range items {
@@ -119,6 +122,7 @@ func NewMessage(seqNum uint32, items []string) *Message {
 func (m *Message) Parse(fields []interface{}) error {
 	m.Items = make(map[string]interface{})
 	m.Body = map[*BodySectionName]Literal{}
+	m.itemsOrder = nil
 
 	var k string
 	for i, f := range fields {
@@ -130,6 +134,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			k = strings.ToUpper(k)
 		} else { // It's a value
 			m.Items[k] = nil
+			m.itemsOrder = append(m.itemsOrder, k)
 
 			switch k {
 			case BodyMsgAttr, BodyStructureMsgAttr:
@@ -186,39 +191,57 @@ func (m *Message) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (m *Message) Format() (fields []interface{}) {
-	for k, v := range m.Items {
-		var kk interface{} = k
-		switch strings.ToUpper(k) {
-		case BodyMsgAttr, BodyStructureMsgAttr:
-			// Extension data is only returned with the BODYSTRUCTURE fetch
-			m.BodyStructure.Extended = k == BodyStructureMsgAttr
-			v = m.BodyStructure.Format()
-		case EnvelopeMsgAttr:
-			v = m.Envelope.Format()
-		case FlagsMsgAttr:
-			v = FormatStringList(m.Flags)
-		case InternalDateMsgAttr:
-			v = m.InternalDate
-		case SizeMsgAttr:
-			v = m.Size
-		case UidMsgAttr:
-			v = m.Uid
-		default:
-			for section, literal := range m.Body {
-				if section.value == k {
-					// This can contain spaces, so we can't pass it as a string directly
-					kk = section.resp()
-					v = literal
-					break
-				}
+func (m *Message) formatItem(k string) []interface{} {
+	v := m.Items[k]
+	var kk interface{} = k
+
+	switch strings.ToUpper(k) {
+	case BodyMsgAttr, BodyStructureMsgAttr:
+		// Extension data is only returned with the BODYSTRUCTURE fetch
+		m.BodyStructure.Extended = k == BodyStructureMsgAttr
+		v = m.BodyStructure.Format()
+	case EnvelopeMsgAttr:
+		v = m.Envelope.Format()
+	case FlagsMsgAttr:
+		v = FormatStringList(m.Flags)
+	case InternalDateMsgAttr:
+		v = m.InternalDate
+	case SizeMsgAttr:
+		v = m.Size
+	case UidMsgAttr:
+		v = m.Uid
+	default:
+		for section, literal := range m.Body {
+			if section.value == k {
+				// This can contain spaces, so we can't pass it as a string directly
+				kk = section.resp()
+				v = literal
+				break
 			}
 		}
-
-		fields = append(fields, kk, v)
 	}
 
-	return
+	return []interface{}{kk, v}
+}
+
+func (m *Message) Format() []interface{} {
+	var fields []interface{}
+
+	processed := make(map[string]bool)
+	for _, k := range m.itemsOrder {
+		if _, ok := m.Items[k]; ok {
+			fields = append(fields, m.formatItem(k)...)
+			processed[k] = true
+		}
+	}
+
+	for k := range m.Items {
+		if !processed[k] {
+			fields = append(fields, m.formatItem(k)...)
+		}
+	}
+
+	return fields
 }
 
 // Get the body section with the specified name. Returns nil if it's not found.
