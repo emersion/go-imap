@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -88,8 +89,9 @@ func ErrNoStatusResp() error {
 
 // An IMAP server.
 type Server struct {
-	listener net.Listener
-	conns    []Conn
+	locker    sync.Mutex
+	listeners map[net.Listener]struct{}
+	conns     map[Conn]struct{}
 
 	commands   map[string]HandlerFactory
 	auths      map[string]SaslServerFactory
@@ -121,6 +123,8 @@ type Server struct {
 // Create a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
+		listeners: make(map[net.Listener]struct{}),
+		conns: make(map[Conn]struct{}),
 		Backend:  bkd,
 		ErrorLog: log.New(os.Stderr, "imap/server: ", log.LstdFlags),
 	}
@@ -189,8 +193,16 @@ func New(bkd backend.Backend) *Server {
 
 // Serve accepts incoming connections on the Listener l.
 func (s *Server) Serve(l net.Listener) error {
-	s.listener = l
-	defer s.Close()
+	s.locker.Lock()
+	s.listeners[l] = struct{}{}
+	s.locker.Unlock()
+
+	defer func() {
+		s.locker.Lock()
+		defer s.locker.Unlock()
+		l.Close()
+		delete(s.listeners, l)
+	}()
 
 	go s.listenUpdates()
 
@@ -252,17 +264,16 @@ func (s *Server) ListenAndServeTLS() error {
 }
 
 func (s *Server) handleConn(conn Conn) error {
-	s.conns = append(s.conns, conn)
-	defer (func() {
-		conn.Close()
+	s.locker.Lock()
+	s.conns[conn] = struct{}{}
+	s.locker.Unlock()
 
-		for i, c := range s.conns {
-			if c == conn {
-				s.conns = append(s.conns[:i], s.conns[i+1:]...)
-				break
-			}
-		}
-	})()
+	defer func() {
+		s.locker.Lock()
+		defer s.locker.Unlock()
+		conn.Close()
+		delete(s.conns, conn)
+	}()
 
 	// Send greeting
 	if err := conn.greet(); err != nil {
@@ -443,7 +454,8 @@ func (s *Server) listenUpdates() (err error) {
 
 		sends := make(chan struct{})
 		wait := 0
-		for _, conn := range s.conns {
+		s.locker.Lock()
+		for conn := range s.conns {
 			ctx := conn.Context()
 
 			if update.Username != "" && (ctx.User == nil || ctx.User.Username() != update.Username) {
@@ -472,6 +484,7 @@ func (s *Server) listenUpdates() (err error) {
 
 			wait++
 		}
+		s.locker.Unlock()
 
 		if wait > 0 {
 			go func() {
@@ -490,18 +503,23 @@ func (s *Server) listenUpdates() (err error) {
 
 // ForEachConn iterates through all opened connections.
 func (s *Server) ForEachConn(f func(Conn)) {
-	for _, conn := range s.conns {
+	s.locker.Lock()
+	defer s.locker.Unlock()
+	for conn := range s.conns {
 		f(conn)
 	}
 }
 
 // Stops listening and closes all current connections.
 func (s *Server) Close() error {
-	if err := s.listener.Close(); err != nil {
-		return err
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	for l := range s.listeners {
+		l.Close()
 	}
 
-	for _, conn := range s.conns {
+	for conn := range s.conns {
 		conn.Close()
 	}
 
