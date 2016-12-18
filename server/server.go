@@ -213,10 +213,6 @@ func (s *Server) Serve(l net.Listener) error {
 		}
 
 		var conn Conn = newConn(s, c)
-		if s.Debug != nil {
-			conn.conn().SetDebug(s.Debug)
-		}
-
 		for _, ext := range s.extensions {
 			if ext, ok := ext.(ConnExtension); ok {
 				conn = ext.NewConn(conn)
