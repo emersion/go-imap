@@ -124,9 +124,9 @@ type Server struct {
 func New(bkd backend.Backend) *Server {
 	s := &Server{
 		listeners: make(map[net.Listener]struct{}),
-		conns: make(map[Conn]struct{}),
-		Backend:  bkd,
-		ErrorLog: log.New(os.Stderr, "imap/server: ", log.LstdFlags),
+		conns:     make(map[Conn]struct{}),
+		Backend:   bkd,
+		ErrorLog:  log.New(os.Stderr, "imap/server: ", log.LstdFlags),
 	}
 
 	s.auths = map[string]SaslServerFactory{

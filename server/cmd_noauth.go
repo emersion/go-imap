@@ -11,7 +11,7 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// imap errors in Not Authenticated state.
+// IMAP errors in Not Authenticated state.
 var (
 	ErrAlreadyAuthenticated = errors.New("Already authenticated")
 	ErrAuthDisabled         = errors.New("Authentication disabled")
@@ -118,7 +118,7 @@ func (cmd *Authenticate) Handle(conn Conn) error {
 		mechanisms[name] = newSasl(conn)
 	}
 
-	err := cmd.Authenticate.Handle(mechanisms, conn, conn.writer())
+	err := cmd.Authenticate.Handle(mechanisms, conn)
 	if err != nil {
 		return err
 	}

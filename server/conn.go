@@ -34,7 +34,6 @@ type Conn interface {
 	// Close closes this connection.
 	Close() error
 
-	writer() *imap.Writer
 	setTLSConn(*tls.Conn)
 	silent() *bool // TODO: remove this
 	serve() error
@@ -99,10 +98,6 @@ func newConn(s *Server, c net.Conn) *conn {
 	go conn.send()
 
 	return conn
-}
-
-func (c *conn) writer() *imap.Writer {
-	return c.Writer
 }
 
 func (c *conn) Server() *Server {
