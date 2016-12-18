@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -11,39 +12,38 @@ import (
 	"github.com/emersion/go-imap/backend"
 )
 
-// A connection.
+// Conn is a connection to a client.
 type Conn interface {
 	io.Reader
 
-	// Get this connection's server.
+	// Server returns this connection's server.
 	Server() *Server
-	// Get this connection's context.
+	// Context returns this connection's context.
 	Context() *Context
-	// Get a list of capabilities enabled for this connection.
+	// Capabilities returns a list of capabilities enabled for this connection.
 	Capabilities() []string
-	// Write a response to this connection.
+	// WriteResp writes a response to this connection.
 	WriteResp(res imap.WriterTo) error
 	// IsTLS returns true if TLS is enabled.
 	IsTLS() bool
 	// TLSState returns the TLS connection state if TLS is enabled, nil otherwise.
 	TLSState() *tls.ConnectionState
-	// Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
-	// tunnel.
+	// Upgrade upgrades a connection, e.g. wrap an unencrypted connection with an
+	// encrypted tunnel.
 	Upgrade(upgrader imap.ConnUpgrader) error
-	// Close this connection.
+	// Close closes this connection.
 	Close() error
 
 	conn() *imap.Conn
-	setDeadline()
 	reader() *imap.Reader
 	writer() *imap.Writer
-	locker() sync.Locker
-	greet() error
 	setTLSConn(*tls.Conn)
 	silent() *bool // TODO: remove this
+	serve() error
+	commandHandler(cmd *imap.Command) (hdlr Handler, err error)
 }
 
-// A connection's context.
+// Context stores a connection's metadata.
 type Context struct {
 	// This connection's current state.
 	State imap.ConnState
@@ -70,6 +70,7 @@ type conn struct {
 }
 
 func newConn(s *Server, c net.Conn) *conn {
+	// Create an imap.Reader and an imap.Writer
 	continues := make(chan bool)
 	r := imap.NewServerReader(nil, continues)
 	w := imap.NewWriter(nil)
@@ -110,10 +111,6 @@ func (c *conn) writer() *imap.Writer {
 	return c.Writer
 }
 
-func (c *conn) locker() sync.Locker {
-	return c.l
-}
-
 func (c *conn) Server() *Server {
 	return c.s
 }
@@ -147,7 +144,6 @@ func (c *conn) setDeadline() {
 	c.Conn.SetDeadline(t)
 }
 
-// Write a response to this connection.
 func (c *conn) WriteResp(r imap.WriterTo) error {
 	done := make(chan struct{})
 	c.responses <- &response{r, done}
@@ -156,7 +152,6 @@ func (c *conn) WriteResp(r imap.WriterTo) error {
 	return nil
 }
 
-// Close this connection.
 func (c *conn) Close() error {
 	if c.ctx.User != nil {
 		c.ctx.User.Logout()
@@ -266,11 +261,131 @@ func (c *conn) TLSState() *tls.ConnectionState {
 	return nil
 }
 
-// Check if the client can use plain text authentication.
+// canAuth checks if the client can use plain text authentication.
 func (c *conn) canAuth() bool {
 	return c.IsTLS() || c.s.AllowInsecureAuth
 }
 
 func (c *conn) silent() *bool {
 	return &c.silentVal
+}
+
+func (c *conn) serve() error {
+	// Send greeting
+	if err := c.greet(); err != nil {
+		return err
+	}
+
+	for {
+		if c.ctx.State == imap.LogoutState {
+			return nil
+		}
+
+		var res *imap.StatusResp
+		var up Upgrader
+
+		c.Wait()
+		fields, err := c.ReadLine()
+		if err == io.EOF || c.ctx.State == imap.LogoutState {
+			return nil
+		}
+		c.setDeadline()
+
+		if err != nil {
+			if imap.IsParseError(err) {
+				res = &imap.StatusResp{
+					Type: imap.StatusBad,
+					Info: err.Error(),
+				}
+			} else {
+				c.s.ErrorLog.Println("cannot read command:", err)
+				return err
+			}
+		} else {
+			cmd := &imap.Command{}
+			if err := cmd.Parse(fields); err != nil {
+				res = &imap.StatusResp{
+					Tag:  cmd.Tag,
+					Type: imap.StatusBad,
+					Info: err.Error(),
+				}
+			} else {
+				var err error
+				res, up, err = c.handleCommand(cmd)
+				if err != nil {
+					res = &imap.StatusResp{
+						Tag:  cmd.Tag,
+						Type: imap.StatusBad,
+						Info: err.Error(),
+					}
+				}
+			}
+		}
+
+		if res != nil {
+			c.l.Unlock()
+
+			if err := c.WriteResp(res); err != nil {
+				c.s.ErrorLog.Println("cannot write response:", err)
+				c.l.Lock()
+				continue
+			}
+
+			if up != nil && res.Type == imap.StatusOk {
+				if err := up.Upgrade(c); err != nil {
+					c.s.ErrorLog.Println("cannot upgrade connection:", err)
+					return err
+				}
+			}
+
+			c.l.Lock()
+		}
+	}
+}
+
+func (c *conn) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
+	newHandler := c.s.Command(cmd.Name)
+	if newHandler == nil {
+		err = errors.New("Unknown command")
+		return
+	}
+
+	hdlr = newHandler()
+	err = hdlr.Parse(cmd.Arguments)
+	return
+}
+
+func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrader, err error) {
+	hdlr, err := c.commandHandler(cmd)
+	if err != nil {
+		return
+	}
+
+	c.l.Unlock()
+	defer c.l.Lock()
+
+	hdlrErr := hdlr.Handle(c)
+	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
+		res = statusErr.resp
+	} else if hdlrErr != nil {
+		res = &imap.StatusResp{
+			Type: imap.StatusNo,
+			Info: hdlrErr.Error(),
+		}
+	} else {
+		res = &imap.StatusResp{
+			Type: imap.StatusOk,
+		}
+	}
+
+	if res != nil {
+		res.Tag = cmd.Tag
+
+		if res.Type == imap.StatusOk && res.Info == "" {
+			res.Info = cmd.Name + " completed"
+		}
+	}
+
+	up, _ = hdlr.(Upgrader)
+	return
 }

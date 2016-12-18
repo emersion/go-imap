@@ -1,4 +1,4 @@
-// An IMAP server.
+// Package server provides an IMAP server.
 package server
 
 import (
@@ -223,7 +223,7 @@ func (s *Server) Serve(l net.Listener) error {
 			}
 		}
 
-		go s.handleConn(conn)
+		go s.serveConn(conn)
 	}
 }
 
@@ -263,7 +263,7 @@ func (s *Server) ListenAndServeTLS() error {
 	return s.Serve(l)
 }
 
-func (s *Server) handleConn(conn Conn) error {
+func (s *Server) serveConn(conn Conn) error {
 	s.locker.Lock()
 	s.conns[conn] = struct{}{}
 	s.locker.Unlock()
@@ -275,76 +275,7 @@ func (s *Server) handleConn(conn Conn) error {
 		delete(s.conns, conn)
 	}()
 
-	// Send greeting
-	if err := conn.greet(); err != nil {
-		return err
-	}
-
-	for {
-		if conn.Context().State == imap.LogoutState {
-			return nil
-		}
-
-		var res *imap.StatusResp
-		var up Upgrader
-
-		conn.conn().Wait()
-		fields, err := conn.conn().ReadLine()
-		if err == io.EOF || conn.Context().State == imap.LogoutState {
-			return nil
-		}
-		conn.setDeadline()
-
-		if err != nil {
-			if imap.IsParseError(err) {
-				res = &imap.StatusResp{
-					Type: imap.StatusBad,
-					Info: err.Error(),
-				}
-			} else {
-				s.ErrorLog.Println("cannot read command:", err)
-				return err
-			}
-		} else {
-			cmd := &imap.Command{}
-			if err := cmd.Parse(fields); err != nil {
-				res = &imap.StatusResp{
-					Tag:  cmd.Tag,
-					Type: imap.StatusBad,
-					Info: err.Error(),
-				}
-			} else {
-				var err error
-				res, up, err = s.handleCommand(cmd, conn)
-				if err != nil {
-					res = &imap.StatusResp{
-						Tag:  cmd.Tag,
-						Type: imap.StatusBad,
-						Info: err.Error(),
-					}
-				}
-			}
-		}
-
-		if res != nil {
-			conn.locker().Unlock()
-
-			if err := conn.WriteResp(res); err != nil {
-				s.ErrorLog.Println("cannot write response:", err)
-				conn.locker().Lock()
-				continue
-			}
-
-			if up != nil && res.Type == imap.StatusOk {
-				if err := up.Upgrade(conn); err != nil {
-					s.ErrorLog.Println("cannot upgrade connection:", err)
-					return err
-				}
-			}
-
-			conn.locker().Lock()
-		}
-	}
+	return conn.serve()
 }
 
 // Get a command handler factory for the provided command name.
@@ -357,53 +288,6 @@ func (s *Server) Command(name string) HandlerFactory {
 	}
 
 	return s.commands[name]
-}
-
-func (s *Server) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
-	newHandler := s.Command(cmd.Name)
-	if newHandler == nil {
-		err = errors.New("Unknown command")
-		return
-	}
-
-	hdlr = newHandler()
-	err = hdlr.Parse(cmd.Arguments)
-	return
-}
-
-func (s *Server) handleCommand(cmd *imap.Command, conn Conn) (res *imap.StatusResp, up Upgrader, err error) {
-	hdlr, err := s.commandHandler(cmd)
-	if err != nil {
-		return
-	}
-
-	conn.locker().Unlock()
-	defer conn.locker().Lock()
-
-	hdlrErr := hdlr.Handle(conn)
-	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
-		res = statusErr.resp
-	} else if hdlrErr != nil {
-		res = &imap.StatusResp{
-			Type: imap.StatusNo,
-			Info: hdlrErr.Error(),
-		}
-	} else {
-		res = &imap.StatusResp{
-			Type: imap.StatusOk,
-		}
-	}
-
-	if res != nil {
-		res.Tag = cmd.Tag
-
-		if res.Type == imap.StatusOk && res.Info == "" {
-			res.Info = cmd.Name + " completed"
-		}
-	}
-
-	up, _ = hdlr.(Upgrader)
-	return
 }
 
 func (s *Server) listenUpdates() (err error) {
