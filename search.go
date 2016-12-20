@@ -8,7 +8,7 @@ import (
 
 // TODO: support AND with same fields (e.g. BCC mickey BCC mouse)
 
-// A search criteria.
+// SearchCriteria is a search criteria.
 // See RFC 3501 section 6.4.4 for a description of each field.
 type SearchCriteria struct {
 	SeqSet     *SeqSet
@@ -57,10 +57,8 @@ func maybeString(mystery interface{}) string {
 	return ""
 }
 
-// Parse search criteria from fields.
+// Parse parses search criteria from fields.
 func (c *SearchCriteria) Parse(fields []interface{}) error {
-	// TODO: do not panic when criteria is malformed
-
 	for i := 0; i < len(fields); i++ {
 		f, ok := fields[i].(string)
 		if !ok {
@@ -192,8 +190,10 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 	return nil
 }
 
-// Format search criteria to fields.
-func (c *SearchCriteria) Format() (fields []interface{}) {
+// Format formats search criteria to fields.
+func (c *SearchCriteria) Format() []interface{} {
+	var fields []interface{}
+
 	if c.SeqSet != nil {
 		fields = append(fields, c.SeqSet)
 	}
@@ -301,5 +301,5 @@ func (c *SearchCriteria) Format() (fields []interface{}) {
 		fields = append(fields, "UNSEEN")
 	}
 
-	return
+	return fields
 }
