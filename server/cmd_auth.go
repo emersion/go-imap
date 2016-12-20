@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -228,8 +229,13 @@ func (cmd *Append) Handle(conn Conn) error {
 	}
 
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
-		// TODO: add [TRYCREATE] to the NO response
+	if err == backend.ErrNoSuchMailbox {
+		return ErrStatusResp(&imap.StatusResp{
+			Type: imap.StatusNo,
+			Code: imap.CodeTryCreate,
+			Info: err.Error(),
+		})
+	} else if err != nil {
 		return err
 	}
 
