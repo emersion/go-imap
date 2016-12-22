@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A DELETE command.
-// See RFC 3501 section 6.3.3
+// Delete is a DELETE command, as defined in RFC 3501 section 6.3.3.
 type Delete struct {
 	Mailbox string
 }

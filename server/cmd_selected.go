@@ -288,7 +288,7 @@ type Uid struct {
 
 func (cmd *Uid) Handle(conn Conn) error {
 	inner := cmd.Cmd.Command()
-	hdlr, err := conn.Server().commandHandler(inner)
+	hdlr, err := conn.commandHandler(inner)
 	if err != nil {
 		return err
 	}

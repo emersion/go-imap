@@ -6,8 +6,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A LOGIN command.
-// See RFC 3501 section 6.2.2
+// Login is a LOGIN command, as defined in RFC 3501 section 6.2.2.
 type Login struct {
 	Username string
 	Password string

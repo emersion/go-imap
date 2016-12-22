@@ -11,8 +11,16 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// An AUTHENTICATE command.
-// See RFC 3501 section 6.2.2
+// AuthenticateConn is a connection that supports IMAP authentication.
+type AuthenticateConn interface {
+	io.Reader
+
+	// WriteResp writes an IMAP response to this connection.
+	WriteResp(res imap.WriterTo) error
+}
+
+// Authenticate is an AUTHENTICATE command, as defined in RFC 3501 section
+// 6.2.2.
 type Authenticate struct {
 	Mechanism string
 }
@@ -38,40 +46,37 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, r io.Reader, w *imap.Writer) (err error) {
+func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn AuthenticateConn) error {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
-		err = errors.New("Unsupported mechanism")
-		return
+		return errors.New("Unsupported mechanism")
 	}
 
-	scanner := bufio.NewScanner(r)
+	scanner := bufio.NewScanner(conn)
 
 	var response []byte
 	for {
-		var challenge []byte
-		var done bool
-		challenge, done, err = sasl.Next(response)
+		challenge, done, err := sasl.Next(response)
 		if err != nil || done {
-			return
+			return err
 		}
 
 		encoded := base64.StdEncoding.EncodeToString(challenge)
 		cont := &imap.ContinuationResp{Info: encoded}
-		if err = cont.WriteTo(w); err != nil {
-			return
+		if err := conn.WriteResp(cont); err != nil {
+			return err
 		}
 
 		scanner.Scan()
-		if err = scanner.Err(); err != nil {
-			return
+		if err := scanner.Err(); err != nil {
+			return err
 		}
 
 		encoded = scanner.Text()
 		if encoded != "" {
 			response, err = base64.StdEncoding.DecodeString(encoded)
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}

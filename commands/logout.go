@@ -4,8 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A LOGOUT command.
-// See RFC 3501 section 6.1.3
+// Logout is a LOGOUT command, as defined in RFC 3501 section 6.1.3.
 type Logout struct{}
 
 func (c *Logout) Command() *imap.Command {

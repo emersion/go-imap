@@ -9,11 +9,13 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+// ErrNoMailboxSelected is returned if a command that requires a mailbox to be
+// selected is called when there isn't.
 var ErrNoMailboxSelected = errors.New("No mailbox selected")
 
-// Requests a checkpoint of the currently selected mailbox. A checkpoint refers
-// to any implementation-dependent housekeeping associated with the mailbox that
-// is not normally executed as part of each command.
+// Check requests a checkpoint of the currently selected mailbox. A checkpoint
+// refers to any implementation-dependent housekeeping associated with the
+// mailbox that is not normally executed as part of each command.
 func (c *Client) Check() (err error) {
 	if c.State != imap.SelectedState {
 		err = ErrNoMailboxSelected
@@ -31,9 +33,9 @@ func (c *Client) Check() (err error) {
 	return
 }
 
-// Permanently removes all messages that have the \Deleted flag set from the
-// currently selected mailbox, and returns to the authenticated state from the
-// selected state.
+// Close permanently removes all messages that have the \Deleted flag set from
+// the currently selected mailbox, and returns to the authenticated state from
+// the selected state.
 func (c *Client) Close() (err error) {
 	if c.State != imap.SelectedState {
 		err = ErrNoMailboxSelected
@@ -57,9 +59,9 @@ func (c *Client) Close() (err error) {
 	return
 }
 
-// Permanently removes all messages that have the \Deleted flag set from the
-// currently selected mailbox.
-// If ch is not nil, sends sequence IDs of each deleted message to this channel.
+// Expunge permanently removes all messages that have the \Deleted flag set from
+// the currently selected mailbox. If ch is not nil, sends sequence IDs of each
+// deleted message to this channel.
 func (c *Client) Expunge(ch chan uint32) (err error) {
 	if ch != nil {
 		defer close(ch)
@@ -84,16 +86,6 @@ func (c *Client) Expunge(ch chan uint32) (err error) {
 
 	err = status.Err()
 	return
-}
-
-func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
-	ids, status, err := c.executeSearch(uid, criteria, "UTF-8")
-	if status != nil && status.Code == imap.CodeBadCharset {
-		ids, _, err = c.executeSearch(uid, criteria, "US-ASCII")
-		return
-	}
-
-	return ids, err
 }
 
 func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset string) (ids []uint32, status *imap.StatusResp, err error) {
@@ -124,19 +116,28 @@ func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset 
 	return
 }
 
-// Searches the mailbox for messages that match the given searching criteria.
-// Searching criteria consist of one or more search keys. The response contains
-// a list of message sequence IDs corresponding to those messages that match the
+func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
+	ids, status, err := c.executeSearch(uid, criteria, "UTF-8")
+	if status != nil && status.Code == imap.CodeBadCharset {
+		ids, _, err = c.executeSearch(uid, criteria, "US-ASCII")
+		return
+	}
+
+	return ids, err
+}
+
+// Search searches the mailbox for messages that match the given searching
+// criteria. Searching criteria consist of one or more search keys. The response
+// contains a list of message sequence IDs corresponding to those messages that
+// match the searching criteria. When multiple keys are specified, the result is
+// the intersection (AND function) of all the messages that match those keys.
+// Criteria must be UTF-8 encoded. See RFC 3501 section 6.4.4 for a list of
 // searching criteria.
-// When multiple keys are specified, the result is the intersection (AND
-// function) of all the messages that match those keys.
-// Criteria must be UTF-8 encoded.
-// See RFC 3501 section 6.4.4 for a list of searching criteria.
 func (c *Client) Search(criteria *imap.SearchCriteria) (seqNums []uint32, err error) {
 	return c.search(false, criteria)
 }
 
-// Identical to Search, but unique identifiers are returned instead of message
+// UidSearch is identical to Search, but UIDs are returned instead of message
 // sequence numbers.
 func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) {
 	return c.search(true, criteria)
@@ -170,14 +171,14 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *i
 	return
 }
 
-// Retrieves data associated with a message in the mailbox.
-// See RFC 3501 section 6.4.5 for a list of items that can be requested.
+// Fetch retrieves data associated with a message in the mailbox. See RFC 3501
+// section 6.4.5 for a list of items that can be requested.
 func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) (err error) {
 	return c.fetch(false, seqset, items, ch)
 }
 
-// Identical to Fetch, but seqset is interpreted as containing unique
-// identifiers instead of message sequence numbers.
+// UidFetch is identical to Fetch, but seqset is interpreted as containing
+// unique identifiers instead of message sequence numbers.
 func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) (err error) {
 	return c.fetch(true, seqset, items, ch)
 }
@@ -224,15 +225,15 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 	return
 }
 
-// Alters data associated with a message in the mailbox. If ch is not nil, the
-// updated value of the data will be sent to this channel.
-// See RFC 3501 section 6.4.6 for a list of items that can be updated.
+// Store alters data associated with a message in the mailbox. If ch is not nil,
+// the updated value of the data will be sent to this channel. See RFC 3501
+// section 6.4.6 for a list of items that can be updated.
 func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
 	return c.store(false, seqset, item, value, ch)
 }
 
-// Identical to Store, but seqset is interpreted as containing unique
-// identifiers instead of message sequence numbers.
+// UidStore is identical to Store, but seqset is interpreted as containing
+// unique identifiers instead of message sequence numbers.
 func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) (err error) {
 	return c.store(true, seqset, item, value, ch)
 }
@@ -261,13 +262,13 @@ func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) (err error) {
 	return
 }
 
-// Copies the specified message(s) to the end of the specified destination
+// Copy copies the specified message(s) to the end of the specified destination
 // mailbox.
 func (c *Client) Copy(seqset *imap.SeqSet, dest string) (err error) {
 	return c.copy(false, seqset, dest)
 }
 
-// Identical to Copy, but seqset is interpreted as containing unique
+// UidCopy is identical to Copy, but seqset is interpreted as containing unique
 // identifiers instead of message sequence numbers.
 func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) (err error) {
 	return c.copy(true, seqset, dest)

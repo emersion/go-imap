@@ -1,19 +1,18 @@
-// An IMAP4rev1 (RFC 3501) library written in Go. It can be used to build a
-// client and/or a server and supports UTF-7.
+// Package imap implements IMAP4rev1 (RFC 3501).
 package imap
 
-// An operation that will be applied on message flags.
+// FlagsOp is an operation that will be applied on message flags.
 type FlagsOp string
 
 const (
-	// Replace existing flags by new ones
+	// SetFlags replaces existing flags by new ones.
 	SetFlags FlagsOp = "FLAGS"
-	// Add new flags
+	// AddFlags adds new flags.
 	AddFlags = "+FLAGS"
-	// Remove existing flags
+	// RemoveFlags removes existing flags.
 	RemoveFlags = "-FLAGS"
 )
 
-// Appending this to a FlagsOp makes the operation not trigger unilateral
-// message updates.
+// SilentOp can be appended to a FlagsOp to prevent the operation from
+// triggering unilateral message updates.
 const SilentOp = ".SILENT"

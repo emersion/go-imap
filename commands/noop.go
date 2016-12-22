@@ -4,8 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A NOOP command.
-// See RFC 3501 section 6.1.2
+// Noop is a NOOP command, as defined in RFC 3501 section 6.1.2.
 type Noop struct{}
 
 func (c *Noop) Command() *imap.Command {

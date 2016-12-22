@@ -89,19 +89,17 @@ func main() {
 	log.Println("Logged in")
 
 	// List mailboxes
-	mailboxes := make(chan *imap.MailboxInfo)
-	done := make(chan error, 1)
+	mailboxes := make(chan *imap.MailboxInfo, 10)
 	go func () {
-		done <- c.List("", "*", mailboxes)
+		// c.List will send mailboxes to the channel and close it when done
+		if err := c.List("", "*", mailboxes); err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
 		log.Println("* " + m.Name)
-	}
-
-	if err := <-done; err != nil {
-		log.Fatal(err)
 	}
 
 	// Select INBOX
@@ -112,21 +110,25 @@ func main() {
 	log.Println("Flags for INBOX:", mbox.Flags)
 
 	// Get the last 4 messages
-	seqset, _ := imap.NewSeqSet("")
-	seqset.AddRange(mbox.Messages - 3, mbox.Messages)
+	from := uint32(1)
+	to := mbox.Messages
+	if mbox.Messages > 3 {
+		// We're using unsigned integers here, only substract if the result is > 0
+		from = mbox.Messages - 3
+	}
 
-	messages := make(chan *imap.Message)
-	done = make(chan error, 1)
+	seqset := &imap.SeqSet{}
+	seqset.AddRange(from, to)
+
+	messages := make(chan *imap.Message, 10)
 	go func() {
-		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
+		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	for msg := range messages {
 		log.Println(msg.Envelope.Subject)
-	}
-
-	if err := <-done; err != nil {
-		log.Fatal(err)
 	}
 
 	log.Println("Done!")

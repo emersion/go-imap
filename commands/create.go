@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A CREATE command.
-// See RFC 3501 section 6.3.3
+// Create is a CREATE command, as defined in RFC 3501 section 6.3.3.
 type Create struct {
 	Mailbox string
 }

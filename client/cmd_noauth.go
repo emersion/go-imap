@@ -12,17 +12,24 @@ import (
 )
 
 var (
-	ErrAlreadyLoggedIn   = errors.New("Already logged in")
+	// ErrAlreadyLoggedIn is returned if Login or Authenticate is called when the
+	// client is already logged in.
+	ErrAlreadyLoggedIn = errors.New("Already logged in")
+	// ErrTLSAlreadyEnabled is returned if StartTLS is called when TLS is already
+	// enabled.
 	ErrTLSAlreadyEnabled = errors.New("TLS is already enabled")
-	ErrLoginDisabled     = errors.New("Login is disabled in current state")
+	// ErrLoginDisabled is returned if Login or Authenticate is called when the
+	// server has disabled authentication. Most of the time, calling enabling TLS
+	// solves the problem.
+	ErrLoginDisabled = errors.New("Login is disabled in current state")
 )
 
-// Check if the server supports STARTTLS.
+// SupportsStartTLS checks if the server supports STARTTLS.
 func (c *Client) SupportsStartTLS() bool {
 	return c.Caps[imap.StartTLS]
 }
 
-// If the connection to the IMAP server isn't secure, starts TLS negotiation.
+// StartTLS starts TLS negotiation.
 //
 // This function also resets c.Caps because capabilities change when TLS is
 // enabled.
@@ -57,23 +64,22 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	return
 }
 
-// Check if the server supports a given authentication mechanism.
+// SupportsAuth checks if the server supports a given authentication mechanism.
 func (c *Client) SupportsAuth(mech string) bool {
 	return c.Caps["AUTH="+mech]
 }
 
-// Indicates a SASL authentication mechanism to the server. If the server
-// supports the requested authentication mechanism, it performs an
+// Authenticate indicates a SASL authentication mechanism to the server. If the
+// server supports the requested authentication mechanism, it performs an
 // authentication protocol exchange to authenticate and identify the client.
-func (c *Client) Authenticate(auth sasl.Client) (err error) {
+func (c *Client) Authenticate(auth sasl.Client) error {
 	if c.State != imap.NotAuthenticatedState {
-		err = ErrAlreadyLoggedIn
-		return
+		return ErrAlreadyLoggedIn
 	}
 
 	mech, ir, err := auth.Start()
 	if err != nil {
-		return
+		return err
 	}
 
 	cmd := &commands.Authenticate{
@@ -88,10 +94,10 @@ func (c *Client) Authenticate(auth sasl.Client) (err error) {
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
-		return
+		return err
 	}
 	if err = status.Err(); err != nil {
-		return
+		return err
 	}
 
 	c.State = imap.AuthenticatedState
@@ -100,11 +106,10 @@ func (c *Client) Authenticate(auth sasl.Client) (err error) {
 	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
-
-	return
+	return nil
 }
 
-// Identifies the client to the server and carries the plaintext password
+// Login identifies the client to the server and carries the plaintext password
 // authenticating this user.
 func (c *Client) Login(username, password string) (err error) {
 	if c.State != imap.NotAuthenticatedState {

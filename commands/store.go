@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A STORE command.
-// See RFC 3501 section 6.4.6
+// Store is a STORE command, as defined in RFC 3501 section 6.4.6.
 type Store struct {
 	SeqSet *imap.SeqSet
 	Item   string

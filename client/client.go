@@ -13,10 +13,11 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// Used when a connection is closed while waiting for a command response.
+// errClosed is used when a connection is closed while waiting for a command
+// response.
 var errClosed = fmt.Errorf("imap: connection closed")
 
-// Client represents an IMAP client.
+// Client is an IMAP client.
 type Client struct {
 	conn  *imap.Conn
 	isTLS bool

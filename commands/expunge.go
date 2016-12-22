@@ -4,8 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// An EXPUNGE command.
-// See RFC 3501 section 6.4.3
+// Expunge is an EXPUNGE command, as defined in RFC 3501 section 6.4.3.
 type Expunge struct{}
 
 func (cmd *Expunge) Command() *imap.Command {

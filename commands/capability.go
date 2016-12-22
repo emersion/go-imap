@@ -4,8 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A CAPABILITY command.
-// See RFC 3501 section 6.1.1
+// Capability is a CAPABILITY command, as defined in RFC 3501 section 6.1.1.
 type Capability struct{}
 
 func (c *Capability) Command() *imap.Command {

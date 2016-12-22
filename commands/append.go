@@ -8,8 +8,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// An APPEND command.
-// See RFC 3501 section 6.3.11
+// Append is an APPEND command, as defined in RFC 3501 section 6.3.11.
 type Append struct {
 	Mailbox string
 	Flags   []string

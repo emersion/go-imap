@@ -31,7 +31,6 @@ func (m *Message) Metadata(items []string) (metadata *imap.Message) {
 			metadata.Uid = m.Uid
 		default:
 			section, err := imap.NewBodySectionName(item)
-			item = ""
 			if err != nil {
 				break
 			}

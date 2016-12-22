@@ -7,8 +7,7 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
-// A COPY command.
-// See RFC 3501 section 6.4.7
+// Copy is a COPY command, as defined in RFC 3501 section 6.4.7.
 type Copy struct {
 	SeqSet  *imap.SeqSet
 	Mailbox string

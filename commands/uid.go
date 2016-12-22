@@ -7,8 +7,8 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A UID command.
-// See RFC 3501 section 6.4.8
+// Uid is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another
+// command (e.g. wrapping a Fetch command will result in a UID FETCH).
 type Uid struct {
 	Cmd imap.Commander
 }
