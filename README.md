@@ -64,6 +64,7 @@ package main
 
 import (
 	"log"
+	"mime"
 
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap"
@@ -116,9 +117,10 @@ func main() {
 		// We're using unsigned integers here, only substract if the result is > 0
 		from = mbox.Messages - 3
 	}
-
 	seqset := &imap.SeqSet{}
 	seqset.AddRange(from, to)
+
+	dec := new(mime.WordDecoder)
 
 	messages := make(chan *imap.Message, 10)
 	go func() {
@@ -127,8 +129,11 @@ func main() {
 		}
 	}()
 
+	log.Println("Last 4 messages:")
 	for msg := range messages {
-		log.Println(msg.Envelope.Subject)
+		if subject, err := dec.DecodeHeader(msg.Envelope.Subject); err == nil {
+			log.Println("* " + subject)
+		}
 	}
 
 	log.Println("Done!")
