@@ -120,8 +120,6 @@ func main() {
 	seqset := &imap.SeqSet{}
 	seqset.AddRange(from, to)
 
-	dec := new(mime.WordDecoder)
-
 	messages := make(chan *imap.Message, 10)
 	go func() {
 		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
@@ -130,6 +128,7 @@ func main() {
 	}()
 
 	log.Println("Last 4 messages:")
+	dec := new(mime.WordDecoder)
 	for msg := range messages {
 		if subject, err := dec.DecodeHeader(msg.Envelope.Subject); err == nil {
 			log.Println("* " + subject)
