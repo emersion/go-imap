@@ -33,7 +33,10 @@ func (c *Client) Capability() (caps map[string]bool, err error) {
 		caps[name] = true
 	}
 
+	c.capsLocker.Lock()
 	c.Caps = caps
+	c.capsLocker.Unlock()
+
 	return
 }
 

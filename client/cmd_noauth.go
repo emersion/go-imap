@@ -26,7 +26,10 @@ var (
 
 // SupportsStartTLS checks if the server supports STARTTLS.
 func (c *Client) SupportsStartTLS() bool {
-	return c.Caps[imap.StartTLS]
+	c.capsLocker.Lock()
+	tls := c.Caps[imap.StartTLS]
+	c.capsLocker.Unlock()
+	return tls
 }
 
 // StartTLS starts TLS negotiation.
@@ -53,7 +56,10 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 			return nil, err
 		}
 
+		c.capsLocker.Lock()
 		c.Caps = nil
+		c.capsLocker.Unlock()
+
 		return tlsConn, nil
 	})
 	if err != nil {
@@ -66,7 +72,10 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 
 // SupportsAuth checks if the server supports a given authentication mechanism.
 func (c *Client) SupportsAuth(mech string) bool {
-	return c.Caps["AUTH="+mech]
+	c.capsLocker.Lock()
+	auth := c.Caps["AUTH="+mech]
+	c.capsLocker.Unlock()
+	return auth
 }
 
 // Authenticate indicates a SASL authentication mechanism to the server. If the
@@ -101,11 +110,15 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 	}
 
 	c.State = imap.AuthenticatedState
+
+	c.capsLocker.Lock()
 	c.Caps = nil
+	c.capsLocker.Unlock()
 
 	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
+
 	return nil
 }
 
@@ -116,10 +129,14 @@ func (c *Client) Login(username, password string) (err error) {
 		err = ErrAlreadyLoggedIn
 		return
 	}
+
+	c.capsLocker.Lock()
 	if c.Caps["LOGINDISABLED"] {
+		c.capsLocker.Unlock()
 		err = ErrLoginDisabled
 		return
 	}
+	c.capsLocker.Unlock()
 
 	cmd := &commands.Login{
 		Username: username,
@@ -135,7 +152,10 @@ func (c *Client) Login(username, password string) (err error) {
 	}
 
 	c.State = imap.AuthenticatedState
+
+	c.capsLocker.Lock()
 	c.Caps = nil
+	c.capsLocker.Unlock()
 
 	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
