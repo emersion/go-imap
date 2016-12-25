@@ -26,29 +26,28 @@ func TestClient_StartTLS(t *testing.T) {
 		Certificates:       []tls.Certificate{cert},
 	}
 
-	ct := func(c *client.Client) (err error) {
+	ct := func(c *client.Client) error {
 		if c.IsTLS() {
-			err = fmt.Errorf("Client has TLS enabled before STARTTLS")
-			return
+			return fmt.Errorf("Client has TLS enabled before STARTTLS")
 		}
 
-		if !c.SupportsStartTLS() {
-			err = fmt.Errorf("Server doesn't support STARTTLS")
-			return
+
+		if ok, err := c.SupportStartTLS(); err != nil {
+			return err
+		} else if !ok {
+			return fmt.Errorf("Server doesn't support STARTTLS")
 		}
 
-		err = c.StartTLS(tlsConfig)
-		if err != nil {
-			return
+		if err := c.StartTLS(tlsConfig); err != nil {
+			return err
 		}
 
 		if !c.IsTLS() {
-			err = fmt.Errorf("Client has not TLS enabled after STARTTLS")
-			return
+			return fmt.Errorf("Client has not TLS enabled after STARTTLS")
 		}
 
-		_, err = c.Capability()
-		return
+		_, err := c.Capability()
+		return err
 	}
 
 	st := func(c net.Conn) {
@@ -81,24 +80,24 @@ func TestClient_StartTLS(t *testing.T) {
 }
 
 func TestClient_Authenticate(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		if !c.SupportsAuth("PLAIN") {
-			err = fmt.Errorf("Server doesn't support AUTH=PLAIN")
-			return
+	ct := func(c *client.Client) error {
+		if ok, err := c.SupportAuth(sasl.Plain); err != nil {
+			return err
+		} else if !ok {
+			return fmt.Errorf("Server doesn't support AUTH=PLAIN")
 		}
 
 		sasl := sasl.NewPlainClient("", "username", "password")
 
-		err = c.Authenticate(sasl)
-		if err != nil {
-			return
+		if err := c.Authenticate(sasl); err != nil {
+			return err
 		}
 
 		if c.State != imap.AuthenticatedState {
 			return fmt.Errorf("Client is not in authenticated state after AUTENTICATE")
 		}
 
-		return
+		return nil
 	}
 
 	st := func(c net.Conn) {

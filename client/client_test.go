@@ -90,7 +90,9 @@ func removeCmdTag(cmd string) string {
 
 func TestClient(t *testing.T) {
 	ct := func(c *client.Client) error {
-		if !c.Caps["IMAP4rev1"] {
+		if ok, err := c.Support("IMAP4rev1"); err != nil {
+			return err
+		} else if !ok {
 			return errors.New("Server hasn't IMAP4rev1 capability")
 		}
 		return nil

@@ -16,28 +16,47 @@ var ErrAlreadyLoggedOut = errors.New("Already logged out")
 // Capabilities are often returned by the server with the greeting or with the
 // STARTTLS and LOGIN responses, so usually explicitly requesting capabilities
 // isn't needed.
-func (c *Client) Capability() (caps map[string]bool, err error) {
+//
+// Most of the time, Support should be used instead.
+func (c *Client) Capability() (map[string]bool, error) {
 	cmd := &commands.Capability{}
 	res := &responses.Capability{}
 
-	status, err := c.execute(cmd, res)
-	if err != nil {
-		return
-	}
-	if err = status.Err(); err != nil {
-		return
+	if status, err := c.execute(cmd, res); err != nil {
+		return nil, err
+	} else if err := status.Err(); err != nil {
+		return nil, err
 	}
 
-	caps = make(map[string]bool)
+	caps := make(map[string]bool)
 	for _, name := range res.Caps {
 		caps[name] = true
 	}
 
 	c.capsLocker.Lock()
-	c.Caps = caps
+	c.caps = caps
+	c.capsLocker.Unlock()
+	return caps, nil
+}
+
+// Support checks if cap is a capability supported by the server. If the server
+// hasn't sent its capabilities yet, Support requests them.
+func (c *Client) Support(cap string) (bool, error) {
+	c.capsLocker.Lock()
+	ok := c.caps != nil
 	c.capsLocker.Unlock()
 
-	return
+	// If capabilities are not cached, request them
+	if !ok {
+		if _, err := c.Capability(); err != nil {
+			return false, err
+		}
+	}
+
+	c.capsLocker.Lock()
+	supported := c.caps[cap]
+	c.capsLocker.Unlock()
+	return supported, nil
 }
 
 // Noop always succeeds and does nothing.
