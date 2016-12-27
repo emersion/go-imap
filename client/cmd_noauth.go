@@ -24,15 +24,12 @@ var (
 	ErrLoginDisabled = errors.New("Login is disabled in current state")
 )
 
-// SupportsStartTLS checks if the server supports STARTTLS.
-func (c *Client) SupportsStartTLS() bool {
-	return c.Caps[imap.StartTLS]
+// SupportStartTLS checks if the server supports STARTTLS.
+func (c *Client) SupportStartTLS() (bool, error) {
+	return c.Support(imap.StartTLS)
 }
 
 // StartTLS starts TLS negotiation.
-//
-// This function also resets c.Caps because capabilities change when TLS is
-// enabled.
 func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	if c.isTLS {
 		err = ErrTLSAlreadyEnabled
@@ -53,7 +50,11 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 			return nil, err
 		}
 
-		c.Caps = nil
+		// Capabilities change when TLS is enabled
+		c.capsLocker.Lock()
+		c.caps = nil
+		c.capsLocker.Unlock()
+
 		return tlsConn, nil
 	})
 	if err != nil {
@@ -64,9 +65,9 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 	return
 }
 
-// SupportsAuth checks if the server supports a given authentication mechanism.
-func (c *Client) SupportsAuth(mech string) bool {
-	return c.Caps["AUTH="+mech]
+// SupportAuth checks if the server supports a given authentication mechanism.
+func (c *Client) SupportAuth(mech string) (bool, error) {
+	return c.Support("AUTH="+mech)
 }
 
 // Authenticate indicates a SASL authentication mechanism to the server. If the
@@ -101,24 +102,31 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 	}
 
 	c.State = imap.AuthenticatedState
-	c.Caps = nil
 
-	if status.Code == "CAPABILITY" {
+	// Capabilities change when user is logged in
+	c.capsLocker.Lock()
+	c.caps = nil
+	c.capsLocker.Unlock()
+
+	if status.Code == imap.Capability {
 		c.gotStatusCaps(status.Arguments)
 	}
+
 	return nil
 }
 
 // Login identifies the client to the server and carries the plaintext password
 // authenticating this user.
-func (c *Client) Login(username, password string) (err error) {
+func (c *Client) Login(username, password string) error {
 	if c.State != imap.NotAuthenticatedState {
-		err = ErrAlreadyLoggedIn
-		return
+		return ErrAlreadyLoggedIn
 	}
-	if c.Caps["LOGINDISABLED"] {
-		err = ErrLoginDisabled
-		return
+
+	c.capsLocker.Lock()
+	loginDisabled := c.caps != nil && c.caps["LOGINDISABLED"]
+	c.capsLocker.Unlock()
+	if loginDisabled {
+		return ErrLoginDisabled
 	}
 
 	cmd := &commands.Login{
@@ -128,18 +136,20 @@ func (c *Client) Login(username, password string) (err error) {
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
-		return
+		return err
 	}
 	if err = status.Err(); err != nil {
-		return
+		return err
 	}
 
 	c.State = imap.AuthenticatedState
-	c.Caps = nil
+
+	c.capsLocker.Lock()
+	c.caps = nil
+	c.capsLocker.Unlock()
 
 	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
-
-	return
+	return nil
 }

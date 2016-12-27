@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -27,8 +28,11 @@ type Client struct {
 	greeted   chan struct{}
 	loggedOut chan struct{}
 
-	// The server capabilities.
-	Caps map[string]bool
+	// The cached server capabilities.
+	caps map[string]bool
+	// The caps map may be accessed in different goroutines. Protect access.
+	capsLocker sync.Mutex
+
 	// The current connection state.
 	State imap.ConnState
 	// The selected mailbox, if there is one.
@@ -228,12 +232,16 @@ func (c *Client) handleContinuationReqs(continues chan<- bool) {
 }
 
 func (c *Client) gotStatusCaps(args []interface{}) {
-	c.Caps = make(map[string]bool)
+	c.capsLocker.Lock()
+
+	c.caps = make(map[string]bool)
 	for _, cap := range args {
 		if cap, ok := cap.(string); ok {
-			c.Caps[cap] = true
+			c.caps[cap] = true
 		}
 	}
+
+	c.capsLocker.Unlock()
 }
 
 // The server can send unilateral data. This function handles it.
