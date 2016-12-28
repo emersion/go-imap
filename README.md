@@ -117,7 +117,7 @@ func main() {
 		// We're using unsigned integers here, only substract if the result is > 0
 		from = mbox.Messages - 3
 	}
-	seqset := &imap.SeqSet{}
+	seqset := new(imap.SeqSet)
 	seqset.AddRange(from, to)
 
 	messages := make(chan *imap.Message, 10)
