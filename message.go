@@ -714,9 +714,11 @@ type BodyStructure struct {
 	// True if the body structure contains extension data.
 	Extended bool
 
-	// The Content-Disposition header.
+	// The Content-Disposition header field value.
 	Disposition string
-	// The Content-Language header, if multipart.
+	// The Content-Disposition header field parameters.
+	DispositionParams map[string]string
+	// The Content-Language header field, if multipart.
 	Language []string
 	// The content URI, if multipart.
 	Location []string
@@ -801,7 +803,12 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end++
 		}
 		if len(fields) > end {
-			bs.Disposition, _ = fields[end].(string)
+			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
+				bs.Disposition, _ = disp[0].(string)
+				if params, ok := disp[1].([]interface{}); ok {
+					bs.DispositionParams, _ = ParseParamList(params)
+				}
+			}
 			end++
 		}
 		if len(fields) > end {
@@ -874,7 +881,12 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			end++
 		}
 		if len(fields) > end {
-			bs.Disposition, _ = fields[end].(string)
+			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
+				bs.Disposition, _ = disp[0].(string)
+				if params, ok := disp[1].([]interface{}); ok {
+					bs.DispositionParams, _ = ParseParamList(params)
+				}
+			}
 			end++
 		}
 		if len(fields) > end {
@@ -913,7 +925,10 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 				extended[0] = FormatParamList(bs.Params)
 			}
 			if bs.Disposition != "" {
-				extended[1] = bs.Disposition
+				extended[1] = []interface{}{
+					bs.Disposition,
+					FormatParamList(bs.DispositionParams),
+				}
 			}
 			if bs.Language != nil {
 				extended[2] = FormatStringList(bs.Language)
@@ -968,7 +983,10 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 				extended[0] = bs.Md5
 			}
 			if bs.Disposition != "" {
-				extended[1] = bs.Disposition
+				extended[1] = []interface{}{
+					bs.Disposition,
+					FormatParamList(bs.DispositionParams),
+				}
 			}
 			if bs.Language != nil {
 				extended[2] = FormatStringList(bs.Language)

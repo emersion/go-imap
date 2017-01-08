@@ -6,8 +6,8 @@ import (
 	"mime"
 	"net/mail"
 
-	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/client"
 )
 
 func ExampleClient() {
@@ -31,7 +31,7 @@ func ExampleClient() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo, 10)
-	go func () {
+	go func() {
 		// c.List will send mailboxes to the channel and close it when done
 		if err := c.List("", "*", mailboxes); err != nil {
 			log.Fatal(err)
