@@ -31,7 +31,6 @@ func TestClient_StartTLS(t *testing.T) {
 			return fmt.Errorf("Client has TLS enabled before STARTTLS")
 		}
 
-
 		if ok, err := c.SupportStartTLS(); err != nil {
 			return err
 		} else if !ok {

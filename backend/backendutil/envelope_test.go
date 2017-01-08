@@ -13,14 +13,14 @@ import (
 var testDate, _ = time.Parse(time.RFC1123Z, "Sat, 18 Jun 2016 12:00:00 +0900")
 
 var testEnvelope = &imap.Envelope{
-	Date: testDate,
-	Subject: "Your Name.",
-	From: []*imap.Address{{PersonalName: "Mitsuha Miyamizu", MailboxName: "mitsuha.miyamizu", HostName: "example.org"}},
-	Sender: []*imap.Address{},
-	ReplyTo: []*imap.Address{},
-	To: []*imap.Address{{PersonalName: "Taki Tachibana", MailboxName: "taki.tachibana", HostName: "example.org"}},
-	Cc: []*imap.Address{},
-	Bcc: []*imap.Address{},
+	Date:      testDate,
+	Subject:   "Your Name.",
+	From:      []*imap.Address{{PersonalName: "Mitsuha Miyamizu", MailboxName: "mitsuha.miyamizu", HostName: "example.org"}},
+	Sender:    []*imap.Address{},
+	ReplyTo:   []*imap.Address{},
+	To:        []*imap.Address{{PersonalName: "Taki Tachibana", MailboxName: "taki.tachibana", HostName: "example.org"}},
+	Cc:        []*imap.Address{},
+	Bcc:       []*imap.Address{},
 	InReplyTo: "",
 	MessageId: "42@example.org",
 }

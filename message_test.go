@@ -469,19 +469,24 @@ var bodyStructureTests = []struct {
 		},
 	},
 	{
-		fields: []interface{}{"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
-			"e0323a9039add2978bf5b49550572c7c", "attachment", []interface{}{"en-US"}, []interface{}{}},
+		fields: []interface{}{
+			"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
+			"e0323a9039add2978bf5b49550572c7c",
+			[]interface{}{"attachment", []interface{}{"filename", "document.pdf"}},
+			[]interface{}{"en-US"}, []interface{}{},
+		},
 		bodyStructure: &BodyStructure{
-			MimeType:    "application",
-			MimeSubType: "pdf",
-			Params:      map[string]string{},
-			Encoding:    "base64",
-			Size:        4242,
-			Extended:    true,
-			Md5:         "e0323a9039add2978bf5b49550572c7c",
-			Disposition: "attachment",
-			Language:    []string{"en-US"},
-			Location:    []string{},
+			MimeType:          "application",
+			MimeSubType:       "pdf",
+			Params:            map[string]string{},
+			Encoding:          "base64",
+			Size:              4242,
+			Extended:          true,
+			Md5:               "e0323a9039add2978bf5b49550572c7c",
+			Disposition:       "attachment",
+			DispositionParams: map[string]string{"filename": "document.pdf"},
+			Language:          []string{"en-US"},
+			Location:          []string{},
 		},
 	},
 	{
@@ -517,7 +522,9 @@ var bodyStructureTests = []struct {
 	{
 		fields: []interface{}{
 			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
-			"alternative", []interface{}{"hello", "world"}, "inline", []interface{}{"en-US"}, []interface{}{},
+			"alternative", []interface{}{"hello", "world"},
+			[]interface{}{"inline", []interface{}{}},
+			[]interface{}{"en-US"}, []interface{}{},
 		},
 		bodyStructure: &BodyStructure{
 			MimeType:    "multipart",
@@ -533,10 +540,11 @@ var bodyStructureTests = []struct {
 					Lines:       22,
 				},
 			},
-			Extended:    true,
-			Disposition: "inline",
-			Language:    []string{"en-US"},
-			Location:    []string{},
+			Extended:          true,
+			Disposition:       "inline",
+			DispositionParams: map[string]string{},
+			Language:          []string{"en-US"},
+			Location:          []string{},
 		},
 	},
 }
@@ -548,7 +556,7 @@ func TestBodyStructure_Parse(t *testing.T) {
 		if err := bs.Parse(test.fields); err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
 		} else if !reflect.DeepEqual(bs, test.bodyStructure) {
-			t.Errorf("Invalid body structure for #%v: got %+v but expected %+v", i, bs, test.bodyStructure)
+			t.Errorf("Invalid body structure for #%v: got \n%+v\n but expected \n%+v", i, bs, test.bodyStructure)
 		}
 	}
 }
@@ -565,7 +573,7 @@ func TestBodyStructure_Format(t *testing.T) {
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {
-			t.Errorf("Invalid body structure fields for #%v: has %v but expected %v", i, got, expected)
+			t.Errorf("Invalid body structure fields for #%v: has \n%v\n but expected \n%v", i, got, expected)
 		}
 	}
 }

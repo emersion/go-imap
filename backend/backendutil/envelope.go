@@ -22,8 +22,8 @@ func headerAddressList(h mail.Header, key string) ([]*imap.Address, error) {
 
 		list[i] = &imap.Address{
 			PersonalName: a.Name,
-			MailboxName: mailbox,
-			HostName: hostname,
+			MailboxName:  mailbox,
+			HostName:     hostname,
 		}
 	}
 

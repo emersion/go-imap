@@ -9,45 +9,45 @@ import (
 	"github.com/emersion/go-message"
 )
 
-var bodyTests = []struct{
+var bodyTests = []struct {
 	section string
-	body string
+	body    string
 }{
 	{
 		section: "BODY[]",
-		body: testMailString,
+		body:    testMailString,
 	},
 	{
 		section: "BODY[1]",
-		body: testTextString,
+		body:    testTextString,
 	},
 	{
 		section: "BODY[2]",
-		body: testAttachmentString,
+		body:    testAttachmentString,
 	},
 	{
 		section: "BODY[HEADER]",
-		body: testHeaderString,
+		body:    testHeaderString,
 	},
 	{
 		section: "BODY[1.HEADER]",
-		body: testTextHeaderString,
+		body:    testTextHeaderString,
 	},
 	{
 		section: "BODY[2.HEADER]",
-		body: testAttachmentHeaderString,
+		body:    testAttachmentHeaderString,
 	},
 	{
 		section: "BODY[TEXT]",
-		body: testBodyString,
+		body:    testBodyString,
 	},
 	{
 		section: "BODY[1.TEXT]",
-		body: testTextBodyString,
+		body:    testTextBodyString,
 	},
 	{
 		section: "BODY[2.TEXT]",
-		body: testAttachmentBodyString,
+		body:    testAttachmentBodyString,
 	},
 }
 
