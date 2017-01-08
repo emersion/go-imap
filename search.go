@@ -225,7 +225,7 @@ func (c *SearchCriteria) Format() []interface{} {
 	if c.From != "" {
 		fields = append(fields, "FROM", c.From)
 	}
-	if c.Header[0] != "" && c.Header[1] != "" {
+	if c.Header[0] != "" {
 		fields = append(fields, "HEADER", c.Header[0], c.Header[1])
 	}
 	if c.Keyword != "" {
