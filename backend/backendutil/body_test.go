@@ -49,6 +49,14 @@ var bodyTests = []struct {
 		section: "BODY[2.TEXT]",
 		body:    testAttachmentBodyString,
 	},
+	{
+		section: "BODY[2.1]",
+		body:    "",
+	},
+	{
+		section: "BODY[3]",
+		body:    "",
+	},
 }
 
 func TestFetchBodySection(t *testing.T) {
@@ -64,17 +72,24 @@ func TestFetchBodySection(t *testing.T) {
 		}
 
 		r, err := FetchBodySection(e, section)
-		if err != nil {
-			t.Fatal("Expected no error while extracting body section, got:", err)
-		}
+		if test.body == "" {
+			if err == nil {
+				t.Error("Expected an error while extracting non-existing body section")
+			}
+		} else {
+			if err != nil {
+				t.Error("Expected no error while extracting body section, got:", err)
+				continue
+			}
 
-		b, err := ioutil.ReadAll(r)
-		if err != nil {
-			t.Fatal("Expected no error while reading body section, got:", err)
-		}
+			b, err := ioutil.ReadAll(r)
+			if err != nil {
+				t.Fatal("Expected no error while reading body section, got:", err)
+			}
 
-		if s := string(b); s != test.body {
-			t.Errorf("Expected body section %q to be \n%s\n but got \n%s", test.section, test.body, s)
+			if s := string(b); s != test.body {
+				t.Errorf("Expected body section %q to be \n%s\n but got \n%s", test.section, test.body, s)
+			}
 		}
 	}
 }
