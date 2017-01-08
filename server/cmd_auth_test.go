@@ -39,7 +39,7 @@ func TestSelect_Ok(t *testing.T) {
 	for scanner.Scan() {
 		res := scanner.Text()
 
-		if res == "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)" {
+		if res == "* FLAGS (\\Seen)" {
 			got["FLAGS"] = true
 		} else if res == "* 1 EXISTS" {
 			got["EXISTS"] = true
@@ -47,7 +47,7 @@ func TestSelect_Ok(t *testing.T) {
 			got["RECENT"] = true
 		} else if strings.HasPrefix(res, "* OK [UNSEEN 0]") {
 			got["UNSEEN"] = true
-		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft \\*)]") {
+		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\*)]") {
 			got["PERMANENTFLAGS"] = true
 		} else if strings.HasPrefix(res, "* OK [UIDNEXT 7]") {
 			got["UIDNEXT"] = true
@@ -292,7 +292,7 @@ func TestList(t *testing.T) {
 	io.WriteString(c, "a001 LIST \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LIST (\\Noinferiors) \"/\" INBOX" {
+	if scanner.Text() != "* LIST () \"/\" INBOX" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 
@@ -390,8 +390,8 @@ func TestList_Subscribed(t *testing.T) {
 	io.WriteString(c, "a001 LSUB \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LSUB (\\Noinferiors) \"/\" INBOX" {
-		t.Fatal("Invalid LIST response:", scanner.Text())
+	if scanner.Text() != "* LSUB () \"/\" INBOX" {
+		t.Fatal("Invalid LSUB response:", scanner.Text())
 	}
 
 	scanner.Scan()

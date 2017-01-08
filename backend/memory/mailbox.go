@@ -1,17 +1,21 @@
 package memory
 
 import (
-	"errors"
 	"io/ioutil"
 	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
+	"github.com/emersion/go-imap/backend/backendutil"
 )
 
+var Delimiter = "/"
+
 type Mailbox struct {
+	Subscribed bool
+	Messages   []*Message
+
 	name       string
-	subscribed bool
-	messages   []*Message
 	user       *User
 }
 
@@ -21,40 +25,57 @@ func (mbox *Mailbox) Name() string {
 
 func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 	info := &imap.MailboxInfo{
-		Delimiter:  "/",
+		Delimiter:  Delimiter,
 		Name:       mbox.name,
-		Attributes: []string{imap.NoInferiorsAttr},
 	}
 	return info, nil
 }
 
-func (mbox *Mailbox) uidNext() (uid uint32) {
-	for _, msg := range mbox.messages {
+func (mbox *Mailbox) uidNext() uint32 {
+	var uid uint32
+	for _, msg := range mbox.Messages {
 		if msg.Uid > uid {
 			uid = msg.Uid
 		}
 	}
 	uid++
-	return
+	return uid
+}
+
+func (mbox *Mailbox) flags() []string {
+	flagsMap := make(map[string]bool)
+	for _, msg := range mbox.Messages {
+		for _, f := range msg.Flags {
+			if !flagsMap[f] {
+				flagsMap[f] = true
+			}
+		}
+	}
+
+	var flags []string
+	for f := range flagsMap {
+		flags = append(flags, f)
+	}
+	return flags
 }
 
 func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
 	status := imap.NewMailboxStatus(mbox.name, items)
-	status.Flags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft"}
-	status.PermanentFlags = []string{"\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\Draft", "\\*"}
+	status.Flags = mbox.flags()
+	status.PermanentFlags = []string{"\\*"}
 
 	for _, name := range items {
 		switch name {
 		case imap.MailboxMessages:
-			status.Messages = uint32(len(mbox.messages))
+			status.Messages = uint32(len(mbox.Messages))
 		case imap.MailboxUidNext:
 			status.UidNext = mbox.uidNext()
 		case imap.MailboxUidValidity:
 			status.UidValidity = 1
 		case imap.MailboxRecent:
-			status.Recent = 0
+			status.Recent = 0 // TODO
 		case imap.MailboxUnseen:
-			status.Unseen = 0
+			status.Unseen = 0 // TODO
 		}
 	}
 
@@ -62,12 +83,12 @@ func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
 }
 
 func (mbox *Mailbox) Subscribe() error {
-	mbox.subscribed = true
+	mbox.Subscribed = true
 	return nil
 }
 
 func (mbox *Mailbox) Unsubscribe() error {
-	mbox.subscribed = false
+	mbox.Subscribed = false
 	return nil
 }
 
@@ -75,10 +96,10 @@ func (mbox *Mailbox) Check() error {
 	return nil
 }
 
-func (mbox *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) (err error) {
+func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []string, ch chan<- *imap.Message) error {
 	defer close(ch)
 
-	for i, msg := range mbox.messages {
+	for i, msg := range mbox.Messages {
 		seqNum := uint32(i + 1)
 
 		var id uint32
@@ -87,21 +108,28 @@ func (mbox *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []string,
 		} else {
 			id = seqNum
 		}
-		if !seqset.Contains(id) {
+		if !seqSet.Contains(id) {
 			continue
 		}
 
-		m := msg.Metadata(items)
-		m.SeqNum = seqNum
+		m, err := msg.Fetch(seqNum, items)
+		if err != nil {
+			continue
+		}
+
 		ch <- m
 	}
 
-	return
+	return nil
 }
 
-func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
-	for i, msg := range mbox.messages {
-		if !msg.Matches(criteria) {
+func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
+	var ids []uint32
+	for i, msg := range mbox.Messages {
+		seqNum := uint32(i + 1)
+
+		ok, err := msg.Match(seqNum, criteria)
+		if err != nil || !ok {
 			continue
 		}
 
@@ -109,12 +137,11 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) (id
 		if uid {
 			id = msg.Uid
 		} else {
-			id = uint32(i + 1)
+			id = seqNum
 		}
 		ids = append(ids, id)
 	}
-
-	return
+	return ids, nil
 }
 
 func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Literal) error {
@@ -127,20 +154,18 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 		return err
 	}
 
-	mbox.messages = append(mbox.messages, &Message{&imap.Message{
-		Uid:           mbox.uidNext(),
-		Envelope:      &imap.Envelope{},
-		BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-		Size:          uint32(body.Len()),
-		InternalDate:  date,
-		Flags:         flags,
-	}, b})
-
+	mbox.Messages = append(mbox.Messages, &Message{
+		Uid: mbox.uidNext(),
+		Date: date,
+		Size: uint32(len(b)),
+		Flags: flags,
+		Body: b,
+	})
 	return nil
 }
 
 func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
-	for i, msg := range mbox.messages {
+	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
 			id = msg.Uid
@@ -151,27 +176,7 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 			continue
 		}
 
-		switch op {
-		case imap.SetFlags:
-			// TODO: keep \Recent if it is present
-			msg.Flags = flags
-		case imap.AddFlags:
-			// TODO: check for duplicates
-			msg.Flags = append(msg.Flags, flags...)
-		case imap.RemoveFlags:
-			// Iterate through flags from the last one to the first one, to be able to
-			// delete some of them.
-			for i := len(msg.Flags) - 1; i >= 0; i-- {
-				flag := msg.Flags[i]
-
-				for _, removeFlag := range flags {
-					if removeFlag == flag {
-						msg.Flags = append(msg.Flags[:i], msg.Flags[i+1:]...)
-						break
-					}
-				}
-			}
-		}
+		msg.Flags = backendutil.UpdateFlags(msg.Flags, op, flags)
 	}
 
 	return nil
@@ -180,10 +185,10 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string) error {
 	dest, ok := mbox.user.mailboxes[destName]
 	if !ok {
-		return errors.New("Destination mailbox doesn't exist")
+		return backend.ErrNoSuchMailbox
 	}
 
-	for i, msg := range mbox.messages {
+	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
 			id = msg.Uid
@@ -196,26 +201,26 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 
 		msgCopy := *msg
 		msgCopy.Uid = dest.uidNext()
-		dest.messages = append(dest.messages, &msgCopy)
+		dest.Messages = append(dest.Messages, &msgCopy)
 	}
 
 	return nil
 }
 
 func (mbox *Mailbox) Expunge() error {
-	for i := len(mbox.messages) - 1; i >= 0; i-- {
-		msg := mbox.messages[i]
+	for i := len(mbox.Messages) - 1; i >= 0; i-- {
+		msg := mbox.Messages[i]
 
 		deleted := false
 		for _, flag := range msg.Flags {
-			if flag == "\\Deleted" {
+			if flag == imap.DeletedFlag {
 				deleted = true
 				break
 			}
 		}
 
 		if deleted {
-			mbox.messages = append(mbox.messages[:i], mbox.messages[i+1:]...)
+			mbox.Messages = append(mbox.Messages[:i], mbox.Messages[i+1:]...)
 		}
 	}
 

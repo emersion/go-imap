@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 )
 
@@ -13,8 +12,8 @@ type Backend struct {
 	users map[string]*User
 }
 
-func (bkd *Backend) Login(username, password string) (backend.User, error) {
-	user, ok := bkd.users[username]
+func (be *Backend) Login(username, password string) (backend.User, error) {
+	user, ok := be.users[username]
 	if ok && user.password == password {
 		return user, nil
 	}
@@ -34,27 +33,19 @@ Content-Type: text/plain
 
 Hi there :)`
 
-	now := time.Now()
 	user.mailboxes = map[string]*Mailbox{
 		"INBOX": {
 			name: "INBOX",
-			messages: []*Message{
-				{&imap.Message{
-					Uid:   6,
-					Flags: []string{"\\Seen"},
-					Envelope: &imap.Envelope{
-						Date:    now,
-						Subject: "Hello World!",
-						From:    []*imap.Address{},
-						Sender:  []*imap.Address{},
-						To:      []*imap.Address{},
-					},
-					BodyStructure: &imap.BodyStructure{MimeType: "text", MimeSubType: "plain"},
-					Size:          uint32(len(body)),
-					InternalDate:  now,
-				}, []byte(body)},
-			},
 			user: user,
+			Messages: []*Message{
+				{
+					Uid: 6,
+					Date: time.Now(),
+					Flags: []string{"\\Seen"},
+					Size: uint32(len(body)),
+					Body: []byte(body),
+				},
+			},
 		},
 	}
 

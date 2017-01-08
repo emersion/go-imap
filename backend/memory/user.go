@@ -18,7 +18,7 @@ func (u *User) Username() string {
 
 func (u *User) ListMailboxes(subscribed bool) (mailboxes []backend.Mailbox, err error) {
 	for _, mailbox := range u.mailboxes {
-		if subscribed && !mailbox.subscribed {
+		if subscribed && !mailbox.Subscribed {
 			continue
 		}
 
@@ -64,11 +64,11 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 
 	u.mailboxes[newName] = &Mailbox{
 		name:     newName,
-		messages: mbox.messages,
+		Messages: mbox.Messages,
 		user:     u,
 	}
 
-	mbox.messages = nil
+	mbox.Messages = nil
 
 	if existingName != "INBOX" {
 		delete(u.mailboxes, existingName)

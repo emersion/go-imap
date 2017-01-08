@@ -2,88 +2,66 @@ package memory
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend/backendutil"
+	"github.com/emersion/go-message"
 )
 
 type Message struct {
-	*imap.Message
-
-	body []byte
+	Uid uint32
+	Date time.Time
+	Size uint32
+	Flags []string
+	Body []byte
 }
 
-func (m *Message) Metadata(items []string) (metadata *imap.Message) {
-	metadata = imap.NewMessage(0, items)
+func (m *Message) entity() (*message.Entity, error) {
+	return message.Read(bytes.NewReader(m.Body))
+}
 
+func (m *Message) Fetch(seqNum uint32, items []string) (*imap.Message, error) {
+	fetched := imap.NewMessage(seqNum, items)
 	for _, item := range items {
 		switch item {
 		case imap.EnvelopeMsgAttr:
-			metadata.Envelope = m.Envelope
+			e, _ := m.entity()
+			fetched.Envelope, _ = backendutil.FetchEnvelope(e.Header)
 		case imap.BodyMsgAttr, imap.BodyStructureMsgAttr:
-			metadata.BodyStructure = m.BodyStructure
+			e, _ := m.entity()
+			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(e, item == imap.BodyStructureMsgAttr)
 		case imap.FlagsMsgAttr:
-			metadata.Flags = m.Flags
+			fetched.Flags = m.Flags
 		case imap.InternalDateMsgAttr:
-			metadata.InternalDate = m.InternalDate
+			fetched.InternalDate = m.Date
 		case imap.SizeMsgAttr:
-			metadata.Size = m.Size
+			fetched.Size = m.Size
 		case imap.UidMsgAttr:
-			metadata.Uid = m.Uid
+			fetched.Uid = m.Uid
 		default:
 			section, err := imap.NewBodySectionName(item)
 			if err != nil {
 				break
 			}
 
-			var body []byte
-			if len(section.Path) == 0 {
-				if section.Specifier == "" {
-					body = m.body
-				} else {
-					sep := []byte("\n\n")
-					parts := bytes.SplitN(m.body, sep, 2)
-					if len(parts) == 1 {
-						parts = [][]byte{nil, parts[0]}
-					}
-
-					if section.Specifier == imap.HeaderSpecifier {
-						body = parts[0]
-						body = append(body, sep...)
-					}
-					if section.Specifier == imap.TextSpecifier {
-						body = parts[1]
-					}
-				}
-			}
-
-			// If part doesn't exist, set the literal to nil
-			var literal imap.Literal
-			if body != nil {
-				literal = bytes.NewBuffer(section.ExtractPartial(body))
-			}
-			metadata.Body[section] = literal
+			e, _ := m.entity()
+			l, _ := backendutil.FetchBodySection(e, section)
+			fetched.Body[section] = l
 		}
 	}
 
-	return
+	return fetched, nil
 }
 
-func (m *Message) hasFlag(flag string) bool {
-	for _, f := range m.Flags {
-		if f == flag {
-			return true
-		}
+func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
+	if !backendutil.MatchSeqNumAndUid(seqNum, m.Uid, c) {
+		return false, nil
 	}
-	return false
-}
+	if !backendutil.MatchFlags(m.Flags, c) {
+		return false, nil
+	}
 
-func (m *Message) Matches(criteria *imap.SearchCriteria) bool {
-	// TODO
-	if criteria.SeqSet != nil && !criteria.SeqSet.Contains(m.SeqNum) {
-		return false
-	}
-	if criteria.Deleted && !m.hasFlag(imap.DeletedFlag) {
-		return false
-	}
-	return true
+	e, _ := m.entity()
+	return backendutil.Match(e, c)
 }
