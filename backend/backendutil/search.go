@@ -215,3 +215,26 @@ func MatchFlags(flags []string, c *imap.SearchCriteria) bool {
 
 	return matchFlags(flagsMap, c)
 }
+
+// MatchSeqNumAndUid returns true if a sequence number and a UID matches the
+// provided criteria.
+func MatchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
+	if c.SeqSet != nil && !c.SeqSet.Contains(seqNum) {
+		return false
+	}
+	if c.Uid != nil && !c.Uid.Contains(uid) {
+		return false
+	}
+
+	if c.Not != nil && MatchSeqNumAndUid(seqNum, uid, c.Not) {
+		return false
+	}
+
+	if c.Or[0] != nil && c.Or[1] != nil {
+		if !MatchSeqNumAndUid(seqNum, uid, c.Or[0]) && !MatchSeqNumAndUid(seqNum, uid, c.Or[1]) {
+			return false
+		}
+	}
+
+	return true
+}
