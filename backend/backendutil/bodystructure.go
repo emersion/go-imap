@@ -49,7 +49,7 @@ func FetchBodyStructure(e *message.Entity, extended bool) (*imap.BodyStructure, 
 	if extended {
 		bs.Extended = true
 
-		bs.Disposition = e.Header.Get("Content-Disposition")
+		bs.Disposition, bs.DispositionParams, _ = e.Header.ContentDisposition()
 
 		// TODO: bs.Language, bs.Location
 		// TODO: bs.Md5
