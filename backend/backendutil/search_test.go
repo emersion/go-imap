@@ -1,10 +1,100 @@
 package backendutil
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-message"
 )
+
+var matchTests = []struct{
+	criteria *imap.SearchCriteria
+	res bool
+}{
+	{
+		criteria: &imap.SearchCriteria{From: "Mitsuha"},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{To: "Mitsuha"},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{Before: testDate.Add(48 * time.Hour)},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Not: &imap.SearchCriteria{Since: testDate.Add(48 * time.Hour)},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Not: &imap.SearchCriteria{Body: "name"},
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: [2]string{"Message-Id", "43@example.org"},
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: [2]string{"Message-Id", ""},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Larger: 10,
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Smaller: 10,
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Subject: "your",
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Subject: "Taki",
+		},
+		res: false,
+	},
+}
+
+func TestMatch(t *testing.T) {
+	for i, test := range matchTests {
+		e, err := message.Read(strings.NewReader(testMailString))
+		if err != nil {
+			t.Fatal("Expected no error while reading entity, got:", err)
+		}
+
+		ok, err := Match(e, test.criteria)
+		if err != nil {
+			t.Fatal("Expected no error while matching entity, got:", err)
+		}
+
+		if test.res && !ok {
+			t.Errorf("Expected #%v to match search criteria", i+1)
+		}
+		if !test.res && ok {
+			t.Errorf("Expected #%v not to match search criteria", i+1)
+		}
+	}
+}
 
 var flagsTests = []struct{
 	flags []string
@@ -49,10 +139,10 @@ func TestMatchFlags(t *testing.T) {
 	for i, test := range flagsTests {
 		ok := MatchFlags(test.flags, test.criteria)
 		if test.res && !ok {
-			t.Errorf("Expected #%v to match search criteria", i)
+			t.Errorf("Expected #%v to match search criteria", i+1)
 		}
 		if !test.res && ok {
-			t.Errorf("Expected #%v not to match search criteria", i)
+			t.Errorf("Expected #%v not to match search criteria", i+1)
 		}
 	}
 }

@@ -1,5 +1,11 @@
 package backendutil
 
+import (
+	"time"
+)
+
+var testDate, _ = time.Parse(time.RFC1123Z, "Sat, 18 Jun 2016 12:00:00 +0900")
+
 const testHeaderString = "Content-Type: multipart/mixed; boundary=message-boundary\r\n" +
 	"Date: Sat, 18 Jun 2016 12:00:00 +0900\r\n" +
 	"From: Mitsuha Miyamizu <mitsuha.miyamizu@example.org>\r\n" +

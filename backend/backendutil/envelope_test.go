@@ -4,13 +4,10 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message"
 )
-
-var testDate, _ = time.Parse(time.RFC1123Z, "Sat, 18 Jun 2016 12:00:00 +0900")
 
 var testEnvelope = &imap.Envelope{
 	Date:      testDate,
