@@ -31,7 +31,7 @@ func TestFetchEnvelope(t *testing.T) {
 		t.Fatal("Expected no error while reading mail, got:", err)
 	}
 
-	env, err := FetchEnvelope(e)
+	env, err := FetchEnvelope(e.Header)
 	if err != nil {
 		t.Fatal("Expected no error while fetching envelope, got:", err)
 	}

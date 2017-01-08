@@ -11,6 +11,7 @@ import (
 
 var errNoSuchPart = errors.New("backendutil: no such message body part")
 
+// FetchBodySection extracts a body section from a message.
 func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Literal, error) {
 	// First, find the requested part using the provided path
 	for i := len(section.Path) - 1; i >= 0; i-- {

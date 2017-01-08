@@ -8,6 +8,7 @@ import (
 	"github.com/emersion/go-message"
 )
 
+// FetchBodyStructure computes a message's body structure from its content.
 func FetchBodyStructure(e *message.Entity, extended bool) (*imap.BodyStructure, error) {
 	bs := new(imap.BodyStructure)
 

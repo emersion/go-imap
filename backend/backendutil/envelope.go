@@ -30,20 +30,21 @@ func headerAddressList(h mail.Header, key string) ([]*imap.Address, error) {
 	return list, err
 }
 
-func FetchEnvelope(e *message.Entity) (*imap.Envelope, error) {
-	h := mail.Header{e.Header}
+// FetchEnvelope returns a message's envelope from its header.
+func FetchEnvelope(h message.Header) (*imap.Envelope, error) {
+	mh := mail.Header{h}
 
 	env := new(imap.Envelope)
-	env.Date, _ = h.Date()
-	env.Subject, _ = h.Subject()
-	env.From, _ = headerAddressList(h, "From")
-	env.Sender, _ = headerAddressList(h, "Sender")
-	env.ReplyTo, _ = headerAddressList(h, "Reply-To")
-	env.To, _ = headerAddressList(h, "To")
-	env.Cc, _ = headerAddressList(h, "Cc")
-	env.Bcc, _ = headerAddressList(h, "Bcc")
-	env.InReplyTo = h.Get("In-Reply-To")
-	env.MessageId = h.Get("Message-Id")
+	env.Date, _ = mh.Date()
+	env.Subject, _ = mh.Subject()
+	env.From, _ = headerAddressList(mh, "From")
+	env.Sender, _ = headerAddressList(mh, "Sender")
+	env.ReplyTo, _ = headerAddressList(mh, "Reply-To")
+	env.To, _ = headerAddressList(mh, "To")
+	env.Cc, _ = headerAddressList(mh, "Cc")
+	env.Bcc, _ = headerAddressList(mh, "Bcc")
+	env.InReplyTo = mh.Get("In-Reply-To")
+	env.MessageId = mh.Get("Message-Id")
 
 	return env, nil
 }
