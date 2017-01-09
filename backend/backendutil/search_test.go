@@ -157,6 +157,25 @@ var flagsTests = []struct {
 		},
 		res: false,
 	},
+	{
+		flags: []string{imap.SeenFlag, imap.FlaggedFlag},
+		criteria: &imap.SearchCriteria{
+			Or: [][2]*imap.SearchCriteria{{
+				{WithFlags: []string{imap.DraftFlag}},
+				{WithoutFlags: []string{imap.SeenFlag}},
+			}},
+		},
+		res: false,
+	},
+	{
+		flags: []string{imap.SeenFlag, imap.FlaggedFlag},
+		criteria: &imap.SearchCriteria{
+			Not: []*imap.SearchCriteria{
+				{WithFlags: []string{imap.SeenFlag}},
+			},
+		},
+		res: false,
+	},
 }
 
 func TestMatchFlags(t *testing.T) {
