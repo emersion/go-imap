@@ -44,6 +44,12 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Message-Id": {"42@example.org"}},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
 			Header: textproto.MIMEHeader{"Message-Id": {"43@example.org"}},
 		},
 		res: false,
@@ -53,6 +59,12 @@ var matchTests = []struct {
 			Header: textproto.MIMEHeader{"Message-Id": {""}},
 		},
 		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Reply-To": {""}},
+		},
+		res: false,
 	},
 	{
 		criteria: &imap.SearchCriteria{
