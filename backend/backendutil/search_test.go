@@ -225,3 +225,40 @@ func TestMatchSeqNumAndUid(t *testing.T) {
 		t.Error("Expected to match criteria")
 	}
 }
+
+func TestMatchDate(t *testing.T) {
+	date := time.Unix(1483997966, 0)
+
+	c := &imap.SearchCriteria{
+		Or: [][2]*imap.SearchCriteria{{
+			{
+				Since: date.Add(48 * time.Hour),
+				Not: []*imap.SearchCriteria{{
+					Since: date.Add(48 * time.Hour),
+				}},
+			},
+			{
+				Before: date.Add(- 48 * time.Hour),
+			},
+		}},
+	}
+
+	if MatchDate(date, c) {
+		t.Error("Expected not to match criteria")
+	}
+
+	c.Or[0][0].Since = date.Add(- 48 * time.Hour)
+	if !MatchDate(date, c) {
+		t.Error("Expected to match criteria")
+	}
+
+	c.Or[0][0].Not[0].Since = date.Add(- 48 * time.Hour)
+	if MatchDate(date, c) {
+		t.Error("Expected not to match criteria")
+	}
+
+	c.Or[0][1].Before = date.Add(48 * time.Hour)
+	if !MatchDate(date, c) {
+		t.Error("Expected to match criteria")
+	}
+}
