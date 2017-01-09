@@ -44,6 +44,21 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
+			Text: []string{"name"},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Or: [][2]*imap.SearchCriteria{{
+				{Text: []string{"i'm not in the text"}},
+				{Body: []string{"i'm not in the body"}},
+			}},
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
 			Header: textproto.MIMEHeader{"Message-Id": {"42@example.org"}},
 		},
 		res: true,
