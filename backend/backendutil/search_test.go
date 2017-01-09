@@ -27,14 +27,14 @@ var matchTests = []struct {
 		res: false,
 	},
 	{
-		criteria: &imap.SearchCriteria{Before: testDate.Add(48 * time.Hour)},
+		criteria: &imap.SearchCriteria{SentBefore: testDate.Add(48 * time.Hour)},
 		res:      true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Not: []*imap.SearchCriteria{{Since: testDate.Add(48 * time.Hour)}},
+			Not: []*imap.SearchCriteria{{SentSince: testDate.Add(48 * time.Hour)}},
 		},
-		res: false,
+		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
