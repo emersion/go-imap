@@ -78,8 +78,12 @@ func (cmd *Expunge) Handle(conn Conn) error {
 	// That will allow us to send expunge updates if the backend doesn't support it
 	var seqnums []uint32
 	if conn.Server().Updates == nil {
+		criteria := &imap.SearchCriteria{
+			WithFlags: []string{imap.DeletedFlag},
+		}
+
 		var err error
-		seqnums, err = ctx.Mailbox.SearchMessages(false, &imap.SearchCriteria{Deleted: true})
+		seqnums, err = ctx.Mailbox.SearchMessages(false, criteria)
 		if err != nil {
 			return err
 		}

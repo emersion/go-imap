@@ -2,6 +2,7 @@ package imap
 
 import (
 	"bytes"
+	"net/textproto"
 	"reflect"
 	"testing"
 	"time"
@@ -19,40 +20,47 @@ var searchCriteriaTests = []struct {
 	criteria *SearchCriteria
 }{
 	{
-		expected: `(1:42 ANSWERED BCC root@nsa.gov BEFORE "21-Nov-1997" BODY "hey there" CC root@gchq.gov.uk DELETED DRAFT FLAGGED FROM root@protonmail.com HEADER Content-Type text/csv KEYWORD cc LARGER 4242 NEW NOT (OLD ON "5-Nov-1984") OR (RECENT SENTON "21-Nov-1997") (SEEN SENTBEFORE "5-Nov-1984") SENTSINCE "21-Nov-1997" SINCE "5-Nov-1984" SMALLER 643 SUBJECT "saucisse royale" TEXT DILLE TO cc@dille.cc UID 743:938 UNANSWERED UNDELETED UNDRAFT UNFLAGGED UNKEYWORD microsoft UNSEEN)`,
+		expected: `(1:42 UID 743:938 ` +
+			`SINCE "5-Nov-1984" BEFORE "21-Nov-1997" SENTSINCE "5-Nov-1984" SENTBEFORE "21-Nov-1997" ` +
+			`FROM root@protonmail.com BODY "hey there" TEXT DILLE ` +
+			`ANSWERED DELETED KEYWORD cc UNKEYWORD microsoft ` +
+			`LARGER 4242 SMALLER 4342 ` +
+			`NOT (SENTON "21-Nov-1997" HEADER Content-Type text/csv) ` +
+			`OR (ON "5-Nov-1984" DRAFT FLAGGED UNANSWERED UNDELETED OLD) (UNDRAFT UNFLAGGED UNSEEN))`,
 		criteria: &SearchCriteria{
-			SeqSet:   searchSeqSet1,
-			Answered: true,
-			Bcc:      "root@nsa.gov",
-			Before:   searchDate1,
-			Body:     "hey there",
-			Cc:       "root@gchq.gov.uk",
-			Deleted:  true,
-			Draft:    true,
-			Flagged:  true,
-			From:     "root@protonmail.com",
-			Header:   [2]string{"Content-Type", "text/csv"},
-			Keyword:  "cc",
-			Larger:   4242,
-			New:      true,
-			Not:      &SearchCriteria{Old: true, On: searchDate2},
-			Or: [2]*SearchCriteria{
-				{Recent: true, SentOn: searchDate1},
-				{Seen: true, SentBefore: searchDate2},
-			},
-			SentSince:  searchDate1,
-			Since:      searchDate2,
-			Smaller:    643,
-			Subject:    "saucisse royale",
-			Text:       "DILLE",
-			To:         "cc@dille.cc",
+			SeqNum:     searchSeqSet1,
 			Uid:        searchSeqSet2,
-			Unanswered: true,
-			Undeleted:  true,
-			Undraft:    true,
-			Unflagged:  true,
-			Unkeyword:  "microsoft",
-			Unseen:     true,
+			Since:      searchDate2,
+			Before:     searchDate1,
+			SentSince:  searchDate2,
+			SentBefore: searchDate1,
+			Header: textproto.MIMEHeader{
+				"From": {"root@protonmail.com"},
+			},
+			Body:         []string{"hey there"},
+			Text:         []string{"DILLE"},
+			WithFlags:    []string{AnsweredFlag, DeletedFlag, "cc"},
+			WithoutFlags: []string{"microsoft"},
+			Larger:       4242,
+			Smaller:      4342,
+			Not: []*SearchCriteria{{
+				SentSince:  searchDate1,
+				SentBefore: searchDate1.Add(24 * time.Hour),
+				Header: textproto.MIMEHeader{
+					"Content-Type": {"text/csv"},
+				},
+			}},
+			Or: [][2]*SearchCriteria{{
+				{
+					Since:        searchDate2,
+					Before:       searchDate2.Add(24 * time.Hour),
+					WithFlags:    []string{DraftFlag, FlaggedFlag},
+					WithoutFlags: []string{AnsweredFlag, DeletedFlag, RecentFlag},
+				},
+				{
+					WithoutFlags: []string{DraftFlag, FlaggedFlag, SeenFlag},
+				},
+			}},
 		},
 	},
 }
@@ -61,26 +69,57 @@ func TestSearchCriteria_Format(t *testing.T) {
 	for i, test := range searchCriteriaTests {
 		fields := test.criteria.Format()
 
-		got, _ := formatFields(fields)
+		got, err := formatFields(fields)
+		if err != nil {
+			t.Fatal("Unexpected no error while formatting fields, got:", err)
+		}
 
 		if got != test.expected {
-			t.Errorf("Invalid search criteria fields for #%v: got \n%v\n instead of \n%v", i, got, test.expected)
+			t.Errorf("Invalid search criteria fields for #%v: got \n%v\n instead of \n%v", i+1, got, test.expected)
 		}
 	}
 }
 
 func TestSearchCriteria_Parse(t *testing.T) {
 	for i, test := range searchCriteriaTests {
-		criteria := &SearchCriteria{}
+		criteria := new(SearchCriteria)
 
 		b := bytes.NewBuffer([]byte(test.expected))
 		r := NewReader(b)
 		fields, _ := r.ReadFields()
 
 		if err := criteria.Parse(fields[0].([]interface{})); err != nil {
-			t.Errorf("Cannot parse search criteria for #%v: %v", i, err)
+			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
 		} else if !reflect.DeepEqual(criteria, test.criteria) {
-			t.Errorf("Invalid search criteria for #%v: got %v instead of %v", i, criteria, test.criteria)
+			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
+		}
+	}
+}
+
+var searchCriteriaParseTests = []struct {
+	fields   []interface{}
+	criteria *SearchCriteria
+}{
+	{
+		fields: []interface{}{"ALL"},
+		criteria: &SearchCriteria{},
+	},
+	{
+		fields: []interface{}{"NEW"},
+		criteria: &SearchCriteria{
+			WithFlags: []string{RecentFlag},
+			WithoutFlags: []string{SeenFlag},
+		},
+	},
+}
+
+func TestSearchCriteria_Parse_others(t *testing.T) {
+	for i, test := range searchCriteriaParseTests {
+		criteria := new(SearchCriteria)
+		if err := criteria.Parse(test.fields); err != nil {
+			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
+		} else if !reflect.DeepEqual(criteria, test.criteria) {
+			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
 		}
 	}
 }

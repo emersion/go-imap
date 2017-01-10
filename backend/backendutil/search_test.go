@@ -1,6 +1,7 @@
 package backendutil
 
 import (
+	"net/textproto"
 	"strings"
 	"testing"
 	"time"
@@ -9,45 +10,76 @@ import (
 	"github.com/emersion/go-message"
 )
 
-var matchTests = []struct{
+var matchTests = []struct {
 	criteria *imap.SearchCriteria
-	res bool
+	res      bool
 }{
 	{
-		criteria: &imap.SearchCriteria{From: "Mitsuha"},
-		res: true,
-	},
-	{
-		criteria: &imap.SearchCriteria{To: "Mitsuha"},
-		res: false,
-	},
-	{
-		criteria: &imap.SearchCriteria{Before: testDate.Add(48 * time.Hour)},
-		res: true,
-	},
-	{
 		criteria: &imap.SearchCriteria{
-			Not: &imap.SearchCriteria{Since: testDate.Add(48 * time.Hour)},
+			Header: textproto.MIMEHeader{"From": {"Mitsuha"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Not: &imap.SearchCriteria{Body: "name"},
+			Header: textproto.MIMEHeader{"To": {"Mitsuha"}},
 		},
 		res: false,
 	},
 	{
+		criteria: &imap.SearchCriteria{SentBefore: testDate.Add(48 * time.Hour)},
+		res:      true,
+	},
+	{
 		criteria: &imap.SearchCriteria{
-			Header: [2]string{"Message-Id", "43@example.org"},
+			Not: []*imap.SearchCriteria{{SentSince: testDate.Add(48 * time.Hour)}},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Not: []*imap.SearchCriteria{{Body: []string{"name"}}},
 		},
 		res: false,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: [2]string{"Message-Id", ""},
+			Text: []string{"name"},
 		},
 		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Or: [][2]*imap.SearchCriteria{{
+				{Text: []string{"i'm not in the text"}},
+				{Body: []string{"i'm not in the body"}},
+			}},
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Message-Id": {"42@example.org"}},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Message-Id": {"43@example.org"}},
+		},
+		res: false,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Message-Id": {""}},
+		},
+		res: true,
+	},
+	{
+		criteria: &imap.SearchCriteria{
+			Header: textproto.MIMEHeader{"Reply-To": {""}},
+		},
+		res: false,
 	},
 	{
 		criteria: &imap.SearchCriteria{
@@ -63,13 +95,13 @@ var matchTests = []struct{
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Subject: "your",
+			Header: textproto.MIMEHeader{"Subject": {"your"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Subject: "Taki",
+			Header: textproto.MIMEHeader{"Subject": {"Taki"}},
 		},
 		res: false,
 	},
@@ -96,40 +128,51 @@ func TestMatch(t *testing.T) {
 	}
 }
 
-var flagsTests = []struct{
-	flags []string
+var flagsTests = []struct {
+	flags    []string
 	criteria *imap.SearchCriteria
-	res bool
+	res      bool
 }{
 	{
 		flags: []string{imap.SeenFlag},
 		criteria: &imap.SearchCriteria{
-			Seen: true,
-			Unflagged: true,
+			WithFlags:    []string{imap.SeenFlag},
+			WithoutFlags: []string{imap.FlaggedFlag},
 		},
-		res: true,
-	},
-	{
-		flags: []string{imap.SeenFlag, imap.RecentFlag},
-		criteria: &imap.SearchCriteria{New: true},
-		res: false,
-	},
-	{
-		flags: []string{imap.RecentFlag},
-		criteria: &imap.SearchCriteria{New: true},
 		res: true,
 	},
 	{
 		flags: []string{imap.SeenFlag},
 		criteria: &imap.SearchCriteria{
-			Not: &imap.SearchCriteria{Unseen: true},
+			WithFlags:    []string{imap.DraftFlag},
+			WithoutFlags: []string{imap.FlaggedFlag},
 		},
-		res: true,
+		res: false,
 	},
 	{
-		flags: []string{imap.RecentFlag},
+		flags: []string{imap.SeenFlag, imap.FlaggedFlag},
 		criteria: &imap.SearchCriteria{
-			Not: &imap.SearchCriteria{Unseen: true},
+			WithFlags:    []string{imap.SeenFlag},
+			WithoutFlags: []string{imap.FlaggedFlag},
+		},
+		res: false,
+	},
+	{
+		flags: []string{imap.SeenFlag, imap.FlaggedFlag},
+		criteria: &imap.SearchCriteria{
+			Or: [][2]*imap.SearchCriteria{{
+				{WithFlags: []string{imap.DraftFlag}},
+				{WithoutFlags: []string{imap.SeenFlag}},
+			}},
+		},
+		res: false,
+	},
+	{
+		flags: []string{imap.SeenFlag, imap.FlaggedFlag},
+		criteria: &imap.SearchCriteria{
+			Not: []*imap.SearchCriteria{
+				{WithFlags: []string{imap.SeenFlag}},
+			},
 		},
 		res: false,
 	},
@@ -152,33 +195,70 @@ func TestMatchSeqNumAndUid(t *testing.T) {
 	uid := uint32(69)
 
 	c := &imap.SearchCriteria{
-		Or: [2]*imap.SearchCriteria{
+		Or: [][2]*imap.SearchCriteria{{
 			{
 				Uid: new(imap.SeqSet),
-				Not: &imap.SearchCriteria{SeqSet: new(imap.SeqSet)},
+				Not: []*imap.SearchCriteria{{SeqNum: new(imap.SeqSet)}},
 			},
 			{
-				SeqSet: new(imap.SeqSet),
+				SeqNum: new(imap.SeqSet),
 			},
-		},
+		}},
 	}
 
 	if MatchSeqNumAndUid(seqNum, uid, c) {
 		t.Error("Expected not to match criteria")
 	}
 
-	c.Or[0].Uid.AddNum(uid)
+	c.Or[0][0].Uid.AddNum(uid)
 	if !MatchSeqNumAndUid(seqNum, uid, c) {
 		t.Error("Expected to match criteria")
 	}
 
-	c.Or[0].Not.SeqSet.AddNum(seqNum)
+	c.Or[0][0].Not[0].SeqNum.AddNum(seqNum)
 	if MatchSeqNumAndUid(seqNum, uid, c) {
 		t.Error("Expected not to match criteria")
 	}
 
-	c.Or[1].SeqSet.AddNum(seqNum)
+	c.Or[0][1].SeqNum.AddNum(seqNum)
 	if !MatchSeqNumAndUid(seqNum, uid, c) {
+		t.Error("Expected to match criteria")
+	}
+}
+
+func TestMatchDate(t *testing.T) {
+	date := time.Unix(1483997966, 0)
+
+	c := &imap.SearchCriteria{
+		Or: [][2]*imap.SearchCriteria{{
+			{
+				Since: date.Add(48 * time.Hour),
+				Not: []*imap.SearchCriteria{{
+					Since: date.Add(48 * time.Hour),
+				}},
+			},
+			{
+				Before: date.Add(- 48 * time.Hour),
+			},
+		}},
+	}
+
+	if MatchDate(date, c) {
+		t.Error("Expected not to match criteria")
+	}
+
+	c.Or[0][0].Since = date.Add(- 48 * time.Hour)
+	if !MatchDate(date, c) {
+		t.Error("Expected to match criteria")
+	}
+
+	c.Or[0][0].Not[0].Since = date.Add(- 48 * time.Hour)
+	if MatchDate(date, c) {
+		t.Error("Expected not to match criteria")
+	}
+
+	c.Or[0][1].Before = date.Add(48 * time.Hour)
+	if !MatchDate(date, c) {
 		t.Error("Expected to match criteria")
 	}
 }

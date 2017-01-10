@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"net/textproto"
 	"testing"
 	"time"
 
@@ -113,10 +114,12 @@ func TestClient_Search(t *testing.T) {
 
 		date, _ := time.Parse(imap.DateLayout, "1-Feb-1994")
 		criteria := &imap.SearchCriteria{
-			Deleted: true,
-			From:    "Smith",
-			Since:   date,
-			Not:     &imap.SearchCriteria{To: "Pauline"},
+			WithFlags: []string{imap.DeletedFlag},
+			Header:    textproto.MIMEHeader{"From": {"Smith"}},
+			Since:     date,
+			Not: []*imap.SearchCriteria{{
+				Header: textproto.MIMEHeader{"To": {"Pauline"}},
+			}},
 		}
 
 		results, err := c.Search(criteria)
@@ -135,7 +138,7 @@ func TestClient_Search(t *testing.T) {
 		scanner := NewCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
-		if cmd != `SEARCH CHARSET UTF-8 DELETED FROM Smith NOT (TO Pauline) SINCE "1-Feb-1994"` {
+		if cmd != `SEARCH CHARSET UTF-8 SINCE "1-Feb-1994" FROM Smith DELETED NOT (TO Pauline)` {
 			t.Fatal("Bad command:", cmd)
 		}
 
@@ -151,7 +154,7 @@ func TestClient_Search_Uid(t *testing.T) {
 		c.State = imap.SelectedState
 
 		criteria := &imap.SearchCriteria{
-			Undeleted: true,
+			WithoutFlags: []string{imap.DeletedFlag},
 		}
 
 		results, err := c.UidSearch(criteria)

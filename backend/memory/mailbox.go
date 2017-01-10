@@ -15,8 +15,8 @@ type Mailbox struct {
 	Subscribed bool
 	Messages   []*Message
 
-	name       string
-	user       *User
+	name string
+	user *User
 }
 
 func (mbox *Mailbox) Name() string {
@@ -25,8 +25,8 @@ func (mbox *Mailbox) Name() string {
 
 func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 	info := &imap.MailboxInfo{
-		Delimiter:  Delimiter,
-		Name:       mbox.name,
+		Delimiter: Delimiter,
+		Name:      mbox.name,
 	}
 	return info, nil
 }
@@ -155,11 +155,11 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 	}
 
 	mbox.Messages = append(mbox.Messages, &Message{
-		Uid: mbox.uidNext(),
-		Date: date,
-		Size: uint32(len(b)),
+		Uid:   mbox.uidNext(),
+		Date:  date,
+		Size:  uint32(len(b)),
 		Flags: flags,
-		Body: b,
+		Body:  b,
 	})
 	return nil
 }

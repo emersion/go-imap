@@ -10,11 +10,11 @@ import (
 )
 
 type Message struct {
-	Uid uint32
-	Date time.Time
-	Size uint32
+	Uid   uint32
+	Date  time.Time
+	Size  uint32
 	Flags []string
-	Body []byte
+	Body  []byte
 }
 
 func (m *Message) entity() (*message.Entity, error) {

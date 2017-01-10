@@ -7,30 +7,30 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-var updateFlagsTests = []struct{
-	op imap.FlagsOp
+var updateFlagsTests = []struct {
+	op    imap.FlagsOp
 	flags []string
-	res []string
+	res   []string
 }{
 	{
-		op: imap.AddFlags,
+		op:    imap.AddFlags,
 		flags: []string{"d", "e"},
-		res: []string{"a", "b", "c", "d", "e"},
+		res:   []string{"a", "b", "c", "d", "e"},
 	},
 	{
-		op: imap.AddFlags,
+		op:    imap.AddFlags,
 		flags: []string{"a", "d", "b"},
-		res: []string{"a", "b", "c", "d"},
+		res:   []string{"a", "b", "c", "d"},
 	},
 	{
-		op: imap.RemoveFlags,
+		op:    imap.RemoveFlags,
 		flags: []string{"b", "v", "e", "a"},
-		res: []string{"c"},
+		res:   []string{"c"},
 	},
 	{
-		op: imap.SetFlags,
+		op:    imap.SetFlags,
 		flags: []string{"a", "d", "e"},
-		res: []string{"a", "d", "e"},
+		res:   []string{"a", "d", "e"},
 	},
 }
 

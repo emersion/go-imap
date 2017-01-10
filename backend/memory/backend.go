@@ -39,11 +39,11 @@ Hi there :)`
 			user: user,
 			Messages: []*Message{
 				{
-					Uid: 6,
-					Date: time.Now(),
+					Uid:   6,
+					Date:  time.Now(),
 					Flags: []string{"\\Seen"},
-					Size: uint32(len(body)),
-					Body: []byte(body),
+					Size:  uint32(len(body)),
+					Body:  []byte(body),
 				},
 			},
 		},

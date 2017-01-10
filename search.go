@@ -1,52 +1,12 @@
 package imap
 
 import (
+	"errors"
 	"fmt"
+	"net/textproto"
 	"strings"
 	"time"
 )
-
-// TODO: support AND with same fields (e.g. BCC mickey BCC mouse)
-
-// SearchCriteria is a search criteria.
-// See RFC 3501 section 6.4.4 for a description of each field.
-type SearchCriteria struct {
-	SeqSet     *SeqSet
-	Answered   bool
-	Bcc        string
-	Before     time.Time
-	Body       string
-	Cc         string
-	Deleted    bool
-	Draft      bool
-	Flagged    bool
-	From       string
-	Header     [2]string
-	Keyword    string
-	Larger     uint32
-	New        bool
-	Not        *SearchCriteria
-	Old        bool
-	On         time.Time
-	Or         [2]*SearchCriteria
-	Recent     bool
-	Seen       bool
-	SentBefore time.Time
-	SentOn     time.Time
-	SentSince  time.Time
-	Since      time.Time
-	Smaller    uint32
-	Subject    string
-	Text       string
-	To         string
-	Uid        *SeqSet
-	Unanswered bool
-	Undeleted  bool
-	Undraft    bool
-	Unflagged  bool
-	Unkeyword  string
-	Unseen     bool
-}
 
 func maybeString(mystery interface{}) string {
 	s, ok := mystery.(string)
@@ -57,136 +17,223 @@ func maybeString(mystery interface{}) string {
 	return ""
 }
 
-// Parse parses search criteria from fields.
-func (c *SearchCriteria) Parse(fields []interface{}) error {
-	for i := 0; i < len(fields); i++ {
-		f, ok := fields[i].(string)
-		if !ok {
-			return fmt.Errorf("Invalid search criteria field: %v", fields[i])
+func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
+	if len(fields) == 0 {
+		return nil, nil, errors.New("imap: no enough fields for search key")
+	}
+	return fields[0], fields[1:], nil
+}
+
+// SearchCriteria is a search criteria. A message matches the criteria if and
+// only if it matches each one of its fields.
+type SearchCriteria struct {
+	SeqNum *SeqSet // Sequence number is in sequence set
+	Uid    *SeqSet // UID is in sequence set
+
+	// Time and timezone are ignored
+	Since      time.Time // Internal date is since this date
+	Before     time.Time // Internal date is before this date
+	SentSince  time.Time // Date header field is since this date
+	SentBefore time.Time // Date header field is before this date
+
+	Header textproto.MIMEHeader // Each header field value is present
+	Body   []string             // Each string is in the body
+	Text   []string             // Each string is in the text (header + body)
+
+	WithFlags    []string // Each flag is present
+	WithoutFlags []string // Each flag is not present
+
+	Larger  uint32 // Size is larger than this number
+	Smaller uint32 // Size is smaller than this number
+
+	Not []*SearchCriteria    // Each criteria doesn't match
+	Or  [][2]*SearchCriteria // Each criteria pair has at least one match of two
+}
+
+// NewSearchCriteria creates a new search criteria.
+func NewSearchCriteria() *SearchCriteria {
+	return &SearchCriteria{Header: make(textproto.MIMEHeader)}
+}
+
+func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error) {
+	if len(fields) == 0 {
+		return nil, nil
+	}
+
+	f := fields[0]
+	fields = fields[1:]
+
+	if subfields, ok := f.([]interface{}); ok {
+		return fields, c.Parse(subfields)
+	}
+
+	key, ok := f.(string)
+	if !ok {
+		return nil, fmt.Errorf("imap: invalid search criteria field type: %T", f)
+	}
+	key = strings.ToUpper(key)
+
+	var err error
+	switch key {
+	case "ALL":
+		// Nothing to do
+	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":
+		c.WithFlags = append(c.WithFlags, CanonicalFlag("\\"+key))
+	case "BCC", "CC", "FROM", "SUBJECT", "TO":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
 		}
-
-		switch strings.ToUpper(f) {
-		case "ALL":
-			// Nothing to do
-		case "ANSWERED":
-			c.Answered = true
-		case "BCC":
-			i++
-			c.Bcc, _ = fields[i].(string)
-		case "BEFORE":
-			i++
-			c.Before, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "BODY":
-			i++
-			c.Body, _ = fields[i].(string)
-		case "CC":
-			i++
-			c.Cc, _ = fields[i].(string)
-		case "DELETED":
-			c.Deleted = true
-		case "DRAFT":
-			c.Draft = true
-		case "FLAGGED":
-			c.Flagged = true
-		case "FROM":
-			i++
-			c.From, _ = fields[i].(string)
-		case "HEADER":
-			i++
-			name, _ := fields[i].(string)
-
-			i++
-			value, _ := fields[i].(string)
-
-			c.Header = [2]string{name, value}
-		case "KEYWORD":
-			i++
-			c.Keyword, _ = fields[i].(string)
-		case "LARGER":
-			i++
-			c.Larger, _ = ParseNumber(fields[i])
-		case "NEW":
-			c.New = true
-		case "NOT":
-			i++
-			not, _ := fields[i].([]interface{})
-			c.Not = &SearchCriteria{}
-			if err := c.Not.Parse(not); err != nil {
-				return err
+		if c.Header == nil {
+			c.Header = make(textproto.MIMEHeader)
+		}
+		c.Header.Add(key, maybeString(f))
+	case "BEFORE":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else if c.Before.IsZero() || t.Before(c.Before) {
+			c.Before = t
+		}
+	case "BODY":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			c.Body = append(c.Body, maybeString(f))
+		}
+	case "HEADER":
+		var f1, f2 interface{}
+		if f1, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if f2, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			if c.Header == nil {
+				c.Header = make(textproto.MIMEHeader)
 			}
-		case "OLD":
-			c.Old = true
-		case "ON":
-			i++
-			c.On, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "OR":
-			i++
-			leftFields, _ := fields[i].([]interface{})
-
-			i++
-			rightFields, _ := fields[i].([]interface{})
-
-			c.Or = [2]*SearchCriteria{{}, {}}
-			if err := c.Or[0].Parse(leftFields); err != nil {
-				return err
-			}
-			if err := c.Or[1].Parse(rightFields); err != nil {
-				return err
-			}
-		case "RECENT":
-			c.Recent = true
-		case "SEEN":
-			c.Seen = true
-		case "SENTBEFORE":
-			i++
-			c.SentBefore, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "SENTON":
-			i++
-			c.SentOn, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "SENTSINCE":
-			i++
-			c.SentSince, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "SINCE":
-			i++
-			c.Since, _ = time.Parse(DateLayout, maybeString(fields[i]))
-		case "SMALLER":
-			i++
-			c.Smaller, _ = ParseNumber(fields[i])
-		case "SUBJECT":
-			i++
-			c.Subject, _ = fields[i].(string)
-		case "TEXT":
-			i++
-			c.Text, _ = fields[i].(string)
-		case "TO":
-			i++
-			c.To, _ = fields[i].(string)
-		case "UID":
-			i++
-			s, _ := fields[i].(string)
-			c.Uid, _ = NewSeqSet(s)
-		case "UNANSWERED":
-			c.Unanswered = true
-		case "UNDELETED":
-			c.Undeleted = true
-		case "UNDRAFT":
-			c.Undraft = true
-		case "UNFLAGGED":
-			c.Unflagged = true
-		case "UNKEYWORD":
-			i++
-			c.Unkeyword, _ = fields[i].(string)
-		case "UNSEEN":
-			c.Unseen = true
-		default:
-			// Try to parse a sequence set
-			var err error
-			if c.SeqSet, err = NewSeqSet(f); err != nil {
-				return err
-			}
+			c.Header.Add(maybeString(f1), maybeString(f2))
+		}
+	case "KEYWORD":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			c.WithFlags = append(c.WithFlags, CanonicalFlag(maybeString(f)))
+		}
+	case "LARGER":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if n, err := ParseNumber(f); err != nil {
+			return nil, err
+		} else if c.Larger == 0 || n > c.Larger {
+			c.Larger = n
+		}
+	case "NEW":
+		c.WithFlags = append(c.WithFlags, RecentFlag)
+		c.WithoutFlags = append(c.WithoutFlags, SeenFlag)
+	case "NOT":
+		not := new(SearchCriteria)
+		if fields, err = not.parseField(fields); err != nil {
+			return nil, err
+		}
+		c.Not = append(c.Not, not)
+	case "OLD":
+		c.WithoutFlags = append(c.WithoutFlags, RecentFlag)
+	case "ON":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else {
+			c.Since = t
+			c.Before = t.Add(24 * time.Hour)
+		}
+	case "OR":
+		c1, c2 := new(SearchCriteria), new(SearchCriteria)
+		if fields, err = c1.parseField(fields); err != nil {
+			return nil, err
+		} else if fields, err = c2.parseField(fields); err != nil {
+			return nil, err
+		}
+		c.Or = append(c.Or, [2]*SearchCriteria{c1, c2})
+	case "SENTBEFORE":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else if c.SentBefore.IsZero() || t.Before(c.SentBefore) {
+			c.SentBefore = t
+		}
+	case "SENTON":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else {
+			c.SentSince = t
+			c.SentBefore = t.Add(24 * time.Hour)
+		}
+	case "SENTSINCE":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else if c.SentSince.IsZero() || t.After(c.SentSince) {
+			c.SentSince = t
+		}
+	case "SINCE":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
+			return nil, err
+		} else if c.Since.IsZero() || t.After(c.Since) {
+			c.Since = t
+		}
+	case "SMALLER":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if n, err := ParseNumber(f); err != nil {
+			return nil, err
+		} else if c.Smaller == 0 || n < c.Smaller {
+			c.Smaller = n
+		}
+	case "TEXT":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			c.Text = append(c.Text, maybeString(f))
+		}
+	case "UID":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else if c.Uid, err = NewSeqSet(maybeString(f)); err != nil {
+			return nil, err
+		}
+	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
+		unflag := strings.TrimPrefix(key, "UN")
+		c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag("\\"+unflag))
+	case "UNKEYWORD":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag(maybeString(f)))
+		}
+	default: // Try to parse a sequence set
+		if c.SeqNum, err = NewSeqSet(key); err != nil {
+			return nil, err
 		}
 	}
 
+	return fields, nil
+}
+
+// Parse parses search criteria from fields.
+func (c *SearchCriteria) Parse(fields []interface{}) error {
+	for len(fields) > 0 {
+		var err error
+		if fields, err = c.parseField(fields); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -194,111 +241,91 @@ func (c *SearchCriteria) Parse(fields []interface{}) error {
 func (c *SearchCriteria) Format() []interface{} {
 	var fields []interface{}
 
-	if c.SeqSet != nil {
-		fields = append(fields, c.SeqSet)
-	}
-
-	if c.Answered {
-		fields = append(fields, "ANSWERED")
-	}
-	if c.Bcc != "" {
-		fields = append(fields, "BCC", c.Bcc)
-	}
-	if !c.Before.IsZero() {
-		fields = append(fields, "BEFORE", searchDate(c.Before))
-	}
-	if c.Body != "" {
-		fields = append(fields, "BODY", c.Body)
-	}
-	if c.Cc != "" {
-		fields = append(fields, "CC", c.Cc)
-	}
-	if c.Deleted {
-		fields = append(fields, "DELETED")
-	}
-	if c.Draft {
-		fields = append(fields, "DRAFT")
-	}
-	if c.Flagged {
-		fields = append(fields, "FLAGGED")
-	}
-	if c.From != "" {
-		fields = append(fields, "FROM", c.From)
-	}
-	if c.Header[0] != "" {
-		fields = append(fields, "HEADER", c.Header[0], c.Header[1])
-	}
-	if c.Keyword != "" {
-		fields = append(fields, "KEYWORD", c.Keyword)
-	}
-	if c.Larger != 0 {
-		fields = append(fields, "LARGER", c.Larger)
-	}
-	if c.New {
-		fields = append(fields, "NEW")
-	}
-	if c.Not != nil {
-		fields = append(fields, "NOT", c.Not.Format())
-	}
-	if c.Old {
-		fields = append(fields, "OLD")
-	}
-	if !c.On.IsZero() {
-		fields = append(fields, "ON", searchDate(c.On))
-	}
-	if c.Or[0] != nil && c.Or[1] != nil {
-		fields = append(fields, "OR", c.Or[0].Format(), c.Or[1].Format())
-	}
-	if c.Recent {
-		fields = append(fields, "RECENT")
-	}
-	if c.Seen {
-		fields = append(fields, "SEEN")
-	}
-	if !c.SentBefore.IsZero() {
-		fields = append(fields, "SENTBEFORE", searchDate(c.SentBefore))
-	}
-	if !c.SentOn.IsZero() {
-		fields = append(fields, "SENTON", searchDate(c.SentOn))
-	}
-	if !c.SentSince.IsZero() {
-		fields = append(fields, "SENTSINCE", searchDate(c.SentSince))
-	}
-	if !c.Since.IsZero() {
-		fields = append(fields, "SINCE", searchDate(c.Since))
-	}
-	if c.Smaller != 0 {
-		fields = append(fields, "SMALLER", c.Smaller)
-	}
-	if c.Subject != "" {
-		fields = append(fields, "SUBJECT", c.Subject)
-	}
-	if c.Text != "" {
-		fields = append(fields, "TEXT", c.Text)
-	}
-	if c.To != "" {
-		fields = append(fields, "TO", c.To)
+	if c.SeqNum != nil {
+		fields = append(fields, c.SeqNum)
 	}
 	if c.Uid != nil {
 		fields = append(fields, "UID", c.Uid)
 	}
-	if c.Unanswered {
-		fields = append(fields, "UNANSWERED")
+
+	if !c.Since.IsZero() && !c.Before.IsZero() && c.Before.Sub(c.Since) == 24*time.Hour {
+		fields = append(fields, "ON", searchDate(c.Since))
+	} else {
+		if !c.Since.IsZero() {
+			fields = append(fields, "SINCE", searchDate(c.Since))
+		}
+		if !c.Before.IsZero() {
+			fields = append(fields, "BEFORE", searchDate(c.Before))
+		}
 	}
-	if c.Undeleted {
-		fields = append(fields, "UNDELETED")
+	if !c.SentSince.IsZero() && !c.SentBefore.IsZero() && c.SentBefore.Sub(c.SentSince) == 24*time.Hour {
+		fields = append(fields, "SENTON", searchDate(c.SentSince))
+	} else {
+		if !c.SentSince.IsZero() {
+			fields = append(fields, "SENTSINCE", searchDate(c.SentSince))
+		}
+		if !c.SentBefore.IsZero() {
+			fields = append(fields, "SENTBEFORE", searchDate(c.SentBefore))
+		}
 	}
-	if c.Undraft {
-		fields = append(fields, "UNDRAFT")
+
+	for key, values := range c.Header {
+		var prefields []interface{}
+		switch key {
+		case "Bcc", "Cc", "From", "Subject", "To":
+			prefields = []interface{}{strings.ToUpper(key)}
+		default:
+			prefields = []interface{}{"HEADER", key}
+		}
+		for _, value := range values {
+			fields = append(fields, prefields...)
+			fields = append(fields, value)
+		}
 	}
-	if c.Unflagged {
-		fields = append(fields, "UNFLAGGED")
+
+	for _, value := range c.Body {
+		fields = append(fields, "BODY", value)
 	}
-	if c.Unkeyword != "" {
-		fields = append(fields, "UNKEYWORD", c.Unkeyword)
+	for _, value := range c.Text {
+		fields = append(fields, "TEXT", value)
 	}
-	if c.Unseen {
-		fields = append(fields, "UNSEEN")
+
+	for _, flag := range c.WithFlags {
+		var subfields []interface{}
+		switch flag {
+		case AnsweredFlag, DeletedFlag, DraftFlag, FlaggedFlag, RecentFlag, SeenFlag:
+			subfields = []interface{}{strings.ToUpper(strings.TrimPrefix(flag, "\\"))}
+		default:
+			subfields = []interface{}{"KEYWORD", flag}
+		}
+		fields = append(fields, subfields...)
+	}
+	for _, flag := range c.WithoutFlags {
+		var subfields []interface{}
+		switch flag {
+		case AnsweredFlag, DeletedFlag, DraftFlag, FlaggedFlag, SeenFlag:
+			subfields = []interface{}{"UN" + strings.ToUpper(strings.TrimPrefix(flag, "\\"))}
+		case RecentFlag:
+			subfields = []interface{}{"OLD"}
+		default:
+			subfields = []interface{}{"UNKEYWORD", flag}
+		}
+		fields = append(fields, subfields...)
+	}
+
+	if c.Larger > 0 {
+		fields = append(fields, "LARGER", c.Larger)
+	}
+	if c.Smaller > 0 {
+		fields = append(fields, "SMALLER", c.Smaller)
+	}
+
+	for _, not := range c.Not {
+		fields = append(fields, "NOT", not.Format())
+	}
+
+	for _, or := range c.Or {
+		fields = append(fields, "OR", or[0].Format(), or[1].Format())
 	}
 
 	return fields
