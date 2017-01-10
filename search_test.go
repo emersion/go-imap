@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/textproto"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -109,6 +110,12 @@ var searchCriteriaParseTests = []struct {
 		criteria: &SearchCriteria{
 			WithFlags: []string{RecentFlag},
 			WithoutFlags: []string{SeenFlag},
+		},
+	},
+	{
+		fields: []interface{}{"SUBJECT", strings.NewReader("café")},
+		criteria: &SearchCriteria{
+			Header: textproto.MIMEHeader{"Subject": {"café"}},
 		},
 	},
 }

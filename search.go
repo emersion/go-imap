@@ -3,17 +3,30 @@ package imap
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/textproto"
 	"strings"
 	"time"
 )
 
+func literalString(l Literal) string {
+	b, err := ioutil.ReadAll(l)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 func maybeString(mystery interface{}) string {
-	s, ok := mystery.(string)
-	if ok {
+	if s, ok := mystery.(fmt.Stringer); ok {
+		return s.String()
+	}
+	if l, ok := mystery.(Literal); ok {
+		return literalString(l)
+	}
+	if s, ok := mystery.(string); ok {
 		return s
 	}
-
 	return ""
 }
 
