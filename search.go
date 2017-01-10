@@ -3,31 +3,51 @@ package imap
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/textproto"
 	"strings"
 	"time"
 )
 
-func literalString(l Literal) string {
-	b, err := ioutil.ReadAll(l)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
-
 func maybeString(mystery interface{}) string {
-	if s, ok := mystery.(fmt.Stringer); ok {
-		return s.String()
-	}
-	if l, ok := mystery.(Literal); ok {
-		return literalString(l)
-	}
 	if s, ok := mystery.(string); ok {
 		return s
 	}
 	return ""
+}
+
+func convertField(f interface{}, charsetReader func(io.Reader) io.Reader) string {
+	// An IMAP string contains only 7-bit data, no need to decode it
+	if s, ok := f.(string); ok {
+		return s
+	}
+
+	// If no charset is provided, getting directly the string is faster
+	if charsetReader == nil {
+		if stringer, ok := f.(fmt.Stringer); ok {
+			return stringer.String()
+		}
+	}
+
+	// Not a string, it must be a literal
+	l, ok := f.(Literal)
+	if !ok {
+		return ""
+	}
+
+	var r io.Reader = l
+	if charsetReader != nil {
+		if dec := charsetReader(r); dec != nil {
+			r = dec
+		}
+	}
+
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
 
 func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
@@ -68,7 +88,7 @@ func NewSearchCriteria() *SearchCriteria {
 	return &SearchCriteria{Header: make(textproto.MIMEHeader)}
 }
 
-func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error) {
+func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.Reader) io.Reader) ([]interface{}, error) {
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -77,7 +97,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 	fields = fields[1:]
 
 	if subfields, ok := f.([]interface{}); ok {
-		return fields, c.Parse(subfields)
+		return fields, c.ParseWithCharset(subfields, charsetReader)
 	}
 
 	key, ok := f.(string)
@@ -99,7 +119,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 		if c.Header == nil {
 			c.Header = make(textproto.MIMEHeader)
 		}
-		c.Header.Add(key, maybeString(f))
+		c.Header.Add(key, convertField(f, charsetReader))
 	case "BEFORE":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
@@ -112,7 +132,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
 		} else {
-			c.Body = append(c.Body, maybeString(f))
+			c.Body = append(c.Body, convertField(f, charsetReader))
 		}
 	case "HEADER":
 		var f1, f2 interface{}
@@ -124,7 +144,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 			if c.Header == nil {
 				c.Header = make(textproto.MIMEHeader)
 			}
-			c.Header.Add(maybeString(f1), maybeString(f2))
+			c.Header.Add(maybeString(f1), convertField(f2, charsetReader))
 		}
 	case "KEYWORD":
 		if f, fields, err = popSearchField(fields); err != nil {
@@ -145,7 +165,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 		c.WithoutFlags = append(c.WithoutFlags, SeenFlag)
 	case "NOT":
 		not := new(SearchCriteria)
-		if fields, err = not.parseField(fields); err != nil {
+		if fields, err = not.parseField(fields, charsetReader); err != nil {
 			return nil, err
 		}
 		c.Not = append(c.Not, not)
@@ -162,9 +182,9 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 		}
 	case "OR":
 		c1, c2 := new(SearchCriteria), new(SearchCriteria)
-		if fields, err = c1.parseField(fields); err != nil {
+		if fields, err = c1.parseField(fields, charsetReader); err != nil {
 			return nil, err
-		} else if fields, err = c2.parseField(fields); err != nil {
+		} else if fields, err = c2.parseField(fields, charsetReader); err != nil {
 			return nil, err
 		}
 		c.Or = append(c.Or, [2]*SearchCriteria{c1, c2})
@@ -213,7 +233,7 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
 		} else {
-			c.Text = append(c.Text, maybeString(f))
+			c.Text = append(c.Text, convertField(f, charsetReader))
 		}
 	case "UID":
 		if f, fields, err = popSearchField(fields); err != nil {
@@ -239,18 +259,20 @@ func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error)
 	return fields, nil
 }
 
-// Parse parses search criteria from fields.
-func (c *SearchCriteria) Parse(fields []interface{}) error {
+// ParseWithCharset parses a search criteria from the provided fields.
+// charsetReader is an optional function that converts from the fields charset
+// to UTF-8.
+func (c *SearchCriteria) ParseWithCharset(fields []interface{}, charsetReader func(io.Reader) io.Reader) error {
 	for len(fields) > 0 {
 		var err error
-		if fields, err = c.parseField(fields); err != nil {
+		if fields, err = c.parseField(fields, charsetReader); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// Format formats search criteria to fields.
+// Format formats search criteria to fields. UTF-8 is used.
 func (c *SearchCriteria) Format() []interface{} {
 	var fields []interface{}
 

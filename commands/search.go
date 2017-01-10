@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"io"
 	"strings"
 
 	"github.com/emersion/go-imap"
@@ -42,6 +43,15 @@ func (cmd *Search) Parse(fields []interface{}) error {
 		fields = fields[2:]
 	}
 
+	var charsetReader func(io.Reader) io.Reader
+	charset := strings.ToLower(cmd.Charset)
+	if charset != "utf-8" && charset != "us-ascii" && charset != "" {
+		charsetReader = func(r io.Reader) io.Reader {
+			r, _ = imap.CharsetReader(charset, r)
+			return r
+		}
+	}
+
 	cmd.Criteria = new(imap.SearchCriteria)
-	return cmd.Criteria.Parse(fields)
+	return cmd.Criteria.ParseWithCharset(fields, charsetReader)
 }

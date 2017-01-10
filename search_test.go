@@ -2,6 +2,7 @@ package imap
 
 import (
 	"bytes"
+	"io"
 	"net/textproto"
 	"reflect"
 	"strings"
@@ -89,7 +90,7 @@ func TestSearchCriteria_Parse(t *testing.T) {
 		r := NewReader(b)
 		fields, _ := r.ReadFields()
 
-		if err := criteria.Parse(fields[0].([]interface{})); err != nil {
+		if err := criteria.ParseWithCharset(fields[0].([]interface{}), nil); err != nil {
 			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
 		} else if !reflect.DeepEqual(criteria, test.criteria) {
 			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
@@ -100,6 +101,7 @@ func TestSearchCriteria_Parse(t *testing.T) {
 var searchCriteriaParseTests = []struct {
 	fields   []interface{}
 	criteria *SearchCriteria
+	charset  func(io.Reader) io.Reader
 }{
 	{
 		fields: []interface{}{"ALL"},
@@ -117,13 +119,16 @@ var searchCriteriaParseTests = []struct {
 		criteria: &SearchCriteria{
 			Header: textproto.MIMEHeader{"Subject": {"café"}},
 		},
+		charset: func(r io.Reader) io.Reader {
+			return r
+		},
 	},
 }
 
 func TestSearchCriteria_Parse_others(t *testing.T) {
 	for i, test := range searchCriteriaParseTests {
 		criteria := new(SearchCriteria)
-		if err := criteria.Parse(test.fields); err != nil {
+		if err := criteria.ParseWithCharset(test.fields, test.charset); err != nil {
 			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
 		} else if !reflect.DeepEqual(criteria, test.criteria) {
 			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
