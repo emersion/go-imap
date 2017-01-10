@@ -58,6 +58,9 @@ func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
 	if !backendutil.MatchSeqNumAndUid(seqNum, m.Uid, c) {
 		return false, nil
 	}
+	if !backendutil.MatchDate(m.Date, c) {
+		return false, nil
+	}
 	if !backendutil.MatchFlags(m.Flags, c) {
 		return false, nil
 	}
