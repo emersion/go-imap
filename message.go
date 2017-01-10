@@ -3,6 +3,9 @@ package imap
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"mime"
 	"strconv"
 	"strings"
 	"time"
@@ -73,6 +76,79 @@ func CanonicalFlag(flag string) string {
 		}
 	}
 	return flag
+}
+
+func ParseParamList(fields []interface{}) (map[string]string, error) {
+	params := make(map[string]string)
+
+	var k string
+	for i, f := range fields {
+		p, ok := f.(string)
+		if !ok {
+			return nil, errors.New("Parameter list contains a non-string")
+		}
+
+		if i%2 == 0 {
+			k = p
+		} else {
+			params[k] = p
+			k = ""
+		}
+	}
+
+	if k != "" {
+		return nil, errors.New("Parameter list contains a key without a value")
+	}
+	return params, nil
+}
+
+func FormatParamList(params map[string]string) []interface{} {
+	var fields []interface{}
+	for key, value := range params {
+		fields = append(fields, key, value)
+	}
+	return fields
+}
+
+var wordDecoder = &mime.WordDecoder{
+	CharsetReader: func(charset string, input io.Reader) (io.Reader, error) {
+		if CharsetReader != nil {
+			return CharsetReader(charset, input)
+		}
+		return nil, fmt.Errorf("imap: unhandled charset %q", charset)
+	},
+}
+
+func decodeHeader(s string) (string, error) {
+	dec, err := wordDecoder.DecodeHeader(s)
+	if err != nil {
+		return s, err
+	}
+	return dec, nil
+}
+
+func encodeHeader(s string) string {
+	return mime.QEncoding.Encode("utf-8", s)
+}
+
+func parseHeaderParamList(fields []interface{}) (map[string]string, error) {
+	params, err := ParseParamList(fields)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range params {
+		params[k], _ = decodeHeader(v)
+	}
+	return params, nil
+}
+
+func formatHeaderParamList(params map[string]string) []interface{} {
+	encoded := make(map[string]string)
+	for k, v := range params {
+		encoded[k] = encodeHeader(v)
+	}
+	return FormatParamList(encoded)
 }
 
 // A message.
@@ -511,87 +587,6 @@ func (part *BodyPartName) String() (s string) {
 	return
 }
 
-// A message envelope, ie. message metadata from its headers.
-// See RFC 3501 page 77.
-type Envelope struct {
-	// The message date.
-	Date time.Time
-	// The message subject.
-	Subject string
-	// The From header addresses.
-	From []*Address
-	// The message senders.
-	Sender []*Address
-	// The Reply-To header addresses.
-	ReplyTo []*Address
-	// The To header addresses.
-	To []*Address
-	// The Cc header addresses.
-	Cc []*Address
-	// The Bcc header addresses.
-	Bcc []*Address
-	// The In-Reply-To header. Contains the parent Message-Id.
-	InReplyTo string
-	// The Message-Id header.
-	MessageId string
-}
-
-// Parse an envelope from fields.
-func (e *Envelope) Parse(fields []interface{}) error {
-	if len(fields) < 10 {
-		return errors.New("ENVELOPE doesn't contain 10 fields")
-	}
-
-	if date, ok := fields[0].(string); ok {
-		e.Date, _ = parseMessageDateTime(date)
-	}
-	if subject, ok := fields[1].(string); ok {
-		e.Subject = subject
-	}
-	if from, ok := fields[2].([]interface{}); ok {
-		e.From = ParseAddressList(from)
-	}
-	if sender, ok := fields[3].([]interface{}); ok {
-		e.Sender = ParseAddressList(sender)
-	}
-	if replyTo, ok := fields[4].([]interface{}); ok {
-		e.ReplyTo = ParseAddressList(replyTo)
-	}
-	if to, ok := fields[5].([]interface{}); ok {
-		e.To = ParseAddressList(to)
-	}
-	if cc, ok := fields[6].([]interface{}); ok {
-		e.Cc = ParseAddressList(cc)
-	}
-	if bcc, ok := fields[7].([]interface{}); ok {
-		e.Bcc = ParseAddressList(bcc)
-	}
-	if inReplyTo, ok := fields[8].(string); ok {
-		e.InReplyTo = inReplyTo
-	}
-	if msgId, ok := fields[9].(string); ok {
-		e.MessageId = msgId
-	}
-
-	return nil
-}
-
-// Format an envelope to fields.
-func (e *Envelope) Format() (fields []interface{}) {
-	return []interface{}{
-		envelopeDateTime(e.Date),
-		e.Subject,
-		FormatAddressList(e.From),
-		FormatAddressList(e.Sender),
-		FormatAddressList(e.ReplyTo),
-		FormatAddressList(e.To),
-		FormatAddressList(e.Cc),
-		FormatAddressList(e.Bcc),
-		e.InReplyTo,
-		e.MessageId,
-	}
-}
-
 // An address.
 type Address struct {
 	// The personal name.
@@ -604,10 +599,6 @@ type Address struct {
 	HostName string
 }
 
-func (addr *Address) String() string {
-	return addr.MailboxName + "@" + addr.HostName
-}
-
 // Parse an address from fields.
 func (addr *Address) Parse(fields []interface{}) error {
 	if len(fields) < 4 {
@@ -615,7 +606,7 @@ func (addr *Address) Parse(fields []interface{}) error {
 	}
 
 	if f, ok := fields[0].(string); ok {
-		addr.PersonalName = f
+		addr.PersonalName, _ = decodeHeader(f)
 	}
 	if f, ok := fields[1].(string); ok {
 		addr.AtDomainList = f
@@ -635,7 +626,7 @@ func (addr *Address) Format() []interface{} {
 	fields := make([]interface{}, 4)
 
 	if addr.PersonalName != "" {
-		fields[0] = addr.PersonalName
+		fields[0] = encodeHeader(addr.PersonalName)
 	}
 	if addr.AtDomainList != "" {
 		fields[1] = addr.AtDomainList
@@ -675,6 +666,87 @@ func FormatAddressList(addrs []*Address) (fields []interface{}) {
 	}
 
 	return
+}
+
+// A message envelope, ie. message metadata from its headers.
+// See RFC 3501 page 77.
+type Envelope struct {
+	// The message date.
+	Date time.Time
+	// The message subject.
+	Subject string
+	// The From header addresses.
+	From []*Address
+	// The message senders.
+	Sender []*Address
+	// The Reply-To header addresses.
+	ReplyTo []*Address
+	// The To header addresses.
+	To []*Address
+	// The Cc header addresses.
+	Cc []*Address
+	// The Bcc header addresses.
+	Bcc []*Address
+	// The In-Reply-To header. Contains the parent Message-Id.
+	InReplyTo string
+	// The Message-Id header.
+	MessageId string
+}
+
+// Parse an envelope from fields.
+func (e *Envelope) Parse(fields []interface{}) error {
+	if len(fields) < 10 {
+		return errors.New("ENVELOPE doesn't contain 10 fields")
+	}
+
+	if date, ok := fields[0].(string); ok {
+		e.Date, _ = parseMessageDateTime(date)
+	}
+	if subject, ok := fields[1].(string); ok {
+		e.Subject, _ = decodeHeader(subject)
+	}
+	if from, ok := fields[2].([]interface{}); ok {
+		e.From = ParseAddressList(from)
+	}
+	if sender, ok := fields[3].([]interface{}); ok {
+		e.Sender = ParseAddressList(sender)
+	}
+	if replyTo, ok := fields[4].([]interface{}); ok {
+		e.ReplyTo = ParseAddressList(replyTo)
+	}
+	if to, ok := fields[5].([]interface{}); ok {
+		e.To = ParseAddressList(to)
+	}
+	if cc, ok := fields[6].([]interface{}); ok {
+		e.Cc = ParseAddressList(cc)
+	}
+	if bcc, ok := fields[7].([]interface{}); ok {
+		e.Bcc = ParseAddressList(bcc)
+	}
+	if inReplyTo, ok := fields[8].(string); ok {
+		e.InReplyTo = inReplyTo
+	}
+	if msgId, ok := fields[9].(string); ok {
+		e.MessageId = msgId
+	}
+
+	return nil
+}
+
+// Format an envelope to fields.
+func (e *Envelope) Format() (fields []interface{}) {
+	return []interface{}{
+		envelopeDateTime(e.Date),
+		encodeHeader(e.Subject),
+		FormatAddressList(e.From),
+		FormatAddressList(e.Sender),
+		FormatAddressList(e.ReplyTo),
+		FormatAddressList(e.To),
+		FormatAddressList(e.Cc),
+		FormatAddressList(e.Bcc),
+		e.InReplyTo,
+		e.MessageId,
+	}
 }
 
 // A body structure.
@@ -727,46 +799,13 @@ type BodyStructure struct {
 	Md5 string
 }
 
-func ParseParamList(fields []interface{}) (params map[string]string, err error) {
-	params = map[string]string{}
-
-	var k string
-	for i, f := range fields {
-		p, ok := f.(string)
-		if !ok {
-			err = errors.New("Parameter list contains a non-string")
-			return
-		}
-
-		if i%2 == 0 {
-			k = p
-		} else {
-			params[k] = p
-			k = ""
-		}
-	}
-
-	if k != "" {
-		err = errors.New("Parameter list contains a key without a value")
-	}
-	return
-}
-
-func FormatParamList(params map[string]string) []interface{} {
-	fields := []interface{}{}
-	for key, value := range params {
-		fields = append(fields, key, value)
-	}
-	return fields
-}
-
 func (bs *BodyStructure) Parse(fields []interface{}) error {
 	if len(fields) == 0 {
 		return nil
 	}
 
 	// Initialize params map
-	bs.Params = map[string]string{}
+	bs.Params = make(map[string]string)
 
 	switch fields[0].(type) {
 	case []interface{}: // A multipart body part
@@ -776,7 +815,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		for i, fi := range fields {
 			switch f := fi.(type) {
 			case []interface{}: // A part
-				part := &BodyStructure{}
+				part := new(BodyStructure)
 				if err := part.Parse(f); err != nil {
 					return err
 				}
@@ -799,14 +838,16 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			bs.Extended = true // Contains extension data
 
 			params, _ := fields[end].([]interface{})
-			bs.Params, _ = ParseParamList(params)
+			bs.Params, _ = parseHeaderParamList(params)
 			end++
 		}
 		if len(fields) > end {
 			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
-				bs.Disposition, _ = disp[0].(string)
+				if s, ok := disp[0].(string); ok {
+					bs.Disposition, _ = decodeHeader(s)
+				}
 				if params, ok := disp[1].([]interface{}); ok {
-					bs.DispositionParams, _ = ParseParamList(params)
+					bs.DispositionParams, _ = parseHeaderParamList(params)
 				}
 			}
 			end++
@@ -836,10 +877,12 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.MimeSubType, _ = fields[1].(string)
 
 		params, _ := fields[2].([]interface{})
-		bs.Params, _ = ParseParamList(params)
+		bs.Params, _ = parseHeaderParamList(params)
 
 		bs.Id, _ = fields[3].(string)
-		bs.Description, _ = fields[4].(string)
+		if desc, ok := fields[4].(string); ok {
+			bs.Description, _ = decodeHeader(desc)
+		}
 		bs.Encoding, _ = fields[5].(string)
 		bs.Size, _ = ParseNumber(fields[6])
 
@@ -852,11 +895,11 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			}
 
 			envelope, _ := fields[end].([]interface{})
-			bs.Envelope = &Envelope{}
+			bs.Envelope = new(Envelope)
 			bs.Envelope.Parse(envelope)
 
 			structure, _ := fields[end+1].([]interface{})
-			bs.BodyStructure = &BodyStructure{}
+			bs.BodyStructure = new(BodyStructure)
 			bs.BodyStructure.Parse(structure)
 
 			bs.Lines, _ = ParseNumber(fields[end+2])
@@ -882,9 +925,11 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		}
 		if len(fields) > end {
 			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
-				bs.Disposition, _ = disp[0].(string)
+				if s, ok := disp[0].(string); ok {
+					bs.Disposition, _ = decodeHeader(s)
+				}
 				if params, ok := disp[1].([]interface{}); ok {
-					bs.DispositionParams, _ = ParseParamList(params)
+					bs.DispositionParams, _ = parseHeaderParamList(params)
 				}
 			}
 			end++
@@ -922,12 +967,12 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 			extended := make([]interface{}, 4)
 
 			if bs.Params != nil {
-				extended[0] = FormatParamList(bs.Params)
+				extended[0] = formatHeaderParamList(bs.Params)
 			}
 			if bs.Disposition != "" {
 				extended[1] = []interface{}{
-					bs.Disposition,
-					FormatParamList(bs.DispositionParams),
+					encodeHeader(bs.Disposition),
+					formatHeaderParamList(bs.DispositionParams),
 				}
 			}
 			if bs.Language != nil {
@@ -943,13 +988,13 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		fields = make([]interface{}, 7)
 		fields[0] = bs.MimeType
 		fields[1] = bs.MimeSubType
-		fields[2] = FormatParamList(bs.Params)
+		fields[2] = formatHeaderParamList(bs.Params)
 
 		if bs.Id != "" {
 			fields[3] = bs.Id
 		}
 		if bs.Description != "" {
-			fields[4] = bs.Description
+			fields[4] = encodeHeader(bs.Description)
 		}
 		if bs.Encoding != "" {
 			fields[5] = bs.Encoding
@@ -984,8 +1029,8 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 			}
 			if bs.Disposition != "" {
 				extended[1] = []interface{}{
-					bs.Disposition,
-					FormatParamList(bs.DispositionParams),
+					encodeHeader(bs.Disposition),
+					formatHeaderParamList(bs.DispositionParams),
 				}
 			}
 			if bs.Language != nil {

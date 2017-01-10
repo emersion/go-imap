@@ -3,7 +3,6 @@ package client_test
 import (
 	"io/ioutil"
 	"log"
-	"mime"
 	"net/mail"
 
 	"github.com/emersion/go-imap"
@@ -68,11 +67,8 @@ func ExampleClient() {
 	}()
 
 	log.Println("Last 4 messages:")
-	dec := new(mime.WordDecoder)
 	for msg := range messages {
-		if subject, err := dec.DecodeHeader(msg.Envelope.Subject); err == nil {
-			log.Println("* " + subject)
-		}
+		log.Println("* " + msg.Envelope.Subject)
 	}
 
 	log.Println("Done!")

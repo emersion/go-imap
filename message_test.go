@@ -373,7 +373,7 @@ var paramsListTest = []struct {
 	params map[string]string
 }{
 	{
-		fields: []interface{}{},
+		fields: nil,
 		params: map[string]string{},
 	},
 	{

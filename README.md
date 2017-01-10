@@ -9,7 +9,7 @@ Card](https://goreportcard.com/badge/github.com/emersion/go-imap)](https://gorep
 [![Gitter chat](https://badges.gitter.im/goimap/Lobby.svg)](https://gitter.im/goimap/Lobby)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
-can be used to build a client and/or a server and supports UTF-7.
+can be used to build a client and/or a server.
 
 ```bash
 go get github.com/emersion/go-imap/...
@@ -25,6 +25,7 @@ Other IMAP implementations in Go:
 * Don't implement unilateral updates (i.e. the server can't notify clients for
   new messages)
 * Do not have a good test coverage
+* Don't handle encoding and charset automatically
 
 ## Implemented commands
 
@@ -64,7 +65,6 @@ package main
 
 import (
 	"log"
-	"mime"
 
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap"
@@ -128,11 +128,8 @@ func main() {
 	}()
 
 	log.Println("Last 4 messages:")
-	dec := new(mime.WordDecoder)
 	for msg := range messages {
-		if subject, err := dec.DecodeHeader(msg.Envelope.Subject); err == nil {
-			log.Println("* " + subject)
-		}
+		log.Println("* " + msg.Envelope.Subject)
 	}
 
 	log.Println("Done!")
