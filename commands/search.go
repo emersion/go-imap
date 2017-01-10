@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/emersion/go-imap"
 )
@@ -31,17 +32,16 @@ func (cmd *Search) Parse(fields []interface{}) error {
 	}
 
 	// Parse charset
-	if f, ok := fields[0].(string); ok && f == "CHARSET" {
+	if f, ok := fields[0].(string); ok && strings.EqualFold(f, "CHARSET") {
 		if len(fields) < 2 {
 			return errors.New("Missing CHARSET value")
 		}
 		if cmd.Charset, ok = fields[1].(string); !ok {
 			return errors.New("Charset must be a string")
 		}
-
 		fields = fields[2:]
 	}
 
-	cmd.Criteria = &imap.SearchCriteria{}
+	cmd.Criteria = new(imap.SearchCriteria)
 	return cmd.Criteria.Parse(fields)
 }
