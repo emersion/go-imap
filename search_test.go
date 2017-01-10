@@ -75,23 +75,51 @@ func TestSearchCriteria_Format(t *testing.T) {
 		}
 
 		if got != test.expected {
-			t.Errorf("Invalid search criteria fields for #%v: got \n%v\n instead of \n%v", i, got, test.expected)
+			t.Errorf("Invalid search criteria fields for #%v: got \n%v\n instead of \n%v", i+1, got, test.expected)
 		}
 	}
 }
 
 func TestSearchCriteria_Parse(t *testing.T) {
 	for i, test := range searchCriteriaTests {
-		criteria := &SearchCriteria{}
+		criteria := new(SearchCriteria)
 
 		b := bytes.NewBuffer([]byte(test.expected))
 		r := NewReader(b)
 		fields, _ := r.ReadFields()
 
 		if err := criteria.Parse(fields[0].([]interface{})); err != nil {
-			t.Errorf("Cannot parse search criteria for #%v: %v", i, err)
+			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
 		} else if !reflect.DeepEqual(criteria, test.criteria) {
-			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i, criteria, test.criteria)
+			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
+		}
+	}
+}
+
+var searchCriteriaParseTests = []struct {
+	fields   []interface{}
+	criteria *SearchCriteria
+}{
+	{
+		fields: []interface{}{"ALL"},
+		criteria: &SearchCriteria{},
+	},
+	{
+		fields: []interface{}{"NEW"},
+		criteria: &SearchCriteria{
+			WithFlags: []string{RecentFlag},
+			WithoutFlags: []string{SeenFlag},
+		},
+	},
+}
+
+func TestSearchCriteria_Parse_others(t *testing.T) {
+	for i, test := range searchCriteriaParseTests {
+		criteria := new(SearchCriteria)
+		if err := criteria.Parse(test.fields); err != nil {
+			t.Errorf("Cannot parse search criteria for #%v: %v", i+1, err)
+		} else if !reflect.DeepEqual(criteria, test.criteria) {
+			t.Errorf("Invalid search criteria for #%v: got \n%+v\n instead of \n%+v", i+1, criteria, test.criteria)
 		}
 	}
 }

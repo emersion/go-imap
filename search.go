@@ -52,9 +52,7 @@ type SearchCriteria struct {
 
 // NewSearchCriteria creates a new search criteria.
 func NewSearchCriteria() *SearchCriteria {
-	return &SearchCriteria{
-		Header: make(textproto.MIMEHeader),
-	}
+	return &SearchCriteria{Header: make(textproto.MIMEHeader)}
 }
 
 func (c *SearchCriteria) parseField(fields []interface{}) ([]interface{}, error) {
