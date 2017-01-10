@@ -2,8 +2,8 @@ package backendutil
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -16,6 +16,43 @@ func matchString(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
+func bufferBody(e *message.Entity) (*bytes.Buffer, error) {
+	b := new(bytes.Buffer)
+	if _, err := io.Copy(b, e.Body); err != nil {
+		return nil, err
+	}
+	e.Body = b
+	return b, nil
+}
+
+func matchBody(e *message.Entity, substr string) (bool, error) {
+	if s, ok := e.Body.(fmt.Stringer); ok {
+		return matchString(s.String(), substr), nil
+	}
+
+	b, err := bufferBody(e)
+	if err != nil {
+		return false, err
+	}
+	return matchString(b.String(), substr), nil
+}
+
+type lengther interface {
+	Len() int
+}
+
+func bodyLen(e *message.Entity) (int, error) {
+	if l, ok := e.Body.(lengther); ok {
+		return l.Len(), nil
+	}
+
+	b, err := bufferBody(e)
+	if err != nil {
+		return 0, err
+	}
+	return b.Len(), nil
+}
+
 // Match returns true if a message matches the provided criteria. Sequence
 // number, UID, flag and internal date contrainsts are not checked.
 func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
@@ -23,15 +60,6 @@ func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
 	// TODO: add header size for Larger and Smaller
 
 	h := mail.Header{e.Header}
-
-	// TODO: optimize this
-	b, err := ioutil.ReadAll(e.Body)
-	if err != nil {
-		return false, err
-	}
-	s := string(b)
-	br := bytes.NewReader(b)
-	e.Body = br
 
 	if !c.SentBefore.IsZero() || !c.SentSince.IsZero() {
 		t, err := h.Date()
@@ -69,39 +97,44 @@ func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
 		}
 	}
 	for _, body := range c.Body {
-		if !matchString(s, body) {
-			return false, nil
+		if ok, err := matchBody(e, body); err != nil || !ok {
+			return false, err
 		}
 	}
 	for _, text := range c.Text {
-		if !matchString(s, text) {
-			return false, nil
+		// TODO: also match header fields
+		if ok, err := matchBody(e, text); err != nil || !ok {
+			return false, err
 		}
 	}
 
-	if c.Larger > 0 && uint32(len(b)) < c.Larger {
-		return false, nil
-	}
-	if c.Smaller > 0 && uint32(len(b)) > c.Smaller {
-		return false, nil
+	if c.Larger > 0 || c.Smaller > 0 {
+		n, err := bodyLen(e)
+		if err != nil {
+			return false, err
+		}
+
+		if c.Larger > 0 && uint32(n) < c.Larger {
+			return false, nil
+		}
+		if c.Smaller > 0 && uint32(n) > c.Smaller {
+			return false, nil
+		}
 	}
 
 	for _, not := range c.Not {
 		ok, err := Match(e, not)
-		br.Seek(0, io.SeekStart)
 		if err != nil || ok {
 			return false, err
 		}
 	}
 	for _, or := range c.Or {
 		ok1, err := Match(e, or[0])
-		br.Seek(0, io.SeekStart)
 		if err != nil {
 			return ok1, err
 		}
 
 		ok2, err := Match(e, or[1])
-		br.Seek(0, io.SeekStart)
 		if err != nil || (!ok1 && !ok2) {
 			return false, err
 		}
