@@ -105,11 +105,14 @@ func trimSuffix(str string, suffix rune) string {
 
 // An IMAP reader.
 type Reader struct {
+	MaxLiteralSize uint32 // The maximum literal size.
+
 	reader
+
+	continues      chan<- bool
 
 	brackets   int
 	inRespCode bool
-	continues  chan<- bool
 }
 
 func (r *Reader) ReadSp() error {
@@ -188,44 +191,42 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 	return atom, nil
 }
 
-func (r *Reader) ReadLiteral() (literal Literal, err error) {
+func (r *Reader) ReadLiteral() (Literal, error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
-		return
-	}
-	if char != literalStart {
-		err = newParseError("literal string doesn't start with an open brace")
-		return
+		return nil, err
+	} else if char != literalStart {
+		return nil, newParseError("literal string doesn't start with an open brace")
 	}
 
 	lstr, err := r.ReadString(byte(literalEnd))
 	if err != nil {
-		return
+		return nil, err
 	}
 	lstr = trimSuffix(lstr, literalEnd)
-
-	l, err := strconv.Atoi(lstr)
+	n, err := strconv.ParseUint(lstr, 10, 32)
 	if err != nil {
-		err = newParseError("cannot parse literal length: " + err.Error())
-		return
+		return nil, newParseError("cannot parse literal length: " + err.Error())
+	}
+	if r.MaxLiteralSize > 0 && uint32(n) > r.MaxLiteralSize {
+		return nil, newParseError("literal exceeding maximum size")
 	}
 
-	if err = r.ReadCrlf(); err != nil {
-		return
+	if err := r.ReadCrlf(); err != nil {
+		return nil, err
 	}
 
-	// Send continuation request
+	// Send continuation request if necessary
 	if r.continues != nil {
 		r.continues <- true
 	}
 
-	b := make([]byte, l)
-	if _, err = io.ReadFull(r, b); err != nil {
-		return
+	// Read literal
+	b := make([]byte, n)
+	if _, err := io.ReadFull(r, b); err != nil {
+		return nil, err
 	}
-
-	literal = bytes.NewBuffer(b)
-	return
+	return bytes.NewBuffer(b), nil
 }
 
 func (r *Reader) ReadQuotedString() (string, error) {

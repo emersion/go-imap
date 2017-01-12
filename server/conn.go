@@ -93,6 +93,9 @@ func newConn(s *Server, c net.Conn) *conn {
 	if s.Debug != nil {
 		conn.Conn.SetDebug(s.Debug)
 	}
+	if s.MaxLiteralSize > 0 {
+		conn.Conn.MaxLiteralSize = s.MaxLiteralSize
+	}
 
 	conn.l.Lock()
 	go conn.send()

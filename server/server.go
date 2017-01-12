@@ -118,6 +118,9 @@ type Server struct {
 	// If nil, logging goes to os.Stderr via the log package's
 	// standard logger.
 	ErrorLog imap.Logger
+	// The maximum literal size, in bytes. Literals exceeding this size will be
+	// rejected. A value of zero disables the limit (this is the default).
+	MaxLiteralSize uint32
 }
 
 // Create a new IMAP server from an existing listener.
