@@ -10,7 +10,9 @@ type Expunge struct {
 	SeqNums chan uint32
 }
 
-func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
+func (r *Expunge) HandleFrom(hdlr imap.RespHandler) error {
+	defer close(r.SeqNums)
+
 	for h := range hdlr {
 		res, ok := h.Resp.(*imap.Resp)
 		if !ok || len(res.Fields) < 3 {
@@ -27,7 +29,7 @@ func (r *Expunge) HandleFrom(hdlr imap.RespHandler) (err error) {
 		r.SeqNums <- seqNum
 	}
 
-	return
+	return nil
 }
 
 func (r *Expunge) WriteTo(w *imap.Writer) error {

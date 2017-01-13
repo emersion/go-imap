@@ -16,76 +16,63 @@ var ErrNoMailboxSelected = errors.New("No mailbox selected")
 // Check requests a checkpoint of the currently selected mailbox. A checkpoint
 // refers to any implementation-dependent housekeeping associated with the
 // mailbox that is not normally executed as part of each command.
-func (c *Client) Check() (err error) {
+func (c *Client) Check() error {
 	if c.State != imap.SelectedState {
-		err = ErrNoMailboxSelected
-		return
+		return ErrNoMailboxSelected
 	}
 
 	cmd := &commands.Check{}
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	err = status.Err()
-	return
+	return status.Err()
 }
 
 // Close permanently removes all messages that have the \Deleted flag set from
 // the currently selected mailbox, and returns to the authenticated state from
 // the selected state.
-func (c *Client) Close() (err error) {
+func (c *Client) Close() error {
 	if c.State != imap.SelectedState {
-		err = ErrNoMailboxSelected
-		return
+		return ErrNoMailboxSelected
 	}
 
 	cmd := &commands.Close{}
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
-		return
-	}
-
-	err = status.Err()
-	if err != nil {
-		return
+		return err
+	} else if err := status.Err(); err != nil {
+		return err
 	}
 
 	c.State = imap.AuthenticatedState
 	c.Mailbox = nil
-	return
+	return nil
 }
 
 // Expunge permanently removes all messages that have the \Deleted flag set from
 // the currently selected mailbox. If ch is not nil, sends sequence IDs of each
 // deleted message to this channel.
-func (c *Client) Expunge(ch chan uint32) (err error) {
-	if ch != nil {
-		defer close(ch)
-	}
-
+func (c *Client) Expunge(ch chan uint32) error {
 	if c.State != imap.SelectedState {
-		err = ErrNoMailboxSelected
-		return
+		return ErrNoMailboxSelected
 	}
 
-	cmd := &commands.Expunge{}
+	cmd := new(commands.Expunge)
 
-	var res *responses.Expunge
+	var res imap.RespHandlerFrom
 	if ch != nil {
 		res = &responses.Expunge{SeqNums: ch}
 	}
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
-		return
+		return err
 	}
-
-	err = status.Err()
-	return
+	return status.Err()
 }
 
 func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset string) (ids []uint32, status *imap.StatusResp, err error) {
@@ -224,14 +211,12 @@ func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, c
 	return c.store(true, seqset, item, value, ch)
 }
 
-func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) (err error) {
+func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) error {
 	if c.State != imap.SelectedState {
-		err = ErrNoMailboxSelected
-		return
+		return ErrNoMailboxSelected
 	}
 
-	var cmd imap.Commander
-	cmd = &commands.Copy{
+	var cmd imap.Commander = &commands.Copy{
 		SeqSet:  seqset,
 		Mailbox: dest,
 	}
@@ -241,11 +226,9 @@ func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) (err error) {
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
-		return
+		return err
 	}
-
-	err = status.Err()
-	return
+	return status.Err()
 }
 
 // Copy copies the specified message(s) to the end of the specified destination
