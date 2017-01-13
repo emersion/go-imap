@@ -104,13 +104,13 @@ var searchCriteriaParseTests = []struct {
 	charset  func(io.Reader) io.Reader
 }{
 	{
-		fields: []interface{}{"ALL"},
+		fields:   []interface{}{"ALL"},
 		criteria: &SearchCriteria{},
 	},
 	{
 		fields: []interface{}{"NEW"},
 		criteria: &SearchCriteria{
-			WithFlags: []string{RecentFlag},
+			WithFlags:    []string{RecentFlag},
 			WithoutFlags: []string{SeenFlag},
 		},
 	},

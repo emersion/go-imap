@@ -238,7 +238,7 @@ func TestMatchDate(t *testing.T) {
 				}},
 			},
 			{
-				Before: date.Add(- 48 * time.Hour),
+				Before: date.Add(-48 * time.Hour),
 			},
 		}},
 	}
@@ -247,12 +247,12 @@ func TestMatchDate(t *testing.T) {
 		t.Error("Expected not to match criteria")
 	}
 
-	c.Or[0][0].Since = date.Add(- 48 * time.Hour)
+	c.Or[0][0].Since = date.Add(-48 * time.Hour)
 	if !MatchDate(date, c) {
 		t.Error("Expected to match criteria")
 	}
 
-	c.Or[0][0].Not[0].Since = date.Add(- 48 * time.Hour)
+	c.Or[0][0].Not[0].Since = date.Add(-48 * time.Hour)
 	if MatchDate(date, c) {
 		t.Error("Expected not to match criteria")
 	}

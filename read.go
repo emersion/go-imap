@@ -109,7 +109,7 @@ type Reader struct {
 
 	reader
 
-	continues      chan<- bool
+	continues chan<- bool
 
 	brackets   int
 	inRespCode bool
