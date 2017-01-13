@@ -143,56 +143,60 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	statusHdlr := make(imap.RespHandler)
 	c.handler.Add(statusHdlr)
 
-	written := make(chan error, 1)
+	// Send the command to the server
+	doneWrite := make(chan error, 1)
 	go func() {
-		written <- cmd.WriteTo(c.conn.Writer)
+		doneWrite <- cmd.WriteTo(c.conn.Writer)
 	}()
 
+	// If a response handler is provided, start it
 	var hdlr imap.RespHandler
-	var done chan error
+	var doneHandle chan error
 	if res != nil {
 		hdlr = make(imap.RespHandler)
-		done = make(chan error, 1)
+		doneHandle = make(chan error, 1)
 
 		go func() {
-			done <- res.HandleFrom(hdlr)
-
-			if hdlr != nil {
-				close(hdlr)
-				hdlr = nil
-			}
+			doneHandle <- res.HandleFrom(hdlr)
 		}()
 	}
 
 	for {
 		select {
-		// If the connection is closed (such as from an I/O error), ensure we realize
-		// this and don't block waiting on a response that will never come. loggedOut
-		// is a channel that closes when the reader goroutine ends.
 		case <-c.loggedOut:
+			// If the connection is closed (such as from an I/O error), ensure we
+			// realize this and don't block waiting on a response that will never
+			// come. loggedOut is a channel that closes when the reader goroutine
+			// ends.
 			err = errClosed
 			return
-		case err = <-written:
+		case err = <-doneWrite:
+			// Error while sending the command
 			if err != nil {
-				return
+				c.handler.Del(statusHdlr)
+			}
+		case err = <-doneHandle:
+			// Error while handling responses
+			if err != nil {
+				c.handler.Del(statusHdlr)
 			}
 		case h, more := <-statusHdlr:
 			if !more {
-				if done != nil {
-					err = <-done
-				}
+				// statusHdlr has been closed, stop here
 				return
 			}
 
+			// If the status tag matches the command tag, the response is completed
 			if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
 				h.Accept()
 				status = s
 
+				// Stop the response handler, if it's running
 				if hdlr != nil {
 					close(hdlr)
-					hdlr = nil
 				}
 
+				// Do not listen for responses anymore
 				c.handler.Del(statusHdlr)
 			} else if hdlr != nil {
 				hdlr <- h
