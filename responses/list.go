@@ -12,15 +12,17 @@ type List struct {
 	Subscribed bool
 }
 
-func (r *List) Name() (name string) {
-	name = imap.List
+func (r *List) Name() string {
 	if r.Subscribed {
-		name = imap.Lsub
+		return imap.Lsub
+	} else {
+		return imap.List
 	}
-	return
 }
 
-func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
+func (r *List) HandleFrom(hdlr imap.RespHandler) error {
+	defer close(r.Mailboxes)
+
 	name := r.Name()
 
 	for h := range hdlr {
@@ -30,17 +32,17 @@ func (r *List) HandleFrom(hdlr imap.RespHandler) (err error) {
 		}
 
 		mbox := &imap.MailboxInfo{}
-		if err = mbox.Parse(fields); err != nil {
-			return
+		if err := mbox.Parse(fields); err != nil {
+			return err
 		}
 
 		r.Mailboxes <- mbox
 	}
 
-	return
+	return nil
 }
 
-func (r *List) WriteTo(w *imap.Writer) (err error) {
+func (r *List) WriteTo(w *imap.Writer) error {
 	name := r.Name()
 
 	for mbox := range r.Mailboxes {
@@ -48,10 +50,10 @@ func (r *List) WriteTo(w *imap.Writer) (err error) {
 		fields = append(fields, mbox.Format()...)
 
 		res := imap.NewUntaggedResp(fields)
-		if err = res.WriteTo(w); err != nil {
-			return
+		if err := res.WriteTo(w); err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }

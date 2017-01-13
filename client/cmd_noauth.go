@@ -30,15 +30,14 @@ func (c *Client) SupportStartTLS() (bool, error) {
 }
 
 // StartTLS starts TLS negotiation.
-func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
+func (c *Client) StartTLS(tlsConfig *tls.Config) error {
 	if c.isTLS {
-		err = ErrTLSAlreadyEnabled
-		return
+		return ErrTLSAlreadyEnabled
 	}
 
-	cmd := &commands.StartTLS{}
+	cmd := new(commands.StartTLS)
 
-	err = c.Upgrade(func(conn net.Conn) (net.Conn, error) {
+	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
 		if status, err := c.execute(cmd, nil); err != nil {
 			return nil, err
 		} else if err := status.Err(); err != nil {
@@ -58,11 +57,11 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) (err error) {
 		return tlsConn, nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	c.isTLS = true
-	return
+	return nil
 }
 
 // SupportAuth checks if the server supports a given authentication mechanism.

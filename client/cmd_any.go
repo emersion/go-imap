@@ -64,16 +64,14 @@ func (c *Client) Support(cap string) (bool, error) {
 // It can be used as a periodic poll for new messages or message status updates
 // during a period of inactivity. It can also be used to reset any inactivity
 // autologout timer on the server.
-func (c *Client) Noop() (err error) {
-	cmd := &commands.Noop{}
+func (c *Client) Noop() error {
+	cmd := new(commands.Noop)
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
-		return
+		return err
 	}
-
-	err = status.Err()
-	return
+	return status.Err()
 }
 
 // Logout gracefully closes the connection.
@@ -82,7 +80,7 @@ func (c *Client) Logout() error {
 		return ErrAlreadyLoggedOut
 	}
 
-	cmd := &commands.Logout{}
+	cmd := new(commands.Logout)
 
 	if status, err := c.execute(cmd, nil); err == errClosed {
 		// Server closed connection, that's what we want anyway
