@@ -125,3 +125,35 @@ func ExampleClient_Fetch() {
 	}
 	log.Println(body)
 }
+
+func ExampleClient_DeleteMessages() {
+	// Let's assume c is a client
+	var c *client.Client
+
+	// Select INBOX
+	mbox, err := c.Select("INBOX", false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// We will delete the last message
+	if mbox.Messages == 0 {
+		log.Fatal("No message in mailbox")
+	}
+	seqset := new(imap.SeqSet)
+	seqset.AddRange(mbox.Messages, mbox.Messages)
+
+	// First mark the message as deleted
+	operation := "+FLAGS.SILENT"
+	flags := []string{imap.DeletedFlag}
+	if err := c.Store(seqset, operation, flags, nil); err != nil {
+		log.Fatal(err)
+	}
+
+	// Then delete it
+	if err := c.Expunge(nil); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Last message has been deleted")
+}
