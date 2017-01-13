@@ -150,6 +150,8 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 
 	var hdlr imap.RespHandler
 	var done chan error
+	// We may close hdlr from two goroutines. To do so safely, use a mutex.
+	hdlrLocker := &sync.Mutex{}
 	if res != nil {
 		hdlr = make(imap.RespHandler)
 		done = make(chan error, 1)
@@ -157,10 +159,12 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 		go func() {
 			done <- res.HandleFrom(hdlr)
 
+			hdlrLocker.Lock()
 			if hdlr != nil {
 				close(hdlr)
 				hdlr = nil
 			}
+			hdlrLocker.Unlock()
 		}()
 	}
 
@@ -188,10 +192,12 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 				h.Accept()
 				status = s
 
+				hdlrLocker.Lock()
 				if hdlr != nil {
 					close(hdlr)
 					hdlr = nil
 				}
+				hdlrLocker.Unlock()
 
 				c.handler.Del(statusHdlr)
 			} else if hdlr != nil {
