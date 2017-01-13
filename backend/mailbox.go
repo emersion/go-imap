@@ -21,13 +21,9 @@ type Mailbox interface {
 	// 3501 section 6.3.10 for a list of items that can be requested.
 	Status(items []string) (*imap.MailboxStatus, error)
 
-	// Subscribe adds the mailbox to the server's set of "active" or "subscribed"
-	// mailboxes.
-	Subscribe() error
-
-	// Unsubscribe removes the mailbox to the server's set of "active" or
-	// "subscribed" mailboxes.
-	Unsubscribe() error
+	// SetSubscribed adds or removes the mailbox to the server's set of "active"
+	// or "subscribed" mailboxes.
+	SetSubscribed(subscribed bool) error
 
 	// Check requests a checkpoint of the currently selected mailbox. A checkpoint
 	// refers to any implementation-dependent housekeeping associated with the

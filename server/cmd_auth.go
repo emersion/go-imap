@@ -112,7 +112,7 @@ func (cmd *Subscribe) Handle(conn Conn) error {
 		return err
 	}
 
-	return mbox.Subscribe()
+	return mbox.SetSubscribed(true)
 }
 
 type Unsubscribe struct {
@@ -130,7 +130,7 @@ func (cmd *Unsubscribe) Handle(conn Conn) error {
 		return err
 	}
 
-	return mbox.Unsubscribe()
+	return mbox.SetSubscribed(false)
 }
 
 type List struct {
