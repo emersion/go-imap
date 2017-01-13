@@ -145,7 +145,7 @@ func ExampleClient_Expunge() {
 
 	// First mark the message as deleted
 	operation := "+FLAGS.SILENT"
-	flags := []string{imap.DeletedFlag}
+	flags := []interface{}{imap.DeletedFlag}
 	if err := c.Store(seqset, operation, flags, nil); err != nil {
 		log.Fatal(err)
 	}
