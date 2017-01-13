@@ -21,7 +21,7 @@ func (c *Client) Check() error {
 		return ErrNoMailboxSelected
 	}
 
-	cmd := &commands.Check{}
+	cmd := new(commands.Check)
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
@@ -39,7 +39,7 @@ func (c *Client) Close() error {
 		return ErrNoMailboxSelected
 	}
 
-	cmd := &commands.Close{}
+	cmd := new(commands.Close)
 
 	status, err := c.execute(cmd, nil)
 	if err != nil {
@@ -90,27 +90,24 @@ func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset 
 		cmd = &commands.Uid{Cmd: cmd}
 	}
 
-	res := &responses.Search{}
+	res := new(responses.Search)
 
 	status, err = c.execute(cmd, res)
 	if err != nil {
 		return
 	}
 
-	err = status.Err()
-	ids = res.Ids
-
+	err, ids = status.Err(), res.Ids
 	return
 }
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, err error) {
 	ids, status, err := c.executeSearch(uid, criteria, "UTF-8")
 	if status != nil && status.Code == imap.CodeBadCharset {
+		// Some servers don't support UTF-8
 		ids, _, err = c.executeSearch(uid, criteria, "US-ASCII")
-		return
 	}
-
-	return ids, err
+	return
 }
 
 // Search searches the mailbox for messages that match the given searching
