@@ -126,7 +126,7 @@ func ExampleClient_Fetch() {
 	log.Println(body)
 }
 
-func ExampleClient_DeleteMessages() {
+func ExampleClient_Expunge() {
 	// Let's assume c is a client
 	var c *client.Client
 
