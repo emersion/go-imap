@@ -10,7 +10,9 @@ type Fetch struct {
 	Messages chan *imap.Message
 }
 
-func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
+func (r *Fetch) HandleFrom(hdlr imap.RespHandler) error {
+	defer close(r.Messages)
+
 	for h := range hdlr {
 		res, ok := h.Resp.(*imap.Resp)
 		if !ok || len(res.Fields) < 3 {
@@ -30,14 +32,14 @@ func (r *Fetch) HandleFrom(hdlr imap.RespHandler) (err error) {
 			SeqNum: seqNum,
 		}
 
-		if err = msg.Parse(fields); err != nil {
-			return
+		if err := msg.Parse(fields); err != nil {
+			return err
 		}
 
 		r.Messages <- msg
 	}
 
-	return
+	return nil
 }
 
 func (r *Fetch) WriteTo(w *imap.Writer) error {
