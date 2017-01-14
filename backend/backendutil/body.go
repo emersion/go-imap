@@ -62,5 +62,9 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 		}
 	}
 
-	return b, nil
+	var l imap.Literal = b
+	if section.Partial != nil {
+		l = bytes.NewReader(section.ExtractPartial(b.Bytes()))
+	}
+	return l, nil
 }
