@@ -57,6 +57,10 @@ var bodyTests = []struct {
 		section: "BODY[3]",
 		body:    "",
 	},
+	{
+		section: "BODY[2.TEXT]<0.9>",
+		body:    testAttachmentBodyString[:9],
+	},
 }
 
 func TestFetchBodySection(t *testing.T) {
