@@ -40,24 +40,22 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	// Then, write the requested data to a buffer
 	b := new(bytes.Buffer)
 
-	// Write the header, if requested
-	var w io.Writer
-	switch section.Specifier {
-	case imap.EntireSpecifier, imap.HeaderSpecifier, imap.MimeSpecifier:
-		mw, err := message.CreateWriter(b, e.Header)
-		if err != nil {
-			return nil, err
-		}
-		defer mw.Close()
-		w = mw
-	default: // imap.TextSpecifier
-		w = b
+	// Write the header
+	mw, err := message.CreateWriter(b, e.Header)
+	if err != nil {
+		return nil, err
+	}
+	defer mw.Close()
+
+	// If the header hasn't been requested, discard it
+	if section.Specifier == imap.TextSpecifier {
+		b.Reset()
 	}
 
 	// Write the body, if requested
 	switch section.Specifier {
 	case imap.EntireSpecifier, imap.TextSpecifier:
-		if _, err := io.Copy(w, e.Body); err != nil {
+		if _, err := io.Copy(mw, e.Body); err != nil {
 			return nil, err
 		}
 	}
