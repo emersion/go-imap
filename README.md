@@ -27,35 +27,6 @@ Other IMAP implementations in Go:
 * Do not have a good test coverage
 * Don't handle encoding and charset automatically
 
-## Implemented commands
-
-This package implements all commands specified in the RFC. Each command has its
-own tests.
-
-## IMAP extensions
-
-Commands defined in IMAP extensions are available in other packages. See [the
-wiki](https://github.com/emersion/go-imap/wiki/Using-extensions#using-client-extensions)
-to learn how to use them.
-
-* [APPENDLIMIT](https://github.com/emersion/go-imap-appendlimit)
-* [COMPRESS](https://github.com/emersion/go-imap-compress)
-* [ENABLE](https://github.com/emersion/go-imap-enable)
-* [ID](https://github.com/ProtonMail/go-imap-id)
-* [IDLE](https://github.com/emersion/go-imap-idle)
-* [MOVE](https://github.com/emersion/go-imap-move)
-* [QUOTA](https://github.com/emersion/go-imap-quota)
-* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
-* [UNSELECT](https://github.com/emersion/go-imap-unselect)
-* [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
-
-## Server backends
-
-* [Memory](https://github.com/emersion/go-imap/tree/master/backend/memory) (for testing)
-* [Multi](https://github.com/emersion/go-imap-multi)
-* [PGP](https://github.com/emersion/go-imap-pgp)
-* [Proxy](https://github.com/emersion/go-imap-proxy)
-
 ## Usage
 
 ### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
@@ -167,6 +138,39 @@ func main() {
 ```
 
 You can now use `telnet localhost 1143` to manually connect to the server.
+
+## Extending go-imap
+
+### Extensions
+
+Commands defined in IMAP extensions are available in other packages. See [the
+wiki](https://github.com/emersion/go-imap/wiki/Using-extensions#using-client-extensions)
+to learn how to use them.
+
+* [APPENDLIMIT](https://github.com/emersion/go-imap-appendlimit)
+* [COMPRESS](https://github.com/emersion/go-imap-compress)
+* [ENABLE](https://github.com/emersion/go-imap-enable)
+* [ID](https://github.com/ProtonMail/go-imap-id)
+* [IDLE](https://github.com/emersion/go-imap-idle)
+* [MOVE](https://github.com/emersion/go-imap-move)
+* [QUOTA](https://github.com/emersion/go-imap-quota)
+* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
+* [UNSELECT](https://github.com/emersion/go-imap-unselect)
+* [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
+
+### Server backends
+
+* [Memory](https://github.com/emersion/go-imap/tree/master/backend/memory) (for testing)
+* [Multi](https://github.com/emersion/go-imap-multi)
+* [PGP](https://github.com/emersion/go-imap-pgp)
+* [Proxy](https://github.com/emersion/go-imap-proxy)
+
+### Related projects
+
+* [go-message](https://github.com/emersion/go-message) - parsing and formatting MIME and mail messages
+* [go-pgpmail](https://github.com/emersion/go-pgpmail) - decrypting and encrypting mails with OpenPGP
+* [go-sasl](https://github.com/emersion/go-sasl) - sending and receiving SASL authentications
+* [go-smtp](https://github.com/emersion/go-smtp) - building SMTP clients and servers
 
 ## License
 
