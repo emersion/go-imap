@@ -1,6 +1,8 @@
 package responses
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap"
 )
 
@@ -111,6 +113,7 @@ func (r *Select) WriteTo(w *imap.Writer) (err error) {
 				Type:      imap.StatusOk,
 				Code:      imap.CodeUnseen,
 				Arguments: []interface{}{status.Unseen},
+				Info:      fmt.Sprintf("Message %d is first unseen", status.Unseen),
 			}
 			if err = statusRes.WriteTo(w); err != nil {
 				return
