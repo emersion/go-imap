@@ -30,16 +30,18 @@ func ExampleClient() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo, 10)
-	go func() {
-		// c.List will send mailboxes to the channel and close it when done
-		if err := c.List("", "*", mailboxes); err != nil {
-			log.Fatal(err)
-		}
+	done := make(chan error, 1)
+	go func () {
+		done <- c.List("", "*", mailboxes)
 	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
 		log.Println("* " + m.Name)
+	}
+
+	if err := <-done; err != nil {
+		log.Fatal(err)
 	}
 
 	// Select INBOX
@@ -60,15 +62,18 @@ func ExampleClient() {
 	seqset.AddRange(from, to)
 
 	messages := make(chan *imap.Message, 10)
+	done = make(chan error, 1)
 	go func() {
-		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
-			log.Fatal(err)
-		}
+		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
 	}()
 
 	log.Println("Last 4 messages:")
 	for msg := range messages {
 		log.Println("* " + msg.Envelope.Subject)
+	}
+
+	if err := <-done; err != nil {
+		log.Fatal(err)
 	}
 
 	log.Println("Done!")
@@ -95,10 +100,9 @@ func ExampleClient_Fetch() {
 	attrs := []string{"BODY[]"}
 
 	messages := make(chan *imap.Message, 1)
+	done := make(chan error, 1)
 	go func() {
-		if err := c.Fetch(seqset, attrs, messages); err != nil {
-			log.Fatal(err)
-		}
+		done <- c.Fetch(seqset, attrs, messages)
 	}()
 
 	log.Println("Last message:")
@@ -106,6 +110,10 @@ func ExampleClient_Fetch() {
 	r := msg.GetBody("BODY[]")
 	if r == nil {
 		log.Fatal("Server didn't returned message body")
+	}
+
+	if err := <-done; err != nil {
+		log.Fatal(err)
 	}
 
 	m, err := mail.ReadMessage(r)

@@ -62,16 +62,18 @@ func main() {
 
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo, 10)
+	done := make(chan error, 1)
 	go func () {
-		// c.List will send mailboxes to the channel and close it when done
-		if err := c.List("", "*", mailboxes); err != nil {
-			log.Fatal(err)
-		}
+		done <- c.List("", "*", mailboxes)
 	}()
 
 	log.Println("Mailboxes:")
 	for m := range mailboxes {
 		log.Println("* " + m.Name)
+	}
+
+	if err := <-done; err != nil {
+		log.Fatal(err)
 	}
 
 	// Select INBOX
@@ -92,15 +94,18 @@ func main() {
 	seqset.AddRange(from, to)
 
 	messages := make(chan *imap.Message, 10)
+	done = make(chan error, 1)
 	go func() {
-		if err := c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages); err != nil {
-			log.Fatal(err)
-		}
+		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
 	}()
 
 	log.Println("Last 4 messages:")
 	for msg := range messages {
 		log.Println("* " + msg.Envelope.Subject)
+	}
+
+	if err := <-done; err != nil {
+		log.Fatal(err)
 	}
 
 	log.Println("Done!")
