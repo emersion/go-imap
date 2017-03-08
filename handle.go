@@ -52,18 +52,16 @@ type RespHandlerFrom interface {
 // A RespHandlerFrom that forwards responses to multiple RespHandler.
 type MultiRespHandler struct {
 	handlers []RespHandler
-	locker   sync.Locker
+	locker   sync.RWMutex
 }
 
 func NewMultiRespHandler() *MultiRespHandler {
-	return &MultiRespHandler{
-		locker: &sync.Mutex{},
-	}
+	return &MultiRespHandler{}
 }
 
 func (mh *MultiRespHandler) HandleFrom(ch RespHandler) error {
 	for rh := range ch {
-		mh.locker.Lock()
+		mh.locker.RLock()
 
 		accepted := false
 		for i := len(mh.handlers) - 1; i >= 0; i-- {
@@ -80,7 +78,7 @@ func (mh *MultiRespHandler) HandleFrom(ch RespHandler) error {
 			}
 		}
 
-		mh.locker.Unlock()
+		mh.locker.RUnlock()
 
 		if accepted {
 			rh.Accept()
@@ -89,6 +87,7 @@ func (mh *MultiRespHandler) HandleFrom(ch RespHandler) error {
 		}
 	}
 
+	// Close and remove all handlers
 	mh.locker.Lock()
 	for _, hdlr := range mh.handlers {
 		close(hdlr)
@@ -110,12 +109,26 @@ func (mh *MultiRespHandler) Add(hdlr RespHandler) {
 }
 
 func (mh *MultiRespHandler) Del(hdlr RespHandler) {
-	mh.locker.Lock()
+	// Find the handler's index
+	mh.locker.RLock()
+	found := -1
 	for i, h := range mh.handlers {
 		if h == hdlr {
-			close(hdlr)
-			mh.handlers = append(mh.handlers[:i], mh.handlers[i+1:]...)
+			found = i
+			break
 		}
 	}
+	mh.locker.RUnlock()
+
+	if found < 0 {
+		// Not found
+		return
+	}
+
+	// Close handler and remove it
+	// Make sure to close it before locking, because of deadlocks
+	close(hdlr)
+	mh.locker.Lock()
+	mh.handlers = append(mh.handlers[:found], mh.handlers[found+1:]...)
 	mh.locker.Unlock()
 }
