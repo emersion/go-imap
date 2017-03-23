@@ -165,3 +165,29 @@ func ExampleClient_Expunge() {
 
 	log.Println("Last message has been deleted")
 }
+
+func ExampleClient_StartTLS() {
+	log.Println("Connecting to server...")
+
+	// Connect to server
+	c, err := client.Dial("mail.example.org:143")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Connected")
+
+	// Don't forget to logout
+	defer c.Logout()
+
+	// Start a TLS session
+	if err := c.StartTLS(nil); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("TLS started")
+
+	// Now we can login
+	if err := c.Login("username", "password"); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Logged in")
+}
