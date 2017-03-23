@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/mail"
@@ -180,7 +181,8 @@ func ExampleClient_StartTLS() {
 	defer c.Logout()
 
 	// Start a TLS session
-	if err := c.StartTLS(nil); err != nil {
+	tlsConfig := &tls.Config{ServerName: "mail.example.org"}
+	if err := c.StartTLS(tlsConfig); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("TLS started")
