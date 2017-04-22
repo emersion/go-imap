@@ -189,7 +189,7 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
 // currently selected mailbox, nor does it affect the state of any messages in
 // the queried mailbox.
 //
-// See RFC 2501 section 6.3.10 for a list of items that can be requested.
+// See RFC 3501 section 6.3.10 for a list of items that can be requested.
 func (c *Client) Status(name string, items []string) (*imap.MailboxStatus, error) {
 	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
 		return nil, ErrNotLoggedIn
