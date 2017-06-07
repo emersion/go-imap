@@ -30,7 +30,7 @@ func (cmd *Store) Parse(fields []interface{}) (err error) {
 	if !ok {
 		return errors.New("Invalid sequence set")
 	}
-	if cmd.SeqSet, err = imap.NewSeqSet(seqset); err != nil {
+	if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
 		return err
 	}
 

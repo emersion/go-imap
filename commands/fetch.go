@@ -40,7 +40,7 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 	}
 
 	var err error
-	if cmd.SeqSet, err = imap.NewSeqSet(seqset); err != nil {
+	if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
 		return err
 	}
 

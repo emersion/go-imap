@@ -204,7 +204,7 @@ func TestWriter_WriteField_Literal(t *testing.T) {
 func TestWriter_WriteField_SeqSet(t *testing.T) {
 	w, b := newWriter()
 
-	seqSet, _ := NewSeqSet("3:4,6,42:*")
+	seqSet, _ := ParseSeqSet("3:4,6,42:*")
 
 	if err := w.writeField(seqSet); err != nil {
 		t.Error(err)

@@ -122,8 +122,8 @@ type SeqSet struct {
 	Set []Seq
 }
 
-// NewSeqSet returns a new SeqSet instance after parsing the set string.
-func NewSeqSet(set string) (s *SeqSet, err error) {
+// ParseSeqSet returns a new SeqSet instance after parsing the set string.
+func ParseSeqSet(set string) (s *SeqSet, err error) {
 	s = new(SeqSet)
 	return s, s.Add(set)
 }

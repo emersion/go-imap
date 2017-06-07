@@ -12,8 +12,8 @@ import (
 
 // Note to myself: writing these boring tests actually fixed 2 bugs :P
 
-var searchSeqSet1, _ = NewSeqSet("1:42")
-var searchSeqSet2, _ = NewSeqSet("743:938")
+var searchSeqSet1, _ = ParseSeqSet("1:42")
+var searchSeqSet2, _ = ParseSeqSet("743:938")
 var searchDate1 = time.Date(1997, 11, 21, 0, 0, 0, 0, time.UTC)
 var searchDate2 = time.Date(1984, 11, 5, 0, 0, 0, 0, time.UTC)
 

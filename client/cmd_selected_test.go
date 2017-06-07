@@ -188,7 +188,7 @@ func TestClient_Fetch(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("2:3")
+		seqset, _ := imap.ParseSeqSet("2:3")
 		fields := []string{"UID", "BODY[]"}
 		messages := make(chan *imap.Message, 2)
 
@@ -248,7 +248,7 @@ func TestClient_Fetch_Partial(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("1")
+		seqset, _ := imap.ParseSeqSet("1")
 		fields := []string{"BODY.PEEK[]<0.10>"}
 		messages := make(chan *imap.Message, 1)
 
@@ -287,7 +287,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("1:867")
+		seqset, _ := imap.ParseSeqSet("1:867")
 		fields := []string{"FLAGS"}
 		messages := make(chan *imap.Message, 1)
 
@@ -331,7 +331,7 @@ func TestClient_Store(t *testing.T) {
 		c.State = imap.SelectedState
 
 		updates := make(chan *imap.Message, 1)
-		seqset, _ := imap.NewSeqSet("2")
+		seqset, _ := imap.ParseSeqSet("2")
 		err = c.Store(seqset, imap.AddFlags, []interface{}{"\\Seen"}, updates)
 		if err != nil {
 			return
@@ -364,7 +364,7 @@ func TestClient_Store_Silent(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("2:3")
+		seqset, _ := imap.ParseSeqSet("2:3")
 		err = c.Store(seqset, imap.AddFlags, []interface{}{"\\Seen"}, nil)
 		return
 	}
@@ -387,7 +387,7 @@ func TestClient_Store_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("27:901")
+		seqset, _ := imap.ParseSeqSet("27:901")
 		err = c.UidStore(seqset, imap.AddFlags, []interface{}{"\\Deleted"}, nil)
 		return
 	}
@@ -410,7 +410,7 @@ func TestClient_Copy(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("2:4")
+		seqset, _ := imap.ParseSeqSet("2:4")
 		err = c.Copy(seqset, "Sent")
 		return
 	}
@@ -433,7 +433,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 	ct := func(c *client.Client) (err error) {
 		c.State = imap.SelectedState
 
-		seqset, _ := imap.NewSeqSet("78:102")
+		seqset, _ := imap.ParseSeqSet("78:102")
 		err = c.UidCopy(seqset, "Drafts")
 		return
 	}

@@ -531,7 +531,7 @@ func TestSeqSetInfo(t *testing.T) {
 		{"1,3:5,7,9,42,60:70,100:*", max, true},
 	}
 	for _, test := range tests {
-		s, _ := NewSeqSet(test.s)
+		s, _ := ParseSeqSet(test.s)
 		checkSeqSet(s, t)
 		if s.Contains(test.q) != test.contains {
 			t.Errorf("%q.Contains(%v) expected %v", test.s, test.q, test.contains)
@@ -707,7 +707,7 @@ func TestSeqSetAddNumRangeSet(t *testing.T) {
 		{num{5, 1, 7, 3, 9, 0, 11}, Seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
-		other, _ := NewSeqSet(test.set)
+		other, _ := ParseSeqSet(test.set)
 
 		s := &SeqSet{}
 		s.AddNum(test.num...)
