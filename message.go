@@ -257,7 +257,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			default:
 				// Likely to be a section of the body
 				// First check that the section name is correct
-				if section, err := NewBodySectionName(k); err != nil {
+				if section, err := ParseBodySectionName(k); err != nil {
 					// Not a section name, maybe an attribute defined in an IMAP extension
 					m.Items[k] = f
 				} else {
@@ -486,9 +486,9 @@ func (section *BodySectionName) ExtractPartial(b []byte) []byte {
 	return b[from:to]
 }
 
-// Parse a body section name.
-func NewBodySectionName(s string) (section *BodySectionName, err error) {
-	section = &BodySectionName{}
+// ParseBodySectionName parses a body section name.
+func ParseBodySectionName(s string) (section *BodySectionName, err error) {
+	section = new(BodySectionName)
 	err = section.parse(s)
 	return
 }

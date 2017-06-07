@@ -70,7 +70,7 @@ func TestFetchBodySection(t *testing.T) {
 			t.Fatal("Expected no error while reading mail, got:", err)
 		}
 
-		section, err := imap.NewBodySectionName(test.section)
+		section, err := imap.ParseBodySectionName(test.section)
 		if err != nil {
 			t.Fatal("Expected no error while parsing body section name, got:", err)
 		}

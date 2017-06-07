@@ -172,7 +172,7 @@ var bodySectionNameTests = []struct {
 
 func TestNewBodySectionName(t *testing.T) {
 	for i, test := range bodySectionNameTests {
-		bsn, err := NewBodySectionName(test.raw)
+		bsn, err := ParseBodySectionName(test.raw)
 		if err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
 			continue
@@ -237,7 +237,7 @@ func TestBodySectionName_ExtractPartial(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		bsn, err := NewBodySectionName(test.bsn)
+		bsn, err := ParseBodySectionName(test.bsn)
 		if err != nil {
 			t.Errorf("Cannot parse body section name #%v: %v", i, err)
 			continue

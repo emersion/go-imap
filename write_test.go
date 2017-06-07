@@ -217,7 +217,7 @@ func TestWriter_WriteField_SeqSet(t *testing.T) {
 func TestWriter_WriteField_BodySectionName(t *testing.T) {
 	w, b := newWriter()
 
-	name, _ := NewBodySectionName("BODY.PEEK[HEADER.FIELDS (date subject from to cc)]")
+	name, _ := ParseBodySectionName("BODY.PEEK[HEADER.FIELDS (date subject from to cc)]")
 
 	if err := w.writeField(name.resp()); err != nil {
 		t.Error(err)

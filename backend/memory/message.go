@@ -40,7 +40,7 @@ func (m *Message) Fetch(seqNum uint32, items []string) (*imap.Message, error) {
 		case imap.UidMsgAttr:
 			fetched.Uid = m.Uid
 		default:
-			section, err := imap.NewBodySectionName(item)
+			section, err := imap.ParseBodySectionName(item)
 			if err != nil {
 				break
 			}
