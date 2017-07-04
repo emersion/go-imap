@@ -33,18 +33,18 @@ func (c *Client) Capability() (map[string]bool, error) {
 		caps[name] = true
 	}
 
-	c.capsLocker.Lock()
+	c.locker.Lock()
 	c.caps = caps
-	c.capsLocker.Unlock()
+	c.locker.Unlock()
 	return caps, nil
 }
 
 // Support checks if cap is a capability supported by the server. If the server
 // hasn't sent its capabilities yet, Support requests them.
 func (c *Client) Support(cap string) (bool, error) {
-	c.capsLocker.Lock()
+	c.locker.Lock()
 	ok := c.caps != nil
-	c.capsLocker.Unlock()
+	c.locker.Unlock()
 
 	// If capabilities are not cached, request them
 	if !ok {
@@ -53,9 +53,9 @@ func (c *Client) Support(cap string) (bool, error) {
 		}
 	}
 
-	c.capsLocker.Lock()
+	c.locker.Lock()
 	supported := c.caps[cap]
-	c.capsLocker.Unlock()
+	c.locker.Unlock()
 	return supported, nil
 }
 
@@ -76,7 +76,7 @@ func (c *Client) Noop() error {
 
 // Logout gracefully closes the connection.
 func (c *Client) Logout() error {
-	if c.State == imap.LogoutState {
+	if c.State() == imap.LogoutState {
 		return ErrAlreadyLoggedOut
 	}
 

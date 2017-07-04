@@ -1,4 +1,4 @@
-package client_test
+package client
 
 import (
 	"bytes"
@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Select(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		mbox, err := c.Select("INBOX", false)
 		if err != nil {
@@ -73,8 +72,8 @@ func TestClient_Select(t *testing.T) {
 }
 
 func TestClient_Select_ReadOnly(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		mbox, err := c.Select("INBOX", true)
 		if err != nil {
@@ -105,8 +104,8 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 }
 
 func TestClient_Create(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		err = c.Create("New Mailbox")
 		return
@@ -127,8 +126,8 @@ func TestClient_Create(t *testing.T) {
 }
 
 func TestClient_Delete(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		err = c.Delete("Old Mailbox")
 		return
@@ -149,8 +148,8 @@ func TestClient_Delete(t *testing.T) {
 }
 
 func TestClient_Rename(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		err = c.Rename("Old Mailbox", "New Mailbox")
 		return
@@ -171,8 +170,8 @@ func TestClient_Rename(t *testing.T) {
 }
 
 func TestClient_Subscribe(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		err = c.Subscribe("Mailbox")
 		return
@@ -193,8 +192,8 @@ func TestClient_Subscribe(t *testing.T) {
 }
 
 func TestClient_Unsubscribe(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		err = c.Unsubscribe("Mailbox")
 		return
@@ -215,8 +214,8 @@ func TestClient_Unsubscribe(t *testing.T) {
 }
 
 func TestClient_List(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		mailboxes := make(chan *imap.MailboxInfo, 3)
 		err = c.List("", "%", mailboxes)
@@ -267,8 +266,8 @@ func TestClient_List(t *testing.T) {
 }
 
 func TestClient_Lsub(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		mailboxes := make(chan *imap.MailboxInfo, 1)
 		err = c.Lsub("", "%", mailboxes)
@@ -303,8 +302,8 @@ func TestClient_Lsub(t *testing.T) {
 }
 
 func TestClient_Status(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		mbox, err := c.Status("INBOX", []string{"MESSAGES", "RECENT"})
 		if err != nil {
@@ -339,8 +338,8 @@ func TestClient_Status(t *testing.T) {
 func TestClient_Append(t *testing.T) {
 	msg := "Hello World!\r\nHello Gophers!\r\n"
 
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.AuthenticatedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.AuthenticatedState
 
 		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 		literal := bytes.NewBufferString(msg)

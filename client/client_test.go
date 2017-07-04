@@ -1,4 +1,4 @@
-package client_test
+package client
 
 import (
 	"bufio"
@@ -11,10 +11,9 @@ import (
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 )
 
-type ClientTester func(c *client.Client) error
+type ClientTester func(c *Client) error
 type ServerTester func(c net.Conn)
 
 func testClient(t *testing.T, ct ClientTester, st ServerTester) {
@@ -26,7 +25,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 
 	done := make(chan error)
 	go (func() {
-		c, err := client.Dial(l.Addr().String())
+		c, err := Dial(l.Addr().String())
 		if err != nil {
 			done <- err
 			return
@@ -39,7 +38,7 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 			return
 		}
 
-		c.State = imap.LogoutState
+		c.state = imap.LogoutState
 		done <- nil
 	})()
 
@@ -89,7 +88,7 @@ func removeCmdTag(cmd string) string {
 }
 
 func TestClient(t *testing.T) {
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		if ok, err := c.Support("IMAP4rev1"); err != nil {
 			return err
 		} else if !ok {
@@ -104,7 +103,7 @@ func TestClient(t *testing.T) {
 }
 
 func TestClient_SetDebug(t *testing.T) {
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		b := &bytes.Buffer{}
 		c.SetDebug(b)
 
@@ -137,9 +136,9 @@ func TestClient_SetDebug(t *testing.T) {
 func TestClient_unilateral(t *testing.T) {
 	steps := make(chan struct{})
 
-	ct := func(c *client.Client) error {
-		c.State = imap.SelectedState
-		c.Mailbox = imap.NewMailboxStatus("INBOX", nil)
+	ct := func(c *Client) error {
+		c.state = imap.SelectedState
+		c.mailbox = imap.NewMailboxStatus("INBOX", nil)
 
 		statuses := make(chan *imap.MailboxStatus)
 		c.MailboxUpdates = statuses

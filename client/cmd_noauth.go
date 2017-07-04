@@ -50,9 +50,9 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) error {
 		}
 
 		// Capabilities change when TLS is enabled
-		c.capsLocker.Lock()
+		c.locker.Lock()
 		c.caps = nil
-		c.capsLocker.Unlock()
+		c.locker.Unlock()
 
 		return tlsConn, nil
 	})
@@ -73,7 +73,7 @@ func (c *Client) SupportAuth(mech string) (bool, error) {
 // server supports the requested authentication mechanism, it performs an
 // authentication protocol exchange to authenticate and identify the client.
 func (c *Client) Authenticate(auth sasl.Client) error {
-	if c.State != imap.NotAuthenticatedState {
+	if c.State() != imap.NotAuthenticatedState {
 		return ErrAlreadyLoggedIn
 	}
 
@@ -100,12 +100,10 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 		return err
 	}
 
-	c.State = imap.AuthenticatedState
-
-	// Capabilities change when user is logged in
-	c.capsLocker.Lock()
-	c.caps = nil
-	c.capsLocker.Unlock()
+	c.locker.Lock()
+	c.state = imap.AuthenticatedState
+	c.caps = nil // Capabilities change when user is logged in
+	c.locker.Unlock()
 
 	if status.Code == imap.Capability {
 		c.gotStatusCaps(status.Arguments)
@@ -117,13 +115,13 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 // Login identifies the client to the server and carries the plaintext password
 // authenticating this user.
 func (c *Client) Login(username, password string) error {
-	if c.State != imap.NotAuthenticatedState {
+	if c.State() != imap.NotAuthenticatedState {
 		return ErrAlreadyLoggedIn
 	}
 
-	c.capsLocker.Lock()
+	c.locker.Lock()
 	loginDisabled := c.caps != nil && c.caps["LOGINDISABLED"]
-	c.capsLocker.Unlock()
+	c.locker.Unlock()
 	if loginDisabled {
 		return ErrLoginDisabled
 	}
@@ -141,13 +139,12 @@ func (c *Client) Login(username, password string) error {
 		return err
 	}
 
-	c.State = imap.AuthenticatedState
+	c.locker.Lock()
+	c.state = imap.AuthenticatedState
+	c.caps = nil // Capabilities change when user is logged in
+	c.locker.Unlock()
 
-	c.capsLocker.Lock()
-	c.caps = nil
-	c.capsLocker.Unlock()
-
-	if status.Code == "CAPABILITY" {
+	if status.Code == imap.Capability {
 		c.gotStatusCaps(status.Arguments)
 	}
 	return nil

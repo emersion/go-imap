@@ -1,16 +1,14 @@
-package client_test
+package client
 
 import (
 	"errors"
 	"io"
 	"net"
 	"testing"
-
-	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Capability(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
+	ct := func(c *Client) (err error) {
 		caps, err := c.Capability()
 		if err != nil {
 			return
@@ -38,7 +36,7 @@ func TestClient_Capability(t *testing.T) {
 }
 
 func TestClient_Noop(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
+	ct := func(c *Client) (err error) {
 		err = c.Noop()
 		return
 	}
@@ -58,7 +56,7 @@ func TestClient_Noop(t *testing.T) {
 }
 
 func TestClient_Logout(t *testing.T) {
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		return c.Logout()
 	}
 

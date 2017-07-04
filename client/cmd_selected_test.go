@@ -1,4 +1,4 @@
-package client_test
+package client
 
 import (
 	"fmt"
@@ -10,12 +10,11 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 )
 
 func TestClient_Check(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		err = c.Check()
 		return
@@ -36,19 +35,19 @@ func TestClient_Check(t *testing.T) {
 }
 
 func TestClient_Close(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
-		c.Mailbox = &imap.MailboxStatus{Name: "INBOX"}
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
+		c.mailbox = &imap.MailboxStatus{Name: "INBOX"}
 
 		err = c.Close()
 		if err != nil {
 			return
 		}
 
-		if c.State != imap.AuthenticatedState {
-			return fmt.Errorf("Bad client state: %v", c.State)
+		if c.State() != imap.AuthenticatedState {
+			return fmt.Errorf("Bad state: %v", c.State)
 		}
-		if c.Mailbox != nil {
+		if c.Mailbox() != nil {
 			return fmt.Errorf("Client selected mailbox is not nil: %v", c.Mailbox)
 		}
 		return
@@ -69,8 +68,8 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_Expunge(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		expunged := make(chan uint32, 4)
 		err = c.Expunge(expunged)
@@ -109,8 +108,8 @@ func TestClient_Expunge(t *testing.T) {
 }
 
 func TestClient_Search(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		date, _ := time.Parse(imap.DateLayout, "1-Feb-1994")
 		criteria := &imap.SearchCriteria{
@@ -150,8 +149,8 @@ func TestClient_Search(t *testing.T) {
 }
 
 func TestClient_Search_Uid(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		criteria := &imap.SearchCriteria{
 			WithoutFlags: []string{imap.DeletedFlag},
@@ -185,8 +184,8 @@ func TestClient_Search_Uid(t *testing.T) {
 }
 
 func TestClient_Fetch(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("2:3")
 		fields := []string{"UID", "BODY[]"}
@@ -245,8 +244,8 @@ func TestClient_Fetch(t *testing.T) {
 }
 
 func TestClient_Fetch_Partial(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("1")
 		fields := []string{"BODY.PEEK[]<0.10>"}
@@ -284,8 +283,8 @@ func TestClient_Fetch_Partial(t *testing.T) {
 }
 
 func TestClient_Fetch_Uid(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("1:867")
 		fields := []string{"FLAGS"}
@@ -327,8 +326,8 @@ func TestClient_Fetch_Uid(t *testing.T) {
 }
 
 func TestClient_Store(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		updates := make(chan *imap.Message, 1)
 		seqset, _ := imap.ParseSeqSet("2")
@@ -361,8 +360,8 @@ func TestClient_Store(t *testing.T) {
 }
 
 func TestClient_Store_Silent(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("2:3")
 		err = c.Store(seqset, imap.AddFlags, []interface{}{"\\Seen"}, nil)
@@ -384,8 +383,8 @@ func TestClient_Store_Silent(t *testing.T) {
 }
 
 func TestClient_Store_Uid(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("27:901")
 		err = c.UidStore(seqset, imap.AddFlags, []interface{}{"\\Deleted"}, nil)
@@ -407,8 +406,8 @@ func TestClient_Store_Uid(t *testing.T) {
 }
 
 func TestClient_Copy(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("2:4")
 		err = c.Copy(seqset, "Sent")
@@ -430,8 +429,8 @@ func TestClient_Copy(t *testing.T) {
 }
 
 func TestClient_Copy_Uid(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		c.State = imap.SelectedState
+	ct := func(c *Client) (err error) {
+		c.state = imap.SelectedState
 
 		seqset, _ := imap.ParseSeqSet("78:102")
 		err = c.UidCopy(seqset, "Drafts")

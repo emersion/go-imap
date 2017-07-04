@@ -1,4 +1,4 @@
-package client_test
+package client
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap/internal"
 	"github.com/emersion/go-sasl"
 )
@@ -26,7 +25,7 @@ func TestClient_StartTLS(t *testing.T) {
 		Certificates:       []tls.Certificate{cert},
 	}
 
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		if c.IsTLS() {
 			return fmt.Errorf("Client has TLS enabled before STARTTLS")
 		}
@@ -79,7 +78,7 @@ func TestClient_StartTLS(t *testing.T) {
 }
 
 func TestClient_Authenticate(t *testing.T) {
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		if ok, err := c.SupportAuth(sasl.Plain); err != nil {
 			return err
 		} else if !ok {
@@ -92,7 +91,7 @@ func TestClient_Authenticate(t *testing.T) {
 			return err
 		}
 
-		if c.State != imap.AuthenticatedState {
+		if c.State() != imap.AuthenticatedState {
 			return fmt.Errorf("Client is not in authenticated state after AUTENTICATE")
 		}
 
@@ -133,13 +132,13 @@ func TestClient_Authenticate(t *testing.T) {
 }
 
 func TestClient_Login_Success(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
+	ct := func(c *Client) (err error) {
 		err = c.Login("username", "password")
 		if err != nil {
 			return
 		}
 
-		if c.State != imap.AuthenticatedState {
+		if c.State() != imap.AuthenticatedState {
 			return fmt.Errorf("Client is not in authenticated state after login")
 		}
 
@@ -161,13 +160,13 @@ func TestClient_Login_Success(t *testing.T) {
 }
 
 func TestClient_Login_Error(t *testing.T) {
-	ct := func(c *client.Client) error {
+	ct := func(c *Client) error {
 		err := c.Login("username", "password")
 		if err == nil {
 			return fmt.Errorf("Failed login didn't returned an error: %v", err)
 		}
 
-		if c.State != imap.NotAuthenticatedState {
+		if c.State() != imap.NotAuthenticatedState {
 			return fmt.Errorf("Client state must be NotAuthenticated after failed login, but is: %v", c.State)
 		}
 

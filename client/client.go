@@ -28,15 +28,15 @@ type Client struct {
 	greeted   chan struct{}
 	loggedOut chan struct{}
 
+	// The current connection state.
+	state imap.ConnState
+	// The selected mailbox, if there is one.
+	mailbox *imap.MailboxStatus
 	// The cached server capabilities.
 	caps map[string]bool
-	// The caps map may be accessed in different goroutines. Protect access.
-	capsLocker sync.Mutex
-
-	// The current connection state.
-	State imap.ConnState
-	// The selected mailbox, if there is one.
-	Mailbox *imap.MailboxStatus
+	// state, mailbox and caps may be accessed in different goroutines. Protect
+	// access.
+	locker sync.Mutex
 
 	// A channel where info messages from the server will be sent.
 	Infos chan *imap.StatusResp
@@ -81,7 +81,7 @@ func (c *Client) read(greeted <-chan struct{}) error {
 
 	first := true
 	for {
-		if c.State == imap.LogoutState {
+		if c.State() == imap.LogoutState {
 			return nil
 		}
 
@@ -98,7 +98,7 @@ func (c *Client) read(greeted <-chan struct{}) error {
 		}
 
 		res, err := imap.ReadResp(c.conn.Reader)
-		if err == io.EOF || c.State == imap.LogoutState {
+		if err == io.EOF || c.State() == imap.LogoutState {
 			return nil
 		}
 		if err != nil {
@@ -209,6 +209,23 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 	}
 }
 
+// State returns the current connection state.
+func (c *Client) State() imap.ConnState {
+	c.locker.Lock()
+	state := c.state
+	c.locker.Unlock()
+	return state
+}
+
+// Mailbox returns the selected mailbox. It returns nil if there isn't one.
+func (c *Client) Mailbox() *imap.MailboxStatus {
+	// c.Mailbox fields are not supposed to change, so we can return the pointer.
+	c.locker.Lock()
+	mbox := c.mailbox
+	c.locker.Unlock()
+	return mbox
+}
+
 // Execute executes a generic command. cmdr is a value that can be converted to
 // a raw command and res is a value that can handle responses. The function
 // returns when the command has completed or failed, in this case err is nil. A
@@ -238,7 +255,7 @@ func (c *Client) handleContinuationReqs(continues chan<- bool) {
 }
 
 func (c *Client) gotStatusCaps(args []interface{}) {
-	c.capsLocker.Lock()
+	c.locker.Lock()
 
 	c.caps = make(map[string]bool)
 	for _, cap := range args {
@@ -247,7 +264,7 @@ func (c *Client) gotStatusCaps(args []interface{}) {
 		}
 	}
 
-	c.capsLocker.Unlock()
+	c.locker.Unlock()
 }
 
 // The server can send unilateral data. This function handles it.
@@ -275,17 +292,19 @@ func (c *Client) handleUnilateral() {
 			h.Accept()
 
 			if first {
+				c.locker.Lock()
 				switch res.Type {
 				case imap.StatusPreauth:
-					c.State = imap.AuthenticatedState
+					c.state = imap.AuthenticatedState
 				case imap.StatusBye:
-					c.State = imap.LogoutState
+					c.state = imap.LogoutState
 				case imap.StatusOk:
-					c.State = imap.NotAuthenticatedState
+					c.state = imap.NotAuthenticatedState
 				default:
 					c.ErrorLog.Println("invalid greeting:", res.Type)
-					c.State = imap.LogoutState
+					c.state = imap.LogoutState
 				}
+				c.locker.Unlock()
 
 				if res.Code == imap.CodeCapability {
 					c.gotStatusCaps(res.Arguments)
@@ -309,8 +328,11 @@ func (c *Client) handleUnilateral() {
 					c.Errors <- res
 				}
 			case imap.StatusBye:
-				c.State = imap.LogoutState
-				c.Mailbox = nil
+				c.locker.Lock()
+				c.state = imap.LogoutState
+				c.mailbox = nil
+				c.locker.Unlock()
+
 				c.conn.Close()
 
 				if c.Byes != nil {
@@ -340,34 +362,40 @@ func (c *Client) handleUnilateral() {
 
 			switch name {
 			case "EXISTS":
-				if c.Mailbox == nil {
+				if c.Mailbox() == nil {
 					break
 				}
 
 				if messages, err := imap.ParseNumber(res.Fields[0]); err == nil {
-					c.Mailbox.Messages = messages
-					c.Mailbox.ItemsLocker.Lock()
-					c.Mailbox.Items[imap.MailboxMessages] = nil
-					c.Mailbox.ItemsLocker.Unlock()
+					c.locker.Lock()
+					c.mailbox.Messages = messages
+					c.locker.Unlock()
+
+					c.mailbox.ItemsLocker.Lock()
+					c.mailbox.Items[imap.MailboxMessages] = nil
+					c.mailbox.ItemsLocker.Unlock()
 				}
 
 				if c.MailboxUpdates != nil {
-					c.MailboxUpdates <- c.Mailbox
+					c.MailboxUpdates <- c.Mailbox()
 				}
 			case "RECENT":
-				if c.Mailbox == nil {
+				if c.Mailbox() == nil {
 					break
 				}
 
 				if recent, err := imap.ParseNumber(res.Fields[0]); err == nil {
-					c.Mailbox.Recent = recent
-					c.Mailbox.ItemsLocker.Lock()
-					c.Mailbox.Items[imap.MailboxRecent] = nil
-					c.Mailbox.ItemsLocker.Unlock()
+					c.locker.Lock()
+					c.mailbox.Recent = recent
+					c.locker.Unlock()
+
+					c.mailbox.ItemsLocker.Lock()
+					c.mailbox.Items[imap.MailboxRecent] = nil
+					c.mailbox.ItemsLocker.Unlock()
 				}
 
 				if c.MailboxUpdates != nil {
-					c.MailboxUpdates <- c.Mailbox
+					c.MailboxUpdates <- c.Mailbox()
 				}
 			case "EXPUNGE":
 				seqNum, _ := imap.ParseNumber(res.Fields[0])
@@ -442,7 +470,7 @@ func New(conn net.Conn) (c *Client, err error) {
 		handler:   imap.NewMultiRespHandler(),
 		greeted:   make(chan struct{}),
 		loggedOut: make(chan struct{}),
-		State:     imap.ConnectingState,
+		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
