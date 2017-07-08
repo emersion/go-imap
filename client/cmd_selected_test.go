@@ -21,7 +21,7 @@ func TestClient_Check(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "CHECK" {
@@ -54,7 +54,7 @@ func TestClient_Close(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "CLOSE" {
@@ -90,7 +90,7 @@ func TestClient_Expunge(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "EXPUNGE" {
@@ -134,7 +134,7 @@ func TestClient_Search(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != `SEARCH CHARSET UTF-8 SINCE "1-Feb-1994" FROM Smith DELETED NOT (TO Pauline)` {
@@ -169,7 +169,7 @@ func TestClient_Search_Uid(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "UID SEARCH CHARSET UTF-8 UNDELETED" {
@@ -222,7 +222,7 @@ func TestClient_Fetch(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "FETCH 2:3 (UID BODY[])" {
@@ -265,7 +265,7 @@ func TestClient_Fetch_Partial(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "FETCH 1 (BODY.PEEK[]<0.10>)" {
@@ -310,7 +310,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "UID FETCH 1:867 (FLAGS)" {
@@ -345,7 +345,7 @@ func TestClient_Store(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "STORE 2 +FLAGS (\\Seen)" {
@@ -369,7 +369,7 @@ func TestClient_Store_Silent(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "STORE 2:3 +FLAGS.SILENT (\\Seen)" {
@@ -392,7 +392,7 @@ func TestClient_Store_Uid(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "UID STORE 27:901 +FLAGS.SILENT (\\Deleted)" {
@@ -415,7 +415,7 @@ func TestClient_Copy(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "COPY 2:4 Sent" {
@@ -438,7 +438,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "UID COPY 78:102 Drafts" {

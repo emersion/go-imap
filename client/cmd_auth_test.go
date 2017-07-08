@@ -51,7 +51,7 @@ func TestClient_Select(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "SELECT INBOX" {
@@ -90,7 +90,7 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "EXAMINE INBOX" {
@@ -112,7 +112,7 @@ func TestClient_Create(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "CREATE \"New Mailbox\"" {
@@ -134,7 +134,7 @@ func TestClient_Delete(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "DELETE \"Old Mailbox\"" {
@@ -156,7 +156,7 @@ func TestClient_Rename(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "RENAME \"Old Mailbox\" \"New Mailbox\"" {
@@ -178,7 +178,7 @@ func TestClient_Subscribe(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "SUBSCRIBE Mailbox" {
@@ -200,7 +200,7 @@ func TestClient_Unsubscribe(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "UNSUBSCRIBE Mailbox" {
@@ -249,7 +249,7 @@ func TestClient_List(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "LIST \"\" %" {
@@ -287,7 +287,7 @@ func TestClient_Lsub(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "LSUB \"\" %" {
@@ -321,7 +321,7 @@ func TestClient_Status(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "STATUS INBOX (MESSAGES RECENT)" {
@@ -348,7 +348,7 @@ func TestClient_Append(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {

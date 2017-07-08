@@ -49,7 +49,7 @@ func TestClient_StartTLS(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "STARTTLS" {
@@ -63,7 +63,7 @@ func TestClient_StartTLS(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		scanner = NewCmdScanner(sc)
+		scanner = newCmdScanner(sc)
 
 		tag, cmd = scanner.Scan()
 		if cmd != "CAPABILITY" {
@@ -99,7 +99,7 @@ func TestClient_Authenticate(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "AUTHENTICATE PLAIN" {
@@ -146,7 +146,7 @@ func TestClient_Login_Success(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "LOGIN username password" {
@@ -174,7 +174,7 @@ func TestClient_Login_Error(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "LOGIN username password" {

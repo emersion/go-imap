@@ -21,7 +21,7 @@ func TestClient_Capability(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "CAPABILITY" {
@@ -42,7 +42,7 @@ func TestClient_Noop(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "NOOP" {
@@ -61,7 +61,7 @@ func TestClient_Logout(t *testing.T) {
 	}
 
 	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+		scanner := newCmdScanner(c)
 
 		tag, cmd := scanner.Scan()
 		if cmd != "LOGOUT" {
