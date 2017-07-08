@@ -40,19 +40,19 @@ func newCmdScanner(r io.Reader) *cmdScanner {
 
 type serverConn struct {
 	*cmdScanner
-	io.WriteCloser
+	net.Conn
 	net.Listener
 }
 
 func (c *serverConn) Close() error {
-	if err := c.WriteCloser.Close(); err != nil {
+	if err := c.Conn.Close(); err != nil {
 		return err
 	}
 	return c.Listener.Close()
 }
 
 func (c *serverConn) WriteString(s string) (n int, err error) {
-	return io.WriteString(c.WriteCloser, s)
+	return io.WriteString(c.Conn, s)
 }
 
 func newTestClient(t *testing.T) (c *Client, s *serverConn) {
