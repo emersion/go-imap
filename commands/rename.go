@@ -28,16 +28,16 @@ func (cmd *Rename) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	if existingName, ok := fields[0].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if existingName, err := imap.ParseString(fields[0]); err != nil {
+		return err
 	} else if existingName, err := utf7.Decoder.String(existingName); err != nil {
 		return err
 	} else {
 		cmd.Existing = imap.CanonicalMailboxName(existingName)
 	}
 
-	if newName, ok := fields[1].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if newName, err := imap.ParseString(fields[1]); err != nil {
+		return err
 	} else if newName, err := utf7.Decoder.String(newName); err != nil {
 		return err
 	} else {

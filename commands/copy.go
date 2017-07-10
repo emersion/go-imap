@@ -35,8 +35,8 @@ func (cmd *Copy) Parse(fields []interface{}) error {
 		cmd.SeqSet = seqSet
 	}
 
-	if mailbox, ok := fields[1].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if mailbox, err := imap.ParseString(fields[1]); err != nil {
+		return err
 	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
 	} else {

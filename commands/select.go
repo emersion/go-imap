@@ -33,8 +33,8 @@ func (cmd *Select) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	if mailbox, ok := fields[0].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if mailbox, err := imap.ParseString(fields[0]); err != nil {
+		return err
 	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
 	} else {

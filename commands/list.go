@@ -36,8 +36,8 @@ func (cmd *List) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	if mailbox, ok := fields[0].(string); !ok {
-		return errors.New("Reference name must be a string")
+	if mailbox, err := imap.ParseString(fields[0]); err != nil {
+		return err
 	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
 	} else {
@@ -45,8 +45,8 @@ func (cmd *List) Parse(fields []interface{}) error {
 		cmd.Reference = imap.CanonicalMailboxName(mailbox)
 	}
 
-	if mailbox, ok := fields[1].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if mailbox, err := imap.ParseString(fields[1]); err != nil {
+		return err
 	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
 		return err
 	} else {
