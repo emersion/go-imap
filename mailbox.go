@@ -53,13 +53,23 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 		return errors.New("Mailbox info needs at least 3 fields")
 	}
 
-	info.Attributes, _ = ParseStringList(fields[0])
+	var err error
+	if info.Attributes, err = ParseStringList(fields[0]); err != nil {
+		return err
+	}
 
-	info.Delimiter, _ = fields[1].(string)
+	var ok bool
+	if info.Delimiter, ok = fields[1].(string); !ok {
+		return errors.New("Mailbox delimiter must be a string")
+	}
 
-	name, _ := fields[2].(string)
-	info.Name, _ = utf7.Decoder.String(name)
-	info.Name = CanonicalMailboxName(info.Name)
+	if name, err := ParseString(fields[2]); err != nil {
+		return err
+	} else if name, err := utf7.Decoder.String(name); err != nil {
+		return err
+	} else {
+		info.Name = CanonicalMailboxName(name)
+	}
 
 	return nil
 }

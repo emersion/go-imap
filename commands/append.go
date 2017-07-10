@@ -48,8 +48,8 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	}
 
 	// Parse mailbox name
-	if mailbox, ok := fields[0].(string); !ok {
-		return errors.New("Mailbox name must be a string")
+	if mailbox, err := imap.ParseString(fields[0]); err != nil {
+		return err
 	} else if mailbox, err = utf7.Decoder.String(mailbox); err != nil {
 		return err
 	} else {
@@ -81,11 +81,9 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 
 		// Parse date
 		if len(fields) > 0 {
-			date, ok := fields[0].(string)
-			if !ok {
+			if date, ok := fields[0].(string); !ok {
 				return errors.New("Date must be a string")
-			}
-			if cmd.Date, err = time.Parse(imap.DateTimeLayout, date); err != nil {
+			} else if cmd.Date, err = time.Parse(imap.DateTimeLayout, date); err != nil {
 				return err
 			}
 		}

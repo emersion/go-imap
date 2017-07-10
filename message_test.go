@@ -287,12 +287,35 @@ var envelopeTests = []struct {
 func TestEnvelope_Parse(t *testing.T) {
 	for i, test := range envelopeTests {
 		e := &Envelope{}
-
 		if err := e.Parse(test.fields); err != nil {
 			t.Error("Error parsing envelope:", err)
 		} else if !reflect.DeepEqual(e, test.envelope) {
 			t.Errorf("Invalid envelope for #%v: got %v but expected %v", i, e, test.envelope)
 		}
+	}
+}
+
+func TestEnvelope_Parse_literal(t *testing.T) {
+	subject := "Hello World!"
+	l := bytes.NewBufferString(subject)
+	fields := []interface{}{
+		"Tue, 10 Nov 2009 23:00:00 -0600",
+		l,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		"42@example.org",
+		"43@example.org",
+	}
+
+	e := &Envelope{}
+	if err := e.Parse(fields); err != nil {
+		t.Error("Error parsing envelope:", err)
+	} else if e.Subject != subject {
+		t.Errorf("Invalid envelope subject: got %v but expected %v", e.Subject, subject)
 	}
 }
 

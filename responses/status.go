@@ -29,12 +29,13 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 			return errors.New("STATUS response expects two fields")
 		}
 
-		name, ok := fields[0].(string)
-		if !ok {
-			return errors.New("STATUS response expects a string as first argument")
+		if name, err := imap.ParseString(fields[0]); err != nil {
+			return err
+		} else if name, err := utf7.Decoder.String(name); err != nil {
+			return err
+		} else {
+			mbox.Name = imap.CanonicalMailboxName(name)
 		}
-		mbox.Name, _ = utf7.Decoder.String(name)
-		mbox.Name = imap.CanonicalMailboxName(mbox.Name)
 
 		var items []interface{}
 		if items, ok = fields[1].([]interface{}); !ok {
@@ -51,13 +52,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
-
-	fields := []interface{}{imap.Status, mbox.Name, mbox.Format()}
-
-	res := imap.NewUntaggedResp(fields)
-	if err := res.WriteTo(w); err != nil {
-		return err
-	}
-
-	return nil
+	name, _ := utf7.Encoder.String(mbox.Name)
+	fields := []interface{}{imap.Status, name, mbox.Format()}
+	return imap.NewUntaggedResp(fields).WriteTo(w)
 }
