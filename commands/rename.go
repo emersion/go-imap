@@ -14,8 +14,9 @@ type Rename struct {
 }
 
 func (cmd *Rename) Command() *imap.Command {
-	existingName, _ := utf7.Encoder.String(cmd.Existing)
-	newName, _ := utf7.Encoder.String(cmd.New)
+	enc := utf7.Encoding.NewEncoder()
+	existingName, _ := enc.String(cmd.Existing)
+	newName, _ := enc.String(cmd.New)
 
 	return &imap.Command{
 		Name:      imap.Rename,
@@ -28,9 +29,11 @@ func (cmd *Rename) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
+	dec := utf7.Encoding.NewDecoder()
+
 	if existingName, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if existingName, err := utf7.Decoder.String(existingName); err != nil {
+	} else if existingName, err := dec.String(existingName); err != nil {
 		return err
 	} else {
 		cmd.Existing = imap.CanonicalMailboxName(existingName)
@@ -38,7 +41,7 @@ func (cmd *Rename) Parse(fields []interface{}) error {
 
 	if newName, err := imap.ParseString(fields[1]); err != nil {
 		return err
-	} else if newName, err := utf7.Decoder.String(newName); err != nil {
+	} else if newName, err := dec.String(newName); err != nil {
 		return err
 	} else {
 		cmd.New = imap.CanonicalMailboxName(newName)

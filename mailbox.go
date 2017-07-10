@@ -65,7 +65,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 	if name, err := ParseString(fields[2]); err != nil {
 		return err
-	} else if name, err := utf7.Decoder.String(name); err != nil {
+	} else if name, err := utf7.Encoding.NewDecoder().String(name); err != nil {
 		return err
 	} else {
 		info.Name = CanonicalMailboxName(name)
@@ -76,7 +76,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
-	name, _ := utf7.Encoder.String(info.Name)
+	name, _ := utf7.Encoding.NewEncoder().String(info.Name)
 	// Thunderbird doesn't understand delimiters if not quoted
 	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
 }

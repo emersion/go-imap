@@ -5,15 +5,11 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
 )
 
-var ErrBadUtf7 = errors.New("bad utf-7 encoding")
-
-var Decoder = &encoding.Decoder{
-	Transformer: &decoder{true},
-}
+// ErrInvalidUTF7 means that a transformer encountered invalid UTF-7.
+var ErrInvalidUTF7 = errors.New("utf7: invalid UTF-7")
 
 type decoder struct {
 	ascii bool
@@ -24,7 +20,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		ch := src[i]
 
 		if ch < min || ch > max { // Illegal code point in ASCII mode
-			err = ErrBadUtf7
+			err = ErrInvalidUTF7
 			return
 		}
 
@@ -47,14 +43,14 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		start := i + 1
 		for i++; i < len(src) && src[i] != '-'; i++ {
 			if src[i] == '\r' || src[i] == '\n' { // base64 package ignores CR and LF
-				err = ErrBadUtf7
+				err = ErrInvalidUTF7
 				return
 			}
 		}
 
 		if i == len(src) { // Implicit shift ("&...")
 			if atEOF {
-				err = ErrBadUtf7
+				err = ErrInvalidUTF7
 			} else {
 				err = transform.ErrShortSrc
 			}
@@ -67,7 +63,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 			d.ascii = true
 		} else { // Control or non-ASCII code points in base64
 			if !d.ascii { // Null shift ("&...-&...-")
-				err = ErrBadUtf7
+				err = ErrInvalidUTF7
 				return
 			}
 
@@ -76,7 +72,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		}
 
 		if len(b) == 0 { // Bad encoding
-			err = ErrBadUtf7
+			err = ErrInvalidUTF7
 			return
 		}
 
@@ -116,16 +112,16 @@ func decode(b64 []byte) []byte {
 	if n := len(b64); b64[n-1] == '=' {
 		return nil
 	} else if n&3 == 0 {
-		b = make([]byte, enc.DecodedLen(n)*3)
+		b = make([]byte, b64Enc.DecodedLen(n)*3)
 	} else {
 		n += 4 - n&3
-		b = make([]byte, n+enc.DecodedLen(n)*3)
+		b = make([]byte, n+b64Enc.DecodedLen(n)*3)
 		copy(b[copy(b, b64):n], []byte("=="))
 		b64, b = b[:n], b[n:]
 	}
 
 	// Decode Base64 into the first 1/3rd of b
-	n, err := enc.Decode(b, b64)
+	n, err := b64Enc.Decode(b, b64)
 	if err != nil || n&1 == 1 {
 		return nil
 	}

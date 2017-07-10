@@ -14,7 +14,7 @@ type Status struct {
 }
 
 func (cmd *Status) Command() *imap.Command {
-	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	items := make([]interface{}, len(cmd.Items))
 	for i, f := range cmd.Items {
@@ -34,7 +34,7 @@ func (cmd *Status) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
+	} else if mailbox, err := utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)

@@ -31,7 +31,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 		if name, err := imap.ParseString(fields[0]); err != nil {
 			return err
-		} else if name, err := utf7.Decoder.String(name); err != nil {
+		} else if name, err := utf7.Encoding.NewDecoder().String(name); err != nil {
 			return err
 		} else {
 			mbox.Name = imap.CanonicalMailboxName(name)
@@ -52,7 +52,7 @@ func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
 
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
-	name, _ := utf7.Encoder.String(mbox.Name)
+	name, _ := utf7.Encoding.NewEncoder().String(mbox.Name)
 	fields := []interface{}{imap.Status, name, mbox.Format()}
 	return imap.NewUntaggedResp(fields).WriteTo(w)
 }

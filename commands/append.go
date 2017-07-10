@@ -19,7 +19,7 @@ type Append struct {
 func (cmd *Append) Command() *imap.Command {
 	var args []interface{}
 
-	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 	args = append(args, mailbox)
 
 	if cmd.Flags != nil {
@@ -50,7 +50,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	// Parse mailbox name
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	} else if mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)

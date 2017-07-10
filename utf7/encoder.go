@@ -4,13 +4,8 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
 )
-
-var Encoder = &encoding.Encoder{
-	Transformer: &encoder{},
-}
 
 type encoder struct{}
 
@@ -81,9 +76,9 @@ func encode(s []byte) []byte {
 	}
 
 	// Encode as base64
-	n := enc.EncodedLen(len(b)) + 2
+	n := b64Enc.EncodedLen(len(b)) + 2
 	b64 := make([]byte, n)
-	enc.Encode(b64[1:], b)
+	b64Enc.Encode(b64[1:], b)
 
 	// Strip padding
 	n -= 2 - (len(b)+2)%3
