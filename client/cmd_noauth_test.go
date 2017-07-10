@@ -43,7 +43,7 @@ func TestClient_StartTLS(t *testing.T) {
 	if cmd != "STARTTLS" {
 		t.Fatalf("client sent command %v, want STARTTLS", cmd)
 	}
-	s.WriteString(tag+" OK Begin TLS negotiation now\r\n")
+	s.WriteString(tag + " OK Begin TLS negotiation now\r\n")
 
 	ss := tls.Server(s.Conn, tlsConfig)
 	if err := ss.Handshake(); err != nil {
@@ -100,7 +100,7 @@ func TestClient_Authenticate(t *testing.T) {
 		t.Fatalf("client sent auth %v, want %v", line, wantLine)
 	}
 
-	s.WriteString(tag+" OK AUTHENTICATE completed\r\n")
+	s.WriteString(tag + " OK AUTHENTICATE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Authenticate() = %v", err)
@@ -124,7 +124,7 @@ func TestClient_Login_Success(t *testing.T) {
 	if cmd != "LOGIN username password" {
 		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
 	}
-	s.WriteString(tag+" OK LOGIN completed\r\n")
+	s.WriteString(tag + " OK LOGIN completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Login() = %v", err)
@@ -148,7 +148,7 @@ func TestClient_Login_Error(t *testing.T) {
 	if cmd != "LOGIN username password" {
 		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
 	}
-	s.WriteString(tag+" NO LOGIN incorrect\r\n")
+	s.WriteString(tag + " NO LOGIN incorrect\r\n")
 
 	if err := <-done; err == nil {
 		t.Fatal("c.Login() = nil, want LOGIN incorrect")

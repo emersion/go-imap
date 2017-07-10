@@ -116,7 +116,7 @@ func TestClient_SetDebug(t *testing.T) {
 	}
 
 	s.WriteString("* CAPABILITY IMAP4rev1\r\n")
-	s.WriteString(tag+" OK CAPABILITY completed.\r\n")
+	s.WriteString(tag + " OK CAPABILITY completed.\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatal("c.Capability() =", err)

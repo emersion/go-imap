@@ -16,7 +16,7 @@ const (
 
 var b64Enc = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,")
 
-type enc struct {}
+type enc struct{}
 
 func (e enc) NewDecoder() *encoding.Decoder {
 	return &encoding.Decoder{

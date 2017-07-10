@@ -26,7 +26,7 @@ func TestClient_Check(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "CHECK")
 	}
 
-	s.WriteString(tag+" OK CHECK completed\r\n")
+	s.WriteString(tag + " OK CHECK completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Check() = %v", err)
@@ -49,7 +49,7 @@ func TestClient_Close(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "CLOSE")
 	}
 
-	s.WriteString(tag+" OK CLOSE completed\r\n")
+	s.WriteString(tag + " OK CLOSE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Check() = %v", err)
@@ -84,7 +84,7 @@ func TestClient_Expunge(t *testing.T) {
 	s.WriteString("* 3 EXPUNGE\r\n")
 	s.WriteString("* 5 EXPUNGE\r\n")
 	s.WriteString("* 8 EXPUNGE\r\n")
-	s.WriteString(tag+" OK EXPUNGE completed\r\n")
+	s.WriteString(tag + " OK EXPUNGE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Expunge() = %v", err)
@@ -132,7 +132,7 @@ func TestClient_Search(t *testing.T) {
 	}
 
 	s.WriteString("* SEARCH 2 84 882\r\n")
-	s.WriteString(tag+" OK SEARCH completed\r\n")
+	s.WriteString(tag + " OK SEARCH completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Search() = %v", err)
@@ -169,7 +169,7 @@ func TestClient_Search_Uid(t *testing.T) {
 	}
 
 	s.WriteString("* SEARCH 1 78 2010\r\n")
-	s.WriteString(tag+" OK UID SEARCH completed\r\n")
+	s.WriteString(tag + " OK UID SEARCH completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Search() = %v", err)
@@ -209,7 +209,7 @@ func TestClient_Fetch(t *testing.T) {
 	s.WriteString("Hello World!")
 	s.WriteString(")\r\n")
 
-	s.WriteString(tag+" OK FETCH completed\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Fetch() = %v", err)
@@ -262,7 +262,7 @@ func TestClient_Fetch_Partial(t *testing.T) {
 	s.WriteString("I love pot")
 	s.WriteString(")\r\n")
 
-	s.WriteString(tag+" OK FETCH completed\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Fetch() = %v", err)
@@ -295,7 +295,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	}
 
 	s.WriteString("* 23 FETCH (UID 42 FLAGS (\\Seen))\r\n")
-	s.WriteString(tag+" OK UID FETCH completed\r\n")
+	s.WriteString(tag + " OK UID FETCH completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.UidFetch() = %v", err)
@@ -333,7 +333,7 @@ func TestClient_Store(t *testing.T) {
 	}
 
 	s.WriteString("* 2 FETCH (FLAGS (\\Seen))\r\n")
-	s.WriteString(tag+" OK STORE completed\r\n")
+	s.WriteString(tag + " OK STORE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Store() = %v", err)
@@ -363,7 +363,7 @@ func TestClient_Store_Silent(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "STORE 2:3 +FLAGS.SILENT (\\Seen)")
 	}
 
-	s.WriteString(tag+" OK STORE completed\r\n")
+	s.WriteString(tag + " OK STORE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Store() = %v", err)
@@ -388,7 +388,7 @@ func TestClient_Store_Uid(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "UID STORE 27:901 +FLAGS.SILENT (\\Deleted)")
 	}
 
-	s.WriteString(tag+" OK STORE completed\r\n")
+	s.WriteString(tag + " OK STORE completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.UidStore() = %v", err)
@@ -413,7 +413,7 @@ func TestClient_Copy(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "COPY 2:4 Sent")
 	}
 
-	s.WriteString(tag+" OK COPY completed\r\n")
+	s.WriteString(tag + " OK COPY completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.Copy() = %v", err)
@@ -438,7 +438,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 		t.Fatalf("client sent command %v, want %v", cmd, "UID COPY 78:102 Drafts")
 	}
 
-	s.WriteString(tag+" OK UID COPY completed\r\n")
+	s.WriteString(tag + " OK UID COPY completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Fatalf("c.UidCopy() = %v", err)

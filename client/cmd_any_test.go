@@ -23,7 +23,7 @@ func TestClient_Capability(t *testing.T) {
 		t.Fatalf("client sent command %v, want CAPABILITY", cmd)
 	}
 	s.WriteString("* CAPABILITY IMAP4rev1 XTEST\r\n")
-	s.WriteString(tag+" OK CAPABILITY completed.\r\n")
+	s.WriteString(tag + " OK CAPABILITY completed.\r\n")
 
 	if err := <-done; err != nil {
 		t.Errorf("c.Capability() = ", err)
@@ -47,7 +47,7 @@ func TestClient_Noop(t *testing.T) {
 	if cmd != "NOOP" {
 		t.Fatalf("client sent command %v, want NOOP", cmd)
 	}
-	s.WriteString(tag+" OK NOOP completed\r\n")
+	s.WriteString(tag + " OK NOOP completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Error("c.Noop() =", err)
@@ -68,7 +68,7 @@ func TestClient_Logout(t *testing.T) {
 		t.Fatalf("client sent command %v, want LOGOUT", cmd)
 	}
 	s.WriteString("* BYE Client asked to close the connection.\r\n")
-	s.WriteString(tag+" OK LOGOUT completed\r\n")
+	s.WriteString(tag + " OK LOGOUT completed\r\n")
 
 	if err := <-done; err != nil {
 		t.Error("c.Logout() =", err)
