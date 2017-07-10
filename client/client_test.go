@@ -136,6 +136,13 @@ func testClient(t *testing.T, ct ClientTester, st ServerTester) {
 	conn.Close()
 }
 
+func setClientState(c *Client, state imap.ConnState, mailbox *imap.MailboxStatus) {
+	c.locker.Lock()
+	c.state = state
+	c.mailbox = mailbox
+	c.locker.Unlock()
+}
+
 func TestClient(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
@@ -181,10 +188,7 @@ func TestClient_unilateral(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
 
-	c.locker.Lock()
-	c.state = imap.SelectedState
-	c.mailbox = imap.NewMailboxStatus("INBOX", nil)
-	c.locker.Unlock()
+	setClientState(c, imap.SelectedState, imap.NewMailboxStatus("INBOX", nil))
 
 	statuses := make(chan *imap.MailboxStatus, 1)
 	c.MailboxUpdates = statuses
