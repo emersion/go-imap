@@ -2,9 +2,8 @@ package client
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -12,362 +11,349 @@ import (
 )
 
 func TestClient_Select(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		mbox, err := c.Select("INBOX", false)
-		if err != nil {
-			return
-		}
+	setClientState(c, imap.AuthenticatedState, nil)
 
-		if mbox.Name != "INBOX" {
-			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
-		}
-		if mbox.ReadOnly {
-			return fmt.Errorf("Bad mailbox read-only: %v", mbox.ReadOnly)
-		}
-		if len(mbox.Flags) != 5 {
-			return fmt.Errorf("Bad mailbox flags: %v", mbox.Flags)
-		}
-		if len(mbox.PermanentFlags) != 3 {
-			return fmt.Errorf("Bad mailbox permanent flags: %v", mbox.PermanentFlags)
-		}
-		if mbox.Messages != 172 {
-			return fmt.Errorf("Bad mailbox messages: %v", mbox.Messages)
-		}
-		if mbox.Recent != 1 {
-			return fmt.Errorf("Bad mailbox recent: %v", mbox.Recent)
-		}
-		if mbox.Unseen != 12 {
-			return fmt.Errorf("Bad mailbox unseen: %v", mbox.Unseen)
-		}
-		if mbox.UidNext != 4392 {
-			return fmt.Errorf("Bad mailbox UIDNEXT: %v", mbox.UidNext)
-		}
-		if mbox.UidValidity != 3857529045 {
-			return fmt.Errorf("Bad mailbox UIDVALIDITY: %v", mbox.UidValidity)
-		}
-		return
+	var mbox *imap.MailboxStatus
+	done := make(chan error, 1)
+	go func() {
+		var err error
+		mbox, err = c.Select("INBOX", false)
+		done <- err
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "SELECT INBOX" {
+		t.Fatalf("client sent command %v, want SELECT INBOX", cmd)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("* 172 EXISTS\r\n")
+	s.WriteString("* 1 RECENT\r\n")
+	s.WriteString("* OK [UNSEEN 12] Message 12 is first unseen\r\n")
+	s.WriteString("* OK [UIDVALIDITY 3857529045] UIDs valid\r\n")
+	s.WriteString("* OK [UIDNEXT 4392] Predicted next UID\r\n")
+	s.WriteString("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n")
+	s.WriteString("* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n")
+	s.WriteString(tag+" OK SELECT completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "SELECT INBOX" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* 172 EXISTS\r\n")
-		io.WriteString(c, "* 1 RECENT\r\n")
-		io.WriteString(c, "* OK [UNSEEN 12] Message 12 is first unseen\r\n")
-		io.WriteString(c, "* OK [UIDVALIDITY 3857529045] UIDs valid\r\n")
-		io.WriteString(c, "* OK [UIDNEXT 4392] Predicted next UID\r\n")
-		io.WriteString(c, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n")
-		io.WriteString(c, "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n")
-		io.WriteString(c, tag+" OK SELECT completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Select() = %v", err)
 	}
 
-	testClient(t, ct, st)
+	want := &imap.MailboxStatus{
+		Name: "INBOX",
+		ReadOnly: false,
+		Flags: []string{imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag},
+		PermanentFlags: []string{imap.DeletedFlag, imap.SeenFlag, "\\*"},
+		Messages: 172,
+		Recent: 1,
+		Unseen: 12,
+		UidNext: 4392,
+		UidValidity: 3857529045,
+	}
+	mbox.Items = nil
+	if !reflect.DeepEqual(mbox, want) {
+		t.Errorf("c.Select() = \n%+v\n want \n%+v", mbox, want)
+	}
 }
 
 func TestClient_Select_ReadOnly(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		mbox, err := c.Select("INBOX", true)
-		if err != nil {
-			return
-		}
+	setClientState(c, imap.AuthenticatedState, nil)
 
-		if mbox.Name != "INBOX" {
-			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
-		}
-		if !mbox.ReadOnly {
-			return fmt.Errorf("Bad mailbox read-only: %v", mbox.ReadOnly)
-		}
-		return
+	var mbox *imap.MailboxStatus
+	done := make(chan error, 1)
+	go func() {
+		var err error
+		mbox, err = c.Select("INBOX", true)
+		done <- err
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "EXAMINE INBOX" {
+		t.Fatalf("client sent command %v, want EXAMINE INBOX", cmd)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK [READ-ONLY] EXAMINE completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "EXAMINE INBOX" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK [READ-ONLY] EXAMINE completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Select() = %v", err)
 	}
 
-	testClient(t, ct, st)
+	if !mbox.ReadOnly {
+		t.Errorf("c.Select().ReadOnly = false, want true")
+	}
 }
 
 func TestClient_Create(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		err = c.Create("New Mailbox")
-		return
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Create("New Mailbox")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "CREATE \"New Mailbox\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "CREATE \"New Mailbox\"")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK CREATE completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "CREATE \"New Mailbox\"" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK CREATE completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Create() = %v", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Delete(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		err = c.Delete("Old Mailbox")
-		return
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Delete("Old Mailbox")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "DELETE \"Old Mailbox\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "DELETE \"Old Mailbox\"")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK DELETE completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "DELETE \"Old Mailbox\"" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK DELETE completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Delete() = %v", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Rename(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		err = c.Rename("Old Mailbox", "New Mailbox")
-		return
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Rename("Old Mailbox", "New Mailbox")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "RENAME \"Old Mailbox\" \"New Mailbox\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "RENAME \"Old Mailbox\" \"New Mailbox\"")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK RENAME completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "RENAME \"Old Mailbox\" \"New Mailbox\"" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK RENAME completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Rename() = %v", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Subscribe(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		err = c.Subscribe("Mailbox")
-		return
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Subscribe("Mailbox")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "SUBSCRIBE Mailbox" {
+		t.Fatalf("client sent command %v, want %v", cmd, "SUBSCRIBE Mailbox")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK SUBSCRIBE completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "SUBSCRIBE Mailbox" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK SUBSCRIBE completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Subscribe() = %v", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Unsubscribe(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		err = c.Unsubscribe("Mailbox")
-		return
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Unsubscribe("Mailbox")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "UNSUBSCRIBE Mailbox" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UNSUBSCRIBE Mailbox")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString(tag+" OK UNSUBSCRIBE completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "UNSUBSCRIBE Mailbox" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK UNSUBSCRIBE completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Unsubscribe() = %v", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_List(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		mailboxes := make(chan *imap.MailboxInfo, 3)
-		err = c.List("", "%", mailboxes)
-		if err != nil {
-			return
-		}
+	setClientState(c, imap.AuthenticatedState, nil)
 
-		expected := []struct {
-			name       string
-			attributes []string
-		}{
-			{"INBOX", []string{"flag1"}},
-			{"Drafts", []string{"flag2", "flag3"}},
-			{"Sent", nil},
-		}
+	done := make(chan error, 1)
+	mailboxes := make(chan *imap.MailboxInfo, 3)
+	go func() {
+		done <- c.List("", "%", mailboxes)
+	}()
 
-		i := 0
-		for mbox := range mailboxes {
-			if mbox.Name != expected[i].name {
-				return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
-			}
-
-			if fmt.Sprint(mbox.Attributes) != fmt.Sprint(expected[i].attributes) {
-				return fmt.Errorf("Bad mailbox attributes: %v", mbox.Attributes)
-			}
-
-			i++
-		}
-
-		return
+	tag, cmd := s.ScanCmd()
+	if cmd != "LIST \"\" %" {
+		t.Fatalf("client sent command %v, want %v", cmd, "LIST \"\" %")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("* LIST (flag1) \"/\" INBOX\r\n")
+	s.WriteString("* LIST (flag2 flag3) \"/\" Drafts\r\n")
+	s.WriteString("* LIST () \"/\" Sent\r\n")
+	s.WriteString(tag+" OK LIST completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "LIST \"\" %" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* LIST (flag1) \"/\" INBOX\r\n")
-		io.WriteString(c, "* LIST (flag2 flag3) \"/\" Drafts\r\n")
-		io.WriteString(c, "* LIST () \"/\" Sent\r\n")
-		io.WriteString(c, tag+" OK LIST completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.List() = %v", err)
 	}
 
-	testClient(t, ct, st)
+	want := []struct {
+		name       string
+		attributes []string
+	}{
+		{"INBOX", []string{"flag1"}},
+		{"Drafts", []string{"flag2", "flag3"}},
+		{"Sent", []string{}},
+	}
+
+	i := 0
+	for mbox := range mailboxes {
+		if mbox.Name != want[i].name {
+			t.Errorf("Bad mailbox name for %v: %v, want %v", i, mbox.Name, want[i].name)
+		}
+
+		if !reflect.DeepEqual(mbox.Attributes, want[i].attributes) {
+			t.Errorf("Bad mailbox attributes for %v: %v, want %v", i, mbox.Attributes, want[i].attributes)
+		}
+
+		i++
+	}
 }
 
 func TestClient_Lsub(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		mailboxes := make(chan *imap.MailboxInfo, 1)
-		err = c.Lsub("", "%", mailboxes)
-		if err != nil {
-			return
-		}
+	setClientState(c, imap.AuthenticatedState, nil)
 
-		mbox := <-mailboxes
-		if mbox.Name != "INBOX" {
-			return fmt.Errorf("Bad mailbox name: %v", mbox.Name)
-		}
-		if len(mbox.Attributes) != 0 {
-			return fmt.Errorf("Bad mailbox flags: %v", mbox.Attributes)
-		}
+	done := make(chan error, 1)
+	mailboxes := make(chan *imap.MailboxInfo, 1)
+	go func() {
+		done <- c.Lsub("", "%", mailboxes)
+	}()
 
-		return
+	tag, cmd := s.ScanCmd()
+	if cmd != "LSUB \"\" %" {
+		t.Fatalf("client sent command %v, want %v", cmd, "LSUB \"\" %")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("* LSUB () \"/\" INBOX\r\n")
+	s.WriteString(tag+" OK LSUB completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "LSUB \"\" %" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* LSUB () \"/\" INBOX\r\n")
-		io.WriteString(c, tag+" OK LIST completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Lsub() = %v", err)
 	}
 
-	testClient(t, ct, st)
+	mbox := <-mailboxes
+	if mbox.Name != "INBOX" {
+		t.Errorf("Bad mailbox name: %v", mbox.Name)
+	}
+	if len(mbox.Attributes) != 0 {
+		t.Errorf("Bad mailbox flags: %v", mbox.Attributes)
+	}
 }
 
 func TestClient_Status(t *testing.T) {
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		mbox, err := c.Status("INBOX", []string{"MESSAGES", "RECENT"})
-		if err != nil {
-			return
-		}
+	setClientState(c, imap.AuthenticatedState, nil)
 
-		if mbox.Messages != 42 {
-			return fmt.Errorf("Bad mailbox messages: %v", mbox.Messages)
-		}
-		if mbox.Recent != 1 {
-			return fmt.Errorf("Bad mailbox recent: %v", mbox.Recent)
-		}
+	done := make(chan error, 1)
+	var mbox *imap.MailboxStatus
+	go func() {
+		var err error
+		mbox, err = c.Status("INBOX", []string{imap.MailboxMessages, imap.MailboxRecent})
+		done <- err
+	}()
 
-		return
+	tag, cmd := s.ScanCmd()
+	if cmd != "STATUS INBOX (MESSAGES RECENT)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "STATUS INBOX (MESSAGES RECENT)")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
+	s.WriteString(tag+" OK STATUS completed\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "STATUS INBOX (MESSAGES RECENT)" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
-		io.WriteString(c, tag+" OK STATUS completed\r\n")
+	if err := <-done; err != nil {
+		t.Fatalf("c.Status() = %v", err)
 	}
 
-	testClient(t, ct, st)
+	if mbox.Messages != 42 {
+		t.Errorf("Bad mailbox messages: %v", mbox.Messages)
+	}
+	if mbox.Recent != 1 {
+		t.Errorf("Bad mailbox recent: %v", mbox.Recent)
+	}
 }
 
 func TestClient_Append(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
 	msg := "Hello World!\r\nHello Gophers!\r\n"
+	date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+	flags := []string{imap.SeenFlag, imap.DraftFlag}
 
-	ct := func(c *Client) (err error) {
-		c.state = imap.AuthenticatedState
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Append("INBOX", flags, date, bytes.NewBufferString(msg))
+	}()
 
-		date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-		literal := bytes.NewBufferString(msg)
-		err = c.Append("INBOX", []string{"\\Seen", "\\Draft"}, date, literal)
-		return
+	tag, cmd := s.ScanCmd()
+	if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
+		t.Fatalf("client sent command %v, want %v", cmd, "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("+ send literal\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "+ send literal\r\n")
-
-		b := make([]byte, 30)
-		if _, err := io.ReadFull(c, b); err != nil {
-			t.Fatal(err)
-		}
-
-		if string(b) != msg {
-			t.Fatal("Bad literal:", string(b))
-		}
-
-		io.WriteString(c, tag+" OK APPEND completed\r\n")
+	b := make([]byte, 30)
+	if _, err := io.ReadFull(s, b); err != nil {
+		t.Fatal(err)
 	}
 
-	testClient(t, ct, st)
+	if string(b) != msg {
+		t.Fatal("Bad literal:", string(b))
+	}
+
+	s.WriteString(tag+" OK APPEND completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Append() = %v", err)
+	}
 }

@@ -24,12 +24,12 @@ func (cmd *Login) Parse(fields []interface{}) error {
 		return errors.New("Not enough arguments")
 	}
 
-	var ok bool
-	if cmd.Username, ok = fields[0].(string); !ok {
-		return errors.New("Username is not a string")
+	var err error
+	if cmd.Username, err = imap.ParseString(fields[0]); err != nil {
+		return err
 	}
-	if cmd.Password, ok = fields[1].(string); !ok {
-		return errors.New("Password is not a string")
+	if cmd.Password, err = imap.ParseString(fields[1]); err != nil {
+		return err
 	}
 
 	return nil

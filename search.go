@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/textproto"
 	"strings"
 	"time"
@@ -43,8 +42,8 @@ func convertField(f interface{}, charsetReader func(io.Reader) io.Reader) string
 		}
 	}
 
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
+	b := make([]byte, l.Len())
+	if _, err := io.ReadFull(r, b); err != nil {
 		return ""
 	}
 	return string(b)

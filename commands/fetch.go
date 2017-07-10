@@ -34,13 +34,10 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	seqset, ok := fields[0].(string)
-	if !ok {
-		return errors.New("Sequence set must be a string")
-	}
-
 	var err error
-	if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
+	if seqset, ok := fields[0].(string); !ok {
+		return errors.New("Sequence set must be an atom")
+	} else if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
 		return err
 	}
 

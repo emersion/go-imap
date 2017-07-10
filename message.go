@@ -83,9 +83,9 @@ func ParseParamList(fields []interface{}) (map[string]string, error) {
 
 	var k string
 	for i, f := range fields {
-		p, ok := f.(string)
-		if !ok {
-			return nil, errors.New("Parameter list contains a non-string")
+		p, err := ParseString(f)
+		if err != nil {
+			return nil, errors.New("Parameter list contains a non-string: " + err.Error())
 		}
 
 		if i%2 == 0 {
@@ -605,17 +605,17 @@ func (addr *Address) Parse(fields []interface{}) error {
 		return errors.New("Address doesn't contain 4 fields")
 	}
 
-	if f, ok := fields[0].(string); ok {
-		addr.PersonalName, _ = decodeHeader(f)
+	if s, err := ParseString(fields[0]); err == nil {
+		addr.PersonalName, _ = decodeHeader(s)
 	}
-	if f, ok := fields[1].(string); ok {
-		addr.AtDomainList = f
+	if s, err := ParseString(fields[1]); err == nil {
+		addr.AtDomainList, _ = decodeHeader(s)
 	}
-	if f, ok := fields[2].(string); ok {
-		addr.MailboxName = f
+	if s, err := ParseString(fields[2]); err == nil {
+		addr.MailboxName, _ = decodeHeader(s)
 	}
-	if f, ok := fields[3].(string); ok {
-		addr.HostName = f
+	if s, err := ParseString(fields[3]); err == nil {
+		addr.HostName, _ = decodeHeader(s)
 	}
 
 	return nil
@@ -702,7 +702,7 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	if date, ok := fields[0].(string); ok {
 		e.Date, _ = parseMessageDateTime(date)
 	}
-	if subject, ok := fields[1].(string); ok {
+	if subject, err := ParseString(fields[1]); err == nil {
 		e.Subject, _ = decodeHeader(subject)
 	}
 	if from, ok := fields[2].([]interface{}); ok {
@@ -880,7 +880,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		bs.Params, _ = parseHeaderParamList(params)
 
 		bs.Id, _ = fields[3].(string)
-		if desc, ok := fields[4].(string); ok {
+		if desc, err := ParseString(fields[4]); err == nil {
 			bs.Description, _ = decodeHeader(desc)
 		}
 		bs.Encoding, _ = fields[5].(string)
