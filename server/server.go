@@ -45,7 +45,7 @@ type Upgrader interface {
 type HandlerFactory func() Handler
 
 // A function that creates SASL servers.
-type SaslServerFactory func(conn Conn) sasl.Server
+type SASLServerFactory func(conn Conn) sasl.Server
 
 // An IMAP extension.
 type Extension interface {
@@ -94,7 +94,7 @@ type Server struct {
 	conns     map[Conn]struct{}
 
 	commands   map[string]HandlerFactory
-	auths      map[string]SaslServerFactory
+	auths      map[string]SASLServerFactory
 	extensions []Extension
 
 	// TCP address to listen on.
@@ -132,7 +132,7 @@ func New(bkd backend.Backend) *Server {
 		ErrorLog:  log.New(os.Stderr, "imap/server: ", log.LstdFlags),
 	}
 
-	s.auths = map[string]SaslServerFactory{
+	s.auths = map[string]SASLServerFactory{
 		sasl.Plain: func(conn Conn) sasl.Server {
 			return sasl.NewPlainServer(func(identity, username, password string) error {
 				if identity != "" && identity != username {
@@ -421,6 +421,6 @@ func (s *Server) Enable(extensions ...Extension) {
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (s *Server) EnableAuth(name string, f SaslServerFactory) {
+func (s *Server) EnableAuth(name string, f SASLServerFactory) {
 	s.auths[name] = f
 }
