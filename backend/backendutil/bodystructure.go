@@ -53,7 +53,7 @@ func FetchBodyStructure(e *message.Entity, extended bool) (*imap.BodyStructure, 
 		bs.Disposition, bs.DispositionParams, _ = e.Header.ContentDisposition()
 
 		// TODO: bs.Language, bs.Location
-		// TODO: bs.Md5
+		// TODO: bs.MD5
 	}
 
 	return bs, nil

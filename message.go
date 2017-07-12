@@ -796,7 +796,7 @@ type BodyStructure struct {
 	Location []string
 
 	// The MD5 checksum.
-	Md5 string
+	MD5 string
 }
 
 func (bs *BodyStructure) Parse(fields []interface{}) error {
@@ -920,7 +920,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		if len(fields) > end {
 			bs.Extended = true // Contains extension data
 
-			bs.Md5, _ = fields[end].(string)
+			bs.MD5, _ = fields[end].(string)
 			end++
 		}
 		if len(fields) > end {
@@ -1024,8 +1024,8 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		if bs.Extended {
 			extended := make([]interface{}, 4)
 
-			if bs.Md5 != "" {
-				extended[0] = bs.Md5
+			if bs.MD5 != "" {
+				extended[0] = bs.MD5
 			}
 			if bs.Disposition != "" {
 				extended[1] = []interface{}{

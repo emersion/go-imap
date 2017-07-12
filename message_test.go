@@ -505,7 +505,7 @@ var bodyStructureTests = []struct {
 			Encoding:          "base64",
 			Size:              4242,
 			Extended:          true,
-			Md5:               "e0323a9039add2978bf5b49550572c7c",
+			MD5:               "e0323a9039add2978bf5b49550572c7c",
 			Disposition:       "attachment",
 			DispositionParams: map[string]string{"filename": "document.pdf"},
 			Language:          []string{"en-US"},
