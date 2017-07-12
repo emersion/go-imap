@@ -345,9 +345,52 @@ func TestClient_Append(t *testing.T) {
 	b := make([]byte, 30)
 	if _, err := io.ReadFull(s, b); err != nil {
 		t.Fatal(err)
+	} else if string(b) != msg {
+		t.Fatal("Bad literal:", string(b))
 	}
 
-	if string(b) != msg {
+	s.WriteString(tag + " OK APPEND completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Append() = %v", err)
+	}
+}
+
+func TestClient_Append_failed(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	// First the server refuses
+
+	msg := "First try"
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Append("INBOX", nil, time.Time{}, bytes.NewBufferString(msg))
+	}()
+
+	tag, _ := s.ScanCmd()
+	s.WriteString(tag + " BAD APPEND failed\r\n")
+
+	if err := <-done; err == nil {
+		t.Fatal("c.Append() = nil, want an error from the server")
+	}
+
+	// Try a second time, the server accepts
+
+	msg = "Second try"
+	go func() {
+		done <- c.Append("INBOX", nil, time.Time{}, bytes.NewBufferString(msg))
+	}()
+
+	tag, _ = s.ScanCmd()
+	s.WriteString("+ send literal\r\n")
+
+	b := make([]byte, len(msg))
+	if _, err := io.ReadFull(s, b); err != nil {
+		t.Fatal(err)
+	} else if string(b) != msg {
 		t.Fatal("Bad literal:", string(b))
 	}
 
