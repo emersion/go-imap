@@ -13,7 +13,7 @@ type Subscribe struct {
 }
 
 func (cmd *Subscribe) Command() *imap.Command {
-	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
 		Name:      imap.Subscribe,
@@ -28,7 +28,7 @@ func (cmd *Subscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
 	}
 	return nil
@@ -41,7 +41,7 @@ type Unsubscribe struct {
 }
 
 func (cmd *Unsubscribe) Command() *imap.Command {
-	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
 		Name:      imap.Unsubscribe,
@@ -56,7 +56,7 @@ func (cmd *Unsubscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if cmd.Mailbox, err = utf7.Decoder.String(mailbox); err != nil {
+	} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
 	}
 	return nil

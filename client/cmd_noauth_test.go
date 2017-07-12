@@ -1,24 +1,22 @@
-package client_test
+package client
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/base64"
-	"fmt"
 	"io"
-	"net"
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-imap/internal"
 	"github.com/emersion/go-sasl"
 )
 
 func TestClient_StartTLS(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
 	cert, err := tls.X509KeyPair(internal.LocalhostCert, internal.LocalhostKey)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("cannot load test certificate:", err)
 	}
 
 	tlsConfig := &tls.Config{
@@ -26,164 +24,137 @@ func TestClient_StartTLS(t *testing.T) {
 		Certificates:       []tls.Certificate{cert},
 	}
 
-	ct := func(c *client.Client) error {
-		if c.IsTLS() {
-			return fmt.Errorf("Client has TLS enabled before STARTTLS")
-		}
+	if c.IsTLS() {
+		t.Fatal("Client has TLS enabled before STARTTLS")
+	}
 
-		if ok, err := c.SupportStartTLS(); err != nil {
-			return err
-		} else if !ok {
-			return fmt.Errorf("Server doesn't support STARTTLS")
-		}
+	if ok, err := c.SupportStartTLS(); err != nil {
+		t.Fatalf("c.SupportStartTLS() = %v", err)
+	} else if !ok {
+		t.Fatalf("c.SupportStartTLS() = %v, want true", ok)
+	}
 
-		if err := c.StartTLS(tlsConfig); err != nil {
-			return err
-		}
+	done := make(chan error, 1)
+	go func() {
+		done <- c.StartTLS(tlsConfig)
+	}()
 
-		if !c.IsTLS() {
-			return fmt.Errorf("Client has not TLS enabled after STARTTLS")
-		}
+	tag, cmd := s.ScanCmd()
+	if cmd != "STARTTLS" {
+		t.Fatalf("client sent command %v, want STARTTLS", cmd)
+	}
+	s.WriteString(tag + " OK Begin TLS negotiation now\r\n")
 
+	ss := tls.Server(s.Conn, tlsConfig)
+	if err := ss.Handshake(); err != nil {
+		t.Fatal("cannot perform TLS handshake:", err)
+	}
+
+	if err := <-done; err != nil {
+		t.Error("c.StartTLS() =", err)
+	}
+
+	if !c.IsTLS() {
+		t.Errorf("Client has not TLS enabled after STARTTLS")
+	}
+
+	go func() {
 		_, err := c.Capability()
-		return err
+		done <- err
+	}()
+
+	tag, cmd = newCmdScanner(ss).ScanCmd()
+	if cmd != "CAPABILITY" {
+		t.Fatalf("client sent command %v, want CAPABILITY", cmd)
 	}
-
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "STARTTLS" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK Begin TLS negotiation now\r\n")
-
-		sc := tls.Server(c, tlsConfig)
-		if err = sc.Handshake(); err != nil {
-			t.Fatal(err)
-		}
-
-		scanner = NewCmdScanner(sc)
-
-		tag, cmd = scanner.Scan()
-		if cmd != "CAPABILITY" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(sc, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\n")
-		io.WriteString(sc, tag+" OK CAPABILITY completed.\r\n")
-	}
-
-	testClient(t, ct, st)
+	io.WriteString(ss, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\n")
+	io.WriteString(ss, tag+" OK CAPABILITY completed.\r\n")
 }
 
 func TestClient_Authenticate(t *testing.T) {
-	ct := func(c *client.Client) error {
-		if ok, err := c.SupportAuth(sasl.Plain); err != nil {
-			return err
-		} else if !ok {
-			return fmt.Errorf("Server doesn't support AUTH=PLAIN")
-		}
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		sasl := sasl.NewPlainClient("", "username", "password")
-
-		if err := c.Authenticate(sasl); err != nil {
-			return err
-		}
-
-		if c.State != imap.AuthenticatedState {
-			return fmt.Errorf("Client is not in authenticated state after AUTENTICATE")
-		}
-
-		return nil
+	if ok, err := c.SupportAuth(sasl.Plain); err != nil {
+		t.Fatalf("c.SupportAuth(sasl.Plain) = %v", err)
+	} else if !ok {
+		t.Fatalf("c.SupportAuth(sasl.Plain) = %v, want true", ok)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	sasl := sasl.NewPlainClient("", "username", "password")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "AUTHENTICATE PLAIN" {
-			t.Fatal("Bad command:", cmd)
-		}
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Authenticate(sasl)
+	}()
 
-		io.WriteString(c, "+ \r\n")
-
-		line := scanner.ScanLine()
-		b, err := base64.StdEncoding.DecodeString(line)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		parts := bytes.Split(b, []byte("\x00"))
-		if string(parts[0]) != "" {
-			t.Fatal("Bad identity")
-		}
-		if string(parts[1]) != "username" {
-			t.Fatal("Bad username")
-		}
-		if string(parts[2]) != "password" {
-			t.Fatal("Bad password")
-		}
-
-		io.WriteString(c, tag+" OK AUTHENTICATE completed\r\n")
+	tag, cmd := s.ScanCmd()
+	if cmd != "AUTHENTICATE PLAIN" {
+		t.Fatalf("client sent command %v, want AUTHENTICATE PLAIN", cmd)
 	}
 
-	testClient(t, ct, st)
+	s.WriteString("+ \r\n")
+
+	wantLine := "AHVzZXJuYW1lAHBhc3N3b3Jk"
+	if line := s.ScanLine(); line != wantLine {
+		t.Fatalf("client sent auth %v, want %v", line, wantLine)
+	}
+
+	s.WriteString(tag + " OK AUTHENTICATE completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Authenticate() = %v", err)
+	}
+
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
+	}
 }
 
 func TestClient_Login_Success(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		err = c.Login("username", "password")
-		if err != nil {
-			return
-		}
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		if c.State != imap.AuthenticatedState {
-			return fmt.Errorf("Client is not in authenticated state after login")
-		}
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Login("username", "password")
+	}()
 
-		return
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGIN username password" {
+		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
+	}
+	s.WriteString(tag + " OK LOGIN completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Login() = %v", err)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "LOGIN username password" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK LOGIN completed\r\n")
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Login_Error(t *testing.T) {
-	ct := func(c *client.Client) error {
-		err := c.Login("username", "password")
-		if err == nil {
-			return fmt.Errorf("Failed login didn't returned an error: %v", err)
-		}
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		if c.State != imap.NotAuthenticatedState {
-			return fmt.Errorf("Client state must be NotAuthenticated after failed login, but is: %v", c.State)
-		}
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Login("username", "password")
+	}()
 
-		return nil
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGIN username password" {
+		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
+	}
+	s.WriteString(tag + " NO LOGIN incorrect\r\n")
+
+	if err := <-done; err == nil {
+		t.Fatal("c.Login() = nil, want LOGIN incorrect")
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "LOGIN username password" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" NO LOGIN incorrect\r\n")
+	if state := c.State(); state != imap.NotAuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.NotAuthenticatedState)
 	}
-
-	testClient(t, ct, st)
 }

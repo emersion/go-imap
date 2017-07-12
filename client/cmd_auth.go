@@ -13,13 +13,21 @@ import (
 // logged in is called then the client isn't.
 var ErrNotLoggedIn = errors.New("Not logged in")
 
+func (c *Client) ensureAuthenticated() error {
+	state := c.State()
+	if state != imap.AuthenticatedState && state != imap.SelectedState {
+		return ErrNotLoggedIn
+	}
+	return nil
+}
+
 // Select selects a mailbox so that messages in the mailbox can be accessed. Any
 // currently selected mailbox is deselected before attempting the new selection.
 // Even if the readOnly parameter is set to false, the server can decide to open
 // the mailbox in read-only mode.
 func (c *Client) Select(name string, readOnly bool) (*imap.MailboxStatus, error) {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return nil, ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return nil, err
 	}
 
 	cmd := &commands.Select{
@@ -31,27 +39,35 @@ func (c *Client) Select(name string, readOnly bool) (*imap.MailboxStatus, error)
 	res := &responses.Select{
 		Mailbox: mbox,
 	}
-	c.Mailbox = mbox
+	c.locker.Lock()
+	c.mailbox = mbox
+	c.locker.Unlock()
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
-		c.Mailbox = nil
+		c.locker.Lock()
+		c.mailbox = nil
+		c.locker.Unlock()
 		return nil, err
 	}
 	if err := status.Err(); err != nil {
-		c.Mailbox = nil
+		c.locker.Lock()
+		c.mailbox = nil
+		c.locker.Unlock()
 		return nil, err
 	}
 
+	c.locker.Lock()
 	mbox.ReadOnly = (status.Code == imap.CodeReadOnly)
-	c.State = imap.SelectedState
+	c.state = imap.SelectedState
+	c.locker.Unlock()
 	return mbox, nil
 }
 
 // Create creates a mailbox with the given name.
 func (c *Client) Create(name string) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Create{
@@ -67,8 +83,8 @@ func (c *Client) Create(name string) error {
 
 // Delete permanently removes the mailbox with the given name.
 func (c *Client) Delete(name string) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Delete{
@@ -84,8 +100,8 @@ func (c *Client) Delete(name string) error {
 
 // Rename changes the name of a mailbox.
 func (c *Client) Rename(existingName, newName string) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Rename{
@@ -103,8 +119,8 @@ func (c *Client) Rename(existingName, newName string) error {
 // Subscribe adds the specified mailbox name to the server's set of "active" or
 // "subscribed" mailboxes.
 func (c *Client) Subscribe(name string) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Subscribe{
@@ -121,8 +137,8 @@ func (c *Client) Subscribe(name string) error {
 // Unsubscribe removes the specified mailbox name from the server's set of
 // "active" or "subscribed" mailboxes.
 func (c *Client) Unsubscribe(name string) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Unsubscribe{
@@ -144,8 +160,8 @@ func (c *Client) Unsubscribe(name string) error {
 // wildcard, and matches zero or more characters at this position. The
 // character "%" is similar to "*", but it does not match a hierarchy delimiter.
 func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.List{
@@ -164,8 +180,8 @@ func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) error {
 // Lsub returns a subset of names from the set of names that the user has
 // declared as being "active" or "subscribed".
 func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.List{
@@ -191,8 +207,8 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
 //
 // See RFC 3501 section 6.3.10 for a list of items that can be requested.
 func (c *Client) Status(name string, items []string) (*imap.MailboxStatus, error) {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return nil, ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return nil, err
 	}
 
 	cmd := &commands.Status{
@@ -215,8 +231,8 @@ func (c *Client) Status(name string, items []string) (*imap.MailboxStatus, error
 // RFC 2822 message. flags and date are optional arguments and can be set to
 // nil.
 func (c *Client) Append(mbox string, flags []string, date time.Time, msg imap.Literal) error {
-	if c.State != imap.AuthenticatedState && c.State != imap.SelectedState {
-		return ErrNotLoggedIn
+	if err := c.ensureAuthenticated(); err != nil {
+		return err
 	}
 
 	cmd := &commands.Append{

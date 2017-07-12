@@ -32,7 +32,7 @@ func ExampleClient() {
 	// List mailboxes
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
-	go func () {
+	go func() {
 		done <- c.List("", "*", mailboxes)
 	}()
 

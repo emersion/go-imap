@@ -1,213 +1,183 @@
-package client_test
+package client
 
 import (
 	"bufio"
 	"bytes"
-	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
 )
 
-type ClientTester func(c *client.Client) error
-type ServerTester func(c net.Conn)
-
-func testClient(t *testing.T, ct ClientTester, st ServerTester) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-
-	done := make(chan error)
-	go (func() {
-		c, err := client.Dial(l.Addr().String())
-		if err != nil {
-			done <- err
-			return
-		}
-
-		err = ct(c)
-		if err != nil {
-			fmt.Println("Client error:", err)
-			done <- err
-			return
-		}
-
-		c.State = imap.LogoutState
-		done <- nil
-	})()
-
-	conn, err := l.Accept()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	greeting := "* OK [CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN] Server ready.\r\n"
-	if _, err = io.WriteString(conn, greeting); err != nil {
-		t.Fatal(err)
-	}
-
-	st(conn)
-
-	err = <-done
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	conn.Close()
-}
-
-type CmdScanner struct {
+type cmdScanner struct {
 	scanner *bufio.Scanner
 }
 
-func (s *CmdScanner) ScanLine() string {
+func (s *cmdScanner) ScanLine() string {
 	s.scanner.Scan()
 	return s.scanner.Text()
 }
 
-func (s *CmdScanner) Scan() (tag string, cmd string) {
+func (s *cmdScanner) ScanCmd() (tag string, cmd string) {
 	parts := strings.SplitN(s.ScanLine(), " ", 2)
 	return parts[0], parts[1]
 }
 
-func NewCmdScanner(r io.Reader) *CmdScanner {
-	return &CmdScanner{
+func newCmdScanner(r io.Reader) *cmdScanner {
+	return &cmdScanner{
 		scanner: bufio.NewScanner(r),
 	}
 }
 
-func removeCmdTag(cmd string) string {
-	parts := strings.SplitN(cmd, " ", 2)
-	return parts[1]
+type serverConn struct {
+	*cmdScanner
+	net.Conn
+	net.Listener
+}
+
+func (c *serverConn) Close() error {
+	if err := c.Conn.Close(); err != nil {
+		return err
+	}
+	return c.Listener.Close()
+}
+
+func (c *serverConn) WriteString(s string) (n int, err error) {
+	return io.WriteString(c.Conn, s)
+}
+
+func newTestClient(t *testing.T) (c *Client, s *serverConn) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		conn, err := l.Accept()
+		if err != nil {
+			panic(err)
+		}
+
+		greeting := "* OK [CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN] Server ready.\r\n"
+		if _, err := io.WriteString(conn, greeting); err != nil {
+			panic(err)
+		}
+
+		s = &serverConn{newCmdScanner(conn), conn, l}
+		close(done)
+	}()
+
+	c, err = Dial(l.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	<-done
+	return
+}
+
+func setClientState(c *Client, state imap.ConnState, mailbox *imap.MailboxStatus) {
+	c.locker.Lock()
+	c.state = state
+	c.mailbox = mailbox
+	c.locker.Unlock()
 }
 
 func TestClient(t *testing.T) {
-	ct := func(c *client.Client) error {
-		if ok, err := c.Support("IMAP4rev1"); err != nil {
-			return err
-		} else if !ok {
-			return errors.New("Server hasn't IMAP4rev1 capability")
-		}
-		return nil
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	if ok, err := c.Support("IMAP4rev1"); err != nil {
+		t.Fatal("c.Support(IMAP4rev1) =", err)
+	} else if !ok {
+		t.Fatal("c.Support(IMAP4rev1) = false, want true")
 	}
-
-	st := func(c net.Conn) {}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_SetDebug(t *testing.T) {
-	ct := func(c *client.Client) error {
-		b := &bytes.Buffer{}
-		c.SetDebug(b)
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		if _, err := c.Capability(); err != nil {
-			return err
-		}
+	var b bytes.Buffer
+	c.SetDebug(&b)
 
-		if b.Len() == 0 {
-			return errors.New("Empty debug buffer")
-		}
+	done := make(chan error)
+	go func() {
+		_, err := c.Capability()
+		done <- err
+	}()
 
-		return nil
+	tag, cmd := s.ScanCmd()
+	if cmd != "CAPABILITY" {
+		t.Fatal("Bad command:", cmd)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
+	s.WriteString("* CAPABILITY IMAP4rev1\r\n")
+	s.WriteString(tag + " OK CAPABILITY completed.\r\n")
 
-		tag, cmd := scanner.Scan()
-		if cmd != "CAPABILITY" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* CAPABILITY IMAP4rev1\r\n")
-		io.WriteString(c, tag+" OK CAPABILITY completed.\r\n")
+	if err := <-done; err != nil {
+		t.Fatal("c.Capability() =", err)
 	}
 
-	testClient(t, ct, st)
+	if b.Len() == 0 {
+		t.Error("empty debug buffer")
+	}
 }
 
 func TestClient_unilateral(t *testing.T) {
-	steps := make(chan struct{})
+	c, s := newTestClient(t)
+	defer s.Close()
 
-	ct := func(c *client.Client) error {
-		c.State = imap.SelectedState
-		c.Mailbox = imap.NewMailboxStatus("INBOX", nil)
+	setClientState(c, imap.SelectedState, imap.NewMailboxStatus("INBOX", nil))
 
-		statuses := make(chan *imap.MailboxStatus)
-		c.MailboxUpdates = statuses
-		steps <- struct{}{}
+	statuses := make(chan *imap.MailboxStatus, 1)
+	c.MailboxUpdates = statuses
+	expunges := make(chan uint32, 1)
+	c.Expunges = expunges
+	messages := make(chan *imap.Message, 1)
+	c.MessageUpdates = messages
+	infos := make(chan *imap.StatusResp, 1)
+	c.Infos = infos
+	warns := make(chan *imap.StatusResp, 1)
+	c.Warnings = warns
+	errors := make(chan *imap.StatusResp, 1)
+	c.Errors = errors
 
-		if status := <-statuses; status.Messages != 42 {
-			return fmt.Errorf("Invalid messages count: expected %v but got %v", 42, status.Messages)
-		}
-
-		steps <- struct{}{}
-		if status := <-statuses; status.Recent != 587 {
-			return fmt.Errorf("Invalid recent count: expected %v but got %v", 587, status.Recent)
-		}
-
-		expunges := make(chan uint32)
-		c.Expunges = expunges
-		steps <- struct{}{}
-		if seqNum := <-expunges; seqNum != 65535 {
-			return fmt.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, seqNum)
-		}
-
-		messages := make(chan *imap.Message)
-		c.MessageUpdates = messages
-		steps <- struct{}{}
-		if msg := <-messages; msg.SeqNum != 431 {
-			return fmt.Errorf("Invalid expunged sequence number: expected %v but got %v", 431, msg.SeqNum)
-		}
-
-		infos := make(chan *imap.StatusResp)
-		c.Infos = infos
-		steps <- struct{}{}
-		if status := <-infos; status.Info != "Reticulating splines..." {
-			return fmt.Errorf("Invalid info: got %v", status.Info)
-		}
-
-		warns := make(chan *imap.StatusResp)
-		c.Warnings = warns
-		steps <- struct{}{}
-		if status := <-warns; status.Info != "Kansai band competition is in 30 seconds !" {
-			return fmt.Errorf("Invalid warning: got %v", status.Info)
-		}
-
-		errors := make(chan *imap.StatusResp)
-		c.Errors = errors
-		steps <- struct{}{}
-		if status := <-errors; status.Info != "Battery level too low, shutting down." {
-			return fmt.Errorf("Invalid error: got %v", status.Info)
-		}
-
-		return nil
+	s.WriteString("* 42 EXISTS\r\n")
+	if status := <-statuses; status.Messages != 42 {
+		t.Errorf("Invalid messages count: expected %v but got %v", 42, status.Messages)
 	}
 
-	st := func(c net.Conn) {
-		<-steps
-		io.WriteString(c, "* 42 EXISTS\r\n")
-		<-steps
-		io.WriteString(c, "* 587 RECENT\r\n")
-		<-steps
-		io.WriteString(c, "* 65535 EXPUNGE\r\n")
-		<-steps
-		io.WriteString(c, "* 431 FETCH (FLAGS (\\Seen))\r\n")
-		<-steps
-		io.WriteString(c, "* OK Reticulating splines...\r\n")
-		<-steps
-		io.WriteString(c, "* NO Kansai band competition is in 30 seconds !\r\n")
-		<-steps
-		io.WriteString(c, "* BAD Battery level too low, shutting down.\r\n")
+	s.WriteString("* 587 RECENT\r\n")
+	if status := <-statuses; status.Recent != 587 {
+		t.Errorf("Invalid recent count: expected %v but got %v", 587, status.Recent)
 	}
 
-	testClient(t, ct, st)
+	s.WriteString("* 65535 EXPUNGE\r\n")
+	if seqNum := <-expunges; seqNum != 65535 {
+		t.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, seqNum)
+	}
+
+	s.WriteString("* 431 FETCH (FLAGS (\\Seen))\r\n")
+	if msg := <-messages; msg.SeqNum != 431 {
+		t.Errorf("Invalid expunged sequence number: expected %v but got %v", 431, msg.SeqNum)
+	}
+
+	s.WriteString("* OK Reticulating splines...\r\n")
+	if status := <-infos; status.Info != "Reticulating splines..." {
+		t.Errorf("Invalid info: got %v", status.Info)
+	}
+
+	s.WriteString("* NO Kansai band competition is in 30 seconds !\r\n")
+	if status := <-warns; status.Info != "Kansai band competition is in 30 seconds !" {
+		t.Errorf("Invalid warning: got %v", status.Info)
+	}
+
+	s.WriteString("* BAD Battery level too low, shutting down.\r\n")
+	if status := <-errors; status.Info != "Battery level too low, shutting down." {
+		t.Errorf("Invalid error: got %v", status.Info)
+	}
 }

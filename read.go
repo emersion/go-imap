@@ -111,7 +111,7 @@ func ParseStringList(f interface{}) ([]string, error) {
 	for i, f := range fields {
 		var err error
 		if list[i], err = ParseString(f); err != nil {
-			return nil, newParseError("cannot parse string in string list: "+err.Error())
+			return nil, newParseError("cannot parse string in string list: " + err.Error())
 		}
 	}
 	return list, nil

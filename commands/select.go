@@ -20,7 +20,7 @@ func (cmd *Select) Command() *imap.Command {
 		name = imap.Examine
 	}
 
-	mailbox, _ := utf7.Encoder.String(cmd.Mailbox)
+	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
 		Name:      name,
@@ -35,7 +35,7 @@ func (cmd *Select) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if mailbox, err := utf7.Decoder.String(mailbox); err != nil {
+	} else if mailbox, err := utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)

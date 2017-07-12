@@ -18,9 +18,9 @@ func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 	}
 
 	s = server.New(bkd)
-	go s.Serve(l)
-
 	s.AllowInsecureAuth = true
+
+	go s.Serve(l)
 
 	conn, err = net.Dial("tcp", l.Addr().String())
 	if err != nil {

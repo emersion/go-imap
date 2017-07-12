@@ -10,21 +10,21 @@ import (
 )
 
 var testBodyStructure = &imap.BodyStructure{
-	MimeType:    "multipart",
-	MimeSubType: "mixed",
+	MIMEType:    "multipart",
+	MIMESubType: "mixed",
 	Params:      map[string]string{"boundary": "message-boundary"},
 	Parts: []*imap.BodyStructure{
 		{
-			MimeType:          "text",
-			MimeSubType:       "plain",
+			MIMEType:          "text",
+			MIMESubType:       "plain",
 			Params:            map[string]string{},
 			Extended:          true,
 			Disposition:       "inline",
 			DispositionParams: map[string]string{},
 		},
 		{
-			MimeType:          "text",
-			MimeSubType:       "plain",
+			MIMEType:          "text",
+			MIMESubType:       "plain",
 			Params:            map[string]string{},
 			Extended:          true,
 			Disposition:       "attachment",

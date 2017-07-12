@@ -1,79 +1,80 @@
-package client_test
+package client
 
 import (
-	"errors"
-	"io"
-	"net"
 	"testing"
 
-	"github.com/emersion/go-imap/client"
+	"github.com/emersion/go-imap"
 )
 
 func TestClient_Capability(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		caps, err := c.Capability()
-		if err != nil {
-			return
-		}
+	c, s := newTestClient(t)
+	defer s.Close()
 
-		if !caps["XTEST"] {
-			err = errors.New("Client hasn't advertised capability")
-		}
-		return
+	var caps map[string]bool
+	done := make(chan error, 1)
+	go func() {
+		var err error
+		caps, err = c.Capability()
+		done <- err
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "CAPABILITY" {
+		t.Fatalf("client sent command %v, want CAPABILITY", cmd)
+	}
+	s.WriteString("* CAPABILITY IMAP4rev1 XTEST\r\n")
+	s.WriteString(tag + " OK CAPABILITY completed.\r\n")
+
+	if err := <-done; err != nil {
+		t.Errorf("c.Capability() = ", err)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "CAPABILITY" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* CAPABILITY IMAP4rev1 XTEST\r\n")
-		io.WriteString(c, tag+" OK CAPABILITY completed.\r\n")
+	if !caps["XTEST"] {
+		t.Errorf("XTEST capability missing")
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Noop(t *testing.T) {
-	ct := func(c *client.Client) (err error) {
-		err = c.Noop()
-		return
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Noop()
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "NOOP" {
+		t.Fatalf("client sent command %v, want NOOP", cmd)
 	}
+	s.WriteString(tag + " OK NOOP completed\r\n")
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "NOOP" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, tag+" OK NOOP completed\r\n")
+	if err := <-done; err != nil {
+		t.Error("c.Noop() =", err)
 	}
-
-	testClient(t, ct, st)
 }
 
 func TestClient_Logout(t *testing.T) {
-	ct := func(c *client.Client) error {
-		return c.Logout()
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Logout()
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGOUT" {
+		t.Fatalf("client sent command %v, want LOGOUT", cmd)
+	}
+	s.WriteString("* BYE Client asked to close the connection.\r\n")
+	s.WriteString(tag + " OK LOGOUT completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Error("c.Logout() =", err)
 	}
 
-	st := func(c net.Conn) {
-		scanner := NewCmdScanner(c)
-
-		tag, cmd := scanner.Scan()
-		if cmd != "LOGOUT" {
-			t.Fatal("Bad command:", cmd)
-		}
-
-		io.WriteString(c, "* BYE Client asked to close connection.\r\n")
-		io.WriteString(c, tag+" OK LOGOUT completed.\r\n")
-		//c.Close()
+	if state := c.State(); state != imap.LogoutState {
+		t.Errorf("c.State() = %v, want %v", state, imap.LogoutState)
 	}
-
-	testClient(t, ct, st)
 }
