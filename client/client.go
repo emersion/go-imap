@@ -496,7 +496,7 @@ func Dial(addr string) (c *Client, err error) {
 // DialWithDialer connects to an IMAP server using an unencrypted connection
 // using dialer.Dial.
 //
-// Among other uses, this allows us to apply a connection timeout.
+// Among other uses, this allows to apply a dial timeout.
 func DialWithDialer(dialer *net.Dialer, address string) (c *Client, err error) {
 	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
@@ -533,7 +533,7 @@ func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
 // DialWithDialerTLS connects to an IMAP server using an encrypted connection
 // using dialer.Dial.
 //
-// Among other uses, this allows us to apply a connection timeout.
+// Among other uses, this allows to apply a dial timeout.
 func DialWithDialerTLS(dialer *net.Dialer, addr string,
 	tlsConfig *tls.Config) (c *Client, err error) {
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
