@@ -14,9 +14,9 @@ func FetchBodyStructure(e *message.Entity, extended bool) (*imap.BodyStructure, 
 
 	mediaType, mediaParams, _ := e.Header.ContentType()
 	typeParts := strings.SplitN(mediaType, "/", 2)
-	bs.MimeType = typeParts[0]
+	bs.MIMEType = typeParts[0]
 	if len(typeParts) == 2 {
-		bs.MimeSubType = typeParts[1]
+		bs.MIMESubType = typeParts[1]
 	}
 	bs.Params = mediaParams
 

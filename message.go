@@ -61,7 +61,7 @@ const (
 	TextSpecifier = "TEXT"
 	// Refers to the MIME Internet Message Body header.  Must include the final
 	// CRLF delimiting the header and the body.
-	MimeSpecifier = "MIME"
+	MIMESpecifier = "MIME"
 )
 
 // Returns the canonical form of a flag. Flags are case-insensitive.
@@ -522,7 +522,7 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 
 	end := 0
 	for i, node := range path {
-		if node == "" || node == HeaderSpecifier || node == MimeSpecifier || node == TextSpecifier {
+		if node == "" || node == HeaderSpecifier || node == MIMESpecifier || node == TextSpecifier {
 			part.Specifier = node
 			end = i + 1
 			break
@@ -755,9 +755,9 @@ type BodyStructure struct {
 	// Basic fields
 
 	// The MIME type.
-	MimeType string
+	MIMEType string
 	// The MIME subtype.
-	MimeSubType string
+	MIMESubType string
 	// The MIME parameters.
 	Params map[string]string
 
@@ -809,7 +809,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 	switch fields[0].(type) {
 	case []interface{}: // A multipart body part
-		bs.MimeType = "multipart"
+		bs.MIMEType = "multipart"
 
 		end := 0
 		for i, fi := range fields {
@@ -829,7 +829,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			}
 		}
 
-		bs.MimeSubType, _ = fields[end].(string)
+		bs.MIMESubType, _ = fields[end].(string)
 		end++
 
 		// GMail seems to return only 3 extension data fields. Parse as many fields
@@ -873,8 +873,8 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			return errors.New("Non-multipart body part doesn't have 7 fields")
 		}
 
-		bs.MimeType, _ = fields[0].(string)
-		bs.MimeSubType, _ = fields[1].(string)
+		bs.MIMEType, _ = fields[0].(string)
+		bs.MIMESubType, _ = fields[1].(string)
 
 		params, _ := fields[2].([]interface{})
 		bs.Params, _ = parseHeaderParamList(params)
@@ -889,7 +889,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		end := 7
 
 		// Type-specific fields
-		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
+		if bs.MIMEType == "message" && bs.MIMESubType == "rfc822" {
 			if len(fields)-end < 3 {
 				return errors.New("Missing type-specific fields for message/rfc822")
 			}
@@ -906,7 +906,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 			end += 3
 		}
-		if bs.MimeType == "text" {
+		if bs.MIMEType == "text" {
 			if len(fields)-end < 1 {
 				return errors.New("Missing type-specific fields for text/*")
 			}
@@ -956,12 +956,12 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 }
 
 func (bs *BodyStructure) Format() (fields []interface{}) {
-	if bs.MimeType == "multipart" {
+	if bs.MIMEType == "multipart" {
 		for _, part := range bs.Parts {
 			fields = append(fields, part.Format())
 		}
 
-		fields = append(fields, bs.MimeSubType)
+		fields = append(fields, bs.MIMESubType)
 
 		if bs.Extended {
 			extended := make([]interface{}, 4)
@@ -986,8 +986,8 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		}
 	} else {
 		fields = make([]interface{}, 7)
-		fields[0] = bs.MimeType
-		fields[1] = bs.MimeSubType
+		fields[0] = bs.MIMEType
+		fields[1] = bs.MIMESubType
 		fields[2] = formatHeaderParamList(bs.Params)
 
 		if bs.Id != "" {
@@ -1003,7 +1003,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		fields[6] = bs.Size
 
 		// Type-specific fields
-		if bs.MimeType == "message" && bs.MimeSubType == "rfc822" {
+		if bs.MIMEType == "message" && bs.MIMESubType == "rfc822" {
 			var env interface{}
 			if bs.Envelope != nil {
 				env = bs.Envelope.Format()
@@ -1016,7 +1016,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 			fields = append(fields, env, bsbs, bs.Lines)
 		}
-		if bs.MimeType == "text" {
+		if bs.MIMEType == "text" {
 			fields = append(fields, bs.Lines)
 		}
 
