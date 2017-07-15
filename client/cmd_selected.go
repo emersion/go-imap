@@ -65,12 +65,13 @@ func (c *Client) Expunge(ch chan uint32) error {
 
 	cmd := new(commands.Expunge)
 
-	var res imap.RespHandlerFrom
+	var h responses.Handler
 	if ch != nil {
-		res = &responses.Expunge{SeqNums: ch}
+		h = &responses.Expunge{SeqNums: ch}
+		defer close(ch)
 	}
 
-	status, err := c.execute(cmd, res)
+	status, err := c.execute(cmd, h)
 	if err != nil {
 		return err
 	}
@@ -134,6 +135,8 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *i
 		return ErrNoMailboxSelected
 	}
 
+	defer close(ch)
+
 	var cmd imap.Commander
 	cmd = &commands.Fetch{
 		SeqSet: seqset,
@@ -185,12 +188,13 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 		cmd = &commands.Uid{Cmd: cmd}
 	}
 
-	var res imap.RespHandlerFrom
+	var h responses.Handler
 	if ch != nil {
-		res = &responses.Fetch{Messages: ch}
+		h = &responses.Fetch{Messages: ch}
+		defer close(ch)
 	}
 
-	status, err := c.execute(cmd, res)
+	status, err := c.execute(cmd, h)
 	if err != nil {
 		return err
 	}

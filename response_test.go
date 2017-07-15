@@ -11,10 +11,7 @@ func TestResp_WriteTo(t *testing.T) {
 	var b bytes.Buffer
 	w := imap.NewWriter(&b)
 
-	resp := &imap.Resp{
-		Fields: []interface{}{"76", "FETCH", []interface{}{"UID", 783}},
-	}
-
+	resp := imap.NewUntaggedResp([]interface{}{"76", "FETCH", []interface{}{"UID", 783}})
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}
@@ -24,11 +21,11 @@ func TestResp_WriteTo(t *testing.T) {
 	}
 }
 
-func TestContinuationResp_WriteTo(t *testing.T) {
+func TestContinuationReq_WriteTo(t *testing.T) {
 	var b bytes.Buffer
 	w := imap.NewWriter(&b)
 
-	resp := &imap.ContinuationResp{}
+	resp := &imap.ContinuationReq{}
 
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
@@ -39,11 +36,11 @@ func TestContinuationResp_WriteTo(t *testing.T) {
 	}
 }
 
-func TestContinuationResp_WriteTo_WithInfo(t *testing.T) {
+func TestContinuationReq_WriteTo_WithInfo(t *testing.T) {
 	var b bytes.Buffer
 	w := imap.NewWriter(&b)
 
-	resp := &imap.ContinuationResp{Info: "send literal"}
+	resp := &imap.ContinuationReq{Info: "send literal"}
 
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
@@ -54,7 +51,7 @@ func TestContinuationResp_WriteTo_WithInfo(t *testing.T) {
 	}
 }
 
-func TestReadResp_ContinuationResp(t *testing.T) {
+func TestReadResp_ContinuationReq(t *testing.T) {
 	b := bytes.NewBufferString("+ send literal\r\n")
 	r := imap.NewReader(b)
 
@@ -63,7 +60,7 @@ func TestReadResp_ContinuationResp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cont, ok := resp.(*imap.ContinuationResp)
+	cont, ok := resp.(*imap.ContinuationReq)
 	if !ok {
 		t.Fatal("Response is not a continuation request")
 	}
@@ -73,7 +70,7 @@ func TestReadResp_ContinuationResp(t *testing.T) {
 	}
 }
 
-func TestReadResp_ContinuationResp_NoInfo(t *testing.T) {
+func TestReadResp_ContinuationReq_NoInfo(t *testing.T) {
 	b := bytes.NewBufferString("+\r\n")
 	r := imap.NewReader(b)
 
@@ -82,7 +79,7 @@ func TestReadResp_ContinuationResp_NoInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cont, ok := resp.(*imap.ContinuationResp)
+	cont, ok := resp.(*imap.ContinuationReq)
 	if !ok {
 		t.Fatal("Response is not a continuation request")
 	}
@@ -96,21 +93,21 @@ func TestReadResp_Resp(t *testing.T) {
 	b := bytes.NewBufferString("* 1 EXISTS\r\n")
 	r := imap.NewReader(b)
 
-	respi, err := imap.ReadResp(r)
+	resp, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, ok := respi.(*imap.Resp)
+	data, ok := resp.(*imap.DataResp)
 	if !ok {
 		t.Fatal("Invalid response type")
 	}
 
-	if resp.Tag != "*" {
-		t.Error("Invalid tag:", resp.Tag)
+	if data.Tag != "*" {
+		t.Error("Invalid tag:", data.Tag)
 	}
-	if len(resp.Fields) != 2 {
-		t.Error("Invalid fields:", resp.Fields)
+	if len(data.Fields) != 2 {
+		t.Error("Invalid fields:", data.Fields)
 	}
 }
 
@@ -118,21 +115,21 @@ func TestReadResp_Resp_NoArgs(t *testing.T) {
 	b := bytes.NewBufferString("* SEARCH\r\n")
 	r := imap.NewReader(b)
 
-	respi, err := imap.ReadResp(r)
+	resp, err := imap.ReadResp(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, ok := respi.(*imap.Resp)
+	data, ok := resp.(*imap.DataResp)
 	if !ok {
 		t.Fatal("Invalid response type")
 	}
 
-	if resp.Tag != "*" {
-		t.Error("Invalid tag:", resp.Tag)
+	if data.Tag != "*" {
+		t.Error("Invalid tag:", data.Tag)
 	}
-	if len(resp.Fields) != 1 || resp.Fields[0] != "SEARCH" {
-		t.Error("Invalid fields:", resp.Fields)
+	if len(data.Fields) != 1 || data.Fields[0] != "SEARCH" {
+		t.Error("Invalid fields:", data.Fields)
 	}
 }
 

@@ -1,17 +1,13 @@
 package imap
 
-import (
-	"errors"
-)
-
-// A value that can be converted to a Resp.
-type Responser interface {
-	Response() *Resp
+// Resp is an IMAP response. It is either a *DataResp, a
+// *ContinuationReq or a *StatusResp.
+type Resp interface {
+	resp()
 }
 
-// A response.
-// See RFC 3501 section 2.2.2
-type Resp struct {
+// DataResp is an IMAP response containing data.
+type DataResp struct {
 	// The response tag. Can be either "" for untagged responses, "+" for continuation
 	// requests or a previous command's tag.
 	Tag string
@@ -19,7 +15,17 @@ type Resp struct {
 	Fields []interface{}
 }
 
-func (r *Resp) WriteTo(w *Writer) error {
+// NewUntaggedResp creates a new untagged response.
+func NewUntaggedResp(fields []interface{}) *DataResp {
+	return &DataResp{
+		Tag:    "*",
+		Fields: fields,
+	}
+}
+
+func (r *DataResp) resp() {}
+
+func (r *DataResp) WriteTo(w *Writer) error {
 	tag := r.Tag
 	if tag == "" {
 		tag = "*"
@@ -30,21 +36,15 @@ func (r *Resp) WriteTo(w *Writer) error {
 	return w.writeLine(fields...)
 }
 
-// Create a new untagged response.
-func NewUntaggedResp(fields []interface{}) *Resp {
-	return &Resp{
-		Tag:    "*",
-		Fields: fields,
-	}
-}
-
-// A continuation request.
-type ContinuationResp struct {
+// ContinuationReq is a continuation request response.
+type ContinuationReq struct {
 	// The info message sent with the continuation request.
 	Info string
 }
 
-func (r *ContinuationResp) WriteTo(w *Writer) error {
+func (r *ContinuationReq) resp() {}
+
+func (r *ContinuationReq) WriteTo(w *Writer) error {
 	if err := w.writeString("+"); err != nil {
 		return err
 	}
@@ -58,17 +58,15 @@ func (r *ContinuationResp) WriteTo(w *Writer) error {
 	return w.writeCrlf()
 }
 
-// Read a single response from a Reader. Returns either a continuation request,
-// a status response or a raw response.
-func ReadResp(r *Reader) (out interface{}, err error) {
+// ReadResp reads a single response from a Reader.
+func ReadResp(r *Reader) (Resp, error) {
 	atom, err := r.ReadAtom()
 	if err != nil {
-		return
+		return nil, err
 	}
 	tag, ok := atom.(string)
 	if !ok {
-		err = errors.New("Response tag is not an atom")
-		return
+		return nil, newParseError("response tag is not an atom")
 	}
 
 	if tag == "+" {
@@ -76,59 +74,55 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 			r.UnreadRune()
 		}
 
-		res := &ContinuationResp{}
-		res.Info, err = r.ReadInfo()
+		resp := &ContinuationReq{}
+		resp.Info, err = r.ReadInfo()
 		if err != nil {
-			return
+			return nil, err
 		}
 
-		out = res
-		return
+		return resp, nil
 	}
 
-	if err = r.ReadSp(); err != nil {
-		return
+	if err := r.ReadSp(); err != nil {
+		return nil, err
 	}
 
 	// Can be either data or status
 	// Try to parse a status
-	isStatus := false
 	var fields []interface{}
-
-	if atom, err = r.ReadAtom(); err == nil {
+	if atom, err := r.ReadAtom(); err == nil {
 		fields = append(fields, atom)
 
-		if err = r.ReadSp(); err == nil {
+		if err := r.ReadSp(); err == nil {
 			if name, ok := atom.(string); ok {
 				status := StatusRespType(name)
-				if status == StatusOk || status == StatusNo || status == StatusBad || status == StatusPreauth || status == StatusBye {
-					isStatus = true
-
-					res := &StatusResp{
+				switch status {
+				case StatusOk, StatusNo, StatusBad, StatusPreauth, StatusBye:
+					resp := &StatusResp{
 						Tag:  tag,
 						Type: status,
 					}
 
-					var char rune
-					if char, _, err = r.ReadRune(); err != nil {
-						return
+					char, _, err := r.ReadRune()
+					if err != nil {
+						return nil, err
 					}
 					r.UnreadRune()
 
 					if char == '[' {
 						// Contains code & arguments
-						res.Code, res.Arguments, err = r.ReadRespCode()
+						resp.Code, resp.Arguments, err = r.ReadRespCode()
 						if err != nil {
-							return
+							return nil, err
 						}
 					}
 
-					res.Info, err = r.ReadInfo()
+					resp.Info, err = r.ReadInfo()
 					if err != nil {
-						return
+						return nil, err
 					}
 
-					out = res
+					return resp, nil
 				}
 			}
 		} else {
@@ -138,19 +132,47 @@ func ReadResp(r *Reader) (out interface{}, err error) {
 		r.UnreadRune()
 	}
 
-	if !isStatus {
-		// Not a status so it's data
-		res := &Resp{Tag: tag}
+	// Not a status so it's data
+	resp := &DataResp{Tag: tag}
 
-		var remaining []interface{}
-		remaining, err = r.ReadLine()
-		if err != nil {
-			return
-		}
-
-		res.Fields = append(fields, remaining...)
-		out = res
+	var remaining []interface{}
+	remaining, err = r.ReadLine()
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	resp.Fields = append(fields, remaining...)
+	return resp, nil
+}
+
+// ToNamedResp returns true if resp is a data response and has the specified
+// name.
+func ToNamedResp(resp Resp, name string) ([]interface{}, bool) {
+	data, ok := resp.(*DataResp)
+	if !ok || len(data.Fields) == 0 {
+		return nil, false
+	}
+
+	if len(data.Fields) > 1 {
+		// Some responses (namely EXISTS and RECENT) are formatted like so:
+		//   [arg] [name] [...]
+		// Which is fucking stupid. But we handle that here by checking if the
+		// response name is a number and then rearranging it.
+		n, ok := data.Fields[1].(string)
+		if ok && n == name {
+			if _, err := ParseNumber(data.Fields[0]); err == nil {
+				fields := []interface{}{data.Fields[0]}
+				fields = append(fields, data.Fields[2:]...)
+				return fields, true
+			}
+		}
+	}
+
+	// IMAP commands are formatted like this:
+	//   [name] [...]
+	n, ok := data.Fields[0].(string)
+	if !ok || n != name {
+		return nil, false
+	}
+	return data.Fields[1:], true
 }

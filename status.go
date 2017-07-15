@@ -74,6 +74,8 @@ type StatusResp struct {
 	Info string
 }
 
+func (r *StatusResp) resp() {}
+
 // If this status is NO or BAD, returns an error with the status info.
 // Otherwise, returns nil.
 func (r *StatusResp) Err() error {

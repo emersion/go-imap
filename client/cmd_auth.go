@@ -35,7 +35,7 @@ func (c *Client) Select(name string, readOnly bool) (*imap.MailboxStatus, error)
 		ReadOnly: readOnly,
 	}
 
-	mbox := &imap.MailboxStatus{Name: name}
+	mbox := &imap.MailboxStatus{Name: name, Items: make(map[string]interface{})}
 	res := &responses.Select{
 		Mailbox: mbox,
 	}
@@ -164,6 +164,8 @@ func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) error {
 		return err
 	}
 
+	defer close(ch)
+
 	cmd := &commands.List{
 		Reference: ref,
 		Mailbox:   name,
@@ -183,6 +185,8 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
 	if err := c.ensureAuthenticated(); err != nil {
 		return err
 	}
+
+	defer close(ch)
 
 	cmd := &commands.List{
 		Reference:  ref,

@@ -62,7 +62,7 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn Authenti
 		}
 
 		encoded := base64.StdEncoding.EncodeToString(challenge)
-		cont := &imap.ContinuationResp{Info: encoded}
+		cont := &imap.ContinuationReq{Info: encoded}
 		if err := conn.WriteResp(cont); err != nil {
 			return err
 		}

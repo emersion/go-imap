@@ -12,21 +12,26 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/responses"
 )
 
 // errClosed is used when a connection is closed while waiting for a command
 // response.
 var errClosed = fmt.Errorf("imap: connection closed")
 
+// errUnregisterHandler is returned by a response handler to unregister itself.
+var errUnregisterHandler = fmt.Errorf("imap: unregister handler")
+
 // Client is an IMAP client.
 type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
-	handles   imap.RespHandler
-	handler   *imap.MultiRespHandler
 	greeted   chan struct{}
 	loggedOut chan struct{}
+
+	handlers       []responses.Handler
+	handlersLocker sync.Mutex
 
 	// The current connection state.
 	state imap.ConnState
@@ -65,6 +70,32 @@ type Client struct {
 	Timeout time.Duration
 }
 
+func (c *Client) registerHandler(h responses.Handler) {
+	if h == nil {
+		return
+	}
+
+	c.handlersLocker.Lock()
+	c.handlers = append(c.handlers, h)
+	c.handlersLocker.Unlock()
+}
+
+func (c *Client) handle(resp imap.Resp) error {
+	c.handlersLocker.Lock()
+	for i := len(c.handlers) - 1; i >= 0; i-- {
+		if err := c.handlers[i].Handle(resp); err != responses.ErrUnhandled {
+			if err == errUnregisterHandler {
+				c.handlers = append(c.handlers[:i], c.handlers[i+1:]...)
+				err = nil
+			}
+			c.handlersLocker.Unlock()
+			return err
+		}
+	}
+	c.handlersLocker.Unlock()
+	return responses.ErrUnhandled
+}
+
 func (c *Client) read(greeted <-chan struct{}) error {
 	greetedClosed := false
 
@@ -75,7 +106,6 @@ func (c *Client) read(greeted <-chan struct{}) error {
 			close(c.greeted)
 			greetedClosed = true
 		}
-		close(c.handles)
 		close(c.loggedOut)
 	}()
 
@@ -97,11 +127,10 @@ func (c *Client) read(greeted <-chan struct{}) error {
 			}
 		}
 
-		res, err := imap.ReadResp(c.conn.Reader)
+		resp, err := imap.ReadResp(c.conn.Reader)
 		if err == io.EOF || c.State() == imap.LogoutState {
 			return nil
-		}
-		if err != nil {
+		} else if err != nil {
 			c.ErrorLog.Println("error reading response:", err)
 			if imap.IsParseError(err) {
 				continue
@@ -110,58 +139,73 @@ func (c *Client) read(greeted <-chan struct{}) error {
 			}
 		}
 
-		rh := &imap.RespHandle{
-			Resp:    res,
-			Accepts: make(chan bool),
-		}
-		c.handles <- rh
-		if accepted := <-rh.Accepts; !accepted {
-			c.ErrorLog.Println("response has not been handled:", res)
+		if err := c.handle(resp); err == responses.ErrUnhandled {
+			c.ErrorLog.Println("response has not been handled:", resp)
+		} else if err != nil {
+			c.ErrorLog.Println("cannot handle response ", resp, err)
 		}
 	}
 }
 
-func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
+type handleResult struct {
+	status *imap.StatusResp
+	err    error
+}
+
+func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.StatusResp, error) {
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
 	if c.Timeout > 0 {
-		err = c.conn.SetDeadline(time.Now().Add(c.Timeout))
+		err := c.conn.SetDeadline(time.Now().Add(c.Timeout))
 		if err != nil {
-			return
+			return nil, err
 		}
 	} else {
 		// It's possible the client had a timeout set from a previous command, but no
 		// longer does. Ensure we respect that. The zero time means no deadline.
-		err = c.conn.SetDeadline(time.Time{})
-		if err != nil {
-			return
+		if err := c.conn.SetDeadline(time.Time{}); err != nil {
+			return nil, err
 		}
 	}
 
 	// Add handler before sending command, to be sure to get the response in time
 	// (in tests, the response is sent right after our command is received, so
 	// sometimes the response was received before the setup of this handler)
-	statusHdlr := make(imap.RespHandler)
-	c.handler.Add(statusHdlr)
+	doneHandle := make(chan handleResult, 1)
+	unregister := make(chan struct{})
+	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
+		select {
+		case <-unregister:
+			// If an error occured while sending the command, abort
+			return errUnregisterHandler
+		default:
+		}
+
+		if s, ok := resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
+			// This is the command's status response, we're done
+			doneHandle <- handleResult{s, nil}
+			return errUnregisterHandler
+		}
+
+		if h != nil {
+			// Pass the response to the response handler
+			if err := h.Handle(resp); err != nil && err != responses.ErrUnhandled {
+				// If the response handler returns an error, abort
+				doneHandle <- handleResult{nil, err}
+				return errUnregisterHandler
+			} else {
+				return err
+			}
+		}
+		return responses.ErrUnhandled
+	}))
 
 	// Send the command to the server
 	doneWrite := make(chan error, 1)
 	go func() {
 		doneWrite <- cmd.WriteTo(c.conn.Writer)
 	}()
-
-	// If a response handler is provided, start it
-	var hdlr imap.RespHandler
-	var doneHandle chan error
-	if res != nil {
-		hdlr = make(imap.RespHandler)
-		doneHandle = make(chan error, 1)
-
-		go func() {
-			doneHandle <- res.HandleFrom(hdlr)
-		}()
-	}
 
 	for {
 		select {
@@ -170,41 +214,16 @@ func (c *Client) execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status 
 			// realize this and don't block waiting on a response that will never
 			// come. loggedOut is a channel that closes when the reader goroutine
 			// ends.
-			err = errClosed
-			return
-		case err = <-doneWrite:
-			// Error while sending the command
+			close(unregister)
+			return nil, errClosed
+		case err := <-doneWrite:
 			if err != nil {
-				c.handler.Del(statusHdlr)
+				// Error while sending the command
+				close(unregister)
+				return nil, err
 			}
-		case err = <-doneHandle:
-			// Error while handling responses
-			if err != nil {
-				c.handler.Del(statusHdlr)
-			}
-		case h, more := <-statusHdlr:
-			if !more {
-				// statusHdlr has been closed, stop here
-				return
-			}
-
-			// If the status tag matches the command tag, the response is completed
-			if s, ok := h.Resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
-				h.Accept()
-				status = s
-
-				// Stop the response handler, if it's running
-				if hdlr != nil {
-					close(hdlr)
-				}
-
-				// Do not listen for responses anymore
-				c.handler.Del(statusHdlr)
-			} else if hdlr != nil {
-				hdlr <- h
-			} else {
-				h.Reject()
-			}
+		case result := <-doneHandle:
+			return result.status, result.err
 		}
 	}
 }
@@ -227,31 +246,26 @@ func (c *Client) Mailbox() *imap.MailboxStatus {
 }
 
 // Execute executes a generic command. cmdr is a value that can be converted to
-// a raw command and res is a value that can handle responses. The function
-// returns when the command has completed or failed, in this case err is nil. A
-// non-nil err value indicates a network error.
+// a raw command and h is a response handler. The function returns when the
+// command has completed or failed, in this case err is nil. A non-nil err value
+// indicates a network error.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
-func (c *Client) Execute(cmdr imap.Commander, res imap.RespHandlerFrom) (status *imap.StatusResp, err error) {
-	return c.execute(cmdr, res)
+func (c *Client) Execute(cmdr imap.Commander, h responses.Handler) (*imap.StatusResp, error) {
+	return c.execute(cmdr, h)
 }
 
 func (c *Client) handleContinuationReqs(continues chan<- bool) {
-	hdlr := make(imap.RespHandler)
-	c.handler.Add(hdlr)
-	defer c.handler.Del(hdlr)
-
-	defer close(continues)
-
-	for h := range hdlr {
-		if _, ok := h.Resp.(*imap.ContinuationResp); ok {
-			h.Accept()
-			continues <- true
-		} else {
-			h.Reject()
+	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
+		if _, ok := resp.(*imap.ContinuationReq); ok {
+			go func() {
+				continues <- true
+			}()
+			return nil
 		}
-	}
+		return responses.ErrUnhandled
+	}))
 }
 
 func (c *Client) gotStatusCaps(args []interface{}) {
@@ -269,63 +283,31 @@ func (c *Client) gotStatusCaps(args []interface{}) {
 
 // The server can send unilateral data. This function handles it.
 func (c *Client) handleUnilateral() {
-	hdlr := make(imap.RespHandler)
-	c.handler.Add(hdlr)
-	defer c.handler.Del(hdlr)
-
-	greeted := make(chan struct{})
-
-	// Make sure to start reading after we have set up the base handlers,
-	// otherwise some messages will be lost.
-	go c.read(greeted)
-
-	first := true
-	for h := range hdlr {
-		switch res := h.Resp.(type) {
+	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
+		switch resp := resp.(type) {
 		case *imap.StatusResp:
-			if res.Tag != "*" ||
-				(res.Type != imap.StatusOk && res.Type != imap.StatusNo && res.Type != imap.StatusBad && res.Type != imap.StatusBye) ||
-				(res.Code != "" && res.Code != imap.CodeAlert && res.Code != imap.CodeCapability) {
-				h.Reject()
-				break
-			}
-			h.Accept()
-
-			if first {
-				c.locker.Lock()
-				switch res.Type {
-				case imap.StatusPreauth:
-					c.state = imap.AuthenticatedState
-				case imap.StatusBye:
-					c.state = imap.LogoutState
-				case imap.StatusOk:
-					c.state = imap.NotAuthenticatedState
-				default:
-					c.ErrorLog.Println("invalid greeting:", res.Type)
-					c.state = imap.LogoutState
-				}
-				c.locker.Unlock()
-
-				if res.Code == imap.CodeCapability {
-					c.gotStatusCaps(res.Arguments)
-				}
-
-				close(greeted)
-				first = false
+			if resp.Tag != "*" {
+				return responses.ErrUnhandled
 			}
 
-			switch res.Type {
+			switch resp.Type {
 			case imap.StatusOk:
 				if c.Infos != nil {
-					c.Infos <- res
+					go func() {
+						c.Infos <- resp
+					}()
 				}
 			case imap.StatusNo:
 				if c.Warnings != nil {
-					c.Warnings <- res
+					go func() {
+						c.Warnings <- resp
+					}()
 				}
 			case imap.StatusBad:
 				if c.Errors != nil {
-					c.Errors <- res
+					go func() {
+						c.Errors <- resp
+					}()
 				}
 			case imap.StatusBye:
 				c.locker.Lock()
@@ -336,29 +318,29 @@ func (c *Client) handleUnilateral() {
 				c.conn.Close()
 
 				if c.Byes != nil {
-					c.Byes <- res
+					go func() {
+						c.Byes <- resp
+					}()
 				}
+			default:
+				return responses.ErrUnhandled
 			}
-		case *imap.Resp:
-			if len(res.Fields) < 2 {
-				h.Reject()
-				break
+		case *imap.DataResp:
+			if len(resp.Fields) < 2 {
+				return responses.ErrUnhandled
 			}
 
 			// A CAPABILITY response
-			if name, ok := res.Fields[0].(string); ok && name == imap.Capability {
-				h.Accept()
-				c.gotStatusCaps(res.Fields[1:len(res.Fields)])
-				break
+			if name, ok := resp.Fields[0].(string); ok && name == imap.Capability {
+				c.gotStatusCaps(resp.Fields[1:])
+				return nil
 			}
 
 			// An unilateral EXISTS, RECENT, EXPUNGE or FETCH response
-			name, ok := res.Fields[1].(string)
+			name, ok := resp.Fields[1].(string)
 			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE" && name != "FETCH") {
-				h.Reject()
-				break
+				return responses.ErrUnhandled
 			}
-			h.Accept()
 
 			switch name {
 			case "EXISTS":
@@ -366,7 +348,7 @@ func (c *Client) handleUnilateral() {
 					break
 				}
 
-				if messages, err := imap.ParseNumber(res.Fields[0]); err == nil {
+				if messages, err := imap.ParseNumber(resp.Fields[0]); err == nil {
 					c.locker.Lock()
 					c.mailbox.Messages = messages
 					c.locker.Unlock()
@@ -377,14 +359,16 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.MailboxUpdates != nil {
-					c.MailboxUpdates <- c.Mailbox()
+					go func() {
+						c.MailboxUpdates <- c.Mailbox()
+					}()
 				}
 			case "RECENT":
 				if c.Mailbox() == nil {
 					break
 				}
 
-				if recent, err := imap.ParseNumber(res.Fields[0]); err == nil {
+				if recent, err := imap.ParseNumber(resp.Fields[0]); err == nil {
 					c.locker.Lock()
 					c.mailbox.Recent = recent
 					c.locker.Unlock()
@@ -395,33 +379,79 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.MailboxUpdates != nil {
-					c.MailboxUpdates <- c.Mailbox()
+					go func() {
+						c.MailboxUpdates <- c.Mailbox()
+					}()
 				}
 			case "EXPUNGE":
-				seqNum, _ := imap.ParseNumber(res.Fields[0])
+				seqNum, _ := imap.ParseNumber(resp.Fields[0])
 
 				if c.Expunges != nil {
 					c.Expunges <- seqNum
 				}
 			case "FETCH":
-				seqNum, _ := imap.ParseNumber(res.Fields[0])
-				fields, _ := res.Fields[2].([]interface{})
+				seqNum, _ := imap.ParseNumber(resp.Fields[0])
+				fields, _ := resp.Fields[2].([]interface{})
 
-				msg := &imap.Message{
-					SeqNum: seqNum,
-				}
+				msg := &imap.Message{SeqNum: seqNum}
 				if err := msg.Parse(fields); err != nil {
 					break
 				}
 
 				if c.MessageUpdates != nil {
-					c.MessageUpdates <- msg
+					go func() {
+						c.MessageUpdates <- msg
+					}()
 				}
 			}
 		default:
-			h.Reject()
+			return responses.ErrUnhandled
 		}
-	}
+		return nil
+	}))
+}
+
+func (c *Client) handleGreetAndStartReading() error {
+	done := make(chan error, 1)
+	greeted := make(chan struct{})
+
+	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
+		status, ok := resp.(*imap.StatusResp)
+		if !ok {
+			done <- fmt.Errorf("invalid greeting received from server: not a status response")
+			return errUnregisterHandler
+		}
+
+		c.locker.Lock()
+		switch status.Type {
+		case imap.StatusPreauth:
+			c.state = imap.AuthenticatedState
+		case imap.StatusBye:
+			c.state = imap.LogoutState
+		case imap.StatusOk:
+			c.state = imap.NotAuthenticatedState
+		default:
+			c.state = imap.LogoutState
+			c.locker.Unlock()
+			done <- fmt.Errorf("invalid greeting received from server: %v", status.Type)
+			return errUnregisterHandler
+		}
+		c.locker.Unlock()
+
+		if status.Code == imap.CodeCapability {
+			c.gotStatusCaps(status.Arguments)
+		}
+
+		close(greeted)
+		done <- nil
+		return errUnregisterHandler
+	}))
+
+	// Make sure to start reading after we have set up this handler, otherwise
+	// some messages will be lost.
+	go c.read(greeted)
+
+	return <-done
 }
 
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
@@ -459,27 +489,23 @@ func (c *Client) SetDebug(w io.Writer) {
 }
 
 // New creates a new client from an existing connection.
-func New(conn net.Conn) (c *Client, err error) {
+func New(conn net.Conn) (*Client, error) {
 	continues := make(chan bool)
 	w := imap.NewClientWriter(nil, continues)
 	r := imap.NewReader(nil)
 
-	c = &Client{
+	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
-		handles:   make(imap.RespHandler),
-		handler:   imap.NewMultiRespHandler(),
 		greeted:   make(chan struct{}),
 		loggedOut: make(chan struct{}),
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
-	go c.handleContinuationReqs(continues)
-	go c.handleUnilateral()
-	go c.handler.HandleFrom(c.handles)
-
-	<-c.greeted
-	return
+	c.handleContinuationReqs(continues)
+	c.handleUnilateral()
+	err := c.handleGreetAndStartReading()
+	return c, err
 }
 
 // Dial connects to an IMAP server using an unencrypted connection.

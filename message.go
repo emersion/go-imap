@@ -208,7 +208,7 @@ func (m *Message) Parse(fields []interface{}) error {
 		if i%2 == 0 { // It's a key
 			var ok bool
 			if k, ok = f.(string); !ok {
-				return errors.New("Key is not a string")
+				return fmt.Errorf("cannot parse message: key is not a string, but a %T", f)
 			}
 			k = strings.ToUpper(k)
 		} else { // It's a value
@@ -219,7 +219,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			case BodyMsgAttr, BodyStructureMsgAttr:
 				bs, ok := f.([]interface{})
 				if !ok {
-					return errors.New("BODYSTRUCTURE is not a list")
+					return fmt.Errorf("cannot parse message: BODYSTRUCTURE is not a list, but a %T", f)
 				}
 
 				m.BodyStructure = &BodyStructure{Extended: k == BodyStructureMsgAttr}
@@ -229,7 +229,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			case EnvelopeMsgAttr:
 				env, ok := f.([]interface{})
 				if !ok {
-					return errors.New("ENVELOPE is not a list")
+					return fmt.Errorf("cannot parse message: ENVELOPE is not a list, but a %T", f)
 				}
 
 				m.Envelope = &Envelope{}
@@ -239,7 +239,7 @@ func (m *Message) Parse(fields []interface{}) error {
 			case FlagsMsgAttr:
 				flags, ok := f.([]interface{})
 				if !ok {
-					return errors.New("FLAGS is not a list")
+					return fmt.Errorf("cannot parse message: FLAGS is not a list, but a %T", f)
 				}
 
 				m.Flags = make([]string, len(flags))
