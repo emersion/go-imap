@@ -19,8 +19,8 @@ func (r *Select) Handle(resp imap.Resp) error {
 
 	switch resp := resp.(type) {
 	case *imap.DataResp:
-		fields, ok := imap.ToNamedResp(resp, imap.MailboxFlags)
-		if !ok {
+		name, fields, ok := imap.ParseNamedResp(resp)
+		if !ok || name != imap.MailboxFlags {
 			return ErrUnhandled
 		} else if len(fields) < 1 {
 			return errNotEnoughFields

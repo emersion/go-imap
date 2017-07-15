@@ -2,6 +2,7 @@ package imap_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/emersion/go-imap"
@@ -211,6 +212,41 @@ func TestReadResp_StatusResp(t *testing.T) {
 		}
 		if status.Info != test.expected.Info {
 			t.Errorf("Invalid info: expected %v but got %v", status.Info, test.expected.Info)
+		}
+	}
+}
+
+func TestParseNamedResp(t *testing.T) {
+	tests := []struct{
+		resp *imap.DataResp
+		name string
+		fields []interface{}
+	}{
+		{
+			resp: &imap.DataResp{Fields: []interface{}{"CAPABILITY", "IMAP4rev1"}},
+			name: "CAPABILITY",
+			fields: []interface{}{"IMAP4rev1"},
+		},
+		{
+			resp: &imap.DataResp{Fields: []interface{}{"42", "EXISTS"}},
+			name: "EXISTS",
+			fields: []interface{}{"42"},
+		},
+		{
+			resp: &imap.DataResp{Fields: []interface{}{"42", "FETCH", "blah"}},
+			name: "FETCH",
+			fields: []interface{}{"42", "blah"},
+		},
+	}
+
+	for _, test := range tests {
+		name, fields, ok := imap.ParseNamedResp(test.resp)
+		if !ok {
+			t.Errorf("ParseNamedResp(%v)[2] = false, want true", test.resp)
+		} else if name != test.name {
+			t.Errorf("ParseNamedResp(%v)[0] = %v, want %v", test.resp, name, test.name)
+		} else if !reflect.DeepEqual(fields, test.fields) {
+			t.Errorf("ParseNamedResp(%v)[1] = %v, want %v", test.resp, fields, test.fields)
 		}
 	}
 }

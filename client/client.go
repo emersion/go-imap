@@ -326,29 +326,20 @@ func (c *Client) handleUnilateral() {
 				return responses.ErrUnhandled
 			}
 		case *imap.DataResp:
-			if len(resp.Fields) < 2 {
-				return responses.ErrUnhandled
-			}
-
-			// A CAPABILITY response
-			if name, ok := resp.Fields[0].(string); ok && name == imap.Capability {
-				c.gotStatusCaps(resp.Fields[1:])
-				return nil
-			}
-
-			// An unilateral EXISTS, RECENT, EXPUNGE or FETCH response
-			name, ok := resp.Fields[1].(string)
-			if !ok || (name != "EXISTS" && name != "RECENT" && name != "EXPUNGE" && name != "FETCH") {
+			name, fields, ok := imap.ParseNamedResp(resp)
+			if !ok {
 				return responses.ErrUnhandled
 			}
 
 			switch name {
+			case imap.Capability:
+				c.gotStatusCaps(fields)
 			case "EXISTS":
 				if c.Mailbox() == nil {
 					break
 				}
 
-				if messages, err := imap.ParseNumber(resp.Fields[0]); err == nil {
+				if messages, err := imap.ParseNumber(fields[0]); err == nil {
 					c.locker.Lock()
 					c.mailbox.Messages = messages
 					c.locker.Unlock()
@@ -368,7 +359,7 @@ func (c *Client) handleUnilateral() {
 					break
 				}
 
-				if recent, err := imap.ParseNumber(resp.Fields[0]); err == nil {
+				if recent, err := imap.ParseNumber(fields[0]); err == nil {
 					c.locker.Lock()
 					c.mailbox.Recent = recent
 					c.locker.Unlock()
@@ -384,14 +375,14 @@ func (c *Client) handleUnilateral() {
 					}()
 				}
 			case "EXPUNGE":
-				seqNum, _ := imap.ParseNumber(resp.Fields[0])
+				seqNum, _ := imap.ParseNumber(fields[0])
 
 				if c.Expunges != nil {
 					c.Expunges <- seqNum
 				}
 			case "FETCH":
-				seqNum, _ := imap.ParseNumber(resp.Fields[0])
-				fields, _ := resp.Fields[2].([]interface{})
+				seqNum, _ := imap.ParseNumber(fields[0])
+				fields, _ := fields[1].([]interface{})
 
 				msg := &imap.Message{SeqNum: seqNum}
 				if err := msg.Parse(fields); err != nil {
@@ -403,6 +394,8 @@ func (c *Client) handleUnilateral() {
 						c.MessageUpdates <- msg
 					}()
 				}
+			default:
+				return responses.ErrUnhandled
 			}
 		default:
 			return responses.ErrUnhandled

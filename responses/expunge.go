@@ -11,8 +11,8 @@ type Expunge struct {
 }
 
 func (r *Expunge) Handle(resp imap.Resp) error {
-	fields, ok := imap.ToNamedResp(resp, imap.Expunge)
-	if !ok {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Expunge {
 		return ErrUnhandled
 	}
 

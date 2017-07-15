@@ -1,61 +1,13 @@
 package imap
 
+import (
+	"strings"
+)
+
 // Resp is an IMAP response. It is either a *DataResp, a
 // *ContinuationReq or a *StatusResp.
 type Resp interface {
 	resp()
-}
-
-// DataResp is an IMAP response containing data.
-type DataResp struct {
-	// The response tag. Can be either "" for untagged responses, "+" for continuation
-	// requests or a previous command's tag.
-	Tag string
-	// The parsed response fields.
-	Fields []interface{}
-}
-
-// NewUntaggedResp creates a new untagged response.
-func NewUntaggedResp(fields []interface{}) *DataResp {
-	return &DataResp{
-		Tag:    "*",
-		Fields: fields,
-	}
-}
-
-func (r *DataResp) resp() {}
-
-func (r *DataResp) WriteTo(w *Writer) error {
-	tag := r.Tag
-	if tag == "" {
-		tag = "*"
-	}
-
-	fields := []interface{}{tag}
-	fields = append(fields, r.Fields...)
-	return w.writeLine(fields...)
-}
-
-// ContinuationReq is a continuation request response.
-type ContinuationReq struct {
-	// The info message sent with the continuation request.
-	Info string
-}
-
-func (r *ContinuationReq) resp() {}
-
-func (r *ContinuationReq) WriteTo(w *Writer) error {
-	if err := w.writeString("+"); err != nil {
-		return err
-	}
-
-	if r.Info != "" {
-		if err := w.writeString(string(sp) + r.Info); err != nil {
-			return err
-		}
-	}
-
-	return w.writeCrlf()
 }
 
 // ReadResp reads a single response from a Reader.
@@ -145,34 +97,85 @@ func ReadResp(r *Reader) (Resp, error) {
 	return resp, nil
 }
 
-// ToNamedResp returns true if resp is a data response and has the specified
-// name.
-func ToNamedResp(resp Resp, name string) ([]interface{}, bool) {
-	data, ok := resp.(*DataResp)
-	if !ok || len(data.Fields) == 0 {
-		return nil, false
+// DataResp is an IMAP response containing data.
+type DataResp struct {
+	// The response tag. Can be either "" for untagged responses, "+" for continuation
+	// requests or a previous command's tag.
+	Tag string
+	// The parsed response fields.
+	Fields []interface{}
+}
+
+// NewUntaggedResp creates a new untagged response.
+func NewUntaggedResp(fields []interface{}) *DataResp {
+	return &DataResp{
+		Tag:    "*",
+		Fields: fields,
+	}
+}
+
+func (r *DataResp) resp() {}
+
+func (r *DataResp) WriteTo(w *Writer) error {
+	tag := r.Tag
+	if tag == "" {
+		tag = "*"
 	}
 
+	fields := []interface{}{tag}
+	fields = append(fields, r.Fields...)
+	return w.writeLine(fields...)
+}
+
+// ContinuationReq is a continuation request response.
+type ContinuationReq struct {
+	// The info message sent with the continuation request.
+	Info string
+}
+
+func (r *ContinuationReq) resp() {}
+
+func (r *ContinuationReq) WriteTo(w *Writer) error {
+	if err := w.writeString("+"); err != nil {
+		return err
+	}
+
+	if r.Info != "" {
+		if err := w.writeString(string(sp) + r.Info); err != nil {
+			return err
+		}
+	}
+
+	return w.writeCrlf()
+}
+
+// ParseNamedResp attempts to parse a named data response.
+func ParseNamedResp(resp Resp) (name string, fields []interface{}, ok bool) {
+	data, ok := resp.(*DataResp)
+	if !ok || len(data.Fields) == 0 {
+		return
+	}
+
+	// Some responses (namely EXISTS and RECENT) are formatted like so:
+	//   [num] [name] [...]
+	// Which is fucking stupid. But we handle that here by checking if the
+	// response name is a number and then rearranging it.
 	if len(data.Fields) > 1 {
-		// Some responses (namely EXISTS and RECENT) are formatted like so:
-		//   [arg] [name] [...]
-		// Which is fucking stupid. But we handle that here by checking if the
-		// response name is a number and then rearranging it.
-		n, ok := data.Fields[1].(string)
-		if ok && n == name {
+		name, ok := data.Fields[1].(string)
+		if ok {
 			if _, err := ParseNumber(data.Fields[0]); err == nil {
 				fields := []interface{}{data.Fields[0]}
 				fields = append(fields, data.Fields[2:]...)
-				return fields, true
+				return strings.ToUpper(name), fields, true
 			}
 		}
 	}
 
 	// IMAP commands are formatted like this:
 	//   [name] [...]
-	n, ok := data.Fields[0].(string)
-	if !ok || n != name {
-		return nil, false
+	name, ok = data.Fields[0].(string)
+	if !ok {
+		return
 	}
-	return data.Fields[1:], true
+	return strings.ToUpper(name), data.Fields[1:], true
 }

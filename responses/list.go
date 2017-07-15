@@ -21,8 +21,8 @@ func (r *List) Name() string {
 }
 
 func (r *List) Handle(resp imap.Resp) error {
-	fields, ok := imap.ToNamedResp(resp, r.Name())
-	if !ok {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != r.Name() {
 		return ErrUnhandled
 	}
 

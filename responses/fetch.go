@@ -11,11 +11,10 @@ type Fetch struct {
 }
 
 func (r *Fetch) Handle(resp imap.Resp) error {
-	fields, ok := imap.ToNamedResp(resp, imap.Fetch)
-	if !ok {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Fetch {
 		return ErrUnhandled
-	}
-	if len(fields) < 1 {
+	} else if len(fields) < 1 {
 		return errNotEnoughFields
 	}
 

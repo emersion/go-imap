@@ -19,8 +19,8 @@ func (r *Status) Handle(resp imap.Resp) error {
 	}
 	mbox := r.Mailbox
 
-	fields, ok := imap.ToNamedResp(resp, imap.Status)
-	if !ok {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Status {
 		return ErrUnhandled
 	} else if len(fields) < 2 {
 		return errNotEnoughFields

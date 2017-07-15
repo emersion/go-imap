@@ -11,8 +11,8 @@ type Search struct {
 }
 
 func (r *Search) Handle(resp imap.Resp) error {
-	fields, ok := imap.ToNamedResp(resp, imap.Search)
-	if !ok {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Search {
 		return ErrUnhandled
 	}
 
