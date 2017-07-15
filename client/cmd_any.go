@@ -5,7 +5,6 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
-	"github.com/emersion/go-imap/responses"
 )
 
 // ErrAlreadyLoggedOut is returned if Logout is called when the client is
@@ -20,21 +19,15 @@ var ErrAlreadyLoggedOut = errors.New("Already logged out")
 // Most of the time, Support should be used instead.
 func (c *Client) Capability() (map[string]bool, error) {
 	cmd := &commands.Capability{}
-	res := &responses.Capability{}
 
-	if status, err := c.execute(cmd, res); err != nil {
+	if status, err := c.execute(cmd, nil); err != nil {
 		return nil, err
 	} else if err := status.Err(); err != nil {
 		return nil, err
 	}
 
-	caps := make(map[string]bool)
-	for _, name := range res.Caps {
-		caps[name] = true
-	}
-
 	c.locker.Lock()
-	c.caps = caps
+	caps := c.caps
 	c.locker.Unlock()
 	return caps, nil
 }

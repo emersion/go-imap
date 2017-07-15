@@ -14,59 +14,45 @@ type Authenticate struct {
 	Writer          *imap.Writer
 }
 
-func (r *Authenticate) HandleFrom(hdlr imap.RespHandler) (err error) {
-	w := r.Writer
+func (r *Authenticate) writeLine(l string) error {
+	if _, err := r.Writer.Write([]byte(l + "\r\n")); err != nil {
+		return err
+	}
+	return r.Writer.Flush()
+}
 
-	// Cancel auth if an error occurs
-	defer (func() {
-		if err != nil {
-			w.Write([]byte("*\r\n"))
-			w.Flush()
-		}
-	})()
+func (r *Authenticate) cancel() error {
+	return r.writeLine("*")
+}
 
-	for h := range hdlr {
-		cont, ok := h.Resp.(*imap.ContinuationResp)
-		if !ok {
-			h.Reject()
-			continue
-		}
-		h.Accept()
-
-		// Empty challenge, send initial response as stated in RFC 2222 section 5.1
-		if cont.Info == "" && r.InitialResponse != nil {
-			encoded := base64.StdEncoding.EncodeToString(r.InitialResponse)
-			if _, err = w.Write([]byte(encoded + "\r\n")); err != nil {
-				return
-			}
-			if err = w.Flush(); err != nil {
-				return
-			}
-
-			r.InitialResponse = nil
-			continue
-		}
-
-		var challenge []byte
-		challenge, err = base64.StdEncoding.DecodeString(cont.Info)
-		if err != nil {
-			return
-		}
-
-		var res []byte
-		res, err = r.Mechanism.Next(challenge)
-		if err != nil {
-			return
-		}
-
-		encoded := base64.StdEncoding.EncodeToString(res)
-		if _, err = w.Write([]byte(encoded + "\r\n")); err != nil {
-			return
-		}
-		if err = w.Flush(); err != nil {
-			return
-		}
+func (r *Authenticate) Handle(resp imap.Resp) error {
+	cont, ok := resp.(*imap.ContinuationReq)
+	if !ok {
+		return ErrUnhandled
 	}
 
-	return
+	// Empty challenge, send initial response as stated in RFC 2222 section 5.1
+	if cont.Info == "" && r.InitialResponse != nil {
+		encoded := base64.StdEncoding.EncodeToString(r.InitialResponse)
+		if err := r.writeLine(encoded); err != nil {
+			return err
+		}
+		r.InitialResponse = nil
+		return nil
+	}
+
+	challenge, err := base64.StdEncoding.DecodeString(cont.Info)
+	if err != nil {
+		r.cancel()
+		return err
+	}
+
+	reply, err := r.Mechanism.Next(challenge)
+	if err != nil {
+		r.cancel()
+		return err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(reply)
+	return r.writeLine(encoded)
 }

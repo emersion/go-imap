@@ -20,37 +20,30 @@ func (r *List) Name() string {
 	}
 }
 
-func (r *List) HandleFrom(hdlr imap.RespHandler) error {
-	defer close(r.Mailboxes)
-
-	name := r.Name()
-
-	for h := range hdlr {
-		fields, ok := h.AcceptNamedResp(name)
-		if !ok {
-			continue
-		}
-
-		mbox := &imap.MailboxInfo{}
-		if err := mbox.Parse(fields); err != nil {
-			return err
-		}
-
-		r.Mailboxes <- mbox
+func (r *List) Handle(resp imap.Resp) error {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != r.Name() {
+		return ErrUnhandled
 	}
 
+	mbox := &imap.MailboxInfo{}
+	if err := mbox.Parse(fields); err != nil {
+		return err
+	}
+
+	r.Mailboxes <- mbox
 	return nil
 }
 
 func (r *List) WriteTo(w *imap.Writer) error {
-	name := r.Name()
+	respName := r.Name()
 
 	for mbox := range r.Mailboxes {
-		fields := []interface{}{name}
+		fields := []interface{}{respName}
 		fields = append(fields, mbox.Format()...)
 
-		res := imap.NewUntaggedResp(fields)
-		if err := res.WriteTo(w); err != nil {
+		resp := imap.NewUntaggedResp(fields)
+		if err := resp.WriteTo(w); err != nil {
 			return err
 		}
 	}

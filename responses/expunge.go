@@ -10,33 +10,29 @@ type Expunge struct {
 	SeqNums chan uint32
 }
 
-func (r *Expunge) HandleFrom(hdlr imap.RespHandler) error {
-	defer close(r.SeqNums)
-
-	for h := range hdlr {
-		res, ok := h.Resp.(*imap.Resp)
-		if !ok || len(res.Fields) < 3 {
-			h.Reject()
-			continue
-		}
-		if name, ok := res.Fields[1].(string); !ok || name != imap.Expunge {
-			h.Reject()
-			continue
-		}
-		h.Accept()
-
-		seqNum, _ := imap.ParseNumber(res.Fields[0])
-		r.SeqNums <- seqNum
+func (r *Expunge) Handle(resp imap.Resp) error {
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Expunge {
+		return ErrUnhandled
 	}
 
+	if len(fields) == 0 {
+		return errNotEnoughFields
+	}
+
+	seqNum, err := imap.ParseNumber(fields[0])
+	if err != nil {
+		return err
+	}
+
+	r.SeqNums <- seqNum
 	return nil
 }
 
 func (r *Expunge) WriteTo(w *imap.Writer) error {
 	for seqNum := range r.SeqNums {
-		res := imap.NewUntaggedResp([]interface{}{seqNum, imap.Expunge})
-
-		if err := res.WriteTo(w); err != nil {
+		resp := imap.NewUntaggedResp([]interface{}{seqNum, imap.Expunge})
+		if err := resp.WriteTo(w); err != nil {
 			return err
 		}
 	}

@@ -187,8 +187,8 @@ func (c *conn) send() {
 	// Send continuation requests
 	go func() {
 		for range c.continues {
-			res := &imap.ContinuationResp{Info: "send literal"}
-			if err := res.WriteTo(c.Writer); err != nil {
+			resp := &imap.ContinuationReq{Info: "send literal"}
+			if err := resp.WriteTo(c.Writer); err != nil {
 				c.Server().ErrorLog.Println("cannot send continuation request: ", err)
 			} else if err := c.Writer.Flush(); err != nil {
 				c.Server().ErrorLog.Println("cannot flush connection: ", err)

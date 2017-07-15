@@ -2,6 +2,7 @@ package imap
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -203,7 +204,7 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 		if i%2 == 0 {
 			var ok bool
 			if k, ok = f.(string); !ok {
-				return errors.New("Key is not a string")
+				return fmt.Errorf("cannot parse mailbox status: key is not a string, but a %T", f)
 			}
 			k = strings.ToUpper(k)
 		} else {

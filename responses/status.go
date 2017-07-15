@@ -13,38 +13,35 @@ type Status struct {
 	Mailbox *imap.MailboxStatus
 }
 
-func (r *Status) HandleFrom(hdlr imap.RespHandler) error {
+func (r *Status) Handle(resp imap.Resp) error {
 	if r.Mailbox == nil {
 		r.Mailbox = &imap.MailboxStatus{}
 	}
 	mbox := r.Mailbox
+
+	name, fields, ok := imap.ParseNamedResp(resp)
+	if !ok || name != imap.Status {
+		return ErrUnhandled
+	} else if len(fields) < 2 {
+		return errNotEnoughFields
+	}
+
+	if name, err := imap.ParseString(fields[0]); err != nil {
+		return err
+	} else if name, err := utf7.Encoding.NewDecoder().String(name); err != nil {
+		return err
+	} else {
+		mbox.Name = imap.CanonicalMailboxName(name)
+	}
+
+	var items []interface{}
+	if items, ok = fields[1].([]interface{}); !ok {
+		return errors.New("STATUS response expects a list as second argument")
+	}
+
 	mbox.Items = nil
-
-	for h := range hdlr {
-		fields, ok := h.AcceptNamedResp(imap.Status)
-		if !ok {
-			continue
-		}
-		if len(fields) < 2 {
-			return errors.New("STATUS response expects two fields")
-		}
-
-		if name, err := imap.ParseString(fields[0]); err != nil {
-			return err
-		} else if name, err := utf7.Encoding.NewDecoder().String(name); err != nil {
-			return err
-		} else {
-			mbox.Name = imap.CanonicalMailboxName(name)
-		}
-
-		var items []interface{}
-		if items, ok = fields[1].([]interface{}); !ok {
-			return errors.New("STATUS response expects a list as second argument")
-		}
-
-		if err := mbox.Parse(items); err != nil {
-			return err
-		}
+	if err := mbox.Parse(items); err != nil {
+		return err
 	}
 
 	return nil
