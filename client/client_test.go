@@ -133,51 +133,41 @@ func TestClient_unilateral(t *testing.T) {
 
 	setClientState(c, imap.SelectedState, imap.NewMailboxStatus("INBOX", nil))
 
-	statuses := make(chan *imap.MailboxStatus, 1)
-	c.MailboxUpdates = statuses
-	expunges := make(chan uint32, 1)
-	c.Expunges = expunges
-	messages := make(chan *imap.Message, 1)
-	c.MessageUpdates = messages
-	infos := make(chan *imap.StatusResp, 1)
-	c.Infos = infos
-	warns := make(chan *imap.StatusResp, 1)
-	c.Warnings = warns
-	errors := make(chan *imap.StatusResp, 1)
-	c.Errors = errors
+	updates := make(chan interface{}, 1)
+	c.Updates = updates
 
 	s.WriteString("* 42 EXISTS\r\n")
-	if status := <-statuses; status.Messages != 42 {
+	if status, ok := (<-updates).(*imap.MailboxStatus); !ok || status.Messages != 42 {
 		t.Errorf("Invalid messages count: expected %v but got %v", 42, status.Messages)
 	}
 
 	s.WriteString("* 587 RECENT\r\n")
-	if status := <-statuses; status.Recent != 587 {
+	if status, ok := (<-updates).(*imap.MailboxStatus); !ok || status.Recent != 587 {
 		t.Errorf("Invalid recent count: expected %v but got %v", 587, status.Recent)
 	}
 
 	s.WriteString("* 65535 EXPUNGE\r\n")
-	if seqNum := <-expunges; seqNum != 65535 {
-		t.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, seqNum)
+	if expunge, ok := (<-updates).(*ExpungeUpdate); !ok || expunge.SeqNum != 65535 {
+		t.Errorf("Invalid expunged sequence number: expected %v but got %v", 65535, expunge.SeqNum)
 	}
 
 	s.WriteString("* 431 FETCH (FLAGS (\\Seen))\r\n")
-	if msg := <-messages; msg.SeqNum != 431 {
+	if msg, ok := (<-updates).(*imap.Message); !ok || msg.SeqNum != 431 {
 		t.Errorf("Invalid expunged sequence number: expected %v but got %v", 431, msg.SeqNum)
 	}
 
 	s.WriteString("* OK Reticulating splines...\r\n")
-	if status := <-infos; status.Info != "Reticulating splines..." {
+	if status, ok := (<-updates).(*imap.StatusResp); !ok || status.Info != "Reticulating splines..." {
 		t.Errorf("Invalid info: got %v", status.Info)
 	}
 
 	s.WriteString("* NO Kansai band competition is in 30 seconds !\r\n")
-	if status := <-warns; status.Info != "Kansai band competition is in 30 seconds !" {
+	if status, ok := (<-updates).(*imap.StatusResp); !ok || status.Info != "Kansai band competition is in 30 seconds !" {
 		t.Errorf("Invalid warning: got %v", status.Info)
 	}
 
 	s.WriteString("* BAD Battery level too low, shutting down.\r\n")
-	if status := <-errors; status.Info != "Battery level too low, shutting down." {
+	if status, ok := (<-updates).(*imap.StatusResp); !ok || status.Info != "Battery level too low, shutting down." {
 		t.Errorf("Invalid error: got %v", status.Info)
 	}
 }

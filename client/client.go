@@ -22,6 +22,11 @@ var errClosed = fmt.Errorf("imap: connection closed")
 // errUnregisterHandler is returned by a response handler to unregister itself.
 var errUnregisterHandler = fmt.Errorf("imap: unregister handler")
 
+// ExpungeUpdate is delivered when a message is deleted.
+type ExpungeUpdate struct {
+	SeqNum uint32
+}
+
 // Client is an IMAP client.
 type Client struct {
 	conn  *imap.Conn
@@ -43,20 +48,10 @@ type Client struct {
 	// access.
 	locker sync.Mutex
 
-	// A channel where info messages from the server will be sent.
-	Infos chan *imap.StatusResp
-	// A channel where warning messages from the server will be sent.
-	Warnings chan *imap.StatusResp
-	// A channel where error messages from the server will be sent.
-	Errors chan *imap.StatusResp
-	// A channel where bye messages from the server will be sent.
-	Byes chan *imap.StatusResp
-	// A channel where mailbox updates from the server will be sent.
-	MailboxUpdates chan *imap.MailboxStatus
-	// A channel where deleted message IDs will be sent.
-	Expunges chan uint32
-	// A channel where messages updates from the server will be sent.
-	MessageUpdates chan *imap.Message
+	// A channel to which unilateral updates from the server will be sent. An
+	// update can be one of: *imap.StatusResp, *imap.MailboxStatus, *imap.Message,
+	// *ExpungeUpdate.
+	Updates chan<- interface{}
 
 	// ErrorLog specifies an optional logger for errors accepting
 	// connections and unexpected behavior from handlers.
@@ -291,22 +286,10 @@ func (c *Client) handleUnilateral() {
 			}
 
 			switch resp.Type {
-			case imap.StatusOk:
-				if c.Infos != nil {
+			case imap.StatusOk, imap.StatusNo, imap.StatusBad:
+				if c.Updates != nil {
 					go func() {
-						c.Infos <- resp
-					}()
-				}
-			case imap.StatusNo:
-				if c.Warnings != nil {
-					go func() {
-						c.Warnings <- resp
-					}()
-				}
-			case imap.StatusBad:
-				if c.Errors != nil {
-					go func() {
-						c.Errors <- resp
+						c.Updates <- resp
 					}()
 				}
 			case imap.StatusBye:
@@ -317,9 +300,9 @@ func (c *Client) handleUnilateral() {
 
 				c.conn.Close()
 
-				if c.Byes != nil {
+				if c.Updates != nil {
 					go func() {
-						c.Byes <- resp
+						c.Updates <- resp
 					}()
 				}
 			default:
@@ -349,9 +332,9 @@ func (c *Client) handleUnilateral() {
 					c.mailbox.ItemsLocker.Unlock()
 				}
 
-				if c.MailboxUpdates != nil {
+				if c.Updates != nil {
 					go func() {
-						c.MailboxUpdates <- c.Mailbox()
+						c.Updates <- c.Mailbox()
 					}()
 				}
 			case "RECENT":
@@ -369,16 +352,16 @@ func (c *Client) handleUnilateral() {
 					c.mailbox.ItemsLocker.Unlock()
 				}
 
-				if c.MailboxUpdates != nil {
+				if c.Updates != nil {
 					go func() {
-						c.MailboxUpdates <- c.Mailbox()
+						c.Updates <- c.Mailbox()
 					}()
 				}
 			case "EXPUNGE":
 				seqNum, _ := imap.ParseNumber(fields[0])
 
-				if c.Expunges != nil {
-					c.Expunges <- seqNum
+				if c.Updates != nil {
+					c.Updates <- &ExpungeUpdate{seqNum}
 				}
 			case "FETCH":
 				seqNum, _ := imap.ParseNumber(fields[0])
@@ -389,9 +372,9 @@ func (c *Client) handleUnilateral() {
 					break
 				}
 
-				if c.MessageUpdates != nil {
+				if c.Updates != nil {
 					go func() {
-						c.MessageUpdates <- msg
+						c.Updates <- msg
 					}()
 				}
 			default:
