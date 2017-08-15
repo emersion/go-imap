@@ -50,7 +50,8 @@ type Client struct {
 
 	// A channel to which unilateral updates from the server will be sent. An
 	// update can be one of: *imap.StatusResp, *imap.MailboxStatus, *imap.Message,
-	// *ExpungeUpdate.
+	// *ExpungeUpdate. Note that blocking this channel blocks the whole client,
+	// so it's recommended to use a buffered channel.
 	Updates chan<- interface{}
 
 	// ErrorLog specifies an optional logger for errors accepting
@@ -288,9 +289,7 @@ func (c *Client) handleUnilateral() {
 			switch resp.Type {
 			case imap.StatusOk, imap.StatusNo, imap.StatusBad:
 				if c.Updates != nil {
-					go func() {
-						c.Updates <- resp
-					}()
+					c.Updates <- resp
 				}
 			case imap.StatusBye:
 				c.locker.Lock()
@@ -301,9 +300,7 @@ func (c *Client) handleUnilateral() {
 				c.conn.Close()
 
 				if c.Updates != nil {
-					go func() {
-						c.Updates <- resp
-					}()
+					c.Updates <- resp
 				}
 			default:
 				return responses.ErrUnhandled
@@ -333,9 +330,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					go func() {
-						c.Updates <- c.Mailbox()
-					}()
+					c.Updates <- c.Mailbox()
 				}
 			case "RECENT":
 				if c.Mailbox() == nil {
@@ -353,9 +348,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					go func() {
-						c.Updates <- c.Mailbox()
-					}()
+					c.Updates <- c.Mailbox()
 				}
 			case "EXPUNGE":
 				seqNum, _ := imap.ParseNumber(fields[0])
@@ -373,9 +366,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					go func() {
-						c.Updates <- msg
-					}()
+					c.Updates <- msg
 				}
 			default:
 				return responses.ErrUnhandled
