@@ -64,7 +64,7 @@ type Client struct {
 	locker sync.Mutex
 
 	// A channel to which unilateral updates from the server will be sent. An
-	// update can be one of: *imap.StatusResp, *imap.MailboxStatus, *imap.Message,
+	// update can be one of: *StatusUpdate, *MailboxUpdate, *MessageUpdate,
 	// *ExpungeUpdate. Note that blocking this channel blocks the whole client,
 	// so it's recommended to use a separate goroutine and a buffered channel to
 	// prevent deadlocks.
