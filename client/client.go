@@ -22,9 +22,24 @@ var errClosed = fmt.Errorf("imap: connection closed")
 // errUnregisterHandler is returned by a response handler to unregister itself.
 var errUnregisterHandler = fmt.Errorf("imap: unregister handler")
 
+// StatusUpdate is delivered when a status update is received.
+type StatusUpdate struct {
+	Status *imap.StatusResp
+}
+
+// MailboxUpdate is delivered when a mailbox status changes.
+type MailboxUpdate struct {
+	Mailbox *imap.MailboxStatus
+}
+
 // ExpungeUpdate is delivered when a message is deleted.
 type ExpungeUpdate struct {
 	SeqNum uint32
+}
+
+// MessageUpdate is delivered when a message attribute changes.
+type MessageUpdate struct {
+	Message *imap.Message
 }
 
 // Client is an IMAP client.
@@ -290,7 +305,7 @@ func (c *Client) handleUnilateral() {
 			switch resp.Type {
 			case imap.StatusOk, imap.StatusNo, imap.StatusBad:
 				if c.Updates != nil {
-					c.Updates <- resp
+					c.Updates <- &StatusUpdate{resp}
 				}
 			case imap.StatusBye:
 				c.locker.Lock()
@@ -301,7 +316,7 @@ func (c *Client) handleUnilateral() {
 				c.conn.Close()
 
 				if c.Updates != nil {
-					c.Updates <- resp
+					c.Updates <- &StatusUpdate{resp}
 				}
 			default:
 				return responses.ErrUnhandled
@@ -331,7 +346,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					c.Updates <- c.Mailbox()
+					c.Updates <- &MailboxUpdate{c.Mailbox()}
 				}
 			case "RECENT":
 				if c.Mailbox() == nil {
@@ -349,7 +364,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					c.Updates <- c.Mailbox()
+					c.Updates <- &MailboxUpdate{c.Mailbox()}
 				}
 			case "EXPUNGE":
 				seqNum, _ := imap.ParseNumber(fields[0])
@@ -367,7 +382,7 @@ func (c *Client) handleUnilateral() {
 				}
 
 				if c.Updates != nil {
-					c.Updates <- msg
+					c.Updates <- &MessageUpdate{msg}
 				}
 			default:
 				return responses.ErrUnhandled
