@@ -68,7 +68,7 @@ type Client struct {
 	// *ExpungeUpdate. Note that blocking this channel blocks the whole client,
 	// so it's recommended to use a separate goroutine and a buffered channel to
 	// prevent deadlocks.
-	Updates chan<- interface{}
+	Updates chan interface{}
 
 	// ErrorLog specifies an optional logger for errors accepting
 	// connections and unexpected behavior from handlers.
