@@ -11,6 +11,8 @@ Card](https://goreportcard.com/badge/github.com/emersion/go-imap)](https://gorep
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
 
+**Note**: new projects should use the [`v1` branch](https://github.com/emersion/go-imap/tree/v1).
+
 ```bash
 go get github.com/emersion/go-imap/...
 ```
