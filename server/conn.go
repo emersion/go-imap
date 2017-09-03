@@ -198,20 +198,23 @@ func (c *conn) send() {
 
 	// Send responses
 	for {
-		// Get a response that needs to be sent
-		res := <-c.responses
+		select {
+		case res := <-c.responses:
+			// Get a response that needs to be sent
+			// Request to send the response
+			c.l.Lock()
 
-		// Request to send the response
-		c.l.Lock()
+			// Send the response
+			if err := res.WriteTo(c.Writer); err != nil {
+				c.Server().ErrorLog.Println("cannot send response: ", err)
+			} else if err := c.Writer.Flush(); err != nil {
+				c.Server().ErrorLog.Println("cannot flush connection: ", err)
+			}
 
-		// Send the response
-		if err := res.WriteTo(c.Writer); err != nil {
-			c.Server().ErrorLog.Println("cannot send response: ", err)
-		} else if err := c.Writer.Flush(); err != nil {
-			c.Server().ErrorLog.Println("cannot flush connection: ", err)
+			c.l.Unlock()
+		case <-c.continues:
+			return
 		}
-
-		c.l.Unlock()
 	}
 }
 
