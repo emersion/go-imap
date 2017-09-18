@@ -52,6 +52,8 @@ type Context struct {
 	MailboxReadOnly bool
 	// Responses to send to the client.
 	Responses chan<- imap.WriterTo
+	// Closed when the client is logged out.
+	LoggedOut <-chan struct{}
 }
 
 type conn struct {
@@ -63,6 +65,7 @@ type conn struct {
 	tlsConn   *tls.Conn
 	continues chan bool
 	responses chan imap.WriterTo
+	loggedOut chan struct{}
 	silentVal bool
 }
 
@@ -73,6 +76,7 @@ func newConn(s *Server, c net.Conn) *conn {
 	w := imap.NewWriter(nil)
 
 	responses := make(chan imap.WriterTo)
+	loggedOut := make(chan struct{})
 
 	tlsConn, _ := c.(*tls.Conn)
 
@@ -84,10 +88,12 @@ func newConn(s *Server, c net.Conn) *conn {
 		ctx: &Context{
 			State:     imap.ConnectingState,
 			Responses: responses,
+			LoggedOut: loggedOut,
 		},
 		tlsConn:   tlsConn,
 		continues: continues,
 		responses: responses,
+		loggedOut: loggedOut,
 	}
 
 	if s.Debug != nil {
@@ -149,14 +155,7 @@ func (c *conn) Close() error {
 		c.ctx.User.Logout()
 	}
 
-	if err := c.Conn.Close(); err != nil {
-		return err
-	}
-
-	close(c.continues)
-
-	c.ctx.State = imap.LogoutState
-	return nil
+	return c.Conn.Close()
 }
 
 func (c *conn) Capabilities() []string {
@@ -199,19 +198,22 @@ func (c *conn) send() {
 	// Send responses
 	for {
 		// Get a response that needs to be sent
-		res := <-c.responses
+		select {
+		case res := <-c.responses:
+			// Request to send the response
+			c.l.Lock()
 
-		// Request to send the response
-		c.l.Lock()
+			// Send the response
+			if err := res.WriteTo(c.Writer); err != nil {
+				c.Server().ErrorLog.Println("cannot send response: ", err)
+			} else if err := c.Writer.Flush(); err != nil {
+				c.Server().ErrorLog.Println("cannot flush connection: ", err)
+			}
 
-		// Send the response
-		if err := res.WriteTo(c.Writer); err != nil {
-			c.Server().ErrorLog.Println("cannot send response: ", err)
-		} else if err := c.Writer.Flush(); err != nil {
-			c.Server().ErrorLog.Println("cannot flush connection: ", err)
+			c.l.Unlock()
+		case <-c.loggedOut:
+			return
 		}
-
-		c.l.Unlock()
 	}
 }
 
@@ -263,6 +265,12 @@ func (c *conn) silent() *bool {
 }
 
 func (c *conn) serve() error {
+	defer func() {
+		c.ctx.State = imap.LogoutState
+		close(c.continues)
+		close(c.loggedOut)
+	}()
+
 	// Send greeting
 	if err := c.greet(); err != nil {
 		return err
