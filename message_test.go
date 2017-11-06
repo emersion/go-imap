@@ -111,62 +111,62 @@ var bodySectionNameTests = []struct {
 }{
 	{
 		raw:    "BODY[]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{}},
 	},
 	{
 		raw:       "RFC822",
-		parsed:    &BodySectionName{BodyPartName: &BodyPartName{}},
+		parsed:    &BodySectionName{BodyPartName: BodyPartName{}},
 		formatted: "BODY[]",
 	},
 	{
 		raw:    "BODY[HEADER]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier}},
 	},
 	{
 		raw:    "BODY.PEEK[]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Peek: true},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{}, Peek: true},
 	},
 	{
 		raw:    "BODY[TEXT]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: TextSpecifier}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: TextSpecifier}},
 	},
 	{
 		raw:       "RFC822.TEXT",
-		parsed:    &BodySectionName{BodyPartName: &BodyPartName{Specifier: TextSpecifier}},
+		parsed:    &BodySectionName{BodyPartName: BodyPartName{Specifier: TextSpecifier}},
 		formatted: "BODY[TEXT]",
 	},
 	{
 		raw:       "RFC822.HEADER",
-		parsed:    &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier}, Peek: true},
+		parsed:    &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier}, Peek: true},
 		formatted: "BODY.PEEK[HEADER]",
 	},
 	{
 		raw:    "BODY[]<0.512>",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Partial: []int{0, 512}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{}, Partial: []int{0, 512}},
 	},
 	{
 		raw:    "BODY[]<512>",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{}, Partial: []int{512}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{}, Partial: []int{512}},
 	},
 	{
 		raw:    "BODY[1.2.3]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Path: []int{1, 2, 3}}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Path: []int{1, 2, 3}}},
 	},
 	{
 		raw:    "BODY[1.2.3.HEADER]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Path: []int{1, 2, 3}}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Path: []int{1, 2, 3}}},
 	},
 	{
 		raw:    "BODY[5.MIME]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: MIMESpecifier, Path: []int{5}}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: MIMESpecifier, Path: []int{5}}},
 	},
 	{
 		raw:    "BODY[HEADER.FIELDS (From To)]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"From", "To"}}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"From", "To"}}},
 	},
 	{
 		raw:    "BODY[HEADER.FIELDS.NOT (Content-Id)]",
-		parsed: &BodySectionName{BodyPartName: &BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
 	},
 }
 

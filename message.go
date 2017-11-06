@@ -50,10 +50,13 @@ const (
 	UidMsgAttr = "UID"
 )
 
+// A PartSpecifier specifies which parts of the MIME entity should be returned.
+type PartSpecifier string
+
 // Part specifiers described in RFC 3501 page 55.
 const (
 	// Refers to the entire part, including headers.
-	EntireSpecifier = ""
+	EntireSpecifier PartSpecifier = ""
 	// Refers to the header of the part. Must include the final CRLF delimiting
 	// the header and the body.
 	HeaderSpecifier = "HEADER"
@@ -338,7 +341,7 @@ func (m *Message) GetBody(s string) Literal {
 // A body section name.
 // See RFC 3501 page 55.
 type BodySectionName struct {
-	*BodyPartName
+	BodyPartName
 
 	// If set to true, do not implicitly set the \Seen flag.
 	Peek bool
@@ -390,7 +393,6 @@ func (section *BodySectionName) parse(s string) (err error) {
 		return
 	}
 
-	section.BodyPartName = &BodyPartName{}
 	if err = section.BodyPartName.parse(fields); err != nil {
 		return
 	}
@@ -496,7 +498,7 @@ func ParseBodySectionName(s string) (section *BodySectionName, err error) {
 // A body part name.
 type BodyPartName struct {
 	// The specifier of the requested part.
-	Specifier string
+	Specifier PartSpecifier
 	// The part path. Parts indexes start at 1.
 	Path []int
 	// If Specifier is HEADER, contains header fields that will/won't be returned,
@@ -521,11 +523,12 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 	path := strings.Split(strings.ToUpper(name), ".")
 
 	end := 0
-	for i, node := range path {
-		if node == "" || node == HeaderSpecifier || node == MIMESpecifier || node == TextSpecifier {
-			part.Specifier = node
+	loop: for i, node := range path {
+		switch PartSpecifier(node) {
+		case EntireSpecifier, HeaderSpecifier, MIMESpecifier, TextSpecifier:
+			part.Specifier = PartSpecifier(node)
 			end = i + 1
-			break
+			break loop
 		}
 
 		index, err := strconv.Atoi(node)
@@ -566,8 +569,8 @@ func (part *BodyPartName) String() (s string) {
 		path[i] = strconv.Itoa(index)
 	}
 
-	if part.Specifier != "" {
-		path = append(path, part.Specifier)
+	if part.Specifier != EntireSpecifier {
+		path = append(path, string(part.Specifier))
 	}
 
 	if part.Specifier == HeaderSpecifier && len(part.Fields) > 0 {
