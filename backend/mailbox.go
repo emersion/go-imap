@@ -38,7 +38,7 @@ type Mailbox interface {
 	// 3501 section 6.4.5 for a list of items that can be requested.
 	//
 	// Messages must be sent to ch. When the function returns, ch must be closed.
-	ListMessages(uid bool, seqset *imap.SeqSet, items []string, ch chan<- *imap.Message) error
+	ListMessages(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message) error
 
 	// SearchMessages searches messages. The returned list must contain UIDs if
 	// uid is set to true, or sequence numbers otherwise.

@@ -61,11 +61,12 @@ func ExampleClient() {
 	}
 	seqset := new(imap.SeqSet)
 	seqset.AddRange(from, to)
+	items := []imap.FetchItem{imap.FetchEnvelope}
 
 	messages := make(chan *imap.Message, 10)
 	done = make(chan error, 1)
 	go func() {
-		done <- c.Fetch(seqset, []string{imap.EnvelopeMsgAttr}, messages)
+		done <- c.Fetch(seqset, items, messages)
 	}()
 
 	log.Println("Last 4 messages:")
@@ -98,12 +99,12 @@ func ExampleClient_Fetch() {
 	seqset.AddRange(mbox.Messages, mbox.Messages)
 
 	// Get the whole message body
-	attrs := []string{"BODY[]"}
+	items := []imap.FetchItem{imap.FetchRFC822}
 
 	messages := make(chan *imap.Message, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- c.Fetch(seqset, attrs, messages)
+		done <- c.Fetch(seqset, items, messages)
 	}()
 
 	log.Println("Last message:")
@@ -153,9 +154,9 @@ func ExampleClient_Expunge() {
 	seqset.AddRange(mbox.Messages, mbox.Messages)
 
 	// First mark the message as deleted
-	operation := "+FLAGS.SILENT"
+	item := imap.FormatFlagsOp(imap.AddFlags, true)
 	flags := []interface{}{imap.DeletedFlag}
-	if err := c.Store(seqset, operation, flags, nil); err != nil {
+	if err := c.Store(seqset, item, flags, nil); err != nil {
 		log.Fatal(err)
 	}
 

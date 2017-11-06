@@ -91,7 +91,7 @@ func (mbox *Mailbox) Check() error {
 	return nil
 }
 
-func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []string, ch chan<- *imap.Message) error {
+func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message) error {
 	defer close(ch)
 
 	for i, msg := range mbox.Messages {

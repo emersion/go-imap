@@ -21,23 +21,23 @@ func (m *Message) entity() (*message.Entity, error) {
 	return message.Read(bytes.NewReader(m.Body))
 }
 
-func (m *Message) Fetch(seqNum uint32, items []string) (*imap.Message, error) {
+func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, error) {
 	fetched := imap.NewMessage(seqNum, items)
 	for _, item := range items {
 		switch item {
-		case imap.EnvelopeMsgAttr:
+		case imap.FetchEnvelope:
 			e, _ := m.entity()
 			fetched.Envelope, _ = backendutil.FetchEnvelope(e.Header)
-		case imap.BodyMsgAttr, imap.BodyStructureMsgAttr:
+		case imap.FetchBody, imap.FetchBodyStructure:
 			e, _ := m.entity()
-			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(e, item == imap.BodyStructureMsgAttr)
-		case imap.FlagsMsgAttr:
+			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(e, item == imap.FetchBodyStructure)
+		case imap.FetchFlags:
 			fetched.Flags = m.Flags
-		case imap.InternalDateMsgAttr:
+		case imap.FetchInternalDate:
 			fetched.InternalDate = m.Date
-		case imap.SizeMsgAttr:
+		case imap.FetchRFC822Size:
 			fetched.Size = m.Size
-		case imap.UidMsgAttr:
+		case imap.FetchUid:
 			fetched.Uid = m.Uid
 		default:
 			section, err := imap.ParseBodySectionName(item)

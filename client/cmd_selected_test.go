@@ -188,7 +188,7 @@ func TestClient_Fetch(t *testing.T) {
 	setClientState(c, imap.SelectedState, nil)
 
 	seqset, _ := imap.ParseSeqSet("2:3")
-	fields := []string{"UID", "BODY[]"}
+	fields := []imap.FetchItem{imap.FetchUid, imap.FetchItem("BODY[]")}
 
 	done := make(chan error, 1)
 	messages := make(chan *imap.Message, 2)
@@ -245,7 +245,7 @@ func TestClient_Fetch_Partial(t *testing.T) {
 	setClientState(c, imap.SelectedState, nil)
 
 	seqset, _ := imap.ParseSeqSet("1")
-	fields := []string{"BODY.PEEK[]<0.10>"}
+	fields := []imap.FetchItem{imap.FetchItem("BODY.PEEK[]<0.10>")}
 
 	done := make(chan error, 1)
 	messages := make(chan *imap.Message, 1)
@@ -281,7 +281,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	setClientState(c, imap.SelectedState, nil)
 
 	seqset, _ := imap.ParseSeqSet("1:867")
-	fields := []string{"FLAGS"}
+	fields := []imap.FetchItem{imap.FetchFlags}
 
 	done := make(chan error, 1)
 	messages := make(chan *imap.Message, 1)

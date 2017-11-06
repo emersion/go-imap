@@ -10,14 +10,14 @@ import (
 // Store is a STORE command, as defined in RFC 3501 section 6.4.6.
 type Store struct {
 	SeqSet *imap.SeqSet
-	Item   string
+	Item   imap.StoreItem
 	Value  interface{}
 }
 
 func (cmd *Store) Command() *imap.Command {
 	return &imap.Command{
 		Name:      imap.Store,
-		Arguments: []interface{}{cmd.SeqSet, cmd.Item, cmd.Value},
+		Arguments: []interface{}{cmd.SeqSet, string(cmd.Item), cmd.Value},
 	}
 }
 
@@ -34,10 +34,11 @@ func (cmd *Store) Parse(fields []interface{}) (err error) {
 		return err
 	}
 
-	if cmd.Item, ok = fields[1].(string); !ok {
+	if item, ok := fields[1].(string); !ok {
 		return errors.New("Item name must be a string")
+	} else {
+		cmd.Item = imap.StoreItem(strings.ToUpper(item))
 	}
-	cmd.Item = strings.ToUpper(cmd.Item)
 
 	cmd.Value = fields[2]
 

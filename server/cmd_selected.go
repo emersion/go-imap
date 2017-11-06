@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
@@ -206,15 +205,10 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 		return ErrMailboxReadOnly
 	}
 
-	itemStr := cmd.Item
-	silent := strings.HasSuffix(itemStr, imap.SilentOp)
-	if silent {
-		itemStr = strings.TrimSuffix(itemStr, imap.SilentOp)
-	}
-	item := imap.FlagsOp(itemStr)
-
-	if item != imap.SetFlags && item != imap.AddFlags && item != imap.RemoveFlags {
-		return errors.New("Unsupported STORE operation")
+	// Only flags operations are supported
+	op, silent, err := imap.ParseFlagsOp(cmd.Item)
+	if err != nil {
+		return err
 	}
 
 	flagsList, ok := cmd.Value.([]interface{})
@@ -233,7 +227,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	// from receiving them
 	// TODO: find a better way to do this, without conn.silent
 	*conn.silent() = silent
-	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, item, flags)
+	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, op, flags)
 	*conn.silent() = false
 	if err != nil {
 		return err
@@ -244,7 +238,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 	if conn.Server().Updates == nil && !silent {
 		inner := &Fetch{}
 		inner.SeqSet = cmd.SeqSet
-		inner.Items = []string{"FLAGS"}
+		inner.Items = []imap.FetchItem{imap.FetchFlags}
 		if uid {
 			inner.Items = append(inner.Items, "UID")
 		}

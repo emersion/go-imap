@@ -10,7 +10,7 @@ import (
 // Fetch is a FETCH command, as defined in RFC 3501 section 6.4.5.
 type Fetch struct {
 	SeqSet *imap.SeqSet
-	Items  []string
+	Items  []imap.FetchItem
 }
 
 func (cmd *Fetch) Command() *imap.Command {
@@ -19,7 +19,7 @@ func (cmd *Fetch) Command() *imap.Command {
 		if section, err := imap.ParseBodySectionName(item); err == nil {
 			items[i] = section
 		} else {
-			items[i] = item
+			items[i] = string(item)
 		}
 	}
 
@@ -43,21 +43,13 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 
 	switch items := fields[1].(type) {
 	case string: // A macro or a single item
-		switch strings.ToUpper(items) {
-		case "ALL":
-			cmd.Items = []string{"FLAGS", "INTERNALDATE", "RFC822.SIZE", "ENVELOPE"}
-		case "FAST":
-			cmd.Items = []string{"FLAGS", "INTERNALDATE", "RFC822.SIZE"}
-		case "FULL":
-			cmd.Items = []string{"FLAGS", "INTERNALDATE", "RFC822.SIZE", "ENVELOPE", "BODY"}
-		default:
-			cmd.Items = []string{strings.ToUpper(items)}
-		}
+		cmd.Items = imap.FetchItem(strings.ToUpper(items)).Expand()
 	case []interface{}: // A list of items
-		cmd.Items = make([]string, len(items))
-		for i, v := range items {
-			item, _ := v.(string)
-			cmd.Items[i] = strings.ToUpper(item)
+		cmd.Items = make([]imap.FetchItem, 0, len(items))
+		for _, v := range items {
+			itemStr, _ := v.(string)
+			item := imap.FetchItem(strings.ToUpper(itemStr))
+			cmd.Items = append(cmd.Items, item.Expand()...)
 		}
 	default:
 		return errors.New("Items must be either a string or a list")

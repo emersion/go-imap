@@ -19,13 +19,13 @@ func TestCanonicalFlag(t *testing.T) {
 }
 
 func TestNewMessage(t *testing.T) {
-	msg := NewMessage(42, []string{"BODYSTRUCTURE", "FLAGS"})
+	msg := NewMessage(42, []FetchItem{FetchBodyStructure, FetchFlags})
 
 	expected := &Message{
 		SeqNum:     42,
-		Items:      map[string]interface{}{"BODYSTRUCTURE": nil, "FLAGS": nil},
+		Items:      map[FetchItem]interface{}{FetchBodyStructure: nil, FetchFlags: nil},
 		Body:       make(map[*BodySectionName]Literal),
-		itemsOrder: []string{"BODYSTRUCTURE", "FLAGS"},
+		itemsOrder: []FetchItem{FetchBodyStructure, FetchFlags},
 	}
 
 	if !reflect.DeepEqual(expected, msg) {
@@ -50,12 +50,12 @@ var messageTests = []struct {
 }{
 	{
 		message: &Message{
-			Items: map[string]interface{}{
-				"ENVELOPE":    nil,
-				"BODY":        nil,
-				"FLAGS":       nil,
-				"RFC822.SIZE": nil,
-				"UID":         nil,
+			Items: map[FetchItem]interface{}{
+				FetchEnvelope:    nil,
+				FetchBody:        nil,
+				FetchFlags:       nil,
+				FetchRFC822Size: nil,
+				FetchUid:         nil,
 			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
@@ -63,7 +63,7 @@ var messageTests = []struct {
 			Flags:         []string{SeenFlag, AnsweredFlag},
 			Size:          4242,
 			Uid:           2424,
-			itemsOrder:    []string{"ENVELOPE", "BODY", "FLAGS", "RFC822.SIZE", "UID"},
+			itemsOrder:    []FetchItem{FetchEnvelope, FetchBody, FetchFlags, FetchRFC822Size, FetchUid},
 		},
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
@@ -172,7 +172,7 @@ var bodySectionNameTests = []struct {
 
 func TestNewBodySectionName(t *testing.T) {
 	for i, test := range bodySectionNameTests {
-		bsn, err := ParseBodySectionName(test.raw)
+		bsn, err := ParseBodySectionName(FetchItem(test.raw))
 		if err != nil {
 			t.Errorf("Cannot parse #%v: %v", i, err)
 			continue
@@ -190,7 +190,7 @@ func TestNewBodySectionName(t *testing.T) {
 
 func TestBodySectionName_String(t *testing.T) {
 	for i, test := range bodySectionNameTests {
-		s := test.parsed.String()
+		s := string(test.parsed.FetchItem())
 
 		expected := test.formatted
 		if expected == "" {
@@ -237,7 +237,7 @@ func TestBodySectionName_ExtractPartial(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		bsn, err := ParseBodySectionName(test.bsn)
+		bsn, err := ParseBodySectionName(FetchItem(test.bsn))
 		if err != nil {
 			t.Errorf("Cannot parse body section name #%v: %v", i, err)
 			continue

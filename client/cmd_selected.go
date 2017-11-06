@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
@@ -130,7 +129,7 @@ func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err er
 	return c.search(true, criteria)
 }
 
-func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *imap.Message) error {
+func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
 	if c.State() != imap.SelectedState {
 		return ErrNoMailboxSelected
 	}
@@ -157,25 +156,28 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []string, ch chan *i
 
 // Fetch retrieves data associated with a message in the mailbox. See RFC 3501
 // section 6.4.5 for a list of items that can be requested.
-func (c *Client) Fetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) error {
+func (c *Client) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
 	return c.fetch(false, seqset, items, ch)
 }
 
 // UidFetch is identical to Fetch, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidFetch(seqset *imap.SeqSet, items []string, ch chan *imap.Message) error {
+func (c *Client) UidFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
 	return c.fetch(true, seqset, items, ch)
 }
 
-func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) error {
+func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
 	if c.State() != imap.SelectedState {
 		return ErrNoMailboxSelected
 	}
 
 	// If ch is nil, the updated values are data which will be lost, so don't
 	// retrieve it.
-	if ch == nil && !strings.HasSuffix(item, imap.SilentOp) {
-		item += imap.SilentOp
+	if ch == nil {
+		op, _, err := imap.ParseFlagsOp(item)
+		if err == nil {
+			item = imap.FormatFlagsOp(op, true)
+		}
 	}
 
 	var cmd imap.Commander
@@ -204,13 +206,13 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item string, value interfa
 // Store alters data associated with a message in the mailbox. If ch is not nil,
 // the updated value of the data will be sent to this channel. See RFC 3501
 // section 6.4.6 for a list of items that can be updated.
-func (c *Client) Store(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) error {
+func (c *Client) Store(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
 	return c.store(false, seqset, item, value, ch)
 }
 
 // UidStore is identical to Store, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidStore(seqset *imap.SeqSet, item string, value interface{}, ch chan *imap.Message) error {
+func (c *Client) UidStore(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
 	return c.store(true, seqset, item, value, ch)
 }
 

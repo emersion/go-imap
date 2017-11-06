@@ -30,26 +30,6 @@ var flags = []string{
 	RecentFlag,
 }
 
-// Message attributes that can be fetched, defined in RFC 3501 section 6.4.5.
-// Attributes that fetches the message contents are defined with
-// BodySectionName.
-const (
-	// Non-extensible form of BODYSTRUCTURE.
-	BodyMsgAttr = "BODY"
-	// MIME body structure of the message.
-	BodyStructureMsgAttr = "BODYSTRUCTURE"
-	// The envelope structure of the message.
-	EnvelopeMsgAttr = "ENVELOPE"
-	// The flags that are set for the message.
-	FlagsMsgAttr = "FLAGS"
-	// The internal date of the message.
-	InternalDateMsgAttr = "INTERNALDATE"
-	// The RFC 822 size of the message.
-	SizeMsgAttr = "RFC822.SIZE"
-	// The unique identifier for the message.
-	UidMsgAttr = "UID"
-)
-
 // A PartSpecifier specifies which parts of the MIME entity should be returned.
 type PartSpecifier string
 
@@ -161,7 +141,7 @@ type Message struct {
 	// The mailbox items that are currently filled in. This map's values
 	// should not be used directly, they must only be used by libraries
 	// implementing extensions of the IMAP protocol.
-	Items map[string]interface{}
+	Items map[FetchItem]interface{}
 
 	// The message envelope.
 	Envelope *Envelope
@@ -181,14 +161,14 @@ type Message struct {
 	// The order in which items were requested. This order must be preserved
 	// because some bad IMAP clients (looking at you, Outlook!) refuse responses
 	// containing items in a different order.
-	itemsOrder []string
+	itemsOrder []FetchItem
 }
 
 // Create a new empty message that will contain the specified items.
-func NewMessage(seqNum uint32, items []string) *Message {
+func NewMessage(seqNum uint32, items []FetchItem) *Message {
 	msg := &Message{
 		SeqNum:     seqNum,
-		Items:      make(map[string]interface{}),
+		Items:      make(map[FetchItem]interface{}),
 		Body:       make(map[*BodySectionName]Literal),
 		itemsOrder: items,
 	}
@@ -202,34 +182,34 @@ func NewMessage(seqNum uint32, items []string) *Message {
 
 // Parse a message from fields.
 func (m *Message) Parse(fields []interface{}) error {
-	m.Items = make(map[string]interface{})
+	m.Items = make(map[FetchItem]interface{})
 	m.Body = map[*BodySectionName]Literal{}
 	m.itemsOrder = nil
 
-	var k string
+	var k FetchItem
 	for i, f := range fields {
 		if i%2 == 0 { // It's a key
-			var ok bool
-			if k, ok = f.(string); !ok {
+			if kstr, ok := f.(string); !ok {
 				return fmt.Errorf("cannot parse message: key is not a string, but a %T", f)
+			} else {
+				k = FetchItem(strings.ToUpper(kstr))
 			}
-			k = strings.ToUpper(k)
 		} else { // It's a value
 			m.Items[k] = nil
 			m.itemsOrder = append(m.itemsOrder, k)
 
 			switch k {
-			case BodyMsgAttr, BodyStructureMsgAttr:
+			case FetchBody, FetchBodyStructure:
 				bs, ok := f.([]interface{})
 				if !ok {
 					return fmt.Errorf("cannot parse message: BODYSTRUCTURE is not a list, but a %T", f)
 				}
 
-				m.BodyStructure = &BodyStructure{Extended: k == BodyStructureMsgAttr}
+				m.BodyStructure = &BodyStructure{Extended: k == FetchBodyStructure}
 				if err := m.BodyStructure.Parse(bs); err != nil {
 					return err
 				}
-			case EnvelopeMsgAttr:
+			case FetchEnvelope:
 				env, ok := f.([]interface{})
 				if !ok {
 					return fmt.Errorf("cannot parse message: ENVELOPE is not a list, but a %T", f)
@@ -239,7 +219,7 @@ func (m *Message) Parse(fields []interface{}) error {
 				if err := m.Envelope.Parse(env); err != nil {
 					return err
 				}
-			case FlagsMsgAttr:
+			case FetchFlags:
 				flags, ok := f.([]interface{})
 				if !ok {
 					return fmt.Errorf("cannot parse message: FLAGS is not a list, but a %T", f)
@@ -250,12 +230,12 @@ func (m *Message) Parse(fields []interface{}) error {
 					s, _ := flag.(string)
 					m.Flags[i] = CanonicalFlag(s)
 				}
-			case InternalDateMsgAttr:
+			case FetchInternalDate:
 				date, _ := f.(string)
 				m.InternalDate, _ = time.Parse(DateTimeLayout, date)
-			case SizeMsgAttr:
+			case FetchRFC822Size:
 				m.Size, _ = ParseNumber(f)
-			case UidMsgAttr:
+			case FetchUid:
 				m.Uid, _ = ParseNumber(f)
 			default:
 				// Likely to be a section of the body
@@ -273,24 +253,24 @@ func (m *Message) Parse(fields []interface{}) error {
 	return nil
 }
 
-func (m *Message) formatItem(k string) []interface{} {
+func (m *Message) formatItem(k FetchItem) []interface{} {
 	v := m.Items[k]
-	var kk interface{} = k
+	var kk interface{} = string(k)
 
-	switch strings.ToUpper(k) {
-	case BodyMsgAttr, BodyStructureMsgAttr:
+	switch k {
+	case FetchBody, FetchBodyStructure:
 		// Extension data is only returned with the BODYSTRUCTURE fetch
-		m.BodyStructure.Extended = k == BodyStructureMsgAttr
+		m.BodyStructure.Extended = k == FetchBodyStructure
 		v = m.BodyStructure.Format()
-	case EnvelopeMsgAttr:
+	case FetchEnvelope:
 		v = m.Envelope.Format()
-	case FlagsMsgAttr:
+	case FetchFlags:
 		v = FormatStringList(m.Flags)
-	case InternalDateMsgAttr:
+	case FetchInternalDate:
 		v = m.InternalDate
-	case SizeMsgAttr:
+	case FetchRFC822Size:
 		v = m.Size
-	case UidMsgAttr:
+	case FetchUid:
 		v = m.Uid
 	default:
 		for section, literal := range m.Body {
@@ -310,7 +290,7 @@ func (m *Message) Format() []interface{} {
 	var fields []interface{}
 
 	// First send ordered items
-	processed := make(map[string]bool)
+	processed := make(map[FetchItem]bool)
 	for _, k := range m.itemsOrder {
 		if _, ok := m.Items[k]; ok {
 			fields = append(fields, m.formatItem(k)...)
@@ -329,9 +309,9 @@ func (m *Message) Format() []interface{} {
 }
 
 // Get the body section with the specified name. Returns nil if it's not found.
-func (m *Message) GetBody(s string) Literal {
+func (m *Message) GetBody(item FetchItem) Literal {
 	for section, body := range m.Body {
-		if section.value == s {
+		if section.value == item {
 			return body
 		}
 	}
@@ -350,11 +330,11 @@ type BodySectionName struct {
 	// octets desired.
 	Partial []int
 
-	value string
+	value FetchItem
 }
 
 func (section *BodySectionName) parse(s string) (err error) {
-	section.value = s
+	section.value = FetchItem(s)
 
 	if s == "RFC822" {
 		s = "BODY[]"
@@ -422,17 +402,17 @@ func (section *BodySectionName) parse(s string) (err error) {
 	return nil
 }
 
-func (section *BodySectionName) String() (s string) {
+func (section *BodySectionName) FetchItem() FetchItem {
 	if section.value != "" {
-		return section.value
+		return FetchItem(section.value)
 	}
 
-	s = "BODY"
+	s := "BODY"
 	if section.Peek {
 		s += ".PEEK"
 	}
 
-	s += "[" + section.BodyPartName.String() + "]"
+	s += "[" + section.BodyPartName.string() + "]"
 
 	if len(section.Partial) > 0 {
 		s += "<"
@@ -446,7 +426,7 @@ func (section *BodySectionName) String() (s string) {
 		s += ">"
 	}
 
-	return
+	return FetchItem(s)
 }
 
 func (section *BodySectionName) resp() *BodySectionName {
@@ -462,7 +442,7 @@ func (section *BodySectionName) resp() *BodySectionName {
 		reset = true
 	}
 
-	if reset && !strings.HasPrefix(section.value, "RFC822") {
+	if reset && !strings.HasPrefix(string(section.value), "RFC822") {
 		section.value = "" // Reset cached value
 	}
 
@@ -489,10 +469,10 @@ func (section *BodySectionName) ExtractPartial(b []byte) []byte {
 }
 
 // ParseBodySectionName parses a body section name.
-func ParseBodySectionName(s string) (section *BodySectionName, err error) {
-	section = new(BodySectionName)
-	err = section.parse(s)
-	return
+func ParseBodySectionName(s FetchItem) (*BodySectionName, error) {
+	section := new(BodySectionName)
+	err := section.parse(string(s))
+	return section, err
 }
 
 // A body part name.
@@ -563,7 +543,7 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 	return nil
 }
 
-func (part *BodyPartName) String() (s string) {
+func (part *BodyPartName) string() string {
 	path := make([]string, len(part.Path))
 	for i, index := range part.Path {
 		path[i] = strconv.Itoa(index)
@@ -581,13 +561,13 @@ func (part *BodyPartName) String() (s string) {
 		}
 	}
 
-	s = strings.Join(path, ".")
+	s := strings.Join(path, ".")
 
 	if len(part.Fields) > 0 {
 		s += " (" + strings.Join(part.Fields, " ") + ")"
 	}
 
-	return
+	return s
 }
 
 // An address.

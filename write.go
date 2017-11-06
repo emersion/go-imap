@@ -184,7 +184,7 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeString(field.String())
 	case *BodySectionName:
 		// Can contain spaces - that's why we don't just pass it as a string
-		return w.writeString(field.String())
+		return w.writeString(string(field.FetchItem()))
 	}
 
 	return fmt.Errorf("imap: cannot format field: %v", field)
