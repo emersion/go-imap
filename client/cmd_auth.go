@@ -35,7 +35,7 @@ func (c *Client) Select(name string, readOnly bool) (*imap.MailboxStatus, error)
 		ReadOnly: readOnly,
 	}
 
-	mbox := &imap.MailboxStatus{Name: name, Items: make(map[string]interface{})}
+	mbox := &imap.MailboxStatus{Name: name, Items: make(map[imap.StatusItem]interface{})}
 	res := &responses.Select{
 		Mailbox: mbox,
 	}
@@ -210,7 +210,7 @@ func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
 // the queried mailbox.
 //
 // See RFC 3501 section 6.3.10 for a list of items that can be requested.
-func (c *Client) Status(name string, items []string) (*imap.MailboxStatus, error) {
+func (c *Client) Status(name string, items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	if err := c.ensureAuthenticated(); err != nil {
 		return nil, err
 	}

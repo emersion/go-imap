@@ -59,22 +59,42 @@ func (mbox *Mailbox) flags() []string {
 	return flags
 }
 
-func (mbox *Mailbox) Status(items []string) (*imap.MailboxStatus, error) {
+func (mbox *Mailbox) unseenSeqNum() uint32 {
+	for i, msg := range mbox.Messages {
+		seqNum := uint32(i + 1)
+
+		seen := false
+		for _, flag := range msg.Flags {
+			if flag == imap.SeenFlag {
+				seen = true
+				break
+			}
+		}
+
+		if !seen {
+			return seqNum
+		}
+	}
+	return 0
+}
+
+func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	status := imap.NewMailboxStatus(mbox.name, items)
 	status.Flags = mbox.flags()
 	status.PermanentFlags = []string{"\\*"}
+	status.UnseenSeqNum = mbox.unseenSeqNum()
 
 	for _, name := range items {
 		switch name {
-		case imap.MailboxMessages:
+		case imap.StatusMessages:
 			status.Messages = uint32(len(mbox.Messages))
-		case imap.MailboxUidNext:
+		case imap.StatusUidNext:
 			status.UidNext = mbox.uidNext()
-		case imap.MailboxUidValidity:
+		case imap.StatusUidValidity:
 			status.UidValidity = 1
-		case imap.MailboxRecent:
+		case imap.StatusRecent:
 			status.Recent = 0 // TODO
-		case imap.MailboxUnseen:
+		case imap.StatusUnseen:
 			status.Unseen = 0 // TODO
 		}
 	}

@@ -15,11 +15,11 @@ type Mailbox interface {
 	// Info returns this mailbox info.
 	Info() (*imap.MailboxInfo, error)
 
-	// Status returns this mailbox status. The fields Name, Flags and
-	// PermanentFlags in the returned MailboxStatus must be always populated. This
-	// function does not affect the state of any messages in the mailbox. See RFC
-	// 3501 section 6.3.10 for a list of items that can be requested.
-	Status(items []string) (*imap.MailboxStatus, error)
+	// Status returns this mailbox status. The fields Name, Flags, PermanentFlags
+	// and UnseenSeqNum in the returned MailboxStatus must be always populated.
+	// This function does not affect the state of any messages in the mailbox. See
+	// RFC 3501 section 6.3.10 for a list of items that can be requested.
+	Status(items []imap.StatusItem) (*imap.MailboxStatus, error)
 
 	// SetSubscribed adds or removes the mailbox to the server's set of "active"
 	// or "subscribed" mailboxes.

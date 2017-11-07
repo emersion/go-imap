@@ -30,7 +30,6 @@ func TestSelect_Ok(t *testing.T) {
 		"FLAGS":          false,
 		"EXISTS":         false,
 		"RECENT":         false,
-		"UNSEEN":         false,
 		"PERMANENTFLAGS": false,
 		"UIDNEXT":        false,
 		"UIDVALIDITY":    false,
@@ -45,8 +44,6 @@ func TestSelect_Ok(t *testing.T) {
 			got["EXISTS"] = true
 		} else if res == "* 0 RECENT" {
 			got["RECENT"] = true
-		} else if strings.HasPrefix(res, "* OK [UNSEEN 0]") {
-			got["UNSEEN"] = true
 		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\*)]") {
 			got["PERMANENTFLAGS"] = true
 		} else if strings.HasPrefix(res, "* OK [UIDNEXT 7]") {

@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+// A StatusItem is a mailbox status data item that can be retrieved with a
+// STATUS command. See RFC 3501 section 6.3.10.
+type StatusItem string
+
+const (
+	StatusMessages StatusItem = "MESSAGES"
+	StatusRecent = "RECENT"
+	StatusUidNext = "UIDNEXT"
+	StatusUidValidity = "UIDVALIDITY"
+	StatusUnseen = "UNSEEN"
+)
+
 // A FetchItem is a message data item that can be fetched.
 type FetchItem string
 

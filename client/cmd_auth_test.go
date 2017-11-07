@@ -47,9 +47,9 @@ func TestClient_Select(t *testing.T) {
 		ReadOnly:       false,
 		Flags:          []string{imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag},
 		PermanentFlags: []string{imap.DeletedFlag, imap.SeenFlag, "\\*"},
+		UnseenSeqNum:   12,
 		Messages:       172,
 		Recent:         1,
-		Unseen:         12,
 		UidNext:        4392,
 		UidValidity:    3857529045,
 	}
@@ -296,7 +296,7 @@ func TestClient_Status(t *testing.T) {
 	var mbox *imap.MailboxStatus
 	go func() {
 		var err error
-		mbox, err = c.Status("INBOX", []string{imap.MailboxMessages, imap.MailboxRecent})
+		mbox, err = c.Status("INBOX", []imap.StatusItem{imap.StatusMessages, imap.StatusRecent})
 		done <- err
 	}()
 

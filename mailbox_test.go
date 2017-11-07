@@ -111,11 +111,11 @@ func TestMailboxInfo_Match(t *testing.T) {
 }
 
 func TestNewMailboxStatus(t *testing.T) {
-	status := imap.NewMailboxStatus("INBOX", []string{"MESSAGES", "UNSEEN"})
+	status := imap.NewMailboxStatus("INBOX", []imap.StatusItem{imap.StatusMessages, imap.StatusUnseen})
 
 	expected := &imap.MailboxStatus{
 		Name:  "INBOX",
-		Items: map[string]interface{}{"MESSAGES": nil, "UNSEEN": nil},
+		Items: map[imap.StatusItem]interface{}{imap.StatusMessages: nil, imap.StatusUnseen: nil},
 	}
 
 	if !reflect.DeepEqual(expected, status) {
@@ -136,12 +136,12 @@ var mailboxStatusTests = [...]struct {
 			"UIDVALIDITY", uint32(4242),
 		},
 		status: &imap.MailboxStatus{
-			Items: map[string]interface{}{
-				"MESSAGES":    nil,
-				"RECENT":      nil,
-				"UNSEEN":      nil,
-				"UIDNEXT":     nil,
-				"UIDVALIDITY": nil,
+			Items: map[imap.StatusItem]interface{}{
+				imap.StatusMessages:    nil,
+				imap.StatusRecent:      nil,
+				imap.StatusUnseen:      nil,
+				imap.StatusUidNext:     nil,
+				imap.StatusUidValidity: nil,
 			},
 			Messages:    42,
 			Recent:      1,

@@ -341,7 +341,7 @@ func (c *Client) handleUnilateral() {
 					c.locker.Unlock()
 
 					c.mailbox.ItemsLocker.Lock()
-					c.mailbox.Items[imap.MailboxMessages] = nil
+					c.mailbox.Items[imap.StatusMessages] = nil
 					c.mailbox.ItemsLocker.Unlock()
 				}
 
@@ -359,7 +359,7 @@ func (c *Client) handleUnilateral() {
 					c.locker.Unlock()
 
 					c.mailbox.ItemsLocker.Lock()
-					c.mailbox.Items[imap.MailboxRecent] = nil
+					c.mailbox.Items[imap.StatusRecent] = nil
 					c.mailbox.ItemsLocker.Unlock()
 				}
 

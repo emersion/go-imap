@@ -29,10 +29,9 @@ func (cmd *Select) Handle(conn Conn) error {
 		return err
 	}
 
-	items := []string{
-		imap.MailboxFlags, imap.MailboxPermanentFlags,
-		imap.MailboxMessages, imap.MailboxRecent, imap.MailboxUnseen,
-		imap.MailboxUidNext, imap.MailboxUidValidity,
+	items := []imap.StatusItem{
+		imap.StatusMessages, imap.StatusRecent, imap.StatusUnseen,
+		imap.StatusUidNext, imap.StatusUidValidity,
 	}
 
 	status, err := mbox.Status(items)
@@ -208,7 +207,7 @@ func (cmd *Status) Handle(conn Conn) error {
 	}
 
 	// Only keep items thqat have been requested
-	items := make(map[string]interface{})
+	items := make(map[imap.StatusItem]interface{})
 	for _, k := range cmd.Items {
 		items[k] = status.Items[k]
 	}
@@ -246,10 +245,13 @@ func (cmd *Append) Handle(conn Conn) error {
 	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
 	// Do this only if the backend doesn't send updates itself
 	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == mbox.Name() {
-		status, err := mbox.Status([]string{imap.MailboxMessages})
+		status, err := mbox.Status([]imap.StatusItem{imap.StatusMessages})
 		if err != nil {
 			return err
 		}
+		status.Flags = nil
+		status.PermanentFlags = nil
+		status.UnseenSeqNum = 0
 
 		res := &responses.Select{Mailbox: status}
 		if err := conn.WriteResp(res); err != nil {
