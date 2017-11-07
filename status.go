@@ -39,9 +39,11 @@ const (
 	StatusRespBye = "BYE"
 )
 
+type StatusRespCode string
+
 // Status response codes defined in RFC 3501 section 7.1.
 const (
-	CodeAlert          = "ALERT"
+	CodeAlert StatusRespCode = "ALERT"
 	CodeBadCharset     = "BADCHARSET"
 	CodeCapability     = "CAPABILITY"
 	CodeParse          = "PARSE"
@@ -63,7 +65,7 @@ type StatusResp struct {
 	Type StatusRespType
 	// The status code.
 	// See https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml
-	Code string
+	Code StatusRespCode
 	// Arguments provided with the status code.
 	Arguments []interface{}
 	// The status info.

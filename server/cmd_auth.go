@@ -47,7 +47,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return err
 	}
 
-	code := imap.CodeReadWrite
+	var code imap.StatusRespCode = imap.CodeReadWrite
 	if ctx.MailboxReadOnly {
 		code = imap.CodeReadOnly
 	}

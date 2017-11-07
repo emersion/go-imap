@@ -190,12 +190,12 @@ func (w *Writer) writeField(field interface{}) error {
 	return fmt.Errorf("imap: cannot format field: %v", field)
 }
 
-func (w *Writer) writeRespCode(code string, args []interface{}) error {
+func (w *Writer) writeRespCode(code StatusRespCode, args []interface{}) error {
 	if err := w.writeString(string(respCodeStart)); err != nil {
 		return err
 	}
 
-	fields := []interface{}{code}
+	fields := []interface{}{string(code)}
 	fields = append(fields, args...)
 
 	if err := w.writeFields(fields); err != nil {

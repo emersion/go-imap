@@ -420,7 +420,7 @@ func TestReader_ReadRespCode(t *testing.T) {
 	b, r := newReader("[CAPABILITY NOOP STARTTLS]")
 	if code, fields, err := r.ReadRespCode(); err != nil {
 		t.Error(err)
-	} else if code != "CAPABILITY" {
+	} else if code != imap.CodeCapability {
 		t.Error("Response code has not the expected value:", code)
 	} else if len(fields) != 2 {
 		t.Error("Expected 2 fields, but got", len(fields))

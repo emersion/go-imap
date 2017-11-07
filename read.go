@@ -372,7 +372,7 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 	return
 }
 
-func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
+func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err error) {
 	char, _, err := r.ReadRune()
 	if err != nil {
 		return
@@ -394,15 +394,16 @@ func (r *Reader) ReadRespCode() (code string, fields []interface{}, err error) {
 		return
 	}
 
-	code, ok := fields[0].(string)
+	codeStr, ok := fields[0].(string)
 	if !ok {
 		err = newParseError("response code doesn't start with a string atom")
 		return
 	}
-	if code == "" {
+	if codeStr == "" {
 		err = newParseError("response code is empty")
 		return
 	}
+	code = StatusRespCode(strings.ToUpper(codeStr))
 
 	fields = fields[1:]
 
