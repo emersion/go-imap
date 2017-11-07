@@ -22,7 +22,7 @@ func (cmd *Search) Command() *imap.Command {
 	args = append(args, cmd.Criteria.Format()...)
 
 	return &imap.Command{
-		Name:      imap.Search,
+		Name:      "SEARCH",
 		Arguments: args,
 	}
 }

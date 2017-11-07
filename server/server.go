@@ -153,42 +153,42 @@ func New(bkd backend.Backend) *Server {
 	}
 
 	s.commands = map[string]HandlerFactory{
-		imap.Noop:       func() Handler { return &Noop{} },
-		imap.Capability: func() Handler { return &Capability{} },
-		imap.Logout:     func() Handler { return &Logout{} },
+		"NOOP":       func() Handler { return &Noop{} },
+		"CAPABILITY": func() Handler { return &Capability{} },
+		"LOGOUT":     func() Handler { return &Logout{} },
 
-		imap.StartTLS:     func() Handler { return &StartTLS{} },
-		imap.Login:        func() Handler { return &Login{} },
-		imap.Authenticate: func() Handler { return &Authenticate{} },
+		"STARTTLS":     func() Handler { return &StartTLS{} },
+		"LOGIN":        func() Handler { return &Login{} },
+		"AUTHENTICATE": func() Handler { return &Authenticate{} },
 
-		imap.Select: func() Handler { return &Select{} },
-		imap.Examine: func() Handler {
+		"SELECT": func() Handler { return &Select{} },
+		"EXAMINE": func() Handler {
 			hdlr := &Select{}
 			hdlr.ReadOnly = true
 			return hdlr
 		},
-		imap.Create:      func() Handler { return &Create{} },
-		imap.Delete:      func() Handler { return &Delete{} },
-		imap.Rename:      func() Handler { return &Rename{} },
-		imap.Subscribe:   func() Handler { return &Subscribe{} },
-		imap.Unsubscribe: func() Handler { return &Unsubscribe{} },
-		imap.List:        func() Handler { return &List{} },
-		imap.Lsub: func() Handler {
+		"CREATE":      func() Handler { return &Create{} },
+		"DELETE":      func() Handler { return &Delete{} },
+		"RENAME":      func() Handler { return &Rename{} },
+		"SUBSCRIBE":   func() Handler { return &Subscribe{} },
+		"UNSUBSCRIBE": func() Handler { return &Unsubscribe{} },
+		"LIST":        func() Handler { return &List{} },
+		"LSUB": func() Handler {
 			hdlr := &List{}
 			hdlr.Subscribed = true
 			return hdlr
 		},
-		imap.Status: func() Handler { return &Status{} },
-		imap.Append: func() Handler { return &Append{} },
+		"STATUS": func() Handler { return &Status{} },
+		"APPEND": func() Handler { return &Append{} },
 
-		imap.Check:   func() Handler { return &Check{} },
-		imap.Close:   func() Handler { return &Close{} },
-		imap.Expunge: func() Handler { return &Expunge{} },
-		imap.Search:  func() Handler { return &Search{} },
-		imap.Fetch:   func() Handler { return &Fetch{} },
-		imap.Store:   func() Handler { return &Store{} },
-		imap.Copy:    func() Handler { return &Copy{} },
-		imap.Uid:     func() Handler { return &Uid{} },
+		"CHECK":   func() Handler { return &Check{} },
+		"CLOSE":   func() Handler { return &Close{} },
+		"EXPUNGE": func() Handler { return &Expunge{} },
+		"SEARCH":  func() Handler { return &Search{} },
+		"FETCH":   func() Handler { return &Fetch{} },
+		"STORE":   func() Handler { return &Store{} },
+		"COPY":    func() Handler { return &Copy{} },
+		"UID":     func() Handler { return &Uid{} },
 	}
 
 	return s

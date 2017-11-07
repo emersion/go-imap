@@ -9,7 +9,7 @@ type Close struct{}
 
 func (cmd *Close) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Close,
+		Name: "CLOSE",
 	}
 }
 

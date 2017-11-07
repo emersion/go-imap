@@ -9,7 +9,7 @@ type Check struct{}
 
 func (cmd *Check) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Check,
+		Name: "CHECK",
 	}
 }
 

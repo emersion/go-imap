@@ -26,7 +26,7 @@ var (
 
 // SupportStartTLS checks if the server supports STARTTLS.
 func (c *Client) SupportStartTLS() (bool, error) {
-	return c.Support(imap.StartTLS)
+	return c.Support("STARTTLS")
 }
 
 // StartTLS starts TLS negotiation.
@@ -105,7 +105,7 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 	c.caps = nil // Capabilities change when user is logged in
 	c.locker.Unlock()
 
-	if status.Code == imap.Capability {
+	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
 
@@ -144,7 +144,7 @@ func (c *Client) Login(username, password string) error {
 	c.caps = nil // Capabilities change when user is logged in
 	c.locker.Unlock()
 
-	if status.Code == imap.Capability {
+	if status.Code == "CAPABILITY" {
 		c.gotStatusCaps(status.Arguments)
 	}
 	return nil

@@ -9,7 +9,7 @@ type Capability struct{}
 
 func (c *Capability) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Capability,
+		Name: "CAPABILITY",
 	}
 }
 

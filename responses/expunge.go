@@ -4,6 +4,8 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const expungeName = "EXPUNGE"
+
 // An EXPUNGE response.
 // See RFC 3501 section 7.4.1
 type Expunge struct {
@@ -12,7 +14,7 @@ type Expunge struct {
 
 func (r *Expunge) Handle(resp imap.Resp) error {
 	name, fields, ok := imap.ParseNamedResp(resp)
-	if !ok || name != imap.Expunge {
+	if !ok || name != expungeName {
 		return ErrUnhandled
 	}
 
@@ -31,7 +33,7 @@ func (r *Expunge) Handle(resp imap.Resp) error {
 
 func (r *Expunge) WriteTo(w *imap.Writer) error {
 	for seqNum := range r.SeqNums {
-		resp := imap.NewUntaggedResp([]interface{}{seqNum, imap.Expunge})
+		resp := imap.NewUntaggedResp([]interface{}{seqNum, expungeName})
 		if err := resp.WriteTo(w); err != nil {
 			return err
 		}

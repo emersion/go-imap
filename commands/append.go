@@ -37,7 +37,7 @@ func (cmd *Append) Command() *imap.Command {
 	args = append(args, cmd.Message)
 
 	return &imap.Command{
-		Name:      imap.Append,
+		Name:      "APPEND",
 		Arguments: args,
 	}
 }

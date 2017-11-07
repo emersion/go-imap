@@ -24,7 +24,7 @@ func (cmd *Fetch) Command() *imap.Command {
 	}
 
 	return &imap.Command{
-		Name:      imap.Fetch,
+		Name:      "FETCH",
 		Arguments: []interface{}{cmd.SeqSet, items},
 	}
 }

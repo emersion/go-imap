@@ -4,6 +4,11 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const (
+	listName = "LIST"
+	lsubName = "LSUB"
+)
+
 // A LIST response.
 // If Subscribed is set to true, LSUB will be used instead.
 // See RFC 3501 section 7.2.2
@@ -14,9 +19,9 @@ type List struct {
 
 func (r *List) Name() string {
 	if r.Subscribed {
-		return imap.Lsub
+		return lsubName
 	} else {
-		return imap.List
+		return listName
 	}
 }
 

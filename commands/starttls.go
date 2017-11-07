@@ -9,7 +9,7 @@ type StartTLS struct{}
 
 func (cmd *StartTLS) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.StartTLS,
+		Name: "STARTTLS",
 	}
 }
 

@@ -23,7 +23,7 @@ func (cmd *Status) Command() *imap.Command {
 	}
 
 	return &imap.Command{
-		Name:      imap.Status,
+		Name:      "STATUS",
 		Arguments: []interface{}{mailbox, items},
 	}
 }

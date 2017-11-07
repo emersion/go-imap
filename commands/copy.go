@@ -17,7 +17,7 @@ func (cmd *Copy) Command() *imap.Command {
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name:      imap.Copy,
+		Name:      "COPY",
 		Arguments: []interface{}{cmd.SeqSet, mailbox},
 	}
 }

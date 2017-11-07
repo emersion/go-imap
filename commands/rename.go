@@ -19,7 +19,7 @@ func (cmd *Rename) Command() *imap.Command {
 	newName, _ := enc.String(cmd.New)
 
 	return &imap.Command{
-		Name:      imap.Rename,
+		Name:      "RENAME",
 		Arguments: []interface{}{existingName, newName},
 	}
 }

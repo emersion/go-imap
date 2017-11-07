@@ -9,7 +9,7 @@ type Logout struct{}
 
 func (c *Logout) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Logout,
+		Name: "LOGOUT",
 	}
 }
 

@@ -328,7 +328,7 @@ func (c *Client) handleUnilateral() {
 			}
 
 			switch name {
-			case imap.Capability:
+			case "CAPABILITY":
 				c.gotStatusCaps(fields)
 			case "EXISTS":
 				if c.Mailbox() == nil {

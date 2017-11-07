@@ -7,6 +7,8 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const statusName = "STATUS"
+
 // A STATUS response.
 // See RFC 3501 section 7.2.4
 type Status struct {
@@ -20,7 +22,7 @@ func (r *Status) Handle(resp imap.Resp) error {
 	mbox := r.Mailbox
 
 	name, fields, ok := imap.ParseNamedResp(resp)
-	if !ok || name != imap.Status {
+	if !ok || name != statusName {
 		return ErrUnhandled
 	} else if len(fields) < 2 {
 		return errNotEnoughFields
@@ -50,6 +52,6 @@ func (r *Status) Handle(resp imap.Resp) error {
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
 	name, _ := utf7.Encoding.NewEncoder().String(mbox.Name)
-	fields := []interface{}{imap.Status, name, mbox.Format()}
+	fields := []interface{}{statusName, name, mbox.Format()}
 	return imap.NewUntaggedResp(fields).WriteTo(w)
 }

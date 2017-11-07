@@ -9,7 +9,7 @@ type Noop struct{}
 
 func (c *Noop) Command() *imap.Command {
 	return &imap.Command{
-		Name: imap.Noop,
+		Name: "NOOP",
 	}
 }
 

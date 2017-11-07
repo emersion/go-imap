@@ -16,14 +16,14 @@ func (cmd *Subscribe) Command() *imap.Command {
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name:      imap.Subscribe,
+		Name:      "SUBSCRIBE",
 		Arguments: []interface{}{mailbox},
 	}
 }
 
 func (cmd *Subscribe) Parse(fields []interface{}) error {
 	if len(fields) < 0 {
-		return errors.New("No enogh arguments")
+		return errors.New("No enough arguments")
 	}
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
@@ -44,7 +44,7 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
 
 	return &imap.Command{
-		Name:      imap.Unsubscribe,
+		Name:      "UNSUBSCRIBE",
 		Arguments: []interface{}{mailbox},
 	}
 }

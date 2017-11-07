@@ -4,6 +4,8 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const fetchName = "FETCH"
+
 // A FETCH response.
 // See RFC 3501 section 7.4.2
 type Fetch struct {
@@ -12,7 +14,7 @@ type Fetch struct {
 
 func (r *Fetch) Handle(resp imap.Resp) error {
 	name, fields, ok := imap.ParseNamedResp(resp)
-	if !ok || name != imap.Fetch {
+	if !ok || name != fetchName {
 		return ErrUnhandled
 	} else if len(fields) < 1 {
 		return errNotEnoughFields
@@ -35,7 +37,7 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 
 func (r *Fetch) WriteTo(w *imap.Writer) error {
 	for msg := range r.Messages {
-		resp := imap.NewUntaggedResp([]interface{}{msg.SeqNum, imap.Fetch, msg.Format()})
+		resp := imap.NewUntaggedResp([]interface{}{msg.SeqNum, fetchName, msg.Format()})
 		if err := resp.WriteTo(w); err != nil {
 			return err
 		}

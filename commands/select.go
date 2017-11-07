@@ -15,9 +15,9 @@ type Select struct {
 }
 
 func (cmd *Select) Command() *imap.Command {
-	name := imap.Select
+	name := "SELECT"
 	if cmd.ReadOnly {
-		name = imap.Examine
+		name = "EXAMINE"
 	}
 
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)

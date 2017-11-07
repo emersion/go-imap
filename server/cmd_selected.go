@@ -302,6 +302,6 @@ func (cmd *Uid) Handle(conn Conn) error {
 
 	return ErrStatusResp(&imap.StatusResp{
 		Type: imap.StatusOk,
-		Info: imap.Uid + " " + inner.Name + " completed",
+		Info: "UID " + inner.Name + " completed",
 	})
 }

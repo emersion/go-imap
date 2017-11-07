@@ -14,7 +14,7 @@ type Login struct {
 
 func (cmd *Login) Command() *imap.Command {
 	return &imap.Command{
-		Name:      imap.Login,
+		Name:      "LOGIN",
 		Arguments: []interface{}{cmd.Username, cmd.Password},
 	}
 }

@@ -17,9 +17,9 @@ type List struct {
 }
 
 func (cmd *List) Command() *imap.Command {
-	name := imap.List
+	name := "LIST"
 	if cmd.Subscribed {
-		name = imap.Lsub
+		name = "LSUB"
 	}
 
 	enc := utf7.Encoding.NewEncoder()

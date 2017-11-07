@@ -20,7 +20,7 @@ func (cmd *Uid) Command() *imap.Command {
 	args = append(args, inner.Arguments...)
 
 	return &imap.Command{
-		Name:      imap.Uid,
+		Name:      "UID",
 		Arguments: args,
 	}
 }

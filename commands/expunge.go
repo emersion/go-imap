@@ -8,7 +8,7 @@ import (
 type Expunge struct{}
 
 func (cmd *Expunge) Command() *imap.Command {
-	return &imap.Command{Name: imap.Expunge}
+	return &imap.Command{Name: "EXPUNGE"}
 }
 
 func (cmd *Expunge) Parse(fields []interface{}) error {

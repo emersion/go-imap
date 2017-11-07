@@ -11,7 +11,7 @@ type Capability struct {
 }
 
 func (r *Capability) WriteTo(w *imap.Writer) error {
-	fields := []interface{}{imap.Capability}
+	fields := []interface{}{"CAPABILITY"}
 	for _, cap := range r.Caps {
 		fields = append(fields, cap)
 	}
