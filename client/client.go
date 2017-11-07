@@ -70,10 +70,10 @@ type Client struct {
 	// prevent deadlocks.
 	Updates chan<- interface{}
 
-	// ErrorLog specifies an optional logger for errors accepting
-	// connections and unexpected behavior from handlers.
-	// If nil, logging goes to os.Stderr via the log package's
-	// standard logger.
+	// ErrorLog specifies an optional logger for errors accepting connections and
+	// unexpected behavior from handlers. By default, logging goes to os.Stderr
+	// via the log package's standard logger. The logger must be safe to use
+	// simultaneously from multiple goroutines.
 	ErrorLog imap.Logger
 
 	// Timeout specifies a maximum amount of time to wait on a command.
