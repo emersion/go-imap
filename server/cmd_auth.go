@@ -52,7 +52,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		code = imap.CodeReadOnly
 	}
 	return ErrStatusResp(&imap.StatusResp{
-		Type: imap.StatusOk,
+		Type: imap.StatusRespOk,
 		Code: code,
 	})
 }
@@ -230,7 +230,7 @@ func (cmd *Append) Handle(conn Conn) error {
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err == backend.ErrNoSuchMailbox {
 		return ErrStatusResp(&imap.StatusResp{
-			Type: imap.StatusNo,
+			Type: imap.StatusRespNo,
 			Code: imap.CodeTryCreate,
 			Info: err.Error(),
 		})

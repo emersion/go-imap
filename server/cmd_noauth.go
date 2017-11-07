@@ -36,7 +36,7 @@ func (cmd *StartTLS) Handle(conn Conn) error {
 	// Send an OK status response to let the client know that the TLS handshake
 	// can begin
 	return ErrStatusResp(&imap.StatusResp{
-		Type: imap.StatusOk,
+		Type: imap.StatusRespOk,
 		Info: "Begin TLS negotiation now",
 	})
 }
@@ -62,7 +62,7 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 
 func afterAuthStatus(conn Conn) error {
 	return ErrStatusResp(&imap.StatusResp{
-		Type:      imap.StatusOk,
+		Type:      imap.StatusRespOk,
 		Code:      imap.CodeCapability,
 		Arguments: imap.FormatStringList(conn.Capabilities()),
 	})

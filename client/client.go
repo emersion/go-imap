@@ -303,11 +303,11 @@ func (c *Client) handleUnilateral() {
 			}
 
 			switch resp.Type {
-			case imap.StatusOk, imap.StatusNo, imap.StatusBad:
+			case imap.StatusRespOk, imap.StatusRespNo, imap.StatusRespBad:
 				if c.Updates != nil {
 					c.Updates <- &StatusUpdate{resp}
 				}
-			case imap.StatusBye:
+			case imap.StatusRespBye:
 				c.locker.Lock()
 				c.state = imap.LogoutState
 				c.mailbox = nil
@@ -407,11 +407,11 @@ func (c *Client) handleGreetAndStartReading() error {
 
 		c.locker.Lock()
 		switch status.Type {
-		case imap.StatusPreauth:
+		case imap.StatusRespPreauth:
 			c.state = imap.AuthenticatedState
-		case imap.StatusBye:
+		case imap.StatusRespBye:
 			c.state = imap.LogoutState
-		case imap.StatusOk:
+		case imap.StatusRespOk:
 			c.state = imap.NotAuthenticatedState
 		default:
 			c.state = imap.LogoutState

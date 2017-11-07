@@ -81,7 +81,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 			flags[i] = f
 		}
 		statusRes := &imap.StatusResp{
-			Type:      imap.StatusOk,
+			Type:      imap.StatusRespOk,
 			Code:      imap.CodePermanentFlags,
 			Arguments: []interface{}{flags},
 			Info:      "Flags permitted.",
@@ -93,7 +93,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 
 	if mbox.UnseenSeqNum > 0 {
 		statusRes := &imap.StatusResp{
-			Type:      imap.StatusOk,
+			Type:      imap.StatusRespOk,
 			Code:      imap.CodeUnseen,
 			Arguments: []interface{}{mbox.UnseenSeqNum},
 			Info:      fmt.Sprintf("Message %d is first unseen", mbox.UnseenSeqNum),
@@ -117,7 +117,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 			}
 		case imap.StatusUidNext:
 			statusRes := &imap.StatusResp{
-				Type:      imap.StatusOk,
+				Type:      imap.StatusRespOk,
 				Code:      imap.CodeUidNext,
 				Arguments: []interface{}{mbox.UidNext},
 				Info:      "Predicted next UID",
@@ -127,7 +127,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 			}
 		case imap.StatusUidValidity:
 			statusRes := &imap.StatusResp{
-				Type:      imap.StatusOk,
+				Type:      imap.StatusRespOk,
 				Code:      imap.CodeUidValidity,
 				Arguments: []interface{}{mbox.UidValidity},
 				Info:      "UIDs valid",

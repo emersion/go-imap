@@ -49,7 +49,7 @@ func ReadResp(r *Reader) (Resp, error) {
 			if name, ok := atom.(string); ok {
 				status := StatusRespType(name)
 				switch status {
-				case StatusOk, StatusNo, StatusBad, StatusPreauth, StatusBye:
+				case StatusRespOk, StatusRespNo, StatusRespBad, StatusRespPreauth, StatusRespBye:
 					resp := &StatusResp{
 						Tag:  tag,
 						Type: status,

@@ -38,7 +38,7 @@ type Logout struct {
 
 func (cmd *Logout) Handle(conn Conn) error {
 	res := &imap.StatusResp{
-		Type: imap.StatusBye,
+		Type: imap.StatusRespBye,
 		Info: "Closing connection",
 	}
 

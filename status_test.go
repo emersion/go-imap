@@ -15,14 +15,14 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &imap.StatusResp{
 				Tag:  "*",
-				Type: imap.StatusOk,
+				Type: imap.StatusRespOk,
 			},
 			expected: "* OK \r\n",
 		},
 		{
 			input: &imap.StatusResp{
 				Tag:  "*",
-				Type: imap.StatusOk,
+				Type: imap.StatusRespOk,
 				Info: "LOGIN completed",
 			},
 			expected: "* OK LOGIN completed\r\n",
@@ -30,7 +30,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &imap.StatusResp{
 				Tag:  "42",
-				Type: imap.StatusBad,
+				Type: imap.StatusRespBad,
 				Info: "Invalid arguments",
 			},
 			expected: "42 BAD Invalid arguments\r\n",
@@ -38,7 +38,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &imap.StatusResp{
 				Tag:  "a001",
-				Type: imap.StatusOk,
+				Type: imap.StatusRespOk,
 				Code: "READ-ONLY",
 				Info: "EXAMINE completed",
 			},
@@ -47,7 +47,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 		{
 			input: &imap.StatusResp{
 				Tag:       "*",
-				Type:      imap.StatusOk,
+				Type:      imap.StatusRespOk,
 				Code:      "CAPABILITY",
 				Arguments: []interface{}{"IMAP4rev1"},
 				Info:      "IMAP4rev1 service ready",
@@ -73,19 +73,19 @@ func TestStatusResp_WriteTo(t *testing.T) {
 }
 
 func TestStatus_Err(t *testing.T) {
-	status := &imap.StatusResp{Type: imap.StatusOk, Info: "All green"}
+	status := &imap.StatusResp{Type: imap.StatusRespOk, Info: "All green"}
 	if err := status.Err(); err != nil {
 		t.Error("OK status returned error:", err)
 	}
 
-	status = &imap.StatusResp{Type: imap.StatusBad, Info: "BAD!"}
+	status = &imap.StatusResp{Type: imap.StatusRespBad, Info: "BAD!"}
 	if err := status.Err(); err == nil {
 		t.Error("BAD status didn't returned error:", err)
 	} else if err.Error() != "BAD!" {
 		t.Error("BAD status returned incorrect error message:", err)
 	}
 
-	status = &imap.StatusResp{Type: imap.StatusNo, Info: "NO!"}
+	status = &imap.StatusResp{Type: imap.StatusRespNo, Info: "NO!"}
 	if err := status.Err(); err == nil {
 		t.Error("NO status didn't returned error:", err)
 	} else if err.Error() != "NO!" {

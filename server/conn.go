@@ -227,7 +227,7 @@ func (c *conn) greet() error {
 	}
 
 	greeting := &imap.StatusResp{
-		Type:      imap.StatusOk,
+		Type:      imap.StatusRespOk,
 		Code:      imap.CodeCapability,
 		Arguments: args,
 		Info:      "IMAP4rev1 Service Ready",
@@ -294,7 +294,7 @@ func (c *conn) serve() error {
 		if err != nil {
 			if imap.IsParseError(err) {
 				res = &imap.StatusResp{
-					Type: imap.StatusBad,
+					Type: imap.StatusRespBad,
 					Info: err.Error(),
 				}
 			} else {
@@ -306,7 +306,7 @@ func (c *conn) serve() error {
 			if err := cmd.Parse(fields); err != nil {
 				res = &imap.StatusResp{
 					Tag:  cmd.Tag,
-					Type: imap.StatusBad,
+					Type: imap.StatusRespBad,
 					Info: err.Error(),
 				}
 			} else {
@@ -315,7 +315,7 @@ func (c *conn) serve() error {
 				if err != nil {
 					res = &imap.StatusResp{
 						Tag:  cmd.Tag,
-						Type: imap.StatusBad,
+						Type: imap.StatusRespBad,
 						Info: err.Error(),
 					}
 				}
@@ -331,7 +331,7 @@ func (c *conn) serve() error {
 				continue
 			}
 
-			if up != nil && res.Type == imap.StatusOk {
+			if up != nil && res.Type == imap.StatusRespOk {
 				if err := up.Upgrade(c); err != nil {
 					c.s.ErrorLog.Println("cannot upgrade connection:", err)
 					return err
@@ -369,19 +369,19 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 		res = statusErr.resp
 	} else if hdlrErr != nil {
 		res = &imap.StatusResp{
-			Type: imap.StatusNo,
+			Type: imap.StatusRespNo,
 			Info: hdlrErr.Error(),
 		}
 	} else {
 		res = &imap.StatusResp{
-			Type: imap.StatusOk,
+			Type: imap.StatusRespOk,
 		}
 	}
 
 	if res != nil {
 		res.Tag = cmd.Tag
 
-		if res.Type == imap.StatusOk && res.Info == "" {
+		if res.Type == imap.StatusRespOk && res.Info == "" {
 			res.Info = cmd.Name + " completed"
 		}
 	}
