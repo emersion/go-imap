@@ -154,10 +154,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 
 // Flush writes any buffered data to the underlying connection.
 func (c *Conn) Flush() error {
-	if err := c.Writer.Flush(); err != nil {
-		return err
-	}
-	return nil
+	return c.Writer.Flush()
 }
 
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
