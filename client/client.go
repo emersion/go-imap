@@ -257,6 +257,17 @@ func (c *Client) Mailbox() *imap.MailboxStatus {
 	return mbox
 }
 
+// SetState sets this connection's internal state.
+//
+// This function should not be called directly, it must only be used by
+// libraries implementing extensions of the IMAP protocol.
+func (c *Client) SetState(state imap.ConnState, mailbox *imap.MailboxStatus) {
+	c.locker.Lock()
+	c.state = state
+	c.mailbox = mailbox
+	c.locker.Unlock()
+}
+
 // Execute executes a generic command. cmdr is a value that can be converted to
 // a raw command and h is a response handler. The function returns when the
 // command has completed or failed, in this case err is nil. A non-nil err value
