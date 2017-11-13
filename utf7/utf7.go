@@ -31,4 +31,4 @@ func (e enc) NewEncoder() *encoding.Encoder {
 }
 
 // Encoding is the modified UTF-7 encoding.
-var Encoding = enc{}
+var Encoding encoding.Encoding = enc{}
