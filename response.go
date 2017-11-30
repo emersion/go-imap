@@ -117,9 +117,9 @@ func NewUntaggedResp(fields []interface{}) *DataResp {
 func (r *DataResp) resp() {}
 
 func (r *DataResp) WriteTo(w *Writer) error {
-	tag := r.Tag
-	if tag == "" {
-		tag = "*"
+	tag := Atom(r.Tag)
+	if tag == ""  {
+		tag = Atom("*")
 	}
 
 	fields := []interface{}{tag}

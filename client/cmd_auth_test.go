@@ -217,8 +217,8 @@ func TestClient_List(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "LIST \"\" %" {
-		t.Fatalf("client sent command %v, want %v", cmd, "LIST \"\" %")
+	if cmd != "LIST \"\" \"%\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "LIST \"\" \"%\"")
 	}
 
 	s.WriteString("* LIST (flag1) \"/\" INBOX\r\n")
@@ -266,8 +266,8 @@ func TestClient_Lsub(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "LSUB \"\" %" {
-		t.Fatalf("client sent command %v, want %v", cmd, "LSUB \"\" %")
+	if cmd != "LSUB \"\" \"%\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "LSUB \"\" \"%\"")
 	}
 
 	s.WriteString("* LSUB () \"/\" INBOX\r\n")

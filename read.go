@@ -89,6 +89,14 @@ func ParseString(f interface{}) (string, error) {
 		return s, nil
 	}
 
+	// Useful for tests
+	if q, ok := f.(Quoted); ok {
+		return string(q), nil
+	}
+	if a, ok := f.(Atom); ok {
+		return string(a), nil
+	}
+
 	if l, ok := f.(Literal); ok {
 		b := make([]byte, l.Len())
 		if _, err := io.ReadFull(l, b); err != nil {

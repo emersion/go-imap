@@ -21,7 +21,7 @@ func (cmd *Store) Command() *imap.Command {
 	}
 }
 
-func (cmd *Store) Parse(fields []interface{}) (err error) {
+func (cmd *Store) Parse(fields []interface{}) error {
 	if len(fields) < 3 {
 		return errors.New("No enough arguments")
 	}
@@ -30,6 +30,7 @@ func (cmd *Store) Parse(fields []interface{}) (err error) {
 	if !ok {
 		return errors.New("Invalid sequence set")
 	}
+	var err error
 	if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
 		return err
 	}
@@ -40,7 +41,7 @@ func (cmd *Store) Parse(fields []interface{}) (err error) {
 		cmd.Item = imap.StoreItem(strings.ToUpper(item))
 	}
 
+	// TODO: could be fields[2:] according to RFC 3501 page 91 "store-att-flags"
 	cmd.Value = fields[2]
-
-	return
+	return nil
 }

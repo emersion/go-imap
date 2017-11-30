@@ -171,6 +171,15 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value
 		return ErrNoMailboxSelected
 	}
 
+	// TODO: this could break extensions (this only works when item is FLAGS)
+	if fields, ok := value.([]interface{}); ok {
+		for i, field := range fields {
+			if s, ok := field.(string); ok {
+				fields[i] = imap.Atom(s)
+			}
+		}
+	}
+
 	// If ch is nil, the updated values are data which will be lost, so don't
 	// retrieve it.
 	if ch == nil {

@@ -227,7 +227,7 @@ func (m *Message) Parse(fields []interface{}) error {
 
 				m.Flags = make([]string, len(flags))
 				for i, flag := range flags {
-					s, _ := flag.(string)
+					s, _ := ParseString(flag)
 					m.Flags[i] = CanonicalFlag(s)
 				}
 			case FetchInternalDate:
@@ -265,7 +265,11 @@ func (m *Message) formatItem(k FetchItem) []interface{} {
 	case FetchEnvelope:
 		v = m.Envelope.Format()
 	case FetchFlags:
-		v = FormatStringList(m.Flags)
+		flags := make([]interface{}, len(m.Flags))
+		for i, flag := range m.Flags {
+			flags[i] = Atom(flag)
+		}
+		v = flags
 	case FetchInternalDate:
 		v = m.InternalDate
 	case FetchRFC822Size:

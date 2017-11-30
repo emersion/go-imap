@@ -68,7 +68,7 @@ var messageTests = []struct {
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
 			"BODY", bodyStructureTests[0].fields,
-			"FLAGS", []interface{}{SeenFlag, AnsweredFlag},
+			"FLAGS", []interface{}{Atom(SeenFlag), Atom(AnsweredFlag)},
 			"RFC822.SIZE", "4242",
 			"UID", "2424",
 		},
@@ -99,7 +99,7 @@ func TestMessage_Format(t *testing.T) {
 		expected, _ := formatFields(test.fields)
 
 		if got != expected {
-			t.Errorf("Invalid message fields for #%v: got %v but expected %v", i, got, expected)
+			t.Errorf("Invalid message fields for #%v: got \n%v\n but expected \n%v", i, got, expected)
 		}
 	}
 }

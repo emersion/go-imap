@@ -78,8 +78,12 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoding.NewEncoder().String(info.Name)
+	attrs := make([]interface{}, len(info.Attributes))
+	for i, attr := range info.Attributes {
+		attrs[i] = Atom(attr)
+	}
 	// Thunderbird doesn't understand delimiters if not quoted
-	return []interface{}{FormatStringList(info.Attributes), Quoted(info.Delimiter), name}
+	return []interface{}{attrs, Quoted(info.Delimiter), name}
 }
 
 // TODO: optimize this
