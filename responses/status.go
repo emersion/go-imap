@@ -42,11 +42,7 @@ func (r *Status) Handle(resp imap.Resp) error {
 	}
 
 	mbox.Items = nil
-	if err := mbox.Parse(items); err != nil {
-		return err
-	}
-
-	return nil
+	return mbox.Parse(items)
 }
 
 func (r *Status) WriteTo(w *imap.Writer) error {
