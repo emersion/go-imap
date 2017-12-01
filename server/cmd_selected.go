@@ -52,12 +52,8 @@ func (cmd *Close) Handle(conn Conn) error {
 	ctx.Mailbox = nil
 	ctx.MailboxReadOnly = false
 
-	if err := mailbox.Expunge(); err != nil {
-		return err
-	}
-
 	// No need to send expunge updates here, since the mailbox is already unselected
-	return nil
+	return mailbox.Expunge()
 }
 
 type Expunge struct {
