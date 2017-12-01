@@ -36,7 +36,7 @@ type Conn interface {
 
 	setTLSConn(*tls.Conn)
 	silent() *bool // TODO: remove this
-	serve() error
+	serve(Conn) error
 	commandHandler(cmd *imap.Command) (hdlr Handler, err error)
 }
 
@@ -59,6 +59,7 @@ type Context struct {
 type conn struct {
 	*imap.Conn
 
+	conn      Conn // With extensions overrides
 	s         *Server
 	ctx       *Context
 	l         sync.Locker
@@ -264,7 +265,9 @@ func (c *conn) silent() *bool {
 	return &c.silentVal
 }
 
-func (c *conn) serve() error {
+func (c *conn) serve(conn Conn) error {
+	c.conn = conn
+
 	defer func() {
 		c.ctx.State = imap.LogoutState
 		close(c.continues)
@@ -332,7 +335,7 @@ func (c *conn) serve() error {
 			}
 
 			if up != nil && res.Type == imap.StatusRespOk {
-				if err := up.Upgrade(c); err != nil {
+				if err := up.Upgrade(c.conn); err != nil {
 					c.s.ErrorLog.Println("cannot upgrade connection:", err)
 					return err
 				}
@@ -364,7 +367,7 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 	c.l.Unlock()
 	defer c.l.Lock()
 
-	hdlrErr := hdlr.Handle(c)
+	hdlrErr := hdlr.Handle(c.conn)
 	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
 		res = statusErr.resp
 	} else if hdlrErr != nil {

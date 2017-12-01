@@ -274,7 +274,7 @@ func (s *Server) serveConn(conn Conn) error {
 		delete(s.conns, conn)
 	}()
 
-	return conn.serve()
+	return conn.serve(conn)
 }
 
 // Get a command handler factory for the provided command name.
