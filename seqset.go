@@ -268,7 +268,6 @@ func (s *SeqSet) insertAt(i int, v Seq) {
 		s.Set = set
 	}
 	s.Set[i] = v
-	return
 }
 
 // search attempts to find the index of the sequence set value that contains q.

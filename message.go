@@ -464,7 +464,7 @@ func (section *BodySectionName) resp() *BodySectionName {
 	return &resp
 }
 
-// Returns a subset of the specified bytes matching the partial requested in the
+// ExtractPartial returns a subset of the specified bytes matching the partial requested in the
 // section name.
 func (section *BodySectionName) ExtractPartial(b []byte) []byte {
 	if len(section.Partial) != 2 {
@@ -518,7 +518,8 @@ func (part *BodyPartName) parse(fields []interface{}) error {
 	path := strings.Split(strings.ToUpper(name), ".")
 
 	end := 0
-	loop: for i, node := range path {
+loop:
+	for i, node := range path {
 		switch PartSpecifier(node) {
 		case EntireSpecifier, HeaderSpecifier, MIMESpecifier, TextSpecifier:
 			part.Specifier = PartSpecifier(node)
