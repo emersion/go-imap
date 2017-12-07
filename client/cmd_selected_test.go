@@ -215,6 +215,8 @@ func TestClient_Fetch(t *testing.T) {
 		t.Fatalf("c.Fetch() = %v", err)
 	}
 
+	section, _ := imap.ParseBodySectionName("BODY[]")
+
 	msg := <-messages
 	if msg.SeqNum != 2 {
 		t.Errorf("First message has bad sequence number: %v", msg.SeqNum)
@@ -222,7 +224,7 @@ func TestClient_Fetch(t *testing.T) {
 	if msg.Uid != 42 {
 		t.Errorf("First message has bad UID: %v", msg.Uid)
 	}
-	if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]")); string(body) != "I love potatoes." {
+	if body, _ := ioutil.ReadAll(msg.GetBody(section)); string(body) != "I love potatoes." {
 		t.Errorf("First message has bad body: %q", body)
 	}
 
@@ -233,7 +235,7 @@ func TestClient_Fetch(t *testing.T) {
 	if msg.Uid != 28 {
 		t.Errorf("Second message has bad UID: %v", msg.Uid)
 	}
-	if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]")); string(body) != "Hello World!" {
+	if body, _ := ioutil.ReadAll(msg.GetBody(section)); string(body) != "Hello World!" {
 		t.Errorf("Second message has bad body: %q", body)
 	}
 }
@@ -268,8 +270,10 @@ func TestClient_Fetch_Partial(t *testing.T) {
 		t.Fatalf("c.Fetch() = %v", err)
 	}
 
+	section, _ := imap.ParseBodySectionName("BODY.PEEK[]<0.10>")
+
 	msg := <-messages
-	if body, _ := ioutil.ReadAll(msg.GetBody("BODY[]<0>")); string(body) != "I love pot" {
+	if body, _ := ioutil.ReadAll(msg.GetBody(section)); string(body) != "I love pot" {
 		t.Errorf("Message has bad body: %q", body)
 	}
 }

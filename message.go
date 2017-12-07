@@ -313,9 +313,11 @@ func (m *Message) Format() []interface{} {
 }
 
 // Get the body section with the specified name. Returns nil if it's not found.
-func (m *Message) GetBody(item FetchItem) Literal {
-	for section, body := range m.Body {
-		if section.value == item {
+func (m *Message) GetBody(section *BodySectionName) Literal {
+	section = section.resp()
+
+	for s, body := range m.Body {
+		if section.Equal(s) {
 			return body
 		}
 	}
@@ -337,7 +339,7 @@ type BodySectionName struct {
 	value FetchItem
 }
 
-func (section *BodySectionName) parse(s string) (err error) {
+func (section *BodySectionName) parse(s string) error {
 	section.value = FetchItem(s)
 
 	if s == "RFC822" {
@@ -372,13 +374,13 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 	b := bytes.NewBufferString(part + string(cr) + string(lf))
 	r := NewReader(b)
-	var fields []interface{}
-	if fields, err = r.ReadFields(); err != nil {
-		return
+	fields, err := r.ReadFields()
+	if err != nil {
+		return err
 	}
 
-	if err = section.BodyPartName.parse(fields); err != nil {
-		return
+	if err := section.BodyPartName.parse(fields); err != nil {
+		return err
 	}
 
 	if len(partial) > 0 {
@@ -408,7 +410,7 @@ func (section *BodySectionName) parse(s string) (err error) {
 
 func (section *BodySectionName) FetchItem() FetchItem {
 	if section.value != "" {
-		return FetchItem(section.value)
+		return section.value
 	}
 
 	s := "BODY"
@@ -433,24 +435,33 @@ func (section *BodySectionName) FetchItem() FetchItem {
 	return FetchItem(s)
 }
 
+// Equal checks whether two sections are equal.
+func (section *BodySectionName) Equal(other *BodySectionName) bool {
+	if section.Peek != other.Peek {
+		return false
+	}
+	if len(section.Partial) != len(other.Partial) {
+		return false
+	}
+	if len(section.Partial) > 0 && section.Partial[0] != other.Partial[0] {
+		return false
+	}
+	if len(section.Partial) > 1 && section.Partial[1] != other.Partial[1] {
+		return false
+	}
+	return section.BodyPartName.Equal(&other.BodyPartName)
+}
+
 func (section *BodySectionName) resp() *BodySectionName {
-	var reset bool
-
-	if section.Peek != false {
-		section.Peek = false
-		reset = true
+	resp := *section // Copy section
+	if resp.Peek != false {
+		resp.Peek = false
 	}
-
-	if len(section.Partial) == 2 {
-		section.Partial = []int{section.Partial[0]}
-		reset = true
+	if len(resp.Partial) == 2 {
+		resp.Partial = []int{resp.Partial[0]}
 	}
-
-	if reset && !strings.HasPrefix(string(section.value), "RFC822") {
-		section.value = "" // Reset cached value
-	}
-
-	return section
+	resp.value = ""
+	return &resp
 }
 
 // Returns a subset of the specified bytes matching the partial requested in the
@@ -572,6 +583,40 @@ func (part *BodyPartName) string() string {
 	}
 
 	return s
+}
+
+// Equal checks whether two body part names are equal.
+func (part *BodyPartName) Equal(other *BodyPartName) bool {
+	if part.Specifier != other.Specifier {
+		return false
+	}
+	if part.NotFields != other.NotFields {
+		return false
+	}
+	if len(part.Path) != len(other.Path) {
+		return false
+	}
+	for i, node := range part.Path {
+		if node != other.Path[i] {
+			return false
+		}
+	}
+	if len(part.Fields) != len(other.Fields) {
+		return false
+	}
+	for _, field := range part.Fields {
+		found := false
+		for _, f := range other.Fields {
+			if strings.EqualFold(field, f) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // An address.

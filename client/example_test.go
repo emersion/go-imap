@@ -99,7 +99,8 @@ func ExampleClient_Fetch() {
 	seqset.AddRange(mbox.Messages, mbox.Messages)
 
 	// Get the whole message body
-	items := []imap.FetchItem{imap.FetchRFC822}
+	section := &imap.BodySectionName{}
+	items := []imap.FetchItem{section.FetchItem()}
 
 	messages := make(chan *imap.Message, 1)
 	done := make(chan error, 1)
@@ -109,7 +110,7 @@ func ExampleClient_Fetch() {
 
 	log.Println("Last message:")
 	msg := <-messages
-	r := msg.GetBody("BODY[]")
+	r := msg.GetBody(section)
 	if r == nil {
 		log.Fatal("Server didn't returned message body")
 	}
