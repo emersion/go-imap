@@ -152,7 +152,7 @@ func ExampleClient_Expunge() {
 		log.Fatal("No message in mailbox")
 	}
 	seqset := new(imap.SeqSet)
-	seqset.AddRange(mbox.Messages, mbox.Messages)
+	seqset.AddNum(mbox.Messages)
 
 	// First mark the message as deleted
 	item := imap.FormatFlagsOp(imap.AddFlags, true)
@@ -194,4 +194,27 @@ func ExampleClient_StartTLS() {
 		log.Fatal(err)
 	}
 	log.Println("Logged in")
+}
+
+func ExampleClient_Store() {
+	// Let's assume c is a client
+	var c *client.Client
+
+	// Select INBOX
+	_, err := c.Select("INBOX", false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Mark message 42 as seen
+	seqSet := new(imap.SeqSet)
+	seqSet.AddNum(42)
+	item := imap.FormatFlagsOp(imap.AddFlags, true)
+	flags := []interface{}{imap.SeenFlag}
+	err = c.Store(seqSet, item, flags, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Message has been marked as seen")
 }
