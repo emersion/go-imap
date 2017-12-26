@@ -151,9 +151,7 @@ func (c *Client) read(greeted <-chan struct{}) error {
 			}
 		}
 
-		if err := c.handle(resp); err == responses.ErrUnhandled {
-			c.ErrorLog.Println("response has not been handled:", resp)
-		} else if err != nil {
+		if err := c.handle(resp); err != nil && err != responses.ErrUnhandled {
 			c.ErrorLog.Println("cannot handle response ", resp, err)
 		}
 	}
