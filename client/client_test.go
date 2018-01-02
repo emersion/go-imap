@@ -142,7 +142,7 @@ func TestClient_unilateral(t *testing.T) {
 	}
 
 	s.WriteString("* 587 RECENT\r\n")
-	if update, ok := (<-updates).(* MailboxUpdate); !ok || update.Mailbox.Recent != 587 {
+	if update, ok := (<-updates).(*MailboxUpdate); !ok || update.Mailbox.Recent != 587 {
 		t.Errorf("Invalid recent count: expected %v but got %v", 587, update.Mailbox.Recent)
 	}
 

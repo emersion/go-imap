@@ -51,11 +51,11 @@ var messageTests = []struct {
 	{
 		message: &Message{
 			Items: map[FetchItem]interface{}{
-				FetchEnvelope:    nil,
-				FetchBody:        nil,
-				FetchFlags:       nil,
+				FetchEnvelope:   nil,
+				FetchBody:       nil,
+				FetchFlags:      nil,
 				FetchRFC822Size: nil,
-				FetchUid:         nil,
+				FetchUid:        nil,
 			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
