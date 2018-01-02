@@ -12,11 +12,11 @@ import (
 type StatusItem string
 
 const (
-	StatusMessages StatusItem = "MESSAGES"
-	StatusRecent = "RECENT"
-	StatusUidNext = "UIDNEXT"
-	StatusUidValidity = "UIDVALIDITY"
-	StatusUnseen = "UNSEEN"
+	StatusMessages    StatusItem = "MESSAGES"
+	StatusRecent                 = "RECENT"
+	StatusUidNext                = "UIDNEXT"
+	StatusUidValidity            = "UIDVALIDITY"
+	StatusUnseen                 = "UNSEEN"
 )
 
 // A FetchItem is a message data item that can be fetched.
@@ -25,21 +25,21 @@ type FetchItem string
 // List of items that can be fetched.
 const (
 	// Macros
-	FetchAll FetchItem = "ALL"
-	FetchFast = "FAST"
-	FetchFull = "FULL"
+	FetchAll  FetchItem = "ALL"
+	FetchFast           = "FAST"
+	FetchFull           = "FULL"
 
 	// Items
-	FetchBody = "BODY"
+	FetchBody          = "BODY"
 	FetchBodyStructure = "BODYSTRUCTURE"
-	FetchEnvelope = "ENVELOPE"
-	FetchFlags = "FLAGS"
-	FetchInternalDate = "INTERNALDATE"
-	FetchRFC822 = "RFC822"
-	FetchRFC822Header = "RFC822.HEADER"
-	FetchRFC822Size = "RFC822.SIZE"
-	FetchRFC822Text = "RFC822.TEXT"
-	FetchUid = "UID"
+	FetchEnvelope      = "ENVELOPE"
+	FetchFlags         = "FLAGS"
+	FetchInternalDate  = "INTERNALDATE"
+	FetchRFC822        = "RFC822"
+	FetchRFC822Header  = "RFC822.HEADER"
+	FetchRFC822Size    = "RFC822.SIZE"
+	FetchRFC822Text    = "RFC822.TEXT"
+	FetchUid           = "UID"
 )
 
 // Expand expands the item if it's a macro.

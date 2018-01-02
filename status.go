@@ -43,17 +43,17 @@ type StatusRespCode string
 
 // Status response codes defined in RFC 3501 section 7.1.
 const (
-	CodeAlert StatusRespCode = "ALERT"
-	CodeBadCharset     = "BADCHARSET"
-	CodeCapability     = "CAPABILITY"
-	CodeParse          = "PARSE"
-	CodePermanentFlags = "PERMANENTFLAGS"
-	CodeReadOnly       = "READ-ONLY"
-	CodeReadWrite      = "READ-WRITE"
-	CodeTryCreate      = "TRYCREATE"
-	CodeUidNext        = "UIDNEXT"
-	CodeUidValidity    = "UIDVALIDITY"
-	CodeUnseen         = "UNSEEN"
+	CodeAlert          StatusRespCode = "ALERT"
+	CodeBadCharset                    = "BADCHARSET"
+	CodeCapability                    = "CAPABILITY"
+	CodeParse                         = "PARSE"
+	CodePermanentFlags                = "PERMANENTFLAGS"
+	CodeReadOnly                      = "READ-ONLY"
+	CodeReadWrite                     = "READ-WRITE"
+	CodeTryCreate                     = "TRYCREATE"
+	CodeUidNext                       = "UIDNEXT"
+	CodeUidValidity                   = "UIDVALIDITY"
+	CodeUnseen                        = "UNSEEN"
 )
 
 // A status response.

@@ -118,7 +118,7 @@ func (r *DataResp) resp() {}
 
 func (r *DataResp) WriteTo(w *Writer) error {
 	tag := Atom(r.Tag)
-	if tag == ""  {
+	if tag == "" {
 		tag = Atom("*")
 	}
 

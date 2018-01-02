@@ -217,24 +217,24 @@ func TestReadResp_StatusResp(t *testing.T) {
 }
 
 func TestParseNamedResp(t *testing.T) {
-	tests := []struct{
-		resp *imap.DataResp
-		name string
+	tests := []struct {
+		resp   *imap.DataResp
+		name   string
 		fields []interface{}
 	}{
 		{
-			resp: &imap.DataResp{Fields: []interface{}{"CAPABILITY", "IMAP4rev1"}},
-			name: "CAPABILITY",
+			resp:   &imap.DataResp{Fields: []interface{}{"CAPABILITY", "IMAP4rev1"}},
+			name:   "CAPABILITY",
 			fields: []interface{}{"IMAP4rev1"},
 		},
 		{
-			resp: &imap.DataResp{Fields: []interface{}{"42", "EXISTS"}},
-			name: "EXISTS",
+			resp:   &imap.DataResp{Fields: []interface{}{"42", "EXISTS"}},
+			name:   "EXISTS",
 			fields: []interface{}{"42"},
 		},
 		{
-			resp: &imap.DataResp{Fields: []interface{}{"42", "FETCH", "blah"}},
-			name: "FETCH",
+			resp:   &imap.DataResp{Fields: []interface{}{"42", "FETCH", "blah"}},
+			name:   "FETCH",
 			fields: []interface{}{"42", "blah"},
 		},
 	}
