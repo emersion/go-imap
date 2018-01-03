@@ -118,6 +118,11 @@ func TestReader_ReadCrlf(t *testing.T) {
 		t.Error("Invalid read didn't fail")
 	}
 
+	b, r = newReader("\n")
+	if err := r.ReadCrlf(); err == nil {
+		t.Error("Invalid read didn't fail")
+	}
+
 	b, r = newReader("\r")
 	if err := r.ReadCrlf(); err == nil {
 		t.Error("Invalid read didn't fail")
