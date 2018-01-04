@@ -160,6 +160,7 @@ func (r *Reader) ReadCrlf() (err error) {
 	}
 	if char != cr {
 		err = newParseError("line doesn't end with a CR")
+		return
 	}
 
 	if char, _, err = r.ReadRune(); err != nil {
@@ -331,6 +332,9 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 			return
 		}
 		if char == cr || char == listEnd || char == respCodeEnd {
+			if char == cr {
+				r.UnreadRune()
+			}
 			return
 		}
 		if char == listStart {
