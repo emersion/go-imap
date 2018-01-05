@@ -55,11 +55,11 @@ func TestClient_Close(t *testing.T) {
 		t.Fatalf("c.Check() = %v", err)
 	}
 
-	if c.State() != imap.AuthenticatedState {
-		t.Errorf("Bad state: %v", c.State)
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("Bad state: %v", state)
 	}
-	if c.Mailbox() != nil {
-		t.Errorf("Client selected mailbox is not nil: %v", c.Mailbox)
+	if mailbox := c.Mailbox(); mailbox != nil {
+		t.Errorf("Client selected mailbox is not nil: %v", mailbox)
 	}
 }
 
