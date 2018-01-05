@@ -929,11 +929,15 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 			envelope, _ := fields[end].([]interface{})
 			bs.Envelope = new(Envelope)
-			bs.Envelope.Parse(envelope)
+			if err := bs.Envelope.Parse(envelope); err != nil {
+				return err
+			}
 
 			structure, _ := fields[end+1].([]interface{})
 			bs.BodyStructure = new(BodyStructure)
-			bs.BodyStructure.Parse(structure)
+			if err := bs.BodyStructure.Parse(structure); err != nil {
+				return err
+			}
 
 			bs.Lines, _ = ParseNumber(fields[end+2])
 
