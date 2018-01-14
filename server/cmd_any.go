@@ -24,7 +24,7 @@ func (cmd *Noop) Handle(conn Conn) error {
 	ctx := conn.Context()
 	if ctx.Mailbox != nil {
 		// If a mailbox is selected, NOOP can be used to poll for server updates
-		if mbox, ok := ctx.Mailbox.(backend.UpdaterMailbox); ok {
+		if mbox, ok := ctx.Mailbox.(backend.MailboxPoller); ok {
 			return mbox.Poll()
 		}
 	}

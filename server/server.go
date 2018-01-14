@@ -104,7 +104,7 @@ type Server struct {
 	// This server's backend.
 	Backend backend.Backend
 	// Backend updates that will be sent to connected clients.
-	Updates <-chan interface{}
+	Updates <-chan backend.Update
 	// Automatically logout clients after a duration. To do not logout users
 	// automatically, set this to zero. The duration MUST be at least
 	// MinAutoLogout (as stated in RFC 3501 section 5.4).
@@ -207,7 +207,11 @@ func (s *Server) Serve(l net.Listener) error {
 		delete(s.listeners, l)
 	}()
 
-	go s.listenUpdates()
+	updater, ok := s.Backend.(backend.BackendUpdater)
+	if ok {
+		s.Updates = updater.Updates()
+		go s.listenUpdates()
+	}
 
 	for {
 		c, err := l.Accept()
@@ -289,49 +293,32 @@ func (s *Server) Command(name string) HandlerFactory {
 	return s.commands[name]
 }
 
-func (s *Server) listenUpdates() (err error) {
-	updater, ok := s.Backend.(backend.Updater)
-	if !ok {
-		return
-	}
-	s.Updates = updater.Updates()
-
+func (s *Server) listenUpdates() {
 	for {
-		item := <-s.Updates
+		update := <-s.Updates
 
-		var (
-			update *backend.Update
-			res    imap.WriterTo
-		)
-
-		switch item := item.(type) {
+		var res imap.WriterTo
+		switch update := update.(type) {
 		case *backend.StatusUpdate:
-			update = &item.Update
-			res = item.StatusResp
+			res = update.StatusResp
 		case *backend.MailboxUpdate:
-			update = &item.Update
-			res = &responses.Select{Mailbox: item.MailboxStatus}
+			res = &responses.Select{Mailbox: update.MailboxStatus}
 		case *backend.MessageUpdate:
-			update = &item.Update
-
 			ch := make(chan *imap.Message, 1)
-			ch <- item.Message
+			ch <- update.Message
 			close(ch)
 
 			res = &responses.Fetch{Messages: ch}
 		case *backend.ExpungeUpdate:
-			update = &item.Update
-
 			ch := make(chan uint32, 1)
-			ch <- item.SeqNum
+			ch <- update.SeqNum
 			close(ch)
 
 			res = &responses.Expunge{SeqNums: ch}
 		default:
-			s.ErrorLog.Printf("unhandled update: %T\n", item)
+			s.ErrorLog.Printf("unhandled update: %T\n", update)
 		}
-
-		if update == nil || res == nil {
+		if res == nil {
 			continue
 		}
 
@@ -341,10 +328,10 @@ func (s *Server) listenUpdates() (err error) {
 		for conn := range s.conns {
 			ctx := conn.Context()
 
-			if update.Username != "" && (ctx.User == nil || ctx.User.Username() != update.Username) {
+			if update.Username() != "" && (ctx.User == nil || ctx.User.Username() != update.Username()) {
 				continue
 			}
-			if update.Mailbox != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox) {
+			if update.Mailbox() != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox()) {
 				continue
 			}
 			if *conn.silent() {
@@ -374,12 +361,11 @@ func (s *Server) listenUpdates() (err error) {
 				for done := 0; done < wait; done++ {
 					<-sends
 				}
-				close(sends)
 
-				backend.DoneUpdate(update)
+				close(update.Done())
 			}()
 		} else {
-			backend.DoneUpdate(update)
+			close(update.Done())
 		}
 	}
 }
