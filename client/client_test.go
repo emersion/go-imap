@@ -133,7 +133,7 @@ func TestClient_unilateral(t *testing.T) {
 
 	setClientState(c, imap.SelectedState, imap.NewMailboxStatus("INBOX", nil))
 
-	updates := make(chan interface{}, 1)
+	updates := make(chan Update, 1)
 	c.Updates = updates
 
 	s.WriteString("* 42 EXISTS\r\n")

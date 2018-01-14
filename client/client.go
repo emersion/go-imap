@@ -22,25 +22,38 @@ var errClosed = fmt.Errorf("imap: connection closed")
 // errUnregisterHandler is returned by a response handler to unregister itself.
 var errUnregisterHandler = fmt.Errorf("imap: unregister handler")
 
+// Update is an unilateral server update.
+type Update interface {
+	update()
+}
+
 // StatusUpdate is delivered when a status update is received.
 type StatusUpdate struct {
 	Status *imap.StatusResp
 }
+
+func (u *StatusUpdate) update() {}
 
 // MailboxUpdate is delivered when a mailbox status changes.
 type MailboxUpdate struct {
 	Mailbox *imap.MailboxStatus
 }
 
+func (u *MailboxUpdate) update() {}
+
 // ExpungeUpdate is delivered when a message is deleted.
 type ExpungeUpdate struct {
 	SeqNum uint32
 }
 
+func (u *ExpungeUpdate) update() {}
+
 // MessageUpdate is delivered when a message attribute changes.
 type MessageUpdate struct {
 	Message *imap.Message
 }
+
+func (u *MessageUpdate) update() {}
 
 // Client is an IMAP client.
 type Client struct {
@@ -68,7 +81,7 @@ type Client struct {
 	// *ExpungeUpdate. Note that blocking this channel blocks the whole client,
 	// so it's recommended to use a separate goroutine and a buffered channel to
 	// prevent deadlocks.
-	Updates chan<- interface{}
+	Updates chan<- Update
 
 	// ErrorLog specifies an optional logger for errors accepting connections and
 	// unexpected behavior from handlers. By default, logging goes to os.Stderr
