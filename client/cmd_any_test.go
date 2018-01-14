@@ -26,11 +26,11 @@ func TestClient_Capability(t *testing.T) {
 	s.WriteString(tag + " OK CAPABILITY completed.\r\n")
 
 	if err := <-done; err != nil {
-		t.Errorf("c.Capability() = ", err)
+		t.Error("c.Capability() = ", err)
 	}
 
 	if !caps["XTEST"] {
-		t.Errorf("XTEST capability missing")
+		t.Error("XTEST capability missing")
 	}
 }
 
@@ -50,7 +50,7 @@ func TestClient_Noop(t *testing.T) {
 	s.WriteString(tag + " OK NOOP completed\r\n")
 
 	if err := <-done; err != nil {
-		t.Error("c.Noop() =", err)
+		t.Error("c.Noop() = ", err)
 	}
 }
 
