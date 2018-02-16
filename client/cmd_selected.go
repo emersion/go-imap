@@ -54,6 +54,11 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// Terminate closes the tcp connection
+func (c *Client) Terminate() error {
+	return c.conn.Close()
+}
+
 // Expunge permanently removes all messages that have the \Deleted flag set from
 // the currently selected mailbox. If ch is not nil, sends sequence IDs of each
 // deleted message to this channel.
