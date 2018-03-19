@@ -6,7 +6,6 @@
 [![Go Report
 Card](https://goreportcard.com/badge/github.com/emersion/go-imap)](https://goreportcard.com/report/github.com/emersion/go-imap)
 [![Unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/emersion/stability-badges#unstable)
-[![Gitter chat](https://badges.gitter.im/goimap/Lobby.svg)](https://gitter.im/goimap/Lobby)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
