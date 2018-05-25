@@ -115,7 +115,7 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 // Login identifies the client to the server and carries the plaintext password
 // authenticating this user.
 func (c *Client) Login(username, password string) error {
-	if c.State() != imap.NotAuthenticatedState {
+	if state := c.State(); state == imap.AuthenticatedState || state == imap.SelectedState {
 		return ErrAlreadyLoggedIn
 	}
 
