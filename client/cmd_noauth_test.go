@@ -158,3 +158,50 @@ func TestClient_Login_Error(t *testing.T) {
 		t.Errorf("c.State() = %v, want %v", state, imap.NotAuthenticatedState)
 	}
 }
+
+func TestClient_Login_State_Allowed(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Login("username", "password")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGIN username password" {
+		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
+	}
+	s.WriteString(tag + " OK LOGIN completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Login() = %v", err)
+	}
+
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
+	}
+
+	go func() {
+		done <- c.Login("username", "password")
+	}()
+	if err := <-done; err != ErrAlreadyLoggedIn {
+		t.Fatalf("c.Login() = %v, want %v", err, ErrAlreadyLoggedIn)
+	}
+
+	go func() {
+		done <- c.Logout()
+	}()
+
+	s.ScanCmd()
+	s.WriteString("* BYE Client asked to close the connection.\r\n")
+	s.WriteString(tag + " OK LOGOUT completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Logout() = %v", err)
+	}
+
+	if err := c.Login("username", "password"); err == ErrAlreadyLoggedIn {
+		t.Errorf("Client is logout, login must not give %v", ErrAlreadyLoggedIn)
+	}
+}
