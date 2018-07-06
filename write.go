@@ -33,7 +33,7 @@ func formatNumber(num uint32) string {
 func FormatStringList(list []string) (fields []interface{}) {
 	fields = make([]interface{}, len(list))
 	for i, v := range list {
-		fields[i] = v
+		fields[i] = Atom(v)
 	}
 	return
 }
@@ -117,27 +117,6 @@ func (w *Writer) writeFields(fields []interface{}) error {
 	return nil
 }
 
-func (w *Writer) writeListString(fields []string) error {
-	if err := w.writeString(string(listStart)); err != nil {
-		return err
-	}
-
-	for i, field := range fields {
-		if i > 0 { // Write separator
-			if err := w.writeString(string(sp)); err != nil {
-				return err
-			}
-		}
-
-		if err := w.writeString(field); err != nil {
-			return err
-		}
-	}
-
-	return w.writeString(string(listEnd))
-
-}
-
 func (w *Writer) writeList(fields []interface{}) error {
 	if err := w.writeString(string(listStart)); err != nil {
 		return err
@@ -197,7 +176,7 @@ func (w *Writer) writeField(field interface{}) error {
 	case []interface{}:
 		return w.writeList(field)
 	case []string:
-		return w.writeListString(field)
+		return w.writeList(FormatStringList(field))
 	case envelopeDateTime:
 		return w.writeDateTime(time.Time(field), envelopeDateTimeLayout)
 	case searchDate:
