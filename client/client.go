@@ -454,7 +454,9 @@ func (c *Client) handleGreetAndStartReading() error {
 
 	// Make sure to start reading after we have set up this handler, otherwise
 	// some messages will be lost.
-	go c.read(greeted)
+	go func() {
+		done <- c.read(greeted)
+	}()
 
 	return <-done
 }
