@@ -417,7 +417,7 @@ func (c *Client) handleUnilateral() {
 }
 
 func (c *Client) handleGreetAndStartReading() error {
-	done := make(chan error, 1)
+	done := make(chan error, 2)
 	greeted := make(chan struct{})
 
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
@@ -454,7 +454,9 @@ func (c *Client) handleGreetAndStartReading() error {
 
 	// Make sure to start reading after we have set up this handler, otherwise
 	// some messages will be lost.
-	go c.read(greeted)
+	go func() {
+		done <- c.read(greeted)
+	}()
 
 	return <-done
 }
