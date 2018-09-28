@@ -417,7 +417,7 @@ func (c *Client) handleUnilateral() {
 }
 
 func (c *Client) handleGreetAndStartReading() error {
-	done := make(chan error, 1)
+	done := make(chan error, 2)
 	greeted := make(chan struct{})
 
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
