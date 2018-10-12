@@ -47,9 +47,16 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	}
 	defer mw.Close()
 
-	// If the header hasn't been requested, discard it
-	if section.Specifier == imap.TextSpecifier {
+	switch section.Specifier {
+	case imap.TextSpecifier:
+		// The header hasn't been requested. Discard it.
 		b.Reset()
+	case imap.EntireSpecifier:
+		if len(section.Path) > 0 {
+			// When selecting a specific part by index, IMAP servers
+			// return only the text, not the associated MIME header.
+			b.Reset()
+		}
 	}
 
 	// Write the body, if requested
