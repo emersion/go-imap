@@ -14,6 +14,9 @@ const testHeaderString = "Content-Type: multipart/mixed; boundary=message-bounda
 	"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
 	"\r\n"
 
+const testAltHeaderString = "Content-Type: multipart/alternative; boundary=b2\r\n" +
+	"\r\n"
+
 const testTextHeaderString = "Content-Disposition: inline\r\n" +
 	"Content-Type: text/plain\r\n" +
 	"\r\n"
@@ -21,6 +24,14 @@ const testTextHeaderString = "Content-Disposition: inline\r\n" +
 const testTextBodyString = "What's your name?"
 
 const testTextString = testTextHeaderString + testTextBodyString
+
+const testHTMLHeaderString = "Content-Disposition: inline\r\n" +
+	"Content-Type: text/html\r\n" +
+	"\r\n"
+
+const testHTMLBodyString = "<div>What's <i>your</i> name?</div>"
+
+const testHTMLString = testHTMLHeaderString + testHTMLBodyString
 
 const testAttachmentHeaderString = "Content-Disposition: attachment; filename=note.txt\r\n" +
 	"Content-Type: text/plain\r\n" +
@@ -31,7 +42,12 @@ const testAttachmentBodyString = "My name is Mitsuha."
 const testAttachmentString = testAttachmentHeaderString + testAttachmentBodyString
 
 const testBodyString = "--message-boundary\r\n" +
+	testAltHeaderString +
+	"\r\n--b2\r\n" +
 	testTextString +
+	"\r\n--b2\r\n" +
+	testHTMLString +
+	"\r\n--b2--\r\n" +
 	"\r\n--message-boundary\r\n" +
 	testAttachmentString +
 	"\r\n--message-boundary--\r\n"

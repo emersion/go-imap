@@ -15,12 +15,28 @@ var testBodyStructure = &imap.BodyStructure{
 	Params:      map[string]string{"boundary": "message-boundary"},
 	Parts: []*imap.BodyStructure{
 		{
-			MIMEType:          "text",
-			MIMESubType:       "plain",
-			Params:            map[string]string{},
-			Extended:          true,
-			Disposition:       "inline",
-			DispositionParams: map[string]string{},
+			MIMEType:    "multipart",
+			MIMESubType: "alternative",
+			Params:      map[string]string{"boundary": "b2"},
+			Extended:    true,
+			Parts: []*imap.BodyStructure{
+				{
+					MIMEType:          "text",
+					MIMESubType:       "plain",
+					Params:            map[string]string{},
+					Extended:          true,
+					Disposition:       "inline",
+					DispositionParams: map[string]string{},
+				},
+				{
+					MIMEType:          "text",
+					MIMESubType:       "html",
+					Params:            map[string]string{},
+					Extended:          true,
+					Disposition:       "inline",
+					DispositionParams: map[string]string{},
+				},
+			},
 		},
 		{
 			MIMEType:          "text",
