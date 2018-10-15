@@ -19,11 +19,11 @@ var bodyTests = []struct {
 	},
 	{
 		section: "BODY[1]",
-		body:    testTextString,
+		body:    testTextBodyString,
 	},
 	{
 		section: "BODY[2]",
-		body:    testAttachmentString,
+		body:    testAttachmentBodyString,
 	},
 	{
 		section: "BODY[HEADER]",
