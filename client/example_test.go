@@ -218,3 +218,45 @@ func ExampleClient_Store() {
 
 	log.Println("Message has been marked as seen")
 }
+
+func ExampleClient_Search() {
+	// Let's assume c is a client
+	var c *client.Client
+
+	// Select INBOX
+	_, err := c.Select("INBOX", false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set search criteria
+	criteria := imap.NewSearchCriteria()
+	criteria.WithoutFlags = []string{imap.SeenFlag}
+	ids, err := c.Search(criteria)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("IDs found:", ids)
+
+	if len(ids) > 0 {
+		seqset := new(imap.SeqSet)
+		seqset.AddNum(ids...)
+
+		messages := make(chan *imap.Message, 10)
+		done := make(chan error, 1)
+		go func() {
+			done <- c.Fetch(seqset, []imap.FetchItem{imap.FetchEnvelope}, messages)
+		}()
+
+		log.Println("Unseen messages:")
+		for msg := range messages {
+			log.Println("* " + msg.Envelope.Subject)
+		}
+
+		if err := <-done; err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	log.Println("Done!")
+}
