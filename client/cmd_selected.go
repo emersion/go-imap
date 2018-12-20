@@ -261,3 +261,35 @@ func (c *Client) Copy(seqset *imap.SeqSet, dest string) error {
 func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error {
 	return c.copy(true, seqset, dest)
 }
+
+func (c *Client) move(uid bool, seqset *imap.SeqSet, dest string) error {
+	if c.State() != imap.SelectedState {
+		return ErrNoMailboxSelected
+	}
+
+	var cmd imap.Commander = &commands.Move{
+		SeqSet:  seqset,
+		Mailbox: dest,
+	}
+	if uid {
+		cmd = &commands.Uid{Cmd: cmd}
+	}
+
+	status, err := c.execute(cmd, nil)
+	if err != nil {
+		return err
+	}
+	return status.Err()
+}
+
+// Move moves the specified message(s) to the end of the specified destination
+// mailbox.
+func (c *Client) Move(seqset *imap.SeqSet, dest string) error {
+	return c.move(false, seqset, dest)
+}
+
+// UidMove is identical to Move, but seqset is interpreted as containing unique
+// identifiers instead of message sequence numbers.
+func (c *Client) UidMove(seqset *imap.SeqSet, dest string) error {
+	return c.move(true, seqset, dest)
+}
