@@ -10,21 +10,9 @@ Card](https://goreportcard.com/badge/github.com/emersion/go-imap)](https://gorep
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
 
-```bash
+```shell
 go get github.com/emersion/go-imap/...
 ```
-
-## Why?
-
-Other IMAP implementations in Go:
-* Require to make [many type assertions or conversions](https://github.com/emersion/neutron/blob/ca635850e2223d6cfe818664ef901fa6e3c1d859/backend/imap/util.go#L110)
-* Are not idiomatic or are [ugly](https://github.com/jordwest/imap-server/blob/master/conn/commands.go#L53)
-* Are [not pleasant to use](https://github.com/emersion/neutron/blob/ca635850e2223d6cfe818664ef901fa6e3c1d859/backend/imap/messages.go#L228)
-* Implement a server _xor_ a client, not both
-* Don't implement unilateral updates (i.e. the server can't notify clients for
-  new messages)
-* Do not have a good test coverage
-* Don't handle encoding and charset automatically
 
 ## Usage
 
