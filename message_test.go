@@ -400,7 +400,7 @@ var paramsListTest = []struct {
 		params: map[string]string{},
 	},
 	{
-		fields: []interface{}{"a", "b"},
+		fields: []interface{}{"a", Quoted("b")},
 		params: map[string]string{"a": "b"},
 	},
 }
@@ -454,7 +454,7 @@ var bodyStructureTests = []struct {
 		},
 	},
 	{
-		fields: []interface{}{"text", "plain", []interface{}{"charset", "utf-8"}, nil, nil, "us-ascii", "42", "2"},
+		fields: []interface{}{"text", "plain", []interface{}{"charset", Quoted("utf-8")}, nil, nil, "us-ascii", "42", "2"},
 		bodyStructure: &BodyStructure{
 			MIMEType:    "text",
 			MIMESubType: "plain",
@@ -495,7 +495,7 @@ var bodyStructureTests = []struct {
 		fields: []interface{}{
 			"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
 			"e0323a9039add2978bf5b49550572c7c",
-			[]interface{}{"attachment", []interface{}{"filename", "document.pdf"}},
+			[]interface{}{"attachment", []interface{}{"filename", Quoted("document.pdf")}},
 			[]interface{}{"en-US"}, []interface{}{},
 		},
 		bodyStructure: &BodyStructure{
@@ -545,7 +545,7 @@ var bodyStructureTests = []struct {
 	{
 		fields: []interface{}{
 			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
-			"alternative", []interface{}{"hello", "world"},
+			"alternative", []interface{}{"hello", Quoted("world")},
 			[]interface{}{"inline", []interface{}{}},
 			[]interface{}{"en-US"}, []interface{}{},
 		},
