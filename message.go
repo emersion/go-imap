@@ -47,7 +47,7 @@ const (
 	MIMESpecifier = "MIME"
 )
 
-// Returns the canonical form of a flag. Flags are case-insensitive.
+// CanonicalFlag returns the canonical form of a flag. Flags are case-insensitive.
 //
 // If the flag is defined in RFC 3501, it returns the flag with the case of the
 // RFC. Otherwise, it returns the lowercase version of the flag.
@@ -312,7 +312,7 @@ func (m *Message) Format() []interface{} {
 	return fields
 }
 
-// Get the body section with the specified name. Returns nil if it's not found.
+// GetBody gets the body section with the specified name. Returns nil if it's not found.
 func (m *Message) GetBody(section *BodySectionName) Literal {
 	section = section.resp()
 

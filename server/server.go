@@ -281,7 +281,7 @@ func (s *Server) serveConn(conn Conn) error {
 	return conn.serve(conn)
 }
 
-// Get a command handler factory for the provided command name.
+// Command gets a command handler factory for the provided command name.
 func (s *Server) Command(name string) HandlerFactory {
 	// Extensions can override builtin commands
 	for _, ext := range s.extensions {
