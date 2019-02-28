@@ -12,7 +12,7 @@ import (
 // The primary mailbox, as defined in RFC 3501 section 5.1.
 const InboxName = "INBOX"
 
-// Returns the canonical form of a mailbox name. Mailbox names can be
+// CanonicalMailboxName returns the canonical form of a mailbox name. Mailbox names can be
 // case-sensitive or case-insensitive depending on the backend implementation.
 // The special INBOX mailbox is case-insensitive.
 func CanonicalMailboxName(name string) string {
