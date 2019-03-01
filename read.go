@@ -158,6 +158,9 @@ func (r *Reader) ReadCrlf() (err error) {
 	if char, _, err = r.ReadRune(); err != nil {
 		return
 	}
+	if char == lf {
+		return
+	}
 	if char != cr {
 		err = newParseError("line doesn't end with a CR")
 		return
@@ -187,7 +190,7 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 		if r.brackets == 0 && (char == listStart || char == literalStart || char == dquote) {
 			return nil, newParseError("atom contains forbidden char: " + string(char))
 		}
-		if char == cr {
+		if char == cr || char == lf {
 			break
 		}
 		if r.brackets == 0 && (char == sp || char == listEnd) {
@@ -331,8 +334,8 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		if char, _, err = r.ReadRune(); err != nil {
 			return
 		}
-		if char == cr || char == listEnd || char == respCodeEnd {
-			if char == cr {
+		if char == cr || char == lf || char == listEnd || char == respCodeEnd {
+			if char == cr || char == lf {
 				r.UnreadRune()
 			}
 			return
@@ -431,20 +434,14 @@ func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err 
 }
 
 func (r *Reader) ReadInfo() (info string, err error) {
-	info, err = r.ReadString(byte(cr))
+	info, err = r.ReadString(byte(lf))
 	if err != nil {
 		return
 	}
+	info = strings.TrimSuffix(info, string(lf))
 	info = strings.TrimSuffix(info, string(cr))
 	info = strings.TrimLeft(info, " ")
 
-	var char rune
-	if char, _, err = r.ReadRune(); err != nil {
-		return
-	}
-	if char != lf {
-		err = newParseError("line doesn't end with a LF")
-	}
 	return
 }
 

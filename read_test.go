@@ -119,8 +119,8 @@ func TestReader_ReadCrlf(t *testing.T) {
 	}
 
 	b, r = newReader("\n")
-	if err := r.ReadCrlf(); err == nil {
-		t.Error("Invalid read didn't fail")
+	if err := r.ReadCrlf(); err != nil {
+		t.Error(err)
 	}
 
 	b, r = newReader("\r")
@@ -241,8 +241,8 @@ func TestReader_ReadLiteral(t *testing.T) {
 	}
 
 	b, r = newReader("{7}\nabcdefg")
-	if _, err := r.ReadLiteral(); err == nil {
-		t.Error("Invalid read didn't fail")
+	if _, err := r.ReadLiteral(); err != nil {
+		t.Error(err)
 	}
 
 	b, r = newReader("{7}\r\nabcd")
@@ -489,8 +489,8 @@ func TestReader_ReadInfo(t *testing.T) {
 	}
 
 	b, r = newReader("I love potatoes.\n")
-	if _, err := r.ReadInfo(); err == nil {
-		t.Error("Invalid read didn't fail")
+	if _, err := r.ReadInfo(); err != nil {
+		t.Error(err)
 	}
 
 	b, r = newReader("I love potatoes.\rabc")
