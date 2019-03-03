@@ -225,10 +225,11 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	}))
 
 	// Send the command to the server
-	doneWrite := make(chan error, 1)
-	go func() {
-		doneWrite <- cmd.WriteTo(c.conn.Writer)
-	}()
+	if err := cmd.WriteTo(c.conn.Writer); err != nil {
+		// Error while sending the command
+		close(unregister)
+		return nil, err
+	}
 
 	for {
 		select {
@@ -239,12 +240,6 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 			// ends.
 			close(unregister)
 			return nil, errClosed
-		case err := <-doneWrite:
-			if err != nil {
-				// Error while sending the command
-				close(unregister)
-				return nil, err
-			}
 		case result := <-doneHandle:
 			return result.status, result.err
 		}
