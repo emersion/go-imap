@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -62,7 +61,6 @@ type conn struct {
 	conn      Conn // With extensions overrides
 	s         *Server
 	ctx       *Context
-	l         sync.Locker
 	tlsConn   *tls.Conn
 	continues chan bool
 	responses chan imap.WriterTo
@@ -85,7 +83,6 @@ func newConn(s *Server, c net.Conn) *conn {
 		Conn: imap.NewConn(c, r, w),
 
 		s: s,
-		l: &sync.Mutex{},
 		ctx: &Context{
 			State:     imap.ConnectingState,
 			Responses: responses,
@@ -104,7 +101,6 @@ func newConn(s *Server, c net.Conn) *conn {
 		conn.Conn.MaxLiteralSize = s.MaxLiteralSize
 	}
 
-	conn.l.Lock()
 	go conn.send()
 
 	return conn
@@ -183,35 +179,31 @@ func (c *conn) Capabilities() []string {
 	return caps
 }
 
-func (c *conn) send() {
-	// Send continuation requests
-	go func() {
-		for range c.continues {
-			resp := &imap.ContinuationReq{Info: "send literal"}
-			if err := resp.WriteTo(c.Writer); err != nil {
-				c.Server().ErrorLog.Println("cannot send continuation request: ", err)
-			} else if err := c.Writer.Flush(); err != nil {
-				c.Server().ErrorLog.Println("cannot flush connection: ", err)
-			}
-		}
-	}()
+func (c *conn) writeAndFlush(w imap.WriterTo) error {
+	if err := w.WriteTo(c.Writer); err != nil {
+		return err
+	}
+	return c.Writer.Flush()
+}
 
+func (c *conn) send() {
 	// Send responses
 	for {
-		// Get a response that needs to be sent
 		select {
-		case res := <-c.responses:
-			// Request to send the response
-			c.l.Lock()
-
-			// Send the response
-			if err := res.WriteTo(c.Writer); err != nil {
-				c.Server().ErrorLog.Println("cannot send response: ", err)
-			} else if err := c.Writer.Flush(); err != nil {
-				c.Server().ErrorLog.Println("cannot flush connection: ", err)
+		case needCont := <-c.continues:
+			// Send continuation requests
+			if needCont {
+				resp := &imap.ContinuationReq{Info: "send literal"}
+				if err := c.writeAndFlush(resp); err != nil {
+					c.Server().ErrorLog.Println("cannot send continuation request: ", err)
+				}
 			}
-
-			c.l.Unlock()
+		case res := <-c.responses:
+			// Got a response that needs to be sent
+			// Request to send the response
+			if err := c.writeAndFlush(res); err != nil {
+				c.Server().ErrorLog.Println("cannot send response: ", err)
+			}
 		case <-c.loggedOut:
 			return
 		}
@@ -233,9 +225,6 @@ func (c *conn) greet() error {
 		Arguments: args,
 		Info:      "IMAP4rev1 Service Ready",
 	}
-
-	c.l.Unlock()
-	defer c.l.Lock()
 
 	return c.WriteResp(greeting)
 }
@@ -270,7 +259,6 @@ func (c *conn) serve(conn Conn) error {
 
 	defer func() {
 		c.ctx.State = imap.LogoutState
-		close(c.continues)
 		close(c.loggedOut)
 	}()
 
@@ -326,11 +314,9 @@ func (c *conn) serve(conn Conn) error {
 		}
 
 		if res != nil {
-			c.l.Unlock()
 
 			if err := c.WriteResp(res); err != nil {
 				c.s.ErrorLog.Println("cannot write response:", err)
-				c.l.Lock()
 				continue
 			}
 
@@ -340,8 +326,6 @@ func (c *conn) serve(conn Conn) error {
 					return err
 				}
 			}
-
-			c.l.Lock()
 		}
 	}
 }
@@ -363,9 +347,6 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 	if err != nil {
 		return
 	}
-
-	c.l.Unlock()
-	defer c.l.Lock()
 
 	hdlrErr := hdlr.Handle(c.conn)
 	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
