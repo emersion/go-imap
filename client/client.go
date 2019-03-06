@@ -62,7 +62,7 @@ type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
-	replies   chan string
+	replies   chan []byte
 	loggedOut chan struct{}
 	upgrading bool
 
@@ -167,8 +167,8 @@ func (c *Client) readOnce() (bool, error) {
 	return true, nil
 }
 
-func (c *Client) writeReply(reply string) error {
-	if _, err := c.conn.Writer.Write([]byte(reply)); err != nil {
+func (c *Client) writeReply(reply []byte) error {
+	if _, err := c.conn.Writer.Write(reply); err != nil {
 		return err
 	}
 	// Flush reply
@@ -562,7 +562,7 @@ func New(conn net.Conn) (*Client, error) {
 
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
-		replies:   make(chan string),
+		replies:   make(chan []byte),
 		loggedOut: make(chan struct{}),
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),

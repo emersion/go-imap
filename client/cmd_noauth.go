@@ -93,7 +93,7 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 	res := &responses.Authenticate{
 		Mechanism:       auth,
 		InitialResponse: ir,
-		AuthReply: func(reply string) error {
+		AuthReply: func(reply []byte) error {
 			c.replies <- reply
 			return nil
 		},
