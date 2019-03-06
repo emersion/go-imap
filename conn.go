@@ -53,45 +53,39 @@ const (
 type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 
 type Waiter struct {
-	waits chan struct{}
-	ready chan bool
+	start sync.WaitGroup
+	end sync.WaitGroup
 	finished bool
 }
 
-func NewWaiter(blocked bool) *Waiter {
-	w := &Waiter{}
-	// If the waiter is blocked, create a channel.
-	if(blocked) {
-		w.finished = false
-		w.ready = make(chan bool)
-		w.waits = make(chan struct{})
-	} else {
-		w.finished = true
-	}
+func NewWaiter() *Waiter {
+	w := &Waiter{finished: false}
+	w.start.Add(1)
+	w.end.Add(1)
 	return  w
 }
 
 func (w *Waiter) Wait() {
 	if !w.finished {
 		// Signal that we are ready for upgrade to continue.
-		w.ready <- true
+		w.start.Done()
 		// Wait for upgrade to finish.
-		<-w.waits
+		w.end.Wait()
 		w.finished = true
 	}
 }
 
 func (w *Waiter) WaitReady() {
-	if w.ready != nil {
+	if !w.finished {
 		// Wait for reader/writer goroutine to be ready for upgrade.
-		<-w.ready
+		w.start.Wait()
 	}
 }
 
 func (w *Waiter) Close() {
-	if w.waits != nil {
+	if !w.finished {
 		// Upgrade is finished, close chanel to release reader/writer
-		close(w.waits)
+		w.end.Done()
 	}
 }
 
@@ -164,9 +158,9 @@ func NewConn(conn net.Conn, r *Reader, w *Writer) *Conn {
 	return c
 }
 
-func (c *Conn) blockWaiter(blocked bool) *Waiter {
+func (c *Conn) createWaiter() *Waiter {
 	// create new waiter each time.
-	w := NewWaiter(blocked)
+	w := NewWaiter()
 	c.waiter = w
 	return w
 }
@@ -233,7 +227,7 @@ func (c *Conn) Flush() error {
 // tunnel.
 func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	// Block reads and writes during the upgrading process
-	w := c.blockWaiter(true)
+	w := c.createWaiter()
 	defer w.Close()
 
 	upgraded, err := upgrader(c.Conn)
@@ -248,17 +242,13 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 
 // Called by reader/writer goroutines to wait for Upgrade to finish
 func (c *Conn) Wait() {
-	if c.waiter != nil {
-		c.waiter.Wait()
-	}
+	c.waiter.Wait()
 }
 
 // Called by Upgrader to wait for reader/writer goroutines to be ready for
 // upgrade.
 func (c *Conn) WaitReady() {
-	if c.waiter != nil {
-		c.waiter.WaitReady()
-	}
+	c.waiter.WaitReady()
 }
 
 // SetDebug defines an io.Writer to which all network activity will be logged.
