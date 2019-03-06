@@ -7,7 +7,7 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-type AuthReplyFunc func(reply string) error
+type AuthReplyFunc func(reply []byte) error
 
 // An AUTHENTICATE response.
 type Authenticate struct {
@@ -17,7 +17,7 @@ type Authenticate struct {
 }
 
 func (r *Authenticate) writeLine(l string) error {
-	return r.AuthReply(l + "\r\n")
+	return r.AuthReply([]byte(l + "\r\n"))
 }
 
 func (r *Authenticate) cancel() error {
