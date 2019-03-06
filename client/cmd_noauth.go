@@ -38,12 +38,16 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) error {
 	cmd := new(commands.StartTLS)
 
 	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
+		// Flag connection as in upgrading
+		c.upgrading = true
 		if status, err := c.execute(cmd, nil); err != nil {
 			return nil, err
 		} else if err := status.Err(); err != nil {
 			return nil, err
 		}
 
+		// Wait for reader to block.
+		c.conn.WaitReady()
 		tlsConn := tls.Client(conn, tlsConfig)
 		if err := tlsConn.Handshake(); err != nil {
 			return nil, err

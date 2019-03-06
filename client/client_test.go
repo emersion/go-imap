@@ -102,9 +102,20 @@ func TestClient_SetDebug(t *testing.T) {
 	defer s.Close()
 
 	var b bytes.Buffer
-	c.SetDebug(&b)
-
 	done := make(chan error)
+
+	go func() {
+		c.SetDebug(&b)
+		done <- nil
+	}()
+	if tag, cmd := s.ScanCmd(); cmd != "NOOP" {
+		t.Fatal("Bad command:", cmd)
+	} else {
+		s.WriteString(tag + " OK NOOP completed.\r\n")
+	}
+	// wait for SetDebug to finish.
+	<-done
+
 	go func() {
 		_, err := c.Capability()
 		done <- err

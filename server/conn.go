@@ -32,6 +32,7 @@ type Conn interface {
 	Upgrade(upgrader imap.ConnUpgrader) error
 	// Close closes this connection.
 	Close() error
+	WaitReady()
 
 	setTLSConn(*tls.Conn)
 	silent() *bool // TODO: remove this
@@ -63,6 +64,7 @@ type conn struct {
 	ctx       *Context
 	tlsConn   *tls.Conn
 	continues chan bool
+	upgrade   chan bool
 	responses chan imap.WriterTo
 	loggedOut chan struct{}
 	silentVal bool
@@ -90,6 +92,7 @@ func newConn(s *Server, c net.Conn) *conn {
 		},
 		tlsConn:   tlsConn,
 		continues: continues,
+		upgrade:   make(chan bool),
 		responses: responses,
 		loggedOut: loggedOut,
 	}
@@ -190,6 +193,9 @@ func (c *conn) send() {
 	// Send responses
 	for {
 		select {
+		case <-c.upgrade:
+			// Wait until upgrade is finished.
+			c.Wait()
 		case needCont := <-c.continues:
 			// Send continuation requests
 			if needCont {
@@ -275,7 +281,6 @@ func (c *conn) serve(conn Conn) error {
 		var res *imap.StatusResp
 		var up Upgrader
 
-		c.Wait()
 		fields, err := c.ReadLine()
 		if err == io.EOF || c.ctx.State == imap.LogoutState {
 			return nil
@@ -328,6 +333,11 @@ func (c *conn) serve(conn Conn) error {
 			}
 		}
 	}
+}
+
+func (c *conn) WaitReady() {
+	c.upgrade <- true
+	c.Conn.WaitReady()
 }
 
 func (c *conn) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
