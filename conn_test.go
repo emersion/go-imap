@@ -81,6 +81,7 @@ func TestConn_Upgrade(t *testing.T) {
 	began := make(chan struct{})
 	go ic.Upgrade(func(conn net.Conn) (net.Conn, error) {
 		began <- struct{}{}
+		ic.WaitReady()
 		return &upgraded{conn}, nil
 	})
 	<-began

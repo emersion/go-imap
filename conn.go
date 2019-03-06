@@ -51,6 +51,49 @@ const (
 // COMPRESS).
 type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 
+type Waiter struct {
+	waits chan struct{}
+	ready chan bool
+	finished bool
+}
+
+func NewWaiter(blocked bool) *Waiter {
+	w := &Waiter{}
+	// If the waiter is blocked, create a channel.
+	if(blocked) {
+		w.finished = false
+		w.ready = make(chan bool)
+		w.waits = make(chan struct{})
+	} else {
+		w.finished = true
+	}
+	return  w
+}
+
+func (w *Waiter) Wait() {
+	if !w.finished {
+		// Signal that we are ready for upgrade to continue.
+		w.ready <- true
+		// Wait for upgrade to finish.
+		<-w.waits
+		w.finished = true
+	}
+}
+
+func (w *Waiter) WaitReady() {
+	if w.ready != nil {
+		// Wait for reader/writer goroutine to be ready for upgrade.
+		<-w.ready
+	}
+}
+
+func (w *Waiter) Close() {
+	if w.waits != nil {
+		// Upgrade is finished, close chanel to release reader/writer
+		close(w.waits)
+	}
+}
+
 type debugWriter struct {
 	io.Writer
 
@@ -90,7 +133,7 @@ type Conn struct {
 	br *bufio.Reader
 	bw *bufio.Writer
 
-	waits chan struct{}
+	waiter *Waiter
 
 	// Print all commands and responses to this io.Writer.
 	debug io.Writer
@@ -102,6 +145,13 @@ func NewConn(conn net.Conn, r *Reader, w *Writer) *Conn {
 
 	c.init()
 	return c
+}
+
+func (c *Conn) blockWaiter(blocked bool) *Waiter {
+	// create new waiter each time.
+	w := NewWaiter(blocked)
+	c.waiter = w
+	return w
 }
 
 func (c *Conn) init() {
@@ -160,14 +210,9 @@ func (c *Conn) Flush() error {
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
 // tunnel.
 func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
-	// Flush all buffered data
-	if err := c.Flush(); err != nil {
-		return err
-	}
-
 	// Block reads and writes during the upgrading process
-	c.waits = make(chan struct{})
-	defer close(c.waits)
+	w := c.blockWaiter(true)
+	defer w.Close()
 
 	upgraded, err := upgrader(c.Conn)
 	if err != nil {
@@ -179,10 +224,18 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	return nil
 }
 
-// Wait waits for the connection to be ready for reads and writes.
+// Called by reader/writer goroutines to wait for Upgrade to finish
 func (c *Conn) Wait() {
-	if c.waits != nil {
-		<-c.waits
+	if c.waiter != nil {
+		c.waiter.Wait()
+	}
+}
+
+// Called by Upgrader to wait for reader/writer goroutines to be ready for
+// upgrade.
+func (c *Conn) WaitReady() {
+	if c.waiter != nil {
+		c.waiter.WaitReady()
 	}
 }
 

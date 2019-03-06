@@ -45,8 +45,9 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 	tlsConfig := conn.Server().TLSConfig
 
 	var tlsConn *tls.Conn
-	err := conn.Upgrade(func(conn net.Conn) (net.Conn, error) {
-		tlsConn = tls.Server(conn, tlsConfig)
+	err := conn.Upgrade(func(sock net.Conn) (net.Conn, error) {
+		conn.WaitReady()
+		tlsConn = tls.Server(sock, tlsConfig)
 		err := tlsConn.Handshake()
 		return tlsConn, err
 	})

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
 
@@ -62,6 +63,7 @@ type Client struct {
 
 	greeted   chan struct{}
 	loggedOut chan struct{}
+	upgrading bool
 
 	handlers       []responses.Handler
 	handlersLocker sync.Mutex
@@ -140,8 +142,6 @@ func (c *Client) read(greeted <-chan struct{}) error {
 			return nil
 		}
 
-		c.conn.Wait()
-
 		if first {
 			first = false
 		} else {
@@ -192,6 +192,9 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 		}
 	}
 
+	// Check if we are upgrading.
+	upgrading := c.upgrading
+
 	// Add handler before sending command, to be sure to get the response in time
 	// (in tests, the response is sent right after our command is received, so
 	// sometimes the response was received before the setup of this handler)
@@ -208,6 +211,12 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 		if s, ok := resp.(*imap.StatusResp); ok && s.Tag == cmd.Tag {
 			// This is the command's status response, we're done
 			doneHandle <- handleResult{s, nil}
+			// Special handling of connection upgrading.
+			if upgrading {
+				c.upgrading = false
+				// Wait for upgrade to finish.
+				c.conn.Wait()
+			}
 			return errUnregisterHandler
 		}
 
@@ -229,6 +238,12 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 		// Error while sending the command
 		close(unregister)
 		return nil, err
+	}
+	// Flush writer if we are upgrading
+	if upgrading {
+		if err := c.conn.Writer.Flush(); err != nil {
+			return nil, err
+		}
 	}
 
 	for {
@@ -487,7 +502,27 @@ func (c *Client) LoggedOut() <-chan struct{} {
 // SetDebug defines an io.Writer to which all network activity will be logged.
 // If nil is provided, network activity will not be logged.
 func (c *Client) SetDebug(w io.Writer) {
-	c.conn.SetDebug(w)
+	// Need to send a command to unblock the reader goroutine.
+	cmd := new(commands.Noop)
+	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
+		// Flag connection as in upgrading
+		c.upgrading = true
+		if status, err := c.execute(cmd, nil); err != nil {
+			return nil, err
+		} else if err := status.Err(); err != nil {
+			return nil, err
+		}
+
+		// Wait for reader to block.
+		c.conn.WaitReady()
+
+		c.conn.SetDebug(w)
+		return conn, nil
+	})
+	if err != nil {
+		log.Println("SetDebug:",err)
+	}
+
 }
 
 // New creates a new client from an existing connection.
