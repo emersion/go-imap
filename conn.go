@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"net"
+	"sync"
 )
 
 // A connection state.
@@ -94,6 +95,22 @@ func (w *Waiter) Close() {
 	}
 }
 
+type LockedWriter struct {
+	lock sync.Mutex
+	writer io.Writer
+}
+
+// NewLockedWriter - goroutine safe writer.
+func NewLockedWriter(w io.Writer) io.Writer {
+	return &LockedWriter{writer: w}
+}
+
+func (w *LockedWriter) Write(b []byte) (int , error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	return w.writer.Write(b)
+}
+
 type debugWriter struct {
 	io.Writer
 
@@ -162,6 +179,11 @@ func (c *Conn) init() {
 		localDebug, remoteDebug := c.debug, c.debug
 		if debug, ok := c.debug.(*debugWriter); ok {
 			localDebug, remoteDebug = debug.local, debug.remote
+		}
+		// If local and remote are the same, then we need a LockedWriter.
+		if localDebug == remoteDebug {
+			localDebug = NewLockedWriter(localDebug)
+			remoteDebug = localDebug
 		}
 
 		if localDebug != nil {
