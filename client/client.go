@@ -62,7 +62,6 @@ type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
-	greeted   chan struct{}
 	loggedOut chan struct{}
 	upgrading bool
 
@@ -124,58 +123,47 @@ func (c *Client) handle(resp imap.Resp) error {
 	return responses.ErrUnhandled
 }
 
-func (c *Client) read(greeted <-chan struct{}) error {
-	greetedClosed := false
-
-	defer func() {
-		// Ensure we close the greeted channel. New may be waiting on an indication
-		// that we've seen the greeting.
-		if !greetedClosed {
-			close(c.greeted)
-			greetedClosed = true
-		}
-		close(c.loggedOut)
-	}()
-
-	first := true
+func (c *Client) reader() {
+	defer close(c.loggedOut)
+	// Loop while connected.
 	for {
-		if c.State() == imap.LogoutState {
-			return nil
-		}
-
-		if first {
-			first = false
-		} else {
-			<-greeted
-			if !greetedClosed {
-				close(c.greeted)
-				greetedClosed = true
-			}
-		}
-
-		resp, err := imap.ReadResp(c.conn.Reader)
-		if err == io.EOF || c.State() == imap.LogoutState {
-			return nil
-		} else if err != nil {
-			if opErr, ok := err.(*net.OpError); ok {
-				if syscallErr, ok := opErr.Err.(*os.SyscallError); ok {
-					if syscallErr.Err == syscall.ECONNRESET {
-						return nil
-					}
-				}
-			}
+		connected, err := c.readOnce()
+		if err != nil {
 			c.ErrorLog.Println("error reading response:", err)
-			if imap.IsParseError(err) {
-				continue
-			} else {
-				return err
-			}
 		}
-
-		if err := c.handle(resp); err != nil && err != responses.ErrUnhandled {
-			c.ErrorLog.Println("cannot handle response ", resp, err)
+		if !connected {
+			return
 		}
 	}
+}
+
+func (c *Client) readOnce() (bool, error) {
+	if c.State() == imap.LogoutState {
+		return false, nil
+	}
+
+	resp, err := imap.ReadResp(c.conn.Reader)
+	if err == io.EOF || c.State() == imap.LogoutState {
+		return false, nil
+	} else if err != nil {
+		if opErr, ok := err.(*net.OpError); ok {
+			if syscallErr, ok := opErr.Err.(*os.SyscallError); ok {
+				if syscallErr.Err == syscall.ECONNRESET {
+					return false, nil
+				}
+			}
+		}
+		if imap.IsParseError(err) {
+			return true, err
+		} else {
+			return false, err
+		}
+	}
+
+	if err := c.handle(resp); err != nil && err != responses.ErrUnhandled {
+		c.ErrorLog.Println("cannot handle response ", resp, err)
+	}
+	return true, nil
 }
 
 type handleResult struct {
@@ -435,13 +423,13 @@ func (c *Client) handleUnilateral() {
 }
 
 func (c *Client) handleGreetAndStartReading() error {
-	done := make(chan error, 2)
-	greeted := make(chan struct{})
+	var greetErr error
+	gotGreet := false
 
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
 		status, ok := resp.(*imap.StatusResp)
 		if !ok {
-			done <- fmt.Errorf("invalid greeting received from server: not a status response")
+			greetErr = fmt.Errorf("invalid greeting received from server: not a status response")
 			return errUnregisterHandler
 		}
 
@@ -456,7 +444,7 @@ func (c *Client) handleGreetAndStartReading() error {
 		default:
 			c.state = imap.LogoutState
 			c.locker.Unlock()
-			done <- fmt.Errorf("invalid greeting received from server: %v", status.Type)
+			greetErr = fmt.Errorf("invalid greeting received from server: %v", status.Type)
 			return errUnregisterHandler
 		}
 		c.locker.Unlock()
@@ -465,18 +453,34 @@ func (c *Client) handleGreetAndStartReading() error {
 			c.gotStatusCaps(status.Arguments)
 		}
 
-		close(greeted)
-		done <- nil
+		gotGreet = true
 		return errUnregisterHandler
 	}))
 
-	// Make sure to start reading after we have set up this handler, otherwise
-	// some messages will be lost.
-	go func() {
-		done <- c.read(greeted)
-	}()
+	// call `readOnce` until we get the greeting or an error
+	for !gotGreet {
+		connected, err := c.readOnce()
+		// Check for read errors
+		if err != nil {
+			// return read errors
+			return err
+		}
+		// Check for invalid greet
+		if greetErr != nil {
+			// return read errors
+			return greetErr
+		}
+		// Check if connection was closed.
+		if !connected {
+			// connection closed.
+			return io.EOF
+		}
+	}
 
-	return <-done
+	// We got the greeting, now start the reader goroutine.
+	go c.reader()
+
+	return nil
 }
 
 // Upgrade a connection, e.g. wrap an unencrypted connection with an encrypted
@@ -541,7 +545,6 @@ func New(conn net.Conn) (*Client, error) {
 
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
-		greeted:   make(chan struct{}),
 		loggedOut: make(chan struct{}),
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
