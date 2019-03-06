@@ -62,6 +62,7 @@ type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
+	replies   chan string
 	loggedOut chan struct{}
 	upgrading bool
 
@@ -166,6 +167,14 @@ func (c *Client) readOnce() (bool, error) {
 	return true, nil
 }
 
+func (c *Client) writeReply(reply string) error {
+	if _, err := c.conn.Writer.Write([]byte(reply)); err != nil {
+		return err
+	}
+	// Flush reply
+	return c.conn.Writer.Flush()
+}
+
 type handleResult struct {
 	status *imap.StatusResp
 	err    error
@@ -238,12 +247,20 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	// Flush writer if we are upgrading
 	if upgrading {
 		if err := c.conn.Writer.Flush(); err != nil {
+			// Error while sending the command
+			close(unregister)
 			return nil, err
 		}
 	}
 
 	for {
 		select {
+		case reply := <-c.replies:
+			// Response handler needs to send a reply (Used for AUTHENTICATE)
+			if err := c.writeReply(reply); err != nil {
+				close(unregister)
+				return nil, err
+			}
 		case <-c.loggedOut:
 			// If the connection is closed (such as from an I/O error), ensure we
 			// realize this and don't block waiting on a response that will never
@@ -545,6 +562,7 @@ func New(conn net.Conn) (*Client, error) {
 
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
+		replies:   make(chan string),
 		loggedOut: make(chan struct{}),
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),

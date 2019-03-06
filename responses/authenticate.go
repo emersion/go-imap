@@ -7,22 +7,21 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
+type AuthReplyFunc func(reply string)
+
 // An AUTHENTICATE response.
 type Authenticate struct {
 	Mechanism       sasl.Client
 	InitialResponse []byte
-	Writer          *imap.Writer
+	AuthReply       AuthReplyFunc
 }
 
-func (r *Authenticate) writeLine(l string) error {
-	if _, err := r.Writer.Write([]byte(l + "\r\n")); err != nil {
-		return err
-	}
-	return r.Writer.Flush()
+func (r *Authenticate) writeLine(l string) {
+	r.AuthReply(l + "\r\n")
 }
 
-func (r *Authenticate) cancel() error {
-	return r.writeLine("*")
+func (r *Authenticate) cancel() {
+	r.writeLine("*")
 }
 
 func (r *Authenticate) Handle(resp imap.Resp) error {
@@ -34,9 +33,7 @@ func (r *Authenticate) Handle(resp imap.Resp) error {
 	// Empty challenge, send initial response as stated in RFC 2222 section 5.1
 	if cont.Info == "" && r.InitialResponse != nil {
 		encoded := base64.StdEncoding.EncodeToString(r.InitialResponse)
-		if err := r.writeLine(encoded); err != nil {
-			return err
-		}
+		r.writeLine(encoded)
 		r.InitialResponse = nil
 		return nil
 	}
@@ -54,5 +51,6 @@ func (r *Authenticate) Handle(resp imap.Resp) error {
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(reply)
-	return r.writeLine(encoded)
+	r.writeLine(encoded)
+	return nil
 }
