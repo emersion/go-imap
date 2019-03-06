@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"syscall"
 	"sync"
 	"time"
 
@@ -156,6 +157,13 @@ func (c *Client) read(greeted <-chan struct{}) error {
 		if err == io.EOF || c.State() == imap.LogoutState {
 			return nil
 		} else if err != nil {
+			if opErr, ok := err.(*net.OpError); ok {
+				if syscallErr, ok := opErr.Err.(*os.SyscallError); ok {
+					if syscallErr.Err == syscall.ECONNRESET {
+						return nil
+					}
+				}
+			}
 			c.ErrorLog.Println("error reading response:", err)
 			if imap.IsParseError(err) {
 				continue
