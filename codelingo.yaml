@@ -1,0 +1,4 @@
+tenets:
+  - codelingo/effective-go/comment-first-word-as-subject
+  - codelingo/effective-go/single-method-interface-name
+  - codelingo/effective-go/underscores-in-name
