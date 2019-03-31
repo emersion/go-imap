@@ -146,6 +146,7 @@ to learn how to use them.
 * [IDLE](https://github.com/emersion/go-imap-idle)
 * [MOVE](https://github.com/emersion/go-imap-move)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
+* [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 * [UNSELECT](https://github.com/emersion/go-imap-unselect)
 * [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
