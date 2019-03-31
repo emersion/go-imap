@@ -134,11 +134,11 @@ func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err er
 }
 
 func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+	defer close(ch)
+
 	if c.State() != imap.SelectedState {
 		return ErrNoMailboxSelected
 	}
-
-	defer close(ch)
 
 	var cmd imap.Commander = &commands.Fetch{
 		SeqSet: seqset,
