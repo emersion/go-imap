@@ -240,6 +240,34 @@ func TestClient_Fetch(t *testing.T) {
 	}
 }
 
+func TestClient_Fetch_ClosedState(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	seqset, _ := imap.ParseSeqSet("2:3")
+	fields := []imap.FetchItem{imap.FetchUid, imap.FetchItem("BODY[]")}
+
+	done := make(chan error, 1)
+	messages := make(chan *imap.Message, 2)
+	go func() {
+		done <- c.Fetch(seqset, fields, messages)
+	}()
+
+	_, more := <- messages
+
+	if more {
+		t.Fatalf("Messages channel has more messages, but it must be closed with no messages sent")
+	}
+
+	err := <- done
+
+	if err != ErrNoMailboxSelected {
+		t.Fatalf("Expected error to be IMAP Client ErrNoMailboxSelected")
+	}
+}
+
 func TestClient_Fetch_Partial(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
