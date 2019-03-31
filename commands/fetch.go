@@ -16,11 +16,7 @@ type Fetch struct {
 func (cmd *Fetch) Command() *imap.Command {
 	items := make([]interface{}, len(cmd.Items))
 	for i, item := range cmd.Items {
-		if section, err := imap.ParseBodySectionName(item); err == nil {
-			items[i] = section
-		} else {
-			items[i] = string(item)
-		}
+		items[i] = imap.Atom(item)
 	}
 
 	return &imap.Command{
