@@ -2,6 +2,7 @@ package imap
 
 import (
 	"bufio"
+	"crypto/tls"
 	"io"
 	"net"
 	"sync"
@@ -53,8 +54,8 @@ const (
 type ConnUpgrader func(conn net.Conn) (net.Conn, error)
 
 type Waiter struct {
-	start sync.WaitGroup
-	end sync.WaitGroup
+	start    sync.WaitGroup
+	end      sync.WaitGroup
 	finished bool
 }
 
@@ -62,7 +63,7 @@ func NewWaiter() *Waiter {
 	w := &Waiter{finished: false}
 	w.start.Add(1)
 	w.end.Add(1)
-	return  w
+	return w
 }
 
 func (w *Waiter) Wait() {
@@ -90,7 +91,7 @@ func (w *Waiter) Close() {
 }
 
 type LockedWriter struct {
-	lock sync.Mutex
+	lock   sync.Mutex
 	writer io.Writer
 }
 
@@ -99,7 +100,7 @@ func NewLockedWriter(w io.Writer) io.Writer {
 	return &LockedWriter{writer: w}
 }
 
-func (w *LockedWriter) Write(b []byte) (int , error) {
+func (w *LockedWriter) Write(b []byte) (int, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	return w.writer.Write(b)
@@ -133,6 +134,15 @@ func (mf *multiFlusher) Flush() error {
 
 func newMultiFlusher(flushers ...flusher) flusher {
 	return &multiFlusher{flushers}
+}
+
+// Underlying connection state information.
+type ConnInfo struct {
+	RemoteAddr net.Addr
+	LocalAddr  net.Addr
+
+	// nil if connection is not using TLS.
+	TLS *tls.ConnectionState
 }
 
 // An IMAP connection.
@@ -211,6 +221,21 @@ func (c *Conn) init() {
 			newMultiFlusher(c.bw, f),
 		}
 	}
+}
+
+func (c *Conn) Info() *ConnInfo {
+	info := &ConnInfo{
+		RemoteAddr: c.RemoteAddr(),
+		LocalAddr:  c.LocalAddr(),
+	}
+
+	tlsConn, ok := c.Conn.(*tls.Conn)
+	if ok {
+		state := tlsConn.ConnectionState()
+		info.TLS = &state
+	}
+
+	return info
 }
 
 // Write implements io.Writer.

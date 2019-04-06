@@ -139,7 +139,7 @@ func New(bkd backend.Backend) *Server {
 					return errors.New("Identities not supported")
 				}
 
-				user, err := bkd.Login(username, password)
+				user, err := bkd.Login(conn.Info(), username, password)
 				if err != nil {
 					return err
 				}
