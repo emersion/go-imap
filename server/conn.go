@@ -34,6 +34,8 @@ type Conn interface {
 	Close() error
 	WaitReady()
 
+	Info() *imap.ConnInfo
+
 	setTLSConn(*tls.Conn)
 	silent() *bool // TODO: remove this
 	serve(Conn) error
