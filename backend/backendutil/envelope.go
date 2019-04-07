@@ -32,7 +32,7 @@ func headerAddressList(h mail.Header, key string) ([]*imap.Address, error) {
 
 // FetchEnvelope returns a message's envelope from its header.
 func FetchEnvelope(h message.Header) (*imap.Envelope, error) {
-	mh := mail.Header{h}
+	mh := mail.Header{Header: h}
 
 	env := new(imap.Envelope)
 	env.Date, _ = mh.Date()

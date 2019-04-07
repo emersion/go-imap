@@ -13,10 +13,10 @@ type StatusItem string
 
 const (
 	StatusMessages    StatusItem = "MESSAGES"
-	StatusRecent                 = "RECENT"
-	StatusUidNext                = "UIDNEXT"
-	StatusUidValidity            = "UIDVALIDITY"
-	StatusUnseen                 = "UNSEEN"
+	StatusRecent      StatusItem = "RECENT"
+	StatusUidNext     StatusItem = "UIDNEXT"
+	StatusUidValidity StatusItem = "UIDVALIDITY"
+	StatusUnseen      StatusItem = "UNSEEN"
 )
 
 // A FetchItem is a message data item that can be fetched.
@@ -26,20 +26,20 @@ type FetchItem string
 const (
 	// Macros
 	FetchAll  FetchItem = "ALL"
-	FetchFast           = "FAST"
-	FetchFull           = "FULL"
+	FetchFast FetchItem = "FAST"
+	FetchFull FetchItem = "FULL"
 
 	// Items
-	FetchBody          = "BODY"
-	FetchBodyStructure = "BODYSTRUCTURE"
-	FetchEnvelope      = "ENVELOPE"
-	FetchFlags         = "FLAGS"
-	FetchInternalDate  = "INTERNALDATE"
-	FetchRFC822        = "RFC822"
-	FetchRFC822Header  = "RFC822.HEADER"
-	FetchRFC822Size    = "RFC822.SIZE"
-	FetchRFC822Text    = "RFC822.TEXT"
-	FetchUid           = "UID"
+	FetchBody          FetchItem = "BODY"
+	FetchBodyStructure FetchItem = "BODYSTRUCTURE"
+	FetchEnvelope      FetchItem = "ENVELOPE"
+	FetchFlags         FetchItem = "FLAGS"
+	FetchInternalDate  FetchItem = "INTERNALDATE"
+	FetchRFC822        FetchItem = "RFC822"
+	FetchRFC822Header  FetchItem = "RFC822.HEADER"
+	FetchRFC822Size    FetchItem = "RFC822.SIZE"
+	FetchRFC822Text    FetchItem = "RFC822.TEXT"
+	FetchUid           FetchItem = "UID"
 )
 
 // Expand expands the item if it's a macro.

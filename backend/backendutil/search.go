@@ -59,7 +59,7 @@ func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
 	// TODO: support encoded header fields for Bcc, Cc, From, To
 	// TODO: add header size for Larger and Smaller
 
-	h := mail.Header{e.Header}
+	h := mail.Header{Header: e.Header}
 
 	if !c.SentBefore.IsZero() || !c.SentSince.IsZero() {
 		t, err := h.Date()

@@ -98,7 +98,7 @@ func TestReader_ReadSp(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if err := r.ReadSp(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -113,22 +113,22 @@ func TestReader_ReadCrlf(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if err := r.ReadCrlf(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("\n")
+	_, r = newReader("\n")
 	if err := r.ReadCrlf(); err != nil {
 		t.Error(err)
 	}
 
-	b, r = newReader("\r")
+	_, r = newReader("\r")
 	if err := r.ReadCrlf(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("\r42")
+	_, r = newReader("\r42")
 	if err := r.ReadCrlf(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -210,42 +210,42 @@ func TestReader_ReadLiteral(t *testing.T) {
 		}
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[7}\r\nabcdefg")
+	_, r = newReader("[7}\r\nabcdefg")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{7]\r\nabcdefg")
+	_, r = newReader("{7]\r\nabcdefg")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{7.4}\r\nabcdefg")
+	_, r = newReader("{7.4}\r\nabcdefg")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{7}abcdefg")
+	_, r = newReader("{7}abcdefg")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{7}\rabcdefg")
+	_, r = newReader("{7}\rabcdefg")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{7}\nabcdefg")
+	_, r = newReader("{7}\nabcdefg")
 	if _, err := r.ReadLiteral(); err != nil {
 		t.Error(err)
 	}
 
-	b, r = newReader("{7}\r\nabcd")
+	_, r = newReader("{7}\r\nabcd")
 	if _, err := r.ReadLiteral(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -266,29 +266,29 @@ func TestReader_ReadQuotedString(t *testing.T) {
 		}
 	}
 
-	b, r = newReader("\"here's a backslash: \\\\, and here's a double quote: \\\" !\"\r\n")
+	_, r = newReader("\"here's a backslash: \\\\, and here's a double quote: \\\" !\"\r\n")
 	if s, err := r.ReadQuotedString(); err != nil {
 		t.Error(err)
 	} else if s != "here's a backslash: \\, and here's a double quote: \" !" {
 		t.Error("Quoted string has not the expected value:", s)
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("hello gopher\"\r\n")
+	_, r = newReader("hello gopher\"\r\n")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("\"hello gopher\r\n")
+	_, r = newReader("\"hello gopher\r\n")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("\"hello \\gopher\"\r\n")
+	_, r = newReader("\"hello \\gopher\"\r\n")
 	if _, err := r.ReadQuotedString(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -313,32 +313,32 @@ func TestReader_ReadFields(t *testing.T) {
 		}
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("fi\"eld1 \"field2\"\r\n")
+	_, r = newReader("fi\"eld1 \"field2\"\r\n")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("field1 ")
+	_, r = newReader("field1 ")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("field1 (")
+	_, r = newReader("field1 (")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("field1\"field2\"\r\n")
+	_, r = newReader("field1\"field2\"\r\n")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("\"field1\"\"field2\"\r\n")
+	_, r = newReader("\"field1\"\"field2\"\r\n")
 	if _, err := r.ReadFields(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -375,22 +375,22 @@ func TestReader_ReadList(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadList(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[field1 field2 field3)")
+	_, r = newReader("[field1 field2 field3)")
 	if _, err := r.ReadList(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("(field1 fie\"ld2 field3)")
+	_, r = newReader("(field1 fie\"ld2 field3)")
 	if _, err := r.ReadList(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("(field1 field2 field3\r\n")
+	_, r = newReader("(field1 field2 field3\r\n")
 	if _, err := r.ReadList(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -410,12 +410,12 @@ func TestReader_ReadLine(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, err := r.ReadLine(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("field1 field2\rabc")
+	_, r = newReader("field1 field2\rabc")
 	if _, err := r.ReadLine(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -437,32 +437,32 @@ func TestReader_ReadRespCode(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("")
+	_, r = newReader("")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("{CAPABILITY NOOP STARTTLS]")
+	_, r = newReader("{CAPABILITY NOOP STARTTLS]")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[CAPABILITY NO\"OP STARTTLS]")
+	_, r = newReader("[CAPABILITY NO\"OP STARTTLS]")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[]")
+	_, r = newReader("[]")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[{3}\r\nabc]")
+	_, r = newReader("[{3}\r\nabc]")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("[CAPABILITY NOOP STARTTLS\r\n")
+	_, r = newReader("[CAPABILITY NOOP STARTTLS\r\n")
 	if _, _, err := r.ReadRespCode(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
@@ -478,22 +478,22 @@ func TestReader_ReadInfo(t *testing.T) {
 		t.Error("Buffer is not empty after read")
 	}
 
-	b, r = newReader("I love potatoes.")
+	_, r = newReader("I love potatoes.")
 	if _, err := r.ReadInfo(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("I love potatoes.\r")
+	_, r = newReader("I love potatoes.\r")
 	if _, err := r.ReadInfo(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
 
-	b, r = newReader("I love potatoes.\n")
+	_, r = newReader("I love potatoes.\n")
 	if _, err := r.ReadInfo(); err != nil {
 		t.Error(err)
 	}
 
-	b, r = newReader("I love potatoes.\rabc")
+	_, r = newReader("I love potatoes.\rabc")
 	if _, err := r.ReadInfo(); err == nil {
 		t.Error("Invalid read didn't fail")
 	}
