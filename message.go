@@ -454,7 +454,7 @@ func (section *BodySectionName) Equal(other *BodySectionName) bool {
 
 func (section *BodySectionName) resp() *BodySectionName {
 	resp := *section // Copy section
-	if resp.Peek != false {
+	if resp.Peek {
 		resp.Peek = false
 	}
 	if len(resp.Partial) == 2 {

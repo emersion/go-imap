@@ -18,7 +18,7 @@ const (
 	// server.  When tagged, it indicates unsuccessful completion of the
 	// associated command.  The untagged form indicates a warning; the
 	// command can still complete successfully.
-	StatusRespNo = "NO"
+	StatusRespNo StatusRespType = "NO"
 
 	// The BAD response indicates an error message from the server.  When
 	// tagged, it reports a protocol-level error in the client's command;
@@ -26,17 +26,17 @@ const (
 	// form indicates a protocol-level error for which the associated
 	// command can not be determined; it can also indicate an internal
 	// server failure.
-	StatusRespBad = "BAD"
+	StatusRespBad StatusRespType = "BAD"
 
 	// The PREAUTH response is always untagged, and is one of three
 	// possible greetings at connection startup.  It indicates that the
 	// connection has already been authenticated by external means; thus
 	// no LOGIN command is needed.
-	StatusRespPreauth = "PREAUTH"
+	StatusRespPreauth StatusRespType = "PREAUTH"
 
 	// The BYE response is always untagged, and indicates that the server
 	// is about to close the connection.
-	StatusRespBye = "BYE"
+	StatusRespBye StatusRespType = "BYE"
 )
 
 type StatusRespCode string
@@ -44,16 +44,16 @@ type StatusRespCode string
 // Status response codes defined in RFC 3501 section 7.1.
 const (
 	CodeAlert          StatusRespCode = "ALERT"
-	CodeBadCharset                    = "BADCHARSET"
-	CodeCapability                    = "CAPABILITY"
-	CodeParse                         = "PARSE"
-	CodePermanentFlags                = "PERMANENTFLAGS"
-	CodeReadOnly                      = "READ-ONLY"
-	CodeReadWrite                     = "READ-WRITE"
-	CodeTryCreate                     = "TRYCREATE"
-	CodeUidNext                       = "UIDNEXT"
-	CodeUidValidity                   = "UIDVALIDITY"
-	CodeUnseen                        = "UNSEEN"
+	CodeBadCharset     StatusRespCode = "BADCHARSET"
+	CodeCapability     StatusRespCode = "CAPABILITY"
+	CodeParse          StatusRespCode = "PARSE"
+	CodePermanentFlags StatusRespCode = "PERMANENTFLAGS"
+	CodeReadOnly       StatusRespCode = "READ-ONLY"
+	CodeReadWrite      StatusRespCode = "READ-WRITE"
+	CodeTryCreate      StatusRespCode = "TRYCREATE"
+	CodeUidNext        StatusRespCode = "UIDNEXT"
+	CodeUidValidity    StatusRespCode = "UIDVALIDITY"
+	CodeUnseen         StatusRespCode = "UNSEEN"
 )
 
 // A status response.

@@ -308,7 +308,7 @@ func TestClient_Fetch_part(t *testing.T) {
 		t.Fatalf("c.Fetch() = %v", err)
 	}
 
-	_ = <-messages
+	<-messages
 }
 
 func TestClient_Fetch_Uid(t *testing.T) {
