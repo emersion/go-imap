@@ -31,7 +31,13 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 		return err
 	}
 
-	r.Messages <- msg
+	func(){
+		defer func() {
+			recover()
+		}()
+		r.Messages <- msg
+	}()
+
 	return nil
 }
 
