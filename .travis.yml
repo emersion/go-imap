@@ -1,6 +1,0 @@
-language: go
-sudo: false
-go:
-  - "1.10"
-script: go test -race -coverprofile=coverage.txt -covermode=atomic
-after_script: bash <(curl -s https://codecov.io/bash)

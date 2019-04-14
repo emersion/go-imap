@@ -1,7 +1,7 @@
 # go-imap
 
 [![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
-[![Build Status](https://travis-ci.org/emersion/go-imap.svg?branch=master)](https://travis-ci.org/emersion/go-imap)
+[![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap.svg)](https://builds.sr.ht/~emersion/go-imap?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
 [![Go Report
 Card](https://goreportcard.com/badge/github.com/emersion/go-imap)](https://goreportcard.com/report/github.com/emersion/go-imap)
