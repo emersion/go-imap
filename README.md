@@ -161,10 +161,10 @@ to learn how to use them.
 ### Related projects
 
 * [go-message](https://github.com/emersion/go-message) - parsing and formatting MIME and mail messages
+* [go-msgauth](https://github.com/emersion/go-msgauth) - handle DKIM, DMARC and Authentication-Results
 * [go-pgpmail](https://github.com/emersion/go-pgpmail) - decrypting and encrypting mails with OpenPGP
 * [go-sasl](https://github.com/emersion/go-sasl) - sending and receiving SASL authentications
 * [go-smtp](https://github.com/emersion/go-smtp) - building SMTP clients and servers
-* [go-dkim](https://github.com/emersion/go-dkim) - creating and verifying DKIM signatures
 
 ## License
 
