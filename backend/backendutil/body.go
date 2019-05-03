@@ -47,8 +47,8 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 			}
 		} else {
 			newHdr := make(message.Header)
-			for _, fieldName := range section.Fields {
-				newHdr.Set(fieldName, e.Header.Get(fieldName))
+			for i := len(section.Fields) - 1; i >= 0; i-- {
+				newHdr.Add(section.Fields[i], e.Header.Get(section.Fields[i]))
 			}
 			e.Header = newHdr
 		}
