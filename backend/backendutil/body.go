@@ -40,6 +40,20 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	// Then, write the requested data to a buffer
 	b := new(bytes.Buffer)
 
+	if section.Fields != nil {
+		if section.NotFields {
+			for _, fieldName := range section.Fields {
+				e.Header.Del(fieldName)
+			}
+		} else {
+			newHdr := make(message.Header)
+			for _, fieldName := range section.Fields {
+				newHdr.Set(fieldName, e.Header.Get(fieldName))
+			}
+			e.Header = newHdr
+		}
+	}
+
 	// Write the header
 	mw, err := message.CreateWriter(b, e.Header)
 	if err != nil {
