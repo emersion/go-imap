@@ -53,9 +53,9 @@ func bodyLen(e *message.Entity) (int, error) {
 	return b.Len(), nil
 }
 
-// Match returns true if a message matches the provided criteria. Sequence
-// number, UID, flag and internal date contrainsts are not checked.
-func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
+// Match returns true if a message and its metadata matches the provided
+// criteria.
+func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) {
 	// TODO: support encoded header fields for Bcc, Cc, From, To
 	// TODO: add header size for Larger and Smaller
 
@@ -122,19 +122,37 @@ func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
 		}
 	}
 
+	if !c.Since.IsZero() || !c.Before.IsZero() {
+		if !matchDate(date, c) {
+			return false, nil
+		}
+	}
+
+	if c.WithFlags != nil || c.WithoutFlags != nil {
+		if !matchFlags(flags, c) {
+			return false, nil
+		}
+	}
+
+	if c.SeqNum != nil || c.Uid != nil {
+		if !matchSeqNumAndUid(seqNum, uid, c) {
+			return false, nil
+		}
+	}
+
 	for _, not := range c.Not {
-		ok, err := Match(e, not)
+		ok, err := Match(e, seqNum, uid, date, flags, not)
 		if err != nil || ok {
 			return false, err
 		}
 	}
 	for _, or := range c.Or {
-		ok1, err := Match(e, or[0])
+		ok1, err := Match(e, seqNum, uid, date, flags, or[0])
 		if err != nil {
 			return ok1, err
 		}
 
-		ok2, err := Match(e, or[1])
+		ok2, err := Match(e, seqNum, uid, date, flags, or[1])
 		if err != nil || (!ok1 && !ok2) {
 			return false, err
 		}
@@ -143,83 +161,43 @@ func Match(e *message.Entity, c *imap.SearchCriteria) (bool, error) {
 	return true, nil
 }
 
-func matchFlags(flags map[string]bool, c *imap.SearchCriteria) bool {
-	for _, f := range c.WithFlags {
-		if !flags[f] {
-			return false
-		}
-	}
-	for _, f := range c.WithoutFlags {
-		if flags[f] {
-			return false
-		}
-	}
-
-	for _, not := range c.Not {
-		if matchFlags(flags, not) {
-			return false
-		}
-	}
-	for _, or := range c.Or {
-		if !matchFlags(flags, or[0]) && !matchFlags(flags, or[1]) {
-			return false
-		}
-	}
-	return true
-}
-
-// MatchFlags returns true if a flag list matches the provided criteria.
-func MatchFlags(flags []string, c *imap.SearchCriteria) bool {
+func matchFlags(flags []string, c *imap.SearchCriteria) bool {
 	flagsMap := make(map[string]bool)
 	for _, f := range flags {
 		flagsMap[f] = true
 	}
 
-	return matchFlags(flagsMap, c)
+	for _, f := range c.WithFlags {
+		if !flagsMap[f] {
+			return false
+		}
+	}
+	for _, f := range c.WithoutFlags {
+		if flagsMap[f] {
+			return false
+		}
+	}
+
+	return true
 }
 
-// MatchSeqNumAndUid returns true if a sequence number and a UID matches the
-// provided criteria.
-func MatchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
+func matchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
 	if c.SeqNum != nil && !c.SeqNum.Contains(seqNum) {
 		return false
 	}
 	if c.Uid != nil && !c.Uid.Contains(uid) {
 		return false
 	}
-
-	for _, not := range c.Not {
-		if MatchSeqNumAndUid(seqNum, uid, not) {
-			return false
-		}
-	}
-	for _, or := range c.Or {
-		if !MatchSeqNumAndUid(seqNum, uid, or[0]) && !MatchSeqNumAndUid(seqNum, uid, or[1]) {
-			return false
-		}
-	}
 	return true
 }
 
-// MatchDate returns true if a date matches the provided criteria.
-func MatchDate(date time.Time, c *imap.SearchCriteria) bool {
+func matchDate(date time.Time, c *imap.SearchCriteria) bool {
 	date = date.Round(24 * time.Hour)
 	if !c.Since.IsZero() && !date.After(c.Since) {
 		return false
 	}
 	if !c.Before.IsZero() && !date.Before(c.Before) {
 		return false
-	}
-
-	for _, not := range c.Not {
-		if MatchDate(date, not) {
-			return false
-		}
-	}
-	for _, or := range c.Or {
-		if !MatchDate(date, or[0]) && !MatchDate(date, or[1]) {
-			return false
-		}
 	}
 	return true
 }
