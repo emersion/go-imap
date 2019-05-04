@@ -42,6 +42,10 @@ var bodyTests = []struct {
 		body:    testHeaderNoFromToString,
 	},
 	{
+		section: "BODY[HEADER.FIELDS (Date)]",
+		body:    testHeaderDateString,
+	},
+	{
 		section: "BODY[1.1.HEADER]",
 		body:    testTextHeaderString,
 	},

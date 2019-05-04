@@ -8,6 +8,7 @@ var testDate, _ = time.Parse(time.RFC1123Z, "Sat, 18 Jun 2016 12:00:00 +0900")
 
 const testHeaderString = "Content-Type: multipart/mixed; boundary=message-boundary\r\n" +
 	"Date: Sat, 18 Jun 2016 12:00:00 +0900\r\n" +
+	"Date: Sat, 19 Jun 2016 12:00:00 +0900\r\n" +
 	"From: Mitsuha Miyamizu <mitsuha.miyamizu@example.org>\r\n" +
 	"Message-Id: 42@example.org\r\n" +
 	"Subject: Your Name.\r\n" +
@@ -18,8 +19,13 @@ const testHeaderFromToString = "From: Mitsuha Miyamizu <mitsuha.miyamizu@example
 	"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
 	"\r\n"
 
+const testHeaderDateString = "Date: Sat, 18 Jun 2016 12:00:00 +0900\r\n" +
+	"Date: Sat, 19 Jun 2016 12:00:00 +0900\r\n" +
+	"\r\n"
+
 const testHeaderNoFromToString = "Content-Type: multipart/mixed; boundary=message-boundary\r\n" +
 	"Date: Sat, 18 Jun 2016 12:00:00 +0900\r\n" +
+	"Date: Sat, 19 Jun 2016 12:00:00 +0900\r\n" +
 	"Message-Id: 42@example.org\r\n" +
 	"Subject: Your Name.\r\n" +
 	"\r\n"
