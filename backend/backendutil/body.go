@@ -40,8 +40,34 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	// Then, write the requested data to a buffer
 	b := new(bytes.Buffer)
 
+	header := e.Header
+	if section.Fields != nil {
+		// Copy header so we will not change message.Entity passed to us.
+		header = make(message.Header, len(e.Header))
+		for k, v := range e.Header {
+			header[k] = v
+		}
+
+		if section.NotFields {
+			for _, fieldName := range section.Fields {
+				header.Del(fieldName)
+			}
+		} else {
+			fieldsMap := make(map[string]struct{}, len(section.Fields))
+			for _, field := range section.Fields {
+				fieldsMap[field] = struct{}{}
+			}
+
+			for fieldName, _ := range header {
+				if _, ok := fieldsMap[fieldName]; !ok {
+					header.Del(fieldName)
+				}
+			}
+		}
+	}
+
 	// Write the header
-	mw, err := message.CreateWriter(b, e.Header)
+	mw, err := message.CreateWriter(b, header)
 	if err != nil {
 		return nil, err
 	}
