@@ -43,7 +43,7 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	header := e.Header
 	if section.Fields != nil {
 		// Copy header so we will not change message.Entity passed to us.
-		header := e.Header.Copy()
+		header.Header = e.Header.Copy()
 
 		if section.NotFields {
 			for _, fieldName := range section.Fields {
