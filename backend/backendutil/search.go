@@ -77,15 +77,16 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 	}
 
 	for key, wantValues := range c.Header {
-		values, ok := e.Header[key]
+		ok := e.Header.Has(key)
 		for _, wantValue := range wantValues {
 			if wantValue == "" && !ok {
 				return false, nil
 			}
 			if wantValue != "" {
 				ok := false
-				for _, v := range values {
-					if matchString(v, wantValue) {
+				values := e.Header.FieldsByKey(key)
+				for values.Next() {
+					if matchString(values.Value(), wantValue) {
 						ok = true
 						break
 					}

@@ -43,10 +43,7 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	header := e.Header
 	if section.Fields != nil {
 		// Copy header so we will not change message.Entity passed to us.
-		header = make(message.Header, len(e.Header))
-		for k, v := range e.Header {
-			header[k] = v
-		}
+		header.Header = e.Header.Copy()
 
 		if section.NotFields {
 			for _, fieldName := range section.Fields {
@@ -58,9 +55,9 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 				fieldsMap[field] = struct{}{}
 			}
 
-			for fieldName, _ := range header {
-				if _, ok := fieldsMap[fieldName]; !ok {
-					header.Del(fieldName)
+			for field := header.Fields(); field.Next(); {
+				if _, ok := fieldsMap[field.Key()]; !ok {
+					field.Del()
 				}
 			}
 		}
