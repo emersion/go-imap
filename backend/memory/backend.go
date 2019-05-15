@@ -25,14 +25,14 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 func New() *Backend {
 	user := &User{username: "username", password: "password"}
 
-	body := `From: contact@example.org
-To: contact@example.org
-Subject: A little message, just for you
-Date: Wed, 11 May 2016 14:31:59 +0000
-Message-ID: <0000000@localhost/>
-Content-Type: text/plain
-
-Hi there :)`
+	body := "From: contact@example.org\r\n" +
+		"To: contact@example.org\r\n" +
+		"Subject: A little message, just for you\r\n" +
+		"Date: Wed, 11 May 2016 14:31:59 +0000\r\n" +
+		"Message-ID: <0000000@localhost/>\r\n" +
+		"Content-Type: text/plain\r\n" +
+		"\r\n" +
+		"Hi there :)"
 
 	user.mailboxes = map[string]*Mailbox{
 		"INBOX": {
