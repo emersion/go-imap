@@ -1,4 +1,8 @@
 // Package client provides an IMAP client.
+//
+// It is not safe to use the same Client from multiple goroutines. In general,
+// the IMAP protocol doesn't make it possible to send multiple independent
+// IMAP commands on the same connection.
 package client
 
 import (
