@@ -93,10 +93,7 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 	res := &responses.Authenticate{
 		Mechanism:       auth,
 		InitialResponse: ir,
-		AuthReply: func(reply []byte) error {
-			c.replies <- reply
-			return nil
-		},
+		RepliesCh:       make(chan []byte, 10),
 	}
 
 	status, err := c.execute(cmd, res)

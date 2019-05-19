@@ -62,7 +62,6 @@ type Client struct {
 	conn  *imap.Conn
 	isTLS bool
 
-	replies   chan []byte
 	loggedOut chan struct{}
 	upgrading bool
 
@@ -184,6 +183,11 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	cmd := cmdr.Command()
 	cmd.Tag = generateTag()
 
+	var replies <-chan []byte
+	if replier, ok := h.(responses.Replier); ok {
+		replies = replier.Replies()
+	}
+
 	if c.Timeout > 0 {
 		err := c.conn.SetDeadline(time.Now().Add(c.Timeout))
 		if err != nil {
@@ -255,7 +259,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 
 	for {
 		select {
-		case reply := <-c.replies:
+		case reply := <-replies:
 			// Response handler needs to send a reply (Used for AUTHENTICATE)
 			if err := c.writeReply(reply); err != nil {
 				close(unregister)
@@ -562,7 +566,6 @@ func New(conn net.Conn) (*Client, error) {
 
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
-		replies:   make(chan []byte),
 		loggedOut: make(chan struct{}),
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),

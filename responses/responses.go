@@ -26,3 +26,10 @@ type HandlerFunc func(resp imap.Resp) error
 func (f HandlerFunc) Handle(resp imap.Resp) error {
 	return f(resp)
 }
+
+// Replier is a Handler that needs to send raw data (for instance
+// AUTHENTICATE).
+type Replier interface {
+	Handler
+	Replies() <-chan []byte
+}
