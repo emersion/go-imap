@@ -65,6 +65,7 @@ func (u *MessageUpdate) update() {}
 type Client struct {
 	conn  *imap.Conn
 	isTLS bool
+	serverName string
 
 	loggedOut chan struct{}
 	upgrading bool
@@ -582,18 +583,12 @@ func New(conn net.Conn) (*Client, error) {
 }
 
 // Dial connects to an IMAP server using an unencrypted connection.
-func Dial(addr string) (c *Client, err error) {
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return
-	}
-
-	c, err = New(conn)
-	return
+func Dial(addr string) (*Client, error) {
+	return DialWithDialer(new(net.Dialer), addr)
 }
 
 type Dialer interface {
-	// Dial connects to the given address via the proxy.
+	// Dial connects to the given address.
 	Dial(network, addr string) (net.Conn, error)
 }
 
@@ -601,8 +596,8 @@ type Dialer interface {
 // using dialer.Dial.
 //
 // Among other uses, this allows to apply a dial timeout.
-func DialWithDialer(dialer Dialer, address string) (c *Client, err error) {
-	conn, err := dialer.Dial("tcp", address)
+func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
+	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -612,38 +607,43 @@ func DialWithDialer(dialer Dialer, address string) (c *Client, err error) {
 	// workaround, if the dialer has a timeout set, use that for the connection's
 	// deadline.
 	if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
-		err = conn.SetDeadline(time.Now().Add(netDialer.Timeout))
+		err := conn.SetDeadline(time.Now().Add(netDialer.Timeout))
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
-	c, err = New(conn)
-	return
+	c, err := New(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	c.serverName, _, _ = net.SplitHostPort(addr)
+	return c, nil
 }
 
 // DialTLS connects to an IMAP server using an encrypted connection.
-func DialTLS(addr string, tlsConfig *tls.Config) (c *Client, err error) {
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
-	if err != nil {
-		return
-	}
-
-	c, err = New(conn)
-	c.isTLS = true
-	return
+func DialTLS(addr string, tlsConfig *tls.Config) (*Client, error) {
+	return DialWithDialerTLS(new(net.Dialer), addr, tlsConfig)
 }
 
 // DialWithDialerTLS connects to an IMAP server using an encrypted connection
 // using dialer.Dial.
 //
 // Among other uses, this allows to apply a dial timeout.
-func DialWithDialerTLS(dialer Dialer, addr string,
-	tlsConfig *tls.Config) (c *Client, err error) {
-
+func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
-		return
+		return nil, err
+	}
+
+	serverName, _, _ := net.SplitHostPort(addr)
+	if tlsConfig == nil {
+		tlsConfig = &tls.Config{}
+	}
+	if tlsConfig.ServerName == "" {
+		tlsConfig = tlsConfig.Clone()
+		tlsConfig.ServerName = serverName
 	}
 	tlsConn := tls.Client(conn, tlsConfig)
 
@@ -652,13 +652,18 @@ func DialWithDialerTLS(dialer Dialer, addr string,
 	// workaround, if the dialer has a timeout set, use that for the connection's
 	// deadline.
 	if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
-		err = tlsConn.SetDeadline(time.Now().Add(netDialer.Timeout))
+		err := tlsConn.SetDeadline(time.Now().Add(netDialer.Timeout))
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
-	c, err = New(tlsConn)
+	c, err := New(tlsConn)
+	if err != nil {
+		return nil, err
+	}
+
 	c.isTLS = true
-	return
+	c.serverName = serverName
+	return c, nil
 }
