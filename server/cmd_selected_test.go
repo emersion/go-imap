@@ -369,6 +369,24 @@ func TestStore_InvalidFlags(t *testing.T) {
 	}
 }
 
+func TestStore_NonList(t *testing.T) {
+	s, c, scanner := testServerSelected(t, false)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STORE 1 FLAGS somestring someanotherstring\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* 1 FETCH (FLAGS (somestring someanotherstring))" {
+		t.Fatal("Invalid FETCH response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestStore_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
 	defer c.Close()
