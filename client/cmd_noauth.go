@@ -35,6 +35,14 @@ func (c *Client) StartTLS(tlsConfig *tls.Config) error {
 		return ErrTLSAlreadyEnabled
 	}
 
+	if tlsConfig == nil {
+		tlsConfig = new(tls.Config)
+	}
+	if tlsConfig.ServerName == "" {
+		tlsConfig = tlsConfig.Clone()
+		tlsConfig.ServerName = c.serverName
+	}
+
 	cmd := new(commands.StartTLS)
 
 	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
