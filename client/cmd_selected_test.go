@@ -255,13 +255,13 @@ func TestClient_Fetch_ClosedState(t *testing.T) {
 		done <- c.Fetch(seqset, fields, messages)
 	}()
 
-	_, more := <- messages
+	_, more := <-messages
 
 	if more {
 		t.Fatalf("Messages channel has more messages, but it must be closed with no messages sent")
 	}
 
-	err := <- done
+	err := <-done
 
 	if err != ErrNoMailboxSelected {
 		t.Fatalf("Expected error to be IMAP Client ErrNoMailboxSelected")

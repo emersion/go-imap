@@ -22,14 +22,14 @@ type Update interface {
 func NewUpdate(username, mailbox string) Update {
 	return &update{
 		username: username,
-		mailbox: mailbox,
+		mailbox:  mailbox,
 	}
 }
 
 type update struct {
 	username string
-	mailbox string
-	done chan struct{}
+	mailbox  string
+	done     chan struct{}
 }
 
 func (u *update) Username() string {
