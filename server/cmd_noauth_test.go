@@ -12,8 +12,8 @@ import (
 
 func TestStartTLS(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	cert, err := tls.X509KeyPair(internal.LocalhostCert, internal.LocalhostKey)
 	if err != nil {
@@ -57,8 +57,8 @@ func TestStartTLS(t *testing.T) {
 
 func TestLogin_Ok(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LOGIN username password\r\n")
 
@@ -70,8 +70,8 @@ func TestLogin_Ok(t *testing.T) {
 
 func TestLogin_No(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LOGIN username wrongpassword\r\n")
 
@@ -83,8 +83,8 @@ func TestLogin_No(t *testing.T) {
 
 func TestAuthenticate_Plain_Ok(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 AUTHENTICATE PLAIN\r\n")
 
@@ -104,8 +104,8 @@ func TestAuthenticate_Plain_Ok(t *testing.T) {
 
 func TestAuthenticate_Plain_No(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 AUTHENTICATE PLAIN\r\n")
 
@@ -125,8 +125,8 @@ func TestAuthenticate_Plain_No(t *testing.T) {
 
 func TestAuthenticate_No(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 AUTHENTICATE XIDONTEXIST\r\n")
 

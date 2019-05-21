@@ -20,8 +20,8 @@ func testServerAuthenticated(t *testing.T) (s *server.Server, c net.Conn, scanne
 
 func TestSelect_Ok(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SELECT INBOX\r\n")
 
@@ -67,8 +67,8 @@ func TestSelect_Ok(t *testing.T) {
 
 func TestSelect_ReadOnly(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 EXAMINE INBOX\r\n")
 
@@ -89,8 +89,8 @@ func TestSelect_ReadOnly(t *testing.T) {
 
 func TestSelect_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SELECT idontexist\r\n")
 
@@ -103,8 +103,8 @@ func TestSelect_InvalidMailbox(t *testing.T) {
 
 func TestSelect_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SELECT INBOX\r\n")
 	scanner.Scan()
@@ -115,8 +115,8 @@ func TestSelect_NotAuthenticated(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE test\r\n")
 	scanner.Scan()
@@ -128,8 +128,8 @@ func TestCreate(t *testing.T) {
 
 func TestCreate_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE test\r\n")
 	scanner.Scan()
@@ -140,8 +140,8 @@ func TestCreate_NotAuthenticated(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE test\r\n")
 	scanner.Scan()
@@ -156,8 +156,8 @@ func TestDelete(t *testing.T) {
 
 func TestDelete_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 DELETE test\r\n")
 	scanner.Scan()
@@ -168,8 +168,8 @@ func TestDelete_InvalidMailbox(t *testing.T) {
 
 func TestDelete_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 DELETE INBOX\r\n")
 	scanner.Scan()
@@ -180,8 +180,8 @@ func TestDelete_NotAuthenticated(t *testing.T) {
 
 func TestRename(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE test\r\n")
 	scanner.Scan()
@@ -196,8 +196,8 @@ func TestRename(t *testing.T) {
 
 func TestRename_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 RENAME test test2\r\n")
 	scanner.Scan()
@@ -208,8 +208,8 @@ func TestRename_InvalidMailbox(t *testing.T) {
 
 func TestRename_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 RENAME test test2\r\n")
 	scanner.Scan()
@@ -220,8 +220,8 @@ func TestRename_NotAuthenticated(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
 	scanner.Scan()
@@ -238,8 +238,8 @@ func TestSubscribe(t *testing.T) {
 
 func TestSubscribe_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
 	scanner.Scan()
@@ -250,8 +250,8 @@ func TestSubscribe_NotAuthenticated(t *testing.T) {
 
 func TestUnsubscribe(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SUBSCRIBE INBOX\r\n")
 	scanner.Scan()
@@ -271,8 +271,8 @@ func TestUnsubscribe(t *testing.T) {
 
 func TestUnsubscribe_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UNSUBSCRIBE INBOX\r\n")
 	scanner.Scan()
@@ -283,8 +283,8 @@ func TestUnsubscribe_NotAuthenticated(t *testing.T) {
 
 func TestList(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LIST \"\" *\r\n")
 
@@ -301,8 +301,8 @@ func TestList(t *testing.T) {
 
 func TestList_Nested(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE first\r\n")
 	scanner.Scan()
@@ -371,8 +371,8 @@ func TestList_Nested(t *testing.T) {
 
 func TestList_Subscribed(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LSUB \"\" *\r\n")
 
@@ -399,8 +399,8 @@ func TestList_Subscribed(t *testing.T) {
 
 func TestList_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LIST \"\" *\r\n")
 	scanner.Scan()
@@ -411,8 +411,8 @@ func TestList_NotAuthenticated(t *testing.T) {
 
 func TestList_Delimiter(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LIST \"\" \"\"\r\n")
 
@@ -429,8 +429,8 @@ func TestList_Delimiter(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STATUS INBOX (MESSAGES RECENT UIDNEXT UIDVALIDITY UNSEEN)\r\n")
 
@@ -454,8 +454,8 @@ func TestStatus(t *testing.T) {
 
 func TestStatus_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STATUS idontexist (MESSAGES)\r\n")
 	scanner.Scan()
@@ -466,8 +466,8 @@ func TestStatus_InvalidMailbox(t *testing.T) {
 
 func TestStatus_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STATUS INBOX (MESSAGES)\r\n")
 	scanner.Scan()
@@ -478,8 +478,8 @@ func TestStatus_NotAuthenticated(t *testing.T) {
 
 func TestAppend(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND INBOX {80}\r\n")
 	scanner.Scan()
@@ -500,8 +500,8 @@ func TestAppend(t *testing.T) {
 
 func TestAppend_WithFlags(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND INBOX (\\Draft) {11}\r\n")
 	scanner.Scan()
@@ -519,8 +519,8 @@ func TestAppend_WithFlags(t *testing.T) {
 
 func TestAppend_WithFlagsAndDate(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND INBOX (\\Draft) \"5-Nov-1984 13:37:00 -0700\" {11}\r\n")
 	scanner.Scan()
@@ -538,8 +538,8 @@ func TestAppend_WithFlagsAndDate(t *testing.T) {
 
 func TestAppend_Selected(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND INBOX {11}\r\n")
 	scanner.Scan()
@@ -562,8 +562,8 @@ func TestAppend_Selected(t *testing.T) {
 
 func TestAppend_InvalidMailbox(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND idontexist {11}\r\n")
 	scanner.Scan()
@@ -581,8 +581,8 @@ func TestAppend_InvalidMailbox(t *testing.T) {
 
 func TestAppend_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 APPEND INBOX {11}\r\n")
 	scanner.Scan()

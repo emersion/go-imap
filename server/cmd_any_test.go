@@ -21,8 +21,8 @@ func testServerGreeted(t *testing.T) (s *server.Server, c net.Conn, scanner *buf
 
 func TestCapability(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 
@@ -39,8 +39,8 @@ func TestCapability(t *testing.T) {
 
 func TestNoop(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 NOOP\r\n")
 
@@ -52,8 +52,8 @@ func TestNoop(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 LOGOUT\r\n")
 
@@ -80,8 +80,8 @@ func (ext *xnoop) Command(string) server.HandlerFactory {
 
 func TestServer_Enable(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	s.Enable(&xnoop{})
 
@@ -107,8 +107,8 @@ func (ext *xnoopAuth) Next(response []byte) (challenge []byte, done bool, err er
 
 func TestServer_EnableAuth(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	s.EnableAuth("XNOOP", func(server.Conn) sasl.Server {
 		return &xnoopAuth{}
