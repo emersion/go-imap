@@ -29,8 +29,8 @@ func testServerSelected(t *testing.T, readOnly bool) (s *server.Server, c net.Co
 
 func TestCheck(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CHECK\r\n")
 
@@ -42,8 +42,8 @@ func TestCheck(t *testing.T) {
 
 func TestCheck_ReadOnly(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CHECK\r\n")
 
@@ -55,8 +55,8 @@ func TestCheck_ReadOnly(t *testing.T) {
 
 func TestCheck_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CHECK\r\n")
 
@@ -68,8 +68,8 @@ func TestCheck_NotSelected(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CLOSE\r\n")
 
@@ -81,8 +81,8 @@ func TestClose(t *testing.T) {
 
 func TestClose_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CLOSE\r\n")
 
@@ -94,8 +94,8 @@ func TestClose_NotSelected(t *testing.T) {
 
 func TestExpunge(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 EXPUNGE\r\n")
 
@@ -126,8 +126,8 @@ func TestExpunge(t *testing.T) {
 
 func TestExpunge_ReadOnly(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 EXPUNGE\r\n")
 
@@ -139,8 +139,8 @@ func TestExpunge_ReadOnly(t *testing.T) {
 
 func TestExpunge_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 EXPUNGE\r\n")
 
@@ -152,8 +152,8 @@ func TestExpunge_NotSelected(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SEARCH UNDELETED\r\n")
 	scanner.Scan()
@@ -178,8 +178,8 @@ func TestSearch(t *testing.T) {
 
 func TestSearch_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 SEARCH UNDELETED\r\n")
 	scanner.Scan()
@@ -190,8 +190,8 @@ func TestSearch_NotSelected(t *testing.T) {
 
 func TestSearch_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UID SEARCH UNDELETED\r\n")
 	scanner.Scan()
@@ -206,8 +206,8 @@ func TestSearch_Uid(t *testing.T) {
 
 func TestFetch(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 FETCH 1 (UID FLAGS)\r\n")
 	scanner.Scan()
@@ -236,8 +236,8 @@ func TestFetch(t *testing.T) {
 
 func TestFetch_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UID FETCH 6 (UID)\r\n")
 	scanner.Scan()
@@ -252,8 +252,8 @@ func TestFetch_Uid(t *testing.T) {
 
 func TestFetch_Uid_UidNotRequested(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UID FETCH 6 (FLAGS)\r\n")
 	scanner.Scan()
@@ -268,8 +268,8 @@ func TestFetch_Uid_UidNotRequested(t *testing.T) {
 
 func TestStore(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STORE 1 +FLAGS (\\Flagged)\r\n")
 
@@ -317,8 +317,8 @@ func TestStore(t *testing.T) {
 
 func TestStore_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STORE 1 +FLAGS (\\Flagged)\r\n")
 	scanner.Scan()
@@ -329,8 +329,8 @@ func TestStore_NotSelected(t *testing.T) {
 
 func TestStore_ReadOnly(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STORE 1 +FLAGS (\\Flagged)\r\n")
 	scanner.Scan()
@@ -341,8 +341,8 @@ func TestStore_ReadOnly(t *testing.T) {
 
 func TestStore_InvalidOperation(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STORE 1 IDONTEXIST (\\Flagged)\r\n")
 	scanner.Scan()
@@ -353,8 +353,8 @@ func TestStore_InvalidOperation(t *testing.T) {
 
 func TestStore_InvalidFlags(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 STORE 1 +FLAGS somestring\r\n")
 	scanner.Scan()
@@ -389,8 +389,8 @@ func TestStore_NonList(t *testing.T) {
 
 func TestStore_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UID STORE 6 +FLAGS (\\Flagged)\r\n")
 
@@ -407,8 +407,8 @@ func TestStore_Uid(t *testing.T) {
 
 func TestCopy(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE CopyDest\r\n")
 	scanner.Scan()
@@ -435,8 +435,8 @@ func TestCopy(t *testing.T) {
 
 func TestCopy_NotSelected(t *testing.T) {
 	s, c, scanner := testServerAuthenticated(t)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE CopyDest\r\n")
 	scanner.Scan()
@@ -453,8 +453,8 @@ func TestCopy_NotSelected(t *testing.T) {
 
 func TestCopy_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 CREATE CopyDest\r\n")
 	scanner.Scan()
@@ -471,8 +471,8 @@ func TestCopy_Uid(t *testing.T) {
 
 func TestUid_InvalidCommand(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
-	defer c.Close()
 	defer s.Close()
+	defer c.Close()
 
 	io.WriteString(c, "a001 UID IDONTEXIST\r\n")
 	scanner.Scan()

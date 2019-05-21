@@ -32,8 +32,8 @@ func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 
 func TestServer_greeting(t *testing.T) {
 	s, conn := testServer(t)
-	defer conn.Close()
 	defer s.Close()
+	defer conn.Close()
 
 	scanner := bufio.NewScanner(conn)
 
