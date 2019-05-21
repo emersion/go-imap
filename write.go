@@ -154,7 +154,7 @@ func (w *Writer) writeLiteral(l Literal) error {
 	// In case of bufio.Buffer, it will be 0 after io.Copy.
 	literalLen := int64(l.Len())
 
-	n, err := io.Copy(w, l)
+	n, err := io.CopyN(w, l, literalLen)
 	if err != nil {
 		return err
 	}
