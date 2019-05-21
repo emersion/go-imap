@@ -151,8 +151,18 @@ func (w *Writer) writeLiteral(l Literal) error {
 		}
 	}
 
-	_, err := io.Copy(w, l)
-	return err
+	// In case of bufio.Buffer, it will be 0 after io.Copy.
+	literalLen := int64(l.Len())
+
+	n, err := io.Copy(w, l)
+	if err != nil {
+		return err
+	}
+	if n != literalLen {
+		return fmt.Errorf("imap: size of Literal is not equal to Len() (%d != %d)", n, l.Len())
+	}
+
+	return nil
 }
 
 func (w *Writer) writeField(field interface{}) error {
