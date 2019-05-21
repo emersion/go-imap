@@ -12,8 +12,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"syscall"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -557,7 +557,7 @@ func (c *Client) SetDebug(w io.Writer) {
 		return conn, nil
 	})
 	if err != nil {
-		log.Println("SetDebug:",err)
+		log.Println("SetDebug:", err)
 	}
 
 }
@@ -594,7 +594,7 @@ func Dial(addr string) (c *Client, err error) {
 
 type Dialer interface {
 	// Dial connects to the given address via the proxy.
-	Dial(network, addr string) (c net.Conn, err error)
+	Dial(network, addr string) (net.Conn, error)
 }
 
 // DialWithDialer connects to an IMAP server using an unencrypted connection
