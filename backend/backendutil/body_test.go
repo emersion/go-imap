@@ -38,6 +38,10 @@ var bodyTests = []struct {
 		body:    testHeaderFromToString,
 	},
 	{
+		section: "BODY[HEADER.FIELDS (FROM to)]",
+		body:    testHeaderFromToString,
+	},
+	{
 		section: "BODY[HEADER.FIELDS.NOT (From To)]",
 		body:    testHeaderNoFromToString,
 	},

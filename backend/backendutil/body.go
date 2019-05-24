@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/textproto"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message"
@@ -52,7 +53,7 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 		} else {
 			fieldsMap := make(map[string]struct{}, len(section.Fields))
 			for _, field := range section.Fields {
-				fieldsMap[field] = struct{}{}
+				fieldsMap[textproto.CanonicalMIMEHeaderKey(field)] = struct{}{}
 			}
 
 			for field := header.Fields(); field.Next(); {
