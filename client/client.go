@@ -7,6 +7,7 @@ package client
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -564,7 +565,7 @@ func (c *Client) SetDebug(w io.Writer) {
 }
 
 // New creates a new client from an existing connection.
-func New(conn net.Conn) (*Client, error) {
+func New(conn net.Conn, args ...interface{}) (*Client, error) {
 	continues := make(chan bool)
 	w := imap.NewClientWriter(nil, continues)
 	r := imap.NewReader(nil)
@@ -576,15 +577,22 @@ func New(conn net.Conn) (*Client, error) {
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
+	debug, err := dialParams(args...)
+
+	if nil != err {
+		panic(err.Error())
+	}
+
+	c.conn.SetDebug(debug)
 	c.handleContinuationReqs(continues)
 	c.handleUnilateral()
-	err := c.handleGreetAndStartReading()
+	err = c.handleGreetAndStartReading()
 	return c, err
 }
 
 // Dial connects to an IMAP server using an unencrypted connection.
-func Dial(addr string) (*Client, error) {
-	return DialWithDialer(new(net.Dialer), addr)
+func Dial(addr string, args ...interface{}) (*Client, error) {
+	return DialWithDialer(new(net.Dialer), addr, args...)
 }
 
 type Dialer interface {
@@ -596,7 +604,7 @@ type Dialer interface {
 // using dialer.Dial.
 //
 // Among other uses, this allows to apply a dial timeout.
-func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
+func DialWithDialer(dialer Dialer, addr string, args ...interface{}) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -613,7 +621,7 @@ func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
 		}
 	}
 
-	c, err := New(conn)
+	c, err := New(conn, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -666,4 +674,26 @@ func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Clie
 	c.isTLS = true
 	c.serverName = serverName
 	return c, nil
+}
+
+func dialParams(args ...interface{}) (w io.Writer, err error) {
+	// We initialize each of the optional parameters to their default value.
+	w = nil
+	// Get any parameters passed to us out of the args variable into "real"
+	// variables we created for them.
+	for i,p := range args {
+		switch i {
+			case 0: // w
+				param, ok := p.(io.Writer)
+				if !ok {
+					err = errors.New("1st parameter not type io.Writer.")
+					return
+				}
+				w = param
+			default:
+				err = errors.New("Wrong parameter count.")
+				return
+		}
+	}
+	return
 }
