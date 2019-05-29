@@ -4,21 +4,37 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"net/textproto"
+	"mime"
+	nettextproto "net/textproto"
+	"strings"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 var errNoSuchPart = errors.New("backendutil: no such message body part")
 
+func multipartReader(header textproto.Header, body io.Reader) *textproto.MultipartReader {
+	contentType := header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/") {
+		return nil
+	}
+
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil
+	}
+
+	return textproto.NewMultipartReader(body, params["boundary"])
+}
+
 // FetchBodySection extracts a body section from a message.
-func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Literal, error) {
+func FetchBodySection(header textproto.Header, body io.Reader, section *imap.BodySectionName) (imap.Literal, error) {
 	// First, find the requested part using the provided path
 	for i := 0; i < len(section.Path); i++ {
 		n := section.Path[i]
 
-		mr := e.MultipartReader()
+		mr := multipartReader(header, body)
 		if mr == nil {
 			return nil, errNoSuchPart
 		}
@@ -32,7 +48,9 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 			}
 
 			if j == n {
-				e = p
+				body = p
+				header = p.Header
+
 				break
 			}
 		}
@@ -41,22 +59,22 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	// Then, write the requested data to a buffer
 	b := new(bytes.Buffer)
 
-	header := e.Header
+	resHeader := header
 	if section.Fields != nil {
-		// Copy header so we will not change message.Entity passed to us.
-		header.Header = e.Header.Copy()
+		// Copy header so we will not change value passed to us.
+		resHeader = header.Copy()
 
 		if section.NotFields {
 			for _, fieldName := range section.Fields {
-				header.Del(fieldName)
+				resHeader.Del(fieldName)
 			}
 		} else {
 			fieldsMap := make(map[string]struct{}, len(section.Fields))
 			for _, field := range section.Fields {
-				fieldsMap[textproto.CanonicalMIMEHeaderKey(field)] = struct{}{}
+				fieldsMap[nettextproto.CanonicalMIMEHeaderKey(field)] = struct{}{}
 			}
 
-			for field := header.Fields(); field.Next(); {
+			for field := resHeader.Fields(); field.Next(); {
 				if _, ok := fieldsMap[field.Key()]; !ok {
 					field.Del()
 				}
@@ -65,11 +83,10 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	}
 
 	// Write the header
-	mw, err := message.CreateWriter(b, header)
+	err := textproto.WriteHeader(b, resHeader)
 	if err != nil {
 		return nil, err
 	}
-	defer mw.Close()
 
 	switch section.Specifier {
 	case imap.TextSpecifier:
@@ -86,7 +103,7 @@ func FetchBodySection(e *message.Entity, section *imap.BodySectionName) (imap.Li
 	// Write the body, if requested
 	switch section.Specifier {
 	case imap.EntireSpecifier, imap.TextSpecifier:
-		if _, err := io.Copy(mw, e.Body); err != nil {
+		if _, err := io.Copy(b, body); err != nil {
 			return nil, err
 		}
 	}
