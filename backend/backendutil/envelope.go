@@ -1,15 +1,18 @@
 package backendutil
 
 import (
+	"net/mail"
 	"strings"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
-	"github.com/emersion/go-message/mail"
+	"github.com/emersion/go-message/textproto"
 )
 
-func headerAddressList(h mail.Header, key string) ([]*imap.Address, error) {
-	addrs, err := h.AddressList(key)
+func headerAddressList(value string) ([]*imap.Address, error) {
+	addrs, err := mail.ParseAddressList(value)
+	if err != nil {
+		return []*imap.Address{}, err
+	}
 
 	list := make([]*imap.Address, len(addrs))
 	for i, a := range addrs {
@@ -31,20 +34,19 @@ func headerAddressList(h mail.Header, key string) ([]*imap.Address, error) {
 }
 
 // FetchEnvelope returns a message's envelope from its header.
-func FetchEnvelope(h message.Header) (*imap.Envelope, error) {
-	mh := mail.Header{Header: h}
-
+func FetchEnvelope(h textproto.Header) (*imap.Envelope, error) {
 	env := new(imap.Envelope)
-	env.Date, _ = mh.Date()
-	env.Subject, _ = mh.Subject()
-	env.From, _ = headerAddressList(mh, "From")
-	env.Sender, _ = headerAddressList(mh, "Sender")
-	env.ReplyTo, _ = headerAddressList(mh, "Reply-To")
-	env.To, _ = headerAddressList(mh, "To")
-	env.Cc, _ = headerAddressList(mh, "Cc")
-	env.Bcc, _ = headerAddressList(mh, "Bcc")
-	env.InReplyTo = mh.Get("In-Reply-To")
-	env.MessageId = mh.Get("Message-Id")
+
+	env.Date, _ = mail.ParseDate(h.Get("Date"))
+	env.Subject = h.Get("Subject")
+	env.From, _ = headerAddressList(h.Get("From"))
+	env.Sender, _ = headerAddressList(h.Get("Sender"))
+	env.ReplyTo, _ = headerAddressList(h.Get("Reply-To"))
+	env.To, _ = headerAddressList(h.Get("To"))
+	env.Cc, _ = headerAddressList(h.Get("Cc"))
+	env.Bcc, _ = headerAddressList(h.Get("Bcc"))
+	env.InReplyTo = h.Get("In-Reply-To")
+	env.MessageId = h.Get("Message-Id")
 
 	return env, nil
 }

@@ -35,8 +35,8 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 	for _, item := range items {
 		switch item {
 		case imap.FetchEnvelope:
-			e, _ := m.entity()
-			fetched.Envelope, _ = backendutil.FetchEnvelope(e.Header)
+			hdr, _, _ := m.headerAndBody()
+			fetched.Envelope, _ = backendutil.FetchEnvelope(hdr)
 		case imap.FetchBody, imap.FetchBodyStructure:
 			hdr, body, _ := m.headerAndBody()
 			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
