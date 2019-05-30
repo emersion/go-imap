@@ -1,12 +1,14 @@
 package memory
 
 import (
+	"bufio"
 	"bytes"
 	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend/backendutil"
 	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 type Message struct {
@@ -45,8 +47,13 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 				break
 			}
 
-			e, _ := m.entity()
-			l, _ := backendutil.FetchBodySection(e, section)
+			body := bufio.NewReader(bytes.NewReader(m.Body))
+			hdr, err := textproto.ReadHeader(body)
+			if err != nil {
+				return nil, err
+			}
+
+			l, _ := backendutil.FetchBodySection(hdr, body, section)
 			fetched.Body[section] = l
 		}
 	}
