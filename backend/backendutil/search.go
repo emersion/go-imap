@@ -4,33 +4,33 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/mail"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
-	"github.com/emersion/go-message/mail"
+	"github.com/emersion/go-message/textproto"
 )
 
 func matchString(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
-func bufferBody(e *message.Entity) (*bytes.Buffer, error) {
+func bufferBody(body *io.Reader) (*bytes.Buffer, error) {
 	b := new(bytes.Buffer)
-	if _, err := io.Copy(b, e.Body); err != nil {
+	if _, err := io.Copy(b, *body); err != nil {
 		return nil, err
 	}
-	e.Body = b
+	*body = b
 	return b, nil
 }
 
-func matchBody(e *message.Entity, substr string) (bool, error) {
-	if s, ok := e.Body.(fmt.Stringer); ok {
+func matchBody(body *io.Reader, substr string) (bool, error) {
+	if s, ok := (*body).(fmt.Stringer); ok {
 		return matchString(s.String(), substr), nil
 	}
 
-	b, err := bufferBody(e)
+	b, err := bufferBody(body)
 	if err != nil {
 		return false, err
 	}
@@ -41,12 +41,12 @@ type lengther interface {
 	Len() int
 }
 
-func bodyLen(e *message.Entity) (int, error) {
-	if l, ok := e.Body.(lengther); ok {
+func bodyLen(body *io.Reader) (int, error) {
+	if l, ok := (*body).(lengther); ok {
 		return l.Len(), nil
 	}
 
-	b, err := bufferBody(e)
+	b, err := bufferBody(body)
 	if err != nil {
 		return 0, err
 	}
@@ -55,14 +55,16 @@ func bodyLen(e *message.Entity) (int, error) {
 
 // Match returns true if a message and its metadata matches the provided
 // criteria.
-func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) {
+func Match(hdr textproto.Header, body io.Reader, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) {
+	return match(hdr, &body, seqNum, uid, date, flags, c)
+}
+
+func match(hdr textproto.Header, body *io.Reader, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) {
 	// TODO: support encoded header fields for Bcc, Cc, From, To
 	// TODO: add header size for Larger and Smaller
 
-	h := mail.Header{Header: e.Header}
-
 	if !c.SentBefore.IsZero() || !c.SentSince.IsZero() {
-		t, err := h.Date()
+		t, err := mail.ParseDate(hdr.Get("Date"))
 		if err != nil {
 			return false, err
 		}
@@ -77,14 +79,14 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 	}
 
 	for key, wantValues := range c.Header {
-		ok := e.Header.Has(key)
+		ok := hdr.Has(key)
 		for _, wantValue := range wantValues {
 			if wantValue == "" && !ok {
 				return false, nil
 			}
 			if wantValue != "" {
 				ok := false
-				values := e.Header.FieldsByKey(key)
+				values := hdr.FieldsByKey(key)
 				for values.Next() {
 					if matchString(values.Value(), wantValue) {
 						ok = true
@@ -97,20 +99,20 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 			}
 		}
 	}
-	for _, body := range c.Body {
-		if ok, err := matchBody(e, body); err != nil || !ok {
+	for _, searchBody := range c.Body {
+		if ok, err := matchBody(body, searchBody); err != nil || !ok {
 			return false, err
 		}
 	}
 	for _, text := range c.Text {
 		// TODO: also match header fields
-		if ok, err := matchBody(e, text); err != nil || !ok {
+		if ok, err := matchBody(body, text); err != nil || !ok {
 			return false, err
 		}
 	}
 
 	if c.Larger > 0 || c.Smaller > 0 {
-		n, err := bodyLen(e)
+		n, err := bodyLen(body)
 		if err != nil {
 			return false, err
 		}
@@ -142,18 +144,18 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 	}
 
 	for _, not := range c.Not {
-		ok, err := Match(e, seqNum, uid, date, flags, not)
+		ok, err := match(hdr, body, seqNum, uid, date, flags, not)
 		if err != nil || ok {
 			return false, err
 		}
 	}
 	for _, or := range c.Or {
-		ok1, err := Match(e, seqNum, uid, date, flags, or[0])
+		ok1, err := match(hdr, body, seqNum, uid, date, flags, or[0])
 		if err != nil {
 			return ok1, err
 		}
 
-		ok2, err := Match(e, seqNum, uid, date, flags, or[1])
+		ok2, err := match(hdr, body, seqNum, uid, date, flags, or[1])
 		if err != nil || (!ok1 && !ok2) {
 			return false, err
 		}

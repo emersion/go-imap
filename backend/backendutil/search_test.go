@@ -1,13 +1,14 @@
 package backendutil
 
 import (
-	"net/textproto"
+	"bufio"
+	nettextproto "net/textproto"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 var testInternalDate = time.Unix(1483997966, 0)
@@ -22,13 +23,13 @@ var matchTests = []struct {
 }{
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"From": {"Mitsuha"}},
+			Header: nettextproto.MIMEHeader{"From": {"Mitsuha"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"To": {"Mitsuha"}},
+			Header: nettextproto.MIMEHeader{"To": {"Mitsuha"}},
 		},
 		res: false,
 	},
@@ -65,25 +66,25 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {"42@example.org"}},
+			Header: nettextproto.MIMEHeader{"Message-Id": {"42@example.org"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {"43@example.org"}},
+			Header: nettextproto.MIMEHeader{"Message-Id": {"43@example.org"}},
 		},
 		res: false,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {""}},
+			Header: nettextproto.MIMEHeader{"Message-Id": {""}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Reply-To": {""}},
+			Header: nettextproto.MIMEHeader{"Reply-To": {""}},
 		},
 		res: false,
 	},
@@ -101,13 +102,13 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Subject": {"your"}},
+			Header: nettextproto.MIMEHeader{"Subject": {"your"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Subject": {"Taki"}},
+			Header: nettextproto.MIMEHeader{"Subject": {"Taki"}},
 		},
 		res: false,
 	},
@@ -294,12 +295,13 @@ var matchTests = []struct {
 
 func TestMatch(t *testing.T) {
 	for i, test := range matchTests {
-		e, err := message.Read(strings.NewReader(testMailString))
+		bufferedBody := bufio.NewReader(strings.NewReader(testMailString))
+		hdr, err := textproto.ReadHeader(bufferedBody)
 		if err != nil {
 			t.Fatal("Expected no error while reading entity, got:", err)
 		}
 
-		ok, err := Match(e, test.seqNum, test.uid, test.date, test.flags, test.criteria)
+		ok, err := Match(hdr, bufferedBody, test.seqNum, test.uid, test.date, test.flags, test.criteria)
 		if err != nil {
 			t.Fatal("Expected no error while matching entity, got:", err)
 		}
