@@ -3,6 +3,7 @@ package memory
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -23,6 +24,12 @@ func (m *Message) entity() (*message.Entity, error) {
 	return message.Read(bytes.NewReader(m.Body))
 }
 
+func (m *Message) headerAndBody() (textproto.Header, io.Reader, error) {
+	body := bufio.NewReader(bytes.NewReader(m.Body))
+	hdr, err := textproto.ReadHeader(body)
+	return hdr, body, err
+}
+
 func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, error) {
 	fetched := imap.NewMessage(seqNum, items)
 	for _, item := range items {
@@ -31,8 +38,8 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 			e, _ := m.entity()
 			fetched.Envelope, _ = backendutil.FetchEnvelope(e.Header)
 		case imap.FetchBody, imap.FetchBodyStructure:
-			e, _ := m.entity()
-			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(e, item == imap.FetchBodyStructure)
+			hdr, body, _ := m.headerAndBody()
+			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
 		case imap.FetchFlags:
 			fetched.Flags = m.Flags
 		case imap.FetchInternalDate:
