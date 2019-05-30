@@ -79,6 +79,25 @@ func newTestClient(t *testing.T) (c *Client, s *serverConn) {
 	return
 }
 
+func TestDialParam(t *testing.T) {
+	l, _ := net.Listen("tcp", "127.0.0.1:0")
+
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			_, ok = r.(error)
+			if !ok {
+				if r != "1st parameter not type io.Writer." {
+					t.Errorf("Missing error msg: 1st parameter not type io.Writer.")
+				}
+			}
+		}
+	}()
+
+	Dial(l.Addr().String(), "incorrect type")
+	t.Errorf("Missing panic")
+}
+
 func setClientState(c *Client, state imap.ConnState, mailbox *imap.MailboxStatus) {
 	c.locker.Lock()
 	c.state = state
