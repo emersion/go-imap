@@ -161,7 +161,7 @@ func (c *conn) Close() error {
 }
 
 func (c *conn) Capabilities() []string {
-	caps := []string{"IMAP4rev1"}
+	caps := []string{"IMAP4rev1", "LITERAL+"}
 
 	if c.ctx.State == imap.NotAuthenticatedState {
 		if !c.IsTLS() && c.s.TLSConfig != nil {
