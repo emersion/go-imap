@@ -235,9 +235,9 @@ func (r *Reader) ReadLiteral() (Literal, error) {
 	}
 	lstr = trimSuffix(lstr, literalEnd)
 
-	nonSync := lstr[len(lstr)-1] == '+'
+	nonSync := strings.HasSuffix(lstr, "+")
 	if nonSync {
-		lstr = lstr[:len(lstr)-1]
+		lstr = trimSuffix(lstr, '+')
 	}
 
 	n, err := strconv.ParseUint(lstr, 10, 32)
