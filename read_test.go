@@ -194,6 +194,42 @@ func TestReader_ReadAtom(t *testing.T) {
 	}
 }
 
+func TestReader_ReadLiteral_NonSync(t *testing.T) {
+	// For synchronizing literal we should send continuation request.
+	b := bytes.NewBuffer([]byte("{7}\r\nabcdefg"))
+	cont := make(chan bool, 5)
+	r := imap.NewServerReader(b, cont)
+	if litr, err := r.ReadLiteral(); err != nil {
+		t.Error(err)
+	} else if litr.Len() != 7 {
+		t.Error("Invalid literal length")
+	} else {
+		if len(cont) != 1 {
+			t.Error("Missing continuation rejqest")
+		}
+		<-cont
+	}
+
+	b = bytes.NewBuffer([]byte("{7+}\r\nabcdefg"))
+	r = imap.NewServerReader(b, cont)
+	if litr, err := r.ReadLiteral(); err != nil {
+		t.Error(err)
+	} else if litr.Len() != 7 {
+		t.Error("Invalid literal length")
+	} else {
+		if len(cont) != 0 {
+			t.Error("Unexpected continuation rejqest")
+		}
+		if contents, err := ioutil.ReadAll(litr); err != nil {
+			t.Error(err)
+		} else if string(contents) != "abcdefg" {
+			t.Error("Literal has not the expected value:", string(contents))
+		} else if b.Len() > 0 {
+			t.Error("Buffer is not empty after read")
+		}
+	}
+}
+
 func TestReader_ReadLiteral(t *testing.T) {
 	b, r := newReader("{7}\r\nabcdefg")
 	if literal, err := r.ReadLiteral(); err != nil {

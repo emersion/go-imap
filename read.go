@@ -234,6 +234,12 @@ func (r *Reader) ReadLiteral() (Literal, error) {
 		return nil, err
 	}
 	lstr = trimSuffix(lstr, literalEnd)
+
+	nonSync := strings.HasSuffix(lstr, "+")
+	if nonSync {
+		lstr = trimSuffix(lstr, '+')
+	}
+
 	n, err := strconv.ParseUint(lstr, 10, 32)
 	if err != nil {
 		return nil, newParseError("cannot parse literal length: " + err.Error())
@@ -247,7 +253,7 @@ func (r *Reader) ReadLiteral() (Literal, error) {
 	}
 
 	// Send continuation request if necessary
-	if r.continues != nil {
+	if r.continues != nil && !nonSync {
 		r.continues <- true
 	}
 
