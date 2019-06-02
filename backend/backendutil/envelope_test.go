@@ -1,12 +1,13 @@
 package backendutil
 
 import (
+	"bufio"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 var testEnvelope = &imap.Envelope{
@@ -23,12 +24,12 @@ var testEnvelope = &imap.Envelope{
 }
 
 func TestFetchEnvelope(t *testing.T) {
-	e, err := message.Read(strings.NewReader(testMailString))
+	hdr, err := textproto.ReadHeader(bufio.NewReader(strings.NewReader(testMailString)))
 	if err != nil {
 		t.Fatal("Expected no error while reading mail, got:", err)
 	}
 
-	env, err := FetchEnvelope(e.Header)
+	env, err := FetchEnvelope(hdr)
 	if err != nil {
 		t.Fatal("Expected no error while fetching envelope, got:", err)
 	}

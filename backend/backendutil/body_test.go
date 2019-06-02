@@ -1,12 +1,13 @@
 package backendutil
 
 import (
+	"bufio"
 	"io/ioutil"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 var bodyTests = []struct {
@@ -99,7 +100,9 @@ func TestFetchBodySection(t *testing.T) {
 	for _, test := range bodyTests {
 		test := test
 		t.Run(test.section, func(t *testing.T) {
-			e, err := message.Read(strings.NewReader(testMailString))
+			bufferedBody := bufio.NewReader(strings.NewReader(testMailString))
+
+			header, err := textproto.ReadHeader(bufferedBody)
 			if err != nil {
 				t.Fatal("Expected no error while reading mail, got:", err)
 			}
@@ -109,7 +112,7 @@ func TestFetchBodySection(t *testing.T) {
 				t.Fatal("Expected no error while parsing body section name, got:", err)
 			}
 
-			r, err := FetchBodySection(e, section)
+			r, err := FetchBodySection(header, bufferedBody, section)
 			if test.body == "" {
 				if err == nil {
 					t.Error("Expected an error while extracting non-existing body section")

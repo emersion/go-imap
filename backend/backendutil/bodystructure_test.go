@@ -1,12 +1,13 @@
 package backendutil
 
 import (
+	"bufio"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 var testBodyStructure = &imap.BodyStructure{
@@ -51,12 +52,14 @@ var testBodyStructure = &imap.BodyStructure{
 }
 
 func TestFetchBodyStructure(t *testing.T) {
-	e, err := message.Read(strings.NewReader(testMailString))
+	bufferedBody := bufio.NewReader(strings.NewReader(testMailString))
+
+	header, err := textproto.ReadHeader(bufferedBody)
 	if err != nil {
 		t.Fatal("Expected no error while reading mail, got:", err)
 	}
 
-	bs, err := FetchBodyStructure(e, true)
+	bs, err := FetchBodyStructure(header, bufferedBody, true)
 	if err != nil {
 		t.Fatal("Expected no error while fetching body structure, got:", err)
 	}

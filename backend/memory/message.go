@@ -1,12 +1,15 @@
 package memory
 
 import (
+	"bufio"
 	"bytes"
+	"io"
 	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend/backendutil"
 	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/textproto"
 )
 
 type Message struct {
@@ -21,16 +24,22 @@ func (m *Message) entity() (*message.Entity, error) {
 	return message.Read(bytes.NewReader(m.Body))
 }
 
+func (m *Message) headerAndBody() (textproto.Header, io.Reader, error) {
+	body := bufio.NewReader(bytes.NewReader(m.Body))
+	hdr, err := textproto.ReadHeader(body)
+	return hdr, body, err
+}
+
 func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, error) {
 	fetched := imap.NewMessage(seqNum, items)
 	for _, item := range items {
 		switch item {
 		case imap.FetchEnvelope:
-			e, _ := m.entity()
-			fetched.Envelope, _ = backendutil.FetchEnvelope(e.Header)
+			hdr, _, _ := m.headerAndBody()
+			fetched.Envelope, _ = backendutil.FetchEnvelope(hdr)
 		case imap.FetchBody, imap.FetchBodyStructure:
-			e, _ := m.entity()
-			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(e, item == imap.FetchBodyStructure)
+			hdr, body, _ := m.headerAndBody()
+			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
 		case imap.FetchFlags:
 			fetched.Flags = m.Flags
 		case imap.FetchInternalDate:
@@ -45,8 +54,13 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 				break
 			}
 
-			e, _ := m.entity()
-			l, _ := backendutil.FetchBodySection(e, section)
+			body := bufio.NewReader(bytes.NewReader(m.Body))
+			hdr, err := textproto.ReadHeader(body)
+			if err != nil {
+				return nil, err
+			}
+
+			l, _ := backendutil.FetchBodySection(hdr, body, section)
 			fetched.Body[section] = l
 		}
 	}
@@ -55,6 +69,6 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 }
 
 func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
-	e, _ := m.entity()
-	return backendutil.Match(e, seqNum, m.Uid, m.Date, m.Flags, c)
+	hdr, body, _ := m.headerAndBody()
+	return backendutil.Match(hdr, body, seqNum, m.Uid, m.Date, m.Flags, c)
 }
