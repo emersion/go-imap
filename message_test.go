@@ -68,7 +68,7 @@ var messageTests = []struct {
 		fields: []interface{}{
 			"ENVELOPE", envelopeTests[0].fields,
 			"BODY", bodyStructureTests[0].fields,
-			"FLAGS", []interface{}{Atom(SeenFlag), Atom(AnsweredFlag)},
+			"FLAGS", []interface{}{RawString(SeenFlag), RawString(AnsweredFlag)},
 			"RFC822.SIZE", "4242",
 			"UID", "2424",
 		},

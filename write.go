@@ -18,7 +18,7 @@ type (
 	// A string that will be quoted.
 	Quoted string
 	// A raw atom.
-	Atom string
+	RawString string
 )
 
 type WriterTo interface {
@@ -175,7 +175,7 @@ func (w *Writer) writeField(field interface{}) error {
 		return w.writeAstring(field)
 	case Quoted:
 		return w.writeQuoted(string(field))
-	case Atom:
+	case RawString:
 		return w.writeAtom(string(field))
 	case int:
 		return w.writeNumber(uint32(field))

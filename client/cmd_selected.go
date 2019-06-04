@@ -178,7 +178,7 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value
 	if fields, ok := value.([]interface{}); ok {
 		for i, field := range fields {
 			if s, ok := field.(string); ok {
-				fields[i] = imap.Atom(s)
+				fields[i] = imap.RawString(s)
 			}
 		}
 	}

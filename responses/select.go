@@ -67,7 +67,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 	if mbox.Flags != nil {
 		flags := make([]interface{}, len(mbox.Flags))
 		for i, f := range mbox.Flags {
-			flags[i] = imap.Atom(f)
+			flags[i] = imap.RawString(f)
 		}
 		res := imap.NewUntaggedResp([]interface{}{"FLAGS", flags})
 		if err := res.WriteTo(w); err != nil {
@@ -78,7 +78,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 	if mbox.PermanentFlags != nil {
 		flags := make([]interface{}, len(mbox.PermanentFlags))
 		for i, f := range mbox.PermanentFlags {
-			flags[i] = imap.Atom(f)
+			flags[i] = imap.RawString(f)
 		}
 		statusRes := &imap.StatusResp{
 			Type:      imap.StatusRespOk,

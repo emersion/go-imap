@@ -80,7 +80,7 @@ func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoding.NewEncoder().String(info.Name)
 	attrs := make([]interface{}, len(info.Attributes))
 	for i, attr := range info.Attributes {
-		attrs[i] = Atom(attr)
+		attrs[i] = RawString(attr)
 	}
 	// Thunderbird doesn't understand delimiters if not quoted
 	return []interface{}{attrs, Quoted(info.Delimiter), name}

@@ -25,7 +25,7 @@ func (cmd *Append) Command() *imap.Command {
 	if cmd.Flags != nil {
 		flags := make([]interface{}, len(cmd.Flags))
 		for i, flag := range cmd.Flags {
-			flags[i] = imap.Atom(flag)
+			flags[i] = imap.RawString(flag)
 		}
 		args = append(args, flags)
 	}

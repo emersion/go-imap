@@ -89,7 +89,7 @@ func (r *StatusResp) Err() error {
 }
 
 func (r *StatusResp) WriteTo(w *Writer) error {
-	tag := Atom(r.Tag)
+	tag := RawString(r.Tag)
 	if tag == "" {
 		tag = "*"
 	}

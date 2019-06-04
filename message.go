@@ -267,7 +267,7 @@ func (m *Message) formatItem(k FetchItem) []interface{} {
 	case FetchFlags:
 		flags := make([]interface{}, len(m.Flags))
 		for i, flag := range m.Flags {
-			flags[i] = Atom(flag)
+			flags[i] = RawString(flag)
 		}
 		v = flags
 	case FetchInternalDate:

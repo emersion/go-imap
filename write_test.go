@@ -48,7 +48,7 @@ func TestWriter_WriteField_Number(t *testing.T) {
 func TestWriter_WriteField_Atom(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeField(Atom("BODY[]")); err != nil {
+	if err := w.writeField(RawString("BODY[]")); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "BODY[]" {
@@ -253,7 +253,7 @@ func TestWriter_WriteRespCode_WithArgs(t *testing.T) {
 func TestWriter_WriteLine(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeLine(Atom("*"), "OK"); err != nil {
+	if err := w.writeLine(RawString("*"), "OK"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "* OK\r\n" {

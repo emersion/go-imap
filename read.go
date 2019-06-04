@@ -93,7 +93,7 @@ func ParseString(f interface{}) (string, error) {
 	if q, ok := f.(Quoted); ok {
 		return string(q), nil
 	}
-	if a, ok := f.(Atom); ok {
+	if a, ok := f.(RawString); ok {
 		return string(a), nil
 	}
 
