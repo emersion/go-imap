@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 	"time"
 	"unicode"
 )
@@ -77,26 +76,18 @@ func (w *Writer) writeQuoted(s string) error {
 	return w.writeString(strconv.Quote(s))
 }
 
-func (w *Writer) writeAtom(s string) error {
-	return w.writeString(s)
-}
-
-func (w *Writer) writeAstring(s string) error {
+func (w *Writer) writeQuotedOrLiteral(s string) error {
 	if !isAscii(s) {
 		// IMAP doesn't allow 8-bit data outside literals
 		return w.writeLiteral(bytes.NewBufferString(s))
 	}
 
-	if strings.ToUpper(s) == nilAtom || s == "" || strings.ContainsAny(s, atomSpecials) {
-		return w.writeQuoted(s)
-	}
-
-	return w.writeAtom(s)
+	return w.writeQuoted(s)
 }
 
 func (w *Writer) writeDateTime(t time.Time, layout string) error {
 	if t.IsZero() {
-		return w.writeAtom(nilAtom)
+		return w.writeString(nilAtom)
 	}
 	return w.writeQuoted(t.Format(layout))
 }
@@ -167,16 +158,16 @@ func (w *Writer) writeLiteral(l Literal) error {
 
 func (w *Writer) writeField(field interface{}) error {
 	if field == nil {
-		return w.writeAtom(nilAtom)
+		return w.writeString(nilAtom)
 	}
 
 	switch field := field.(type) {
-	case string:
-		return w.writeAstring(field)
 	case Quoted:
 		return w.writeQuoted(string(field))
 	case RawString:
-		return w.writeAtom(string(field))
+		return w.writeString(string(field))
+	case string:
+		return w.writeQuotedOrLiteral(field)
 	case int:
 		return w.writeNumber(uint32(field))
 	case uint32:
