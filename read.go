@@ -98,9 +98,6 @@ func ParseString(f interface{}) (string, error) {
 	if a, ok := f.(RawString); ok {
 		return string(a), nil
 	}
-	if q, ok := f.(Quoted); ok {
-		return string(q), nil
-	}
 
 	if l, ok := f.(Literal); ok {
 		b := make([]byte, l.Len())

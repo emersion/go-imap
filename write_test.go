@@ -81,7 +81,7 @@ func TestWriter_WriteString_Quoted_WithSpecials(t *testing.T) {
 func TestWriter_WriteField_ForcedQuoted(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeField(Quoted("dille")); err != nil {
+	if err := w.writeField("dille"); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "\"dille\"" {

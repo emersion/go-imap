@@ -14,9 +14,7 @@ type flusher interface {
 }
 
 type (
-	// A string that will be quoted.
-	Quoted string
-	// A raw atom.
+	// A raw string.
 	RawString string
 )
 
@@ -162,8 +160,6 @@ func (w *Writer) writeField(field interface{}) error {
 	}
 
 	switch field := field.(type) {
-	case Quoted:
-		return w.writeQuoted(string(field))
 	case RawString:
 		return w.writeString(string(field))
 	case string:
