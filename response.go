@@ -122,7 +122,7 @@ func (r *DataResp) WriteTo(w *Writer) error {
 		tag = RawString("*")
 	}
 
-	fields := []interface{}{tag}
+	fields := []interface{}{RawString(tag)}
 	fields = append(fields, r.Fields...)
 	return w.writeLine(fields...)
 }

@@ -32,7 +32,7 @@ func (cmd *Command) WriteTo(w *Writer) error {
 		tag = "*"
 	}
 
-	fields := []interface{}{tag, cmd.Name}
+	fields := []interface{}{RawString(tag), RawString(cmd.Name)}
 	fields = append(fields, cmd.Arguments...)
 	return w.writeLine(fields...)
 }

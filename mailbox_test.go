@@ -169,11 +169,22 @@ func TestMailboxStatus_Parse(t *testing.T) {
 func TestMailboxStatus_Format(t *testing.T) {
 	for i, test := range mailboxStatusTests {
 		fields := test.status.Format()
-		sort.Sort(internal.MapListSorter(fields))
+
+		// MapListSorter does not know about RawString and will panic.
+		stringFields := make([]interface{}, 0, len(fields))
+		for _, field := range fields {
+			if s, ok := field.(imap.RawString); ok {
+				stringFields = append(stringFields, string(s))
+			} else {
+				stringFields = append(stringFields, field)
+			}
+		}
+
+		sort.Sort(internal.MapListSorter(stringFields))
 
 		sort.Sort(internal.MapListSorter(test.fields))
 
-		if !reflect.DeepEqual(fields, test.fields) {
+		if !reflect.DeepEqual(stringFields, test.fields) {
 			t.Errorf("Invalid mailbox status fields for #%v: got \n%+v\n but expected \n%+v", i, fields, test.fields)
 		}
 	}

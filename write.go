@@ -201,7 +201,7 @@ func (w *Writer) writeRespCode(code StatusRespCode, args []interface{}) error {
 		return err
 	}
 
-	fields := []interface{}{string(code)}
+	fields := []interface{}{RawString(code)}
 	fields = append(fields, args...)
 
 	if err := w.writeFields(fields); err != nil {

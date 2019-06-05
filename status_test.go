@@ -49,7 +49,7 @@ func TestStatusResp_WriteTo(t *testing.T) {
 				Tag:       "*",
 				Type:      imap.StatusRespOk,
 				Code:      "CAPABILITY",
-				Arguments: []interface{}{"IMAP4rev1"},
+				Arguments: []interface{}{imap.RawString("IMAP4rev1")},
 				Info:      "IMAP4rev1 service ready",
 			},
 			expected: "* OK [CAPABILITY IMAP4rev1] IMAP4rev1 service ready\r\n",

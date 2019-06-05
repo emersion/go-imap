@@ -125,7 +125,7 @@ func TestClient_Search(t *testing.T) {
 		done <- err
 	}()
 
-	wantCmd := `SEARCH CHARSET UTF-8 SINCE "1-Feb-1994" FROM Smith DELETED NOT (TO Pauline)`
+	wantCmd := `SEARCH CHARSET "UTF-8" SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
 	tag, cmd := s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
@@ -162,7 +162,7 @@ func TestClient_Search_Uid(t *testing.T) {
 		done <- err
 	}()
 
-	wantCmd := "UID SEARCH CHARSET UTF-8 UNDELETED"
+	wantCmd := "UID SEARCH CHARSET \"UTF-8\" UNDELETED"
 	tag, cmd := s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
@@ -474,8 +474,8 @@ func TestClient_Copy(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "COPY 2:4 Sent" {
-		t.Fatalf("client sent command %v, want %v", cmd, "COPY 2:4 Sent")
+	if cmd != "COPY 2:4 \"Sent\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "COPY 2:4 \"Sent\"")
 	}
 
 	s.WriteString(tag + " OK COPY completed\r\n")
@@ -499,8 +499,8 @@ func TestClient_Copy_Uid(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "UID COPY 78:102 Drafts" {
-		t.Fatalf("client sent command %v, want %v", cmd, "UID COPY 78:102 Drafts")
+	if cmd != "UID COPY 78:102 \"Drafts\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UID COPY 78:102 \"Drafts\"")
 	}
 
 	s.WriteString(tag + " OK UID COPY completed\r\n")

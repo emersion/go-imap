@@ -244,7 +244,7 @@ func (status *MailboxStatus) Format() []interface{} {
 			v = status.UidValidity
 		}
 
-		fields = append(fields, string(k), v)
+		fields = append(fields, RawString(k), v)
 	}
 	return fields
 }

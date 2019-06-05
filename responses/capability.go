@@ -11,9 +11,9 @@ type Capability struct {
 }
 
 func (r *Capability) WriteTo(w *imap.Writer) error {
-	fields := []interface{}{"CAPABILITY"}
+	fields := []interface{}{imap.RawString("CAPABILITY")}
 	for _, cap := range r.Caps {
-		fields = append(fields, cap)
+		fields = append(fields, imap.RawString(cap))
 	}
 
 	return imap.NewUntaggedResp(fields).WriteTo(w)

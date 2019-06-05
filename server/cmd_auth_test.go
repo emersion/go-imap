@@ -289,7 +289,7 @@ func TestList(t *testing.T) {
 	io.WriteString(c, "a001 LIST \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LIST () \"/\" INBOX" {
+	if scanner.Text() != "* LIST () \"/\" \"INBOX\"" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 
@@ -322,7 +322,7 @@ func TestList_Nested(t *testing.T) {
 			} else if strings.HasPrefix(scanner.Text(), "* LIST ") {
 				found := false
 				for _, name := range mailboxes {
-					if strings.HasSuffix(scanner.Text(), " "+name) {
+					if strings.HasSuffix(scanner.Text(), " \""+name+"\"") {
 						checked[name] = true
 						found = true
 						break
@@ -387,7 +387,7 @@ func TestList_Subscribed(t *testing.T) {
 	io.WriteString(c, "a001 LSUB \"\" *\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LSUB () \"/\" INBOX" {
+	if scanner.Text() != "* LSUB () \"/\" \"INBOX\"" {
 		t.Fatal("Invalid LSUB response:", scanner.Text())
 	}
 
@@ -417,7 +417,7 @@ func TestList_Delimiter(t *testing.T) {
 	io.WriteString(c, "a001 LIST \"\" \"\"\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LIST (\\Noselect) \"/\" /" {
+	if scanner.Text() != "* LIST (\\Noselect) \"/\" \"/\"" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 
@@ -436,7 +436,7 @@ func TestStatus(t *testing.T) {
 
 	scanner.Scan()
 	line := scanner.Text()
-	if !strings.HasPrefix(line, "* STATUS INBOX (") {
+	if !strings.HasPrefix(line, "* STATUS \"INBOX\" (") {
 		t.Fatal("Invalid STATUS response:", line)
 	}
 	parts := []string{"MESSAGES 1", "RECENT 0", "UIDNEXT 7", "UIDVALIDITY 1", "UNSEEN 0"}

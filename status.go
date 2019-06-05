@@ -39,7 +39,7 @@ const (
 	StatusRespBye StatusRespType = "BYE"
 )
 
-type StatusRespCode string
+type StatusRespCode RawString
 
 // Status response codes defined in RFC 3501 section 7.1.
 const (
@@ -94,7 +94,7 @@ func (r *StatusResp) WriteTo(w *Writer) error {
 		tag = "*"
 	}
 
-	if err := w.writeFields([]interface{}{tag, string(r.Type)}); err != nil {
+	if err := w.writeFields([]interface{}{RawString(tag), RawString(r.Type)}); err != nil {
 		return err
 	}
 

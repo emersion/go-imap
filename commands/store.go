@@ -17,7 +17,7 @@ type Store struct {
 func (cmd *Store) Command() *imap.Command {
 	return &imap.Command{
 		Name:      "STORE",
-		Arguments: []interface{}{cmd.SeqSet, string(cmd.Item), cmd.Value},
+		Arguments: []interface{}{cmd.SeqSet, imap.RawString(cmd.Item), cmd.Value},
 	}
 }
 

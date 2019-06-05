@@ -149,7 +149,7 @@ func TestWriter_WriteField_ZeroDateTime(t *testing.T) {
 func TestWriter_WriteFields(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeFields([]interface{}{"hey", 42}); err != nil {
+	if err := w.writeFields([]interface{}{RawString("hey"), 42}); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "hey 42" {
@@ -160,7 +160,7 @@ func TestWriter_WriteFields(t *testing.T) {
 func TestWriter_WriteField_SimpleList(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeField([]interface{}{"hey", 42}); err != nil {
+	if err := w.writeField([]interface{}{RawString("hey"), 42}); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "(hey 42)" {
@@ -172,9 +172,9 @@ func TestWriter_WriteField_NestedList(t *testing.T) {
 	w, b := newWriter()
 
 	list := []interface{}{
-		"toplevel",
+		RawString("toplevel"),
 		[]interface{}{
-			"nested",
+			RawString("nested"),
 			0,
 		},
 		22,
@@ -184,7 +184,7 @@ func TestWriter_WriteField_NestedList(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "(toplevel (nested 0) 22)" {
-		t.Error("Not the expected list")
+		t.Error("Not the expected list:", b.String())
 	}
 }
 
@@ -234,26 +234,26 @@ func TestWriter_WriteRespCode_NoArgs(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "[READ-ONLY]" {
-		t.Error("Not the expected response code")
+		t.Error("Not the expected response code:", b.String())
 	}
 }
 
 func TestWriter_WriteRespCode_WithArgs(t *testing.T) {
 	w, b := newWriter()
 
-	args := []interface{}{"IMAP4rev1", "STARTTLS", "LOGINDISABLED"}
+	args := []interface{}{RawString("IMAP4rev1"), RawString("STARTTLS"), RawString("LOGINDISABLED")}
 	if err := w.writeRespCode("CAPABILITY", args); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "[CAPABILITY IMAP4rev1 STARTTLS LOGINDISABLED]" {
-		t.Error("Not the expected response code")
+		t.Error("Not the expected response code:", b.String())
 	}
 }
 
 func TestWriter_WriteLine(t *testing.T) {
 	w, b := newWriter()
 
-	if err := w.writeLine(RawString("*"), "OK"); err != nil {
+	if err := w.writeLine(RawString("*"), RawString("OK")); err != nil {
 		t.Error(err)
 	}
 	if b.String() != "* OK\r\n" {

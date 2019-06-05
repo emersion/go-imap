@@ -31,7 +31,7 @@ func (r *Search) Handle(resp imap.Resp) error {
 }
 
 func (r *Search) WriteTo(w *imap.Writer) (err error) {
-	fields := []interface{}{searchName}
+	fields := []interface{}{imap.RawString(searchName)}
 	for _, id := range r.Ids {
 		fields = append(fields, id)
 	}

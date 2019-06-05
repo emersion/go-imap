@@ -19,7 +19,7 @@ func (cmd *Status) Command() *imap.Command {
 
 	items := make([]interface{}, len(cmd.Items))
 	for i, item := range cmd.Items {
-		items[i] = string(item)
+		items[i] = imap.RawString(item)
 	}
 
 	return &imap.Command{

@@ -66,11 +66,11 @@ var messageTests = []struct {
 			itemsOrder:    []FetchItem{FetchEnvelope, FetchBody, FetchFlags, FetchRFC822Size, FetchUid},
 		},
 		fields: []interface{}{
-			"ENVELOPE", envelopeTests[0].fields,
-			"BODY", bodyStructureTests[0].fields,
-			"FLAGS", []interface{}{RawString(SeenFlag), RawString(AnsweredFlag)},
-			"RFC822.SIZE", "4242",
-			"UID", "2424",
+			RawString("ENVELOPE"), envelopeTests[0].fields,
+			RawString("BODY"), bodyStructureTests[0].fields,
+			RawString("FLAGS"), []interface{}{RawString(SeenFlag), RawString(AnsweredFlag)},
+			RawString("RFC822.SIZE"), RawString("4242"),
+			RawString("UID"), RawString("2424"),
 		},
 	},
 }
@@ -442,7 +442,7 @@ var bodyStructureTests = []struct {
 	bodyStructure *BodyStructure
 }{
 	{
-		fields: []interface{}{"image", "jpeg", []interface{}{}, "<foo4%25foo1@bar.net>", "A picture of cat", "base64", "4242"},
+		fields: []interface{}{"image", "jpeg", []interface{}{}, "<foo4%25foo1@bar.net>", "A picture of cat", "base64", RawString("4242")},
 		bodyStructure: &BodyStructure{
 			MIMEType:    "image",
 			MIMESubType: "jpeg",
@@ -454,7 +454,7 @@ var bodyStructureTests = []struct {
 		},
 	},
 	{
-		fields: []interface{}{"text", "plain", []interface{}{"charset", Quoted("utf-8")}, nil, nil, "us-ascii", "42", "2"},
+		fields: []interface{}{"text", "plain", []interface{}{"charset", Quoted("utf-8")}, nil, nil, "us-ascii", RawString("42"), RawString("2")},
 		bodyStructure: &BodyStructure{
 			MIMEType:    "text",
 			MIMESubType: "plain",
@@ -466,10 +466,10 @@ var bodyStructureTests = []struct {
 	},
 	{
 		fields: []interface{}{
-			"message", "rfc822", []interface{}{}, nil, nil, "us-ascii", "42",
+			"message", "rfc822", []interface{}{}, nil, nil, "us-ascii", RawString("42"),
 			(&Envelope{}).Format(),
 			(&BodyStructure{}).Format(),
-			"67",
+			RawString("67"),
 		},
 		bodyStructure: &BodyStructure{
 			MIMEType:    "message",
@@ -493,7 +493,7 @@ var bodyStructureTests = []struct {
 	},
 	{
 		fields: []interface{}{
-			"application", "pdf", []interface{}{}, nil, nil, "base64", "4242",
+			"application", "pdf", []interface{}{}, nil, nil, "base64", RawString("4242"),
 			"e0323a9039add2978bf5b49550572c7c",
 			[]interface{}{"attachment", []interface{}{"filename", Quoted("document.pdf")}},
 			[]interface{}{"en-US"}, []interface{}{},
@@ -514,8 +514,8 @@ var bodyStructureTests = []struct {
 	},
 	{
 		fields: []interface{}{
-			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
-			[]interface{}{"text", "html", []interface{}{}, nil, nil, "us-ascii", "106", "36"},
+			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", RawString("87"), RawString("22")},
+			[]interface{}{"text", "html", []interface{}{}, nil, nil, "us-ascii", RawString("106"), RawString("36")},
 			"alternative",
 		},
 		bodyStructure: &BodyStructure{
@@ -544,7 +544,7 @@ var bodyStructureTests = []struct {
 	},
 	{
 		fields: []interface{}{
-			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", "87", "22"},
+			[]interface{}{"text", "plain", []interface{}{}, nil, nil, "us-ascii", RawString("87"), RawString("22")},
 			"alternative", []interface{}{"hello", Quoted("world")},
 			[]interface{}{"inline", []interface{}{}},
 			[]interface{}{"en-US"}, []interface{}{},

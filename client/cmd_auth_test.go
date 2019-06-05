@@ -25,8 +25,8 @@ func TestClient_Select(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "SELECT INBOX" {
-		t.Fatalf("client sent command %v, want SELECT INBOX", cmd)
+	if cmd != "SELECT \"INBOX\"" {
+		t.Fatalf("client sent command %v, want SELECT \"INBOX\"", cmd)
 	}
 
 	s.WriteString("* 172 EXISTS\r\n")
@@ -74,8 +74,8 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "EXAMINE INBOX" {
-		t.Fatalf("client sent command %v, want EXAMINE INBOX", cmd)
+	if cmd != "EXAMINE \"INBOX\"" {
+		t.Fatalf("client sent command %v, want EXAMINE \"INBOX\"", cmd)
 	}
 
 	s.WriteString(tag + " OK [READ-ONLY] EXAMINE completed\r\n")
@@ -170,8 +170,8 @@ func TestClient_Subscribe(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "SUBSCRIBE Mailbox" {
-		t.Fatalf("client sent command %v, want %v", cmd, "SUBSCRIBE Mailbox")
+	if cmd != "SUBSCRIBE \"Mailbox\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "SUBSCRIBE \"Mailbox\"")
 	}
 
 	s.WriteString(tag + " OK SUBSCRIBE completed\r\n")
@@ -193,8 +193,8 @@ func TestClient_Unsubscribe(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "UNSUBSCRIBE Mailbox" {
-		t.Fatalf("client sent command %v, want %v", cmd, "UNSUBSCRIBE Mailbox")
+	if cmd != "UNSUBSCRIBE \"Mailbox\"" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UNSUBSCRIBE \"Mailbox\"")
 	}
 
 	s.WriteString(tag + " OK UNSUBSCRIBE completed\r\n")
@@ -301,8 +301,8 @@ func TestClient_Status(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "STATUS INBOX (MESSAGES RECENT)" {
-		t.Fatalf("client sent command %v, want %v", cmd, "STATUS INBOX (MESSAGES RECENT)")
+	if cmd != "STATUS \"INBOX\" (MESSAGES RECENT)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "STATUS \"INBOX\" (MESSAGES RECENT)")
 	}
 
 	s.WriteString("* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
@@ -336,8 +336,8 @@ func TestClient_Append(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
-		t.Fatalf("client sent command %v, want %v", cmd, "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}")
+	if cmd != "APPEND \"INBOX\" (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
+		t.Fatalf("client sent command %v, want %v", cmd, "APPEND \"INBOX\" (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}")
 	}
 
 	s.WriteString("+ send literal\r\n")

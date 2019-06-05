@@ -189,10 +189,13 @@ func (m *Message) Parse(fields []interface{}) error {
 	var k FetchItem
 	for i, f := range fields {
 		if i%2 == 0 { // It's a key
-			if kstr, ok := f.(string); !ok {
+			switch f := f.(type) {
+			case string:
+				k = FetchItem(strings.ToUpper(f))
+			case RawString:
+				k = FetchItem(strings.ToUpper(string(f)))
+			default:
 				return fmt.Errorf("cannot parse message: key is not a string, but a %T", f)
-			} else {
-				k = FetchItem(strings.ToUpper(kstr))
 			}
 		} else { // It's a value
 			m.Items[k] = nil
@@ -255,7 +258,7 @@ func (m *Message) Parse(fields []interface{}) error {
 
 func (m *Message) formatItem(k FetchItem) []interface{} {
 	v := m.Items[k]
-	var kk interface{} = string(k)
+	var kk interface{} = RawString(k)
 
 	switch k {
 	case FetchBody, FetchBodyStructure:
