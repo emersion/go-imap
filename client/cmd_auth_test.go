@@ -25,7 +25,7 @@ func TestClient_Select(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "SELECT \"INBOX\"" {
+	if cmd != "SELECT INBOX" {
 		t.Fatalf("client sent command %v, want SELECT \"INBOX\"", cmd)
 	}
 
@@ -74,7 +74,7 @@ func TestClient_Select_ReadOnly(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "EXAMINE \"INBOX\"" {
+	if cmd != "EXAMINE INBOX" {
 		t.Fatalf("client sent command %v, want EXAMINE \"INBOX\"", cmd)
 	}
 
@@ -301,7 +301,7 @@ func TestClient_Status(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "STATUS \"INBOX\" (MESSAGES RECENT)" {
+	if cmd != "STATUS INBOX (MESSAGES RECENT)" {
 		t.Fatalf("client sent command %v, want %v", cmd, "STATUS \"INBOX\" (MESSAGES RECENT)")
 	}
 
@@ -336,7 +336,7 @@ func TestClient_Append(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "APPEND \"INBOX\" (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
+	if cmd != "APPEND INBOX (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}" {
 		t.Fatalf("client sent command %v, want %v", cmd, "APPEND \"INBOX\" (\\Seen \\Draft) \"10-Nov-2009 23:00:00 +0000\" {30}")
 	}
 

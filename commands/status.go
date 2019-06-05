@@ -24,7 +24,7 @@ func (cmd *Status) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "STATUS",
-		Arguments: []interface{}{mailbox, items},
+		Arguments: []interface{}{imap.FormatMailboxName(mailbox), items},
 	}
 }
 

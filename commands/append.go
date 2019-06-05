@@ -20,7 +20,7 @@ func (cmd *Append) Command() *imap.Command {
 	var args []interface{}
 
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
-	args = append(args, mailbox)
+	args = append(args, imap.FormatMailboxName(mailbox))
 
 	if cmd.Flags != nil {
 		flags := make([]interface{}, len(cmd.Flags))

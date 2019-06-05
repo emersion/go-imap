@@ -248,3 +248,11 @@ func (status *MailboxStatus) Format() []interface{} {
 	}
 	return fields
 }
+
+func FormatMailboxName(name string) interface{} {
+	// Some e-mails servers don't handle quoted INBOX names correctly so we special-case it.
+	if strings.EqualFold(name, "INBOX") {
+		return RawString(name)
+	}
+	return name
+}
