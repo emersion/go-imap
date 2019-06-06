@@ -3,8 +3,10 @@ package server
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net"
+	"runtime/debug"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -262,12 +264,26 @@ func (c *conn) silent() *bool {
 	return &c.silentVal
 }
 
-func (c *conn) serve(conn Conn) error {
+func (c *conn) serve(conn Conn) (err error) {
 	c.conn = conn
 
 	defer func() {
 		c.ctx.State = imap.LogoutState
 		close(c.loggedOut)
+	}()
+
+	defer func() {
+		if r := recover(); r != nil {
+			c.WriteResp(&imap.StatusResp{
+				Type: imap.StatusRespBye,
+				Info: "Internal server error, closing connection.",
+			})
+
+			stack := debug.Stack()
+			c.s.ErrorLog.Printf("panic serving %v: %v\n%s", c.Info().RemoteAddr, r, stack)
+
+			err = fmt.Errorf("%v", r)
+		}
 	}()
 
 	// Send greeting
