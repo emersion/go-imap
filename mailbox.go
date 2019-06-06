@@ -83,7 +83,7 @@ func (info *MailboxInfo) Format() []interface{} {
 		attrs[i] = RawString(attr)
 	}
 	// Thunderbird doesn't understand delimiters if not quoted
-	return []interface{}{attrs, info.Delimiter, name}
+	return []interface{}{attrs, info.Delimiter, FormatMailboxName(name)}
 }
 
 // TODO: optimize this
