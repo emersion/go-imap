@@ -37,7 +37,7 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 
 func (r *Fetch) WriteTo(w *imap.Writer) error {
 	for msg := range r.Messages {
-		resp := imap.NewUntaggedResp([]interface{}{msg.SeqNum, fetchName, msg.Format()})
+		resp := imap.NewUntaggedResp([]interface{}{msg.SeqNum, imap.RawString(fetchName), msg.Format()})
 		if err := resp.WriteTo(w); err != nil {
 			return err
 		}

@@ -224,7 +224,7 @@ func (c *conn) greet() error {
 	caps := c.Capabilities()
 	args := make([]interface{}, len(caps))
 	for i, cap := range caps {
-		args[i] = cap
+		args[i] = imap.RawString(cap)
 	}
 
 	greeting := &imap.StatusResp{

@@ -16,7 +16,7 @@ type Fetch struct {
 func (cmd *Fetch) Command() *imap.Command {
 	items := make([]interface{}, len(cmd.Items))
 	for i, item := range cmd.Items {
-		items[i] = imap.Atom(item)
+		items[i] = imap.RawString(item)
 	}
 
 	return &imap.Command{

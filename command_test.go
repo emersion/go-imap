@@ -31,7 +31,7 @@ func TestCommand_WriteTo_NoArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if b.String() != "A001 NOOP\r\n" {
-		t.Fatal("Not the expected command")
+		t.Fatal("Not the expected command: ", b.String())
 	}
 }
 
@@ -48,8 +48,8 @@ func TestCommand_WriteTo_WithArgs(t *testing.T) {
 	if err := cmd.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}
-	if b.String() != "A002 LOGIN username password\r\n" {
-		t.Fatal("Not the expected command")
+	if b.String() != "A002 LOGIN \"username\" \"password\"\r\n" {
+		t.Fatal("Not the expected command: ", b.String())
 	}
 }
 

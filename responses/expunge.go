@@ -33,7 +33,7 @@ func (r *Expunge) Handle(resp imap.Resp) error {
 
 func (r *Expunge) WriteTo(w *imap.Writer) error {
 	for seqNum := range r.SeqNums {
-		resp := imap.NewUntaggedResp([]interface{}{seqNum, expungeName})
+		resp := imap.NewUntaggedResp([]interface{}{seqNum, imap.RawString(expungeName)})
 		if err := resp.WriteTo(w); err != nil {
 			return err
 		}

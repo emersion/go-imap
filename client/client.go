@@ -63,8 +63,8 @@ func (u *MessageUpdate) update() {}
 
 // Client is an IMAP client.
 type Client struct {
-	conn  *imap.Conn
-	isTLS bool
+	conn       *imap.Conn
+	isTLS      bool
 	serverName string
 
 	loggedOut chan struct{}

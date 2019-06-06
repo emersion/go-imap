@@ -12,7 +12,7 @@ func TestResp_WriteTo(t *testing.T) {
 	var b bytes.Buffer
 	w := imap.NewWriter(&b)
 
-	resp := imap.NewUntaggedResp([]interface{}{"76", "FETCH", []interface{}{"UID", 783}})
+	resp := imap.NewUntaggedResp([]interface{}{imap.RawString("76"), imap.RawString("FETCH"), []interface{}{imap.RawString("UID"), 783}})
 	if err := resp.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}

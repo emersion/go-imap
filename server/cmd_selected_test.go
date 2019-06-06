@@ -424,7 +424,7 @@ func TestCopy(t *testing.T) {
 
 	io.WriteString(c, "a001 STATUS CopyDest (MESSAGES)\r\n")
 	scanner.Scan()
-	if !strings.HasPrefix(scanner.Text(), "* STATUS CopyDest (MESSAGES 1)") {
+	if !strings.HasPrefix(scanner.Text(), "* STATUS \"CopyDest\" (MESSAGES 1)") {
 		t.Fatal("Invalid status response:", scanner.Text())
 	}
 	scanner.Scan()

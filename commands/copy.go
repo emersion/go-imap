@@ -18,7 +18,7 @@ func (cmd *Copy) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "COPY",
-		Arguments: []interface{}{cmd.SeqSet, mailbox},
+		Arguments: []interface{}{cmd.SeqSet, imap.FormatMailboxName(mailbox)},
 	}
 }
 

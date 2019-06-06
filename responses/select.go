@@ -67,9 +67,9 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 	if mbox.Flags != nil {
 		flags := make([]interface{}, len(mbox.Flags))
 		for i, f := range mbox.Flags {
-			flags[i] = imap.Atom(f)
+			flags[i] = imap.RawString(f)
 		}
-		res := imap.NewUntaggedResp([]interface{}{"FLAGS", flags})
+		res := imap.NewUntaggedResp([]interface{}{imap.RawString("FLAGS"), flags})
 		if err := res.WriteTo(w); err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 	if mbox.PermanentFlags != nil {
 		flags := make([]interface{}, len(mbox.PermanentFlags))
 		for i, f := range mbox.PermanentFlags {
-			flags[i] = imap.Atom(f)
+			flags[i] = imap.RawString(f)
 		}
 		statusRes := &imap.StatusResp{
 			Type:      imap.StatusRespOk,
@@ -106,12 +106,12 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 	for k := range r.Mailbox.Items {
 		switch k {
 		case imap.StatusMessages:
-			res := imap.NewUntaggedResp([]interface{}{mbox.Messages, "EXISTS"})
+			res := imap.NewUntaggedResp([]interface{}{mbox.Messages, imap.RawString("EXISTS")})
 			if err := res.WriteTo(w); err != nil {
 				return err
 			}
 		case imap.StatusRecent:
-			res := imap.NewUntaggedResp([]interface{}{mbox.Recent, "RECENT"})
+			res := imap.NewUntaggedResp([]interface{}{mbox.Recent, imap.RawString("RECENT")})
 			if err := res.WriteTo(w); err != nil {
 				return err
 			}

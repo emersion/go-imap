@@ -17,7 +17,7 @@ func (cmd *Subscribe) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "SUBSCRIBE",
-		Arguments: []interface{}{mailbox},
+		Arguments: []interface{}{imap.FormatMailboxName(mailbox)},
 	}
 }
 
@@ -45,7 +45,7 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "UNSUBSCRIBE",
-		Arguments: []interface{}{mailbox},
+		Arguments: []interface{}{imap.FormatMailboxName(mailbox)},
 	}
 }
 

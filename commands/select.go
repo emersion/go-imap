@@ -24,7 +24,7 @@ func (cmd *Select) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      name,
-		Arguments: []interface{}{mailbox},
+		Arguments: []interface{}{imap.FormatMailboxName(mailbox)},
 	}
 }
 

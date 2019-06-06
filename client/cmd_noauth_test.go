@@ -121,7 +121,7 @@ func TestClient_Login_Success(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "LOGIN username password" {
+	if cmd != "LOGIN \"username\" \"password\"" {
 		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
 	}
 	s.WriteString(tag + " OK LOGIN completed\r\n")
@@ -145,7 +145,7 @@ func TestClient_Login_Error(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "LOGIN username password" {
+	if cmd != "LOGIN \"username\" \"password\"" {
 		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
 	}
 	s.WriteString(tag + " NO LOGIN incorrect\r\n")
@@ -169,8 +169,8 @@ func TestClient_Login_State_Allowed(t *testing.T) {
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "LOGIN username password" {
-		t.Fatalf("client sent command %v, want LOGIN username password", cmd)
+	if cmd != "LOGIN \"username\" \"password\"" {
+		t.Fatalf("client sent command %v, want LOGIN \"username\" \"password\"", cmd)
 	}
 	s.WriteString(tag + " OK LOGIN completed\r\n")
 

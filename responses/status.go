@@ -48,6 +48,6 @@ func (r *Status) Handle(resp imap.Resp) error {
 func (r *Status) WriteTo(w *imap.Writer) error {
 	mbox := r.Mailbox
 	name, _ := utf7.Encoding.NewEncoder().String(mbox.Name)
-	fields := []interface{}{statusName, name, mbox.Format()}
+	fields := []interface{}{imap.RawString(statusName), imap.FormatMailboxName(name), mbox.Format()}
 	return imap.NewUntaggedResp(fields).WriteTo(w)
 }

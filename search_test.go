@@ -24,10 +24,10 @@ var searchCriteriaTests = []struct {
 	{
 		expected: `(1:42 UID 743:938 ` +
 			`SINCE "5-Nov-1984" BEFORE "21-Nov-1997" SENTSINCE "5-Nov-1984" SENTBEFORE "21-Nov-1997" ` +
-			`FROM root@protonmail.com BODY "hey there" TEXT DILLE ` +
-			`ANSWERED DELETED KEYWORD cc UNKEYWORD microsoft ` +
+			`FROM "root@protonmail.com" BODY "hey there" TEXT "DILLE" ` +
+			`ANSWERED DELETED KEYWORD "cc" UNKEYWORD "microsoft" ` +
 			`LARGER 4242 SMALLER 4342 ` +
-			`NOT (SENTON "21-Nov-1997" HEADER Content-Type text/csv) ` +
+			`NOT (SENTON "21-Nov-1997" HEADER "Content-Type" "text/csv") ` +
 			`OR (ON "5-Nov-1984" DRAFT FLAGGED UNANSWERED UNDELETED OLD) (UNDRAFT UNFLAGGED UNSEEN))`,
 		criteria: &SearchCriteria{
 			SeqNum:     searchSeqSet1,

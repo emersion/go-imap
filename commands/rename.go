@@ -20,7 +20,7 @@ func (cmd *Rename) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "RENAME",
-		Arguments: []interface{}{existingName, newName},
+		Arguments: []interface{}{imap.FormatMailboxName(existingName), imap.FormatMailboxName(newName)},
 	}
 }
 

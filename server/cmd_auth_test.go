@@ -322,7 +322,7 @@ func TestList_Nested(t *testing.T) {
 			} else if strings.HasPrefix(scanner.Text(), "* LIST ") {
 				found := false
 				for _, name := range mailboxes {
-					if strings.HasSuffix(scanner.Text(), " "+name) {
+					if strings.HasSuffix(scanner.Text(), " \""+name+"\"") || strings.HasSuffix(scanner.Text(), " "+name) {
 						checked[name] = true
 						found = true
 						break
@@ -417,7 +417,7 @@ func TestList_Delimiter(t *testing.T) {
 	io.WriteString(c, "a001 LIST \"\" \"\"\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* LIST (\\Noselect) \"/\" /" {
+	if scanner.Text() != "* LIST (\\Noselect) \"/\" \"/\"" {
 		t.Fatal("Invalid LIST response:", scanner.Text())
 	}
 

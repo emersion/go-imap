@@ -20,12 +20,12 @@ func (cmd *Append) Command() *imap.Command {
 	var args []interface{}
 
 	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
-	args = append(args, mailbox)
+	args = append(args, imap.FormatMailboxName(mailbox))
 
 	if cmd.Flags != nil {
 		flags := make([]interface{}, len(cmd.Flags))
 		for i, flag := range cmd.Flags {
-			flags[i] = imap.Atom(flag)
+			flags[i] = imap.RawString(flag)
 		}
 		args = append(args, flags)
 	}

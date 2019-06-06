@@ -80,10 +80,10 @@ func (info *MailboxInfo) Format() []interface{} {
 	name, _ := utf7.Encoding.NewEncoder().String(info.Name)
 	attrs := make([]interface{}, len(info.Attributes))
 	for i, attr := range info.Attributes {
-		attrs[i] = Atom(attr)
+		attrs[i] = RawString(attr)
 	}
 	// Thunderbird doesn't understand delimiters if not quoted
-	return []interface{}{attrs, Quoted(info.Delimiter), name}
+	return []interface{}{attrs, info.Delimiter, FormatMailboxName(name)}
 }
 
 // TODO: optimize this
@@ -244,7 +244,15 @@ func (status *MailboxStatus) Format() []interface{} {
 			v = status.UidValidity
 		}
 
-		fields = append(fields, string(k), v)
+		fields = append(fields, RawString(k), v)
 	}
 	return fields
+}
+
+func FormatMailboxName(name string) interface{} {
+	// Some e-mails servers don't handle quoted INBOX names correctly so we special-case it.
+	if strings.EqualFold(name, "INBOX") {
+		return RawString(name)
+	}
+	return name
 }

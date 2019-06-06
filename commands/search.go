@@ -17,7 +17,7 @@ type Search struct {
 func (cmd *Search) Command() *imap.Command {
 	var args []interface{}
 	if cmd.Charset != "" {
-		args = append(args, "CHARSET", cmd.Charset)
+		args = append(args, imap.RawString("CHARSET"), cmd.Charset)
 	}
 	args = append(args, cmd.Criteria.Format()...)
 

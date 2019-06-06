@@ -69,12 +69,17 @@ func ParseNumber(f interface{}) (uint32, error) {
 		return n, nil
 	}
 
-	s, ok := f.(string)
-	if !ok {
+	var s string
+	switch f := f.(type) {
+	case RawString:
+		s = string(f)
+	case string:
+		s = f
+	default:
 		return 0, newParseError("expected a number, got a non-atom")
 	}
 
-	nbr, err := strconv.ParseUint(s, 10, 32)
+	nbr, err := strconv.ParseUint(string(s), 10, 32)
 	if err != nil {
 		return 0, &parseError{err}
 	}
@@ -90,10 +95,7 @@ func ParseString(f interface{}) (string, error) {
 	}
 
 	// Useful for tests
-	if q, ok := f.(Quoted); ok {
-		return string(q), nil
-	}
-	if a, ok := f.(Atom); ok {
+	if a, ok := f.(RawString); ok {
 		return string(a), nil
 	}
 

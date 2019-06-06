@@ -17,7 +17,7 @@ func (cmd *Delete) Command() *imap.Command {
 
 	return &imap.Command{
 		Name:      "DELETE",
-		Arguments: []interface{}{mailbox},
+		Arguments: []interface{}{imap.FormatMailboxName(mailbox)},
 	}
 }
 

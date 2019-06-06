@@ -117,12 +117,12 @@ func NewUntaggedResp(fields []interface{}) *DataResp {
 func (r *DataResp) resp() {}
 
 func (r *DataResp) WriteTo(w *Writer) error {
-	tag := Atom(r.Tag)
+	tag := RawString(r.Tag)
 	if tag == "" {
-		tag = Atom("*")
+		tag = RawString("*")
 	}
 
-	fields := []interface{}{tag}
+	fields := []interface{}{RawString(tag)}
 	fields = append(fields, r.Fields...)
 	return w.writeLine(fields...)
 }

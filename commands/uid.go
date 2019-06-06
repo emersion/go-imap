@@ -16,7 +16,7 @@ type Uid struct {
 func (cmd *Uid) Command() *imap.Command {
 	inner := cmd.Cmd.Command()
 
-	args := []interface{}{inner.Name}
+	args := []interface{}{imap.RawString(inner.Name)}
 	args = append(args, inner.Arguments...)
 
 	return &imap.Command{

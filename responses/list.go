@@ -44,7 +44,7 @@ func (r *List) WriteTo(w *imap.Writer) error {
 	respName := r.Name()
 
 	for mbox := range r.Mailboxes {
-		fields := []interface{}{respName}
+		fields := []interface{}{imap.RawString(respName)}
 		fields = append(fields, mbox.Format()...)
 
 		resp := imap.NewUntaggedResp(fields)
