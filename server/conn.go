@@ -273,16 +273,16 @@ func (c *conn) serve(conn Conn) (err error) {
 	}()
 
 	defer func() {
-		if err := recover(); err != nil {
+		if r := recover(); r != nil {
 			c.WriteResp(&imap.StatusResp{
 				Type: imap.StatusRespBye,
 				Info: "Internal server error, closing connection.",
 			})
 
 			stack := debug.Stack()
-			c.s.ErrorLog.Printf("panic serving %v: %v\n%s", c.Info().RemoteAddr, err, stack)
+			c.s.ErrorLog.Printf("panic serving %v: %v\n%s", c.Info().RemoteAddr, r, stack)
 
-			err = fmt.Errorf("%v", err)
+			err = fmt.Errorf("%v", r)
 		}
 	}()
 
