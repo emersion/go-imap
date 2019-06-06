@@ -925,7 +925,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		end := 7
 
 		// Type-specific fields
-		if bs.MIMEType == "message" && bs.MIMESubType == "rfc822" {
+		if strings.EqualFold(bs.MIMEType, "message") && strings.EqualFold(bs.MIMESubType, "rfc822") {
 			if len(fields)-end < 3 {
 				return errors.New("Missing type-specific fields for message/rfc822")
 			}
@@ -942,7 +942,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 
 			end += 3
 		}
-		if bs.MIMEType == "text" {
+		if strings.EqualFold(bs.MIMEType, "text") {
 			if len(fields)-end < 1 {
 				return errors.New("Missing type-specific fields for text/*")
 			}
@@ -992,7 +992,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 }
 
 func (bs *BodyStructure) Format() (fields []interface{}) {
-	if bs.MIMEType == "multipart" {
+	if strings.EqualFold(bs.MIMEType, "multipart") {
 		for _, part := range bs.Parts {
 			fields = append(fields, part.Format())
 		}
@@ -1039,7 +1039,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		fields[6] = bs.Size
 
 		// Type-specific fields
-		if bs.MIMEType == "message" && bs.MIMESubType == "rfc822" {
+		if strings.EqualFold(bs.MIMEType, "message") && strings.EqualFold(bs.MIMESubType, "rfc822") {
 			var env interface{}
 			if bs.Envelope != nil {
 				env = bs.Envelope.Format()
@@ -1052,7 +1052,7 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 			fields = append(fields, env, bsbs, bs.Lines)
 		}
-		if bs.MIMEType == "text" {
+		if strings.EqualFold(bs.MIMEType, "text") {
 			fields = append(fields, bs.Lines)
 		}
 
