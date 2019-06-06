@@ -22,7 +22,8 @@ type AuthenticateConn interface {
 // Authenticate is an AUTHENTICATE command, as defined in RFC 3501 section
 // 6.2.2.
 type Authenticate struct {
-	Mechanism string
+	Mechanism       string
+	InitialResponse string
 }
 
 func (cmd *Authenticate) Command() *imap.Command {
@@ -41,8 +42,16 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	if cmd.Mechanism, ok = fields[0].(string); !ok {
 		return errors.New("Mechanism must be a string")
 	}
-
 	cmd.Mechanism = strings.ToUpper(cmd.Mechanism)
+
+	if len(fields) != 2 {
+		return nil
+	}
+
+	if cmd.InitialResponse, ok = fields[1].(string); !ok {
+		return errors.New("InitialResponse must be a string")
+	}
+
 	return nil
 }
 
@@ -55,6 +64,19 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn Authenti
 	scanner := bufio.NewScanner(conn)
 
 	var response []byte
+	var err error
+	if cmd.InitialResponse != "" {
+		// "=" is invalid base64 but it is used to indicate empty initial
+		// response.
+		if cmd.InitialResponse == "=" {
+			response = []byte{}
+		} else {
+			response, err = base64.StdEncoding.DecodeString(cmd.InitialResponse)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	for {
 		challenge, done, err := sasl.Next(response)
 		if err != nil || done {
