@@ -39,7 +39,7 @@ const (
 	StatusRespBye StatusRespType = "BYE"
 )
 
-type StatusRespCode RawString
+type StatusRespCode string
 
 // Status response codes defined in RFC 3501 section 7.1.
 const (
