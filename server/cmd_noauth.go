@@ -62,10 +62,16 @@ func (cmd *StartTLS) Upgrade(conn Conn) error {
 }
 
 func afterAuthStatus(conn Conn) error {
+	caps := conn.Capabilities()
+	capAtoms := make([]interface{}, 0, len(caps))
+	for _, cap := range caps {
+		capAtoms = append(capAtoms, imap.RawString(cap))
+	}
+
 	return ErrStatusResp(&imap.StatusResp{
 		Type:      imap.StatusRespOk,
 		Code:      imap.CodeCapability,
-		Arguments: imap.FormatStringList(conn.Capabilities()),
+		Arguments: capAtoms,
 	})
 }
 
