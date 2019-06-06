@@ -27,6 +27,12 @@ type Authenticate struct {
 }
 
 func (cmd *Authenticate) Command() *imap.Command {
+	if cmd.InitialResponse != "" {
+		return &imap.Command{
+			Name:      "AUTHENTICATE",
+			Arguments: []interface{}{imap.RawString(cmd.Mechanism), imap.RawString(cmd.InitialResponse)},
+		}
+	}
 	return &imap.Command{
 		Name:      "AUTHENTICATE",
 		Arguments: []interface{}{imap.RawString(cmd.Mechanism)},

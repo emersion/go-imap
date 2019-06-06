@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"net"
 
@@ -96,6 +97,14 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 
 	cmd := &commands.Authenticate{
 		Mechanism: mech,
+	}
+
+	irOk, err := c.Support("SASL-IR")
+	if err != nil {
+		return err
+	}
+	if irOk {
+		cmd.InitialResponse = base64.StdEncoding.EncodeToString(ir)
 	}
 
 	res := &responses.Authenticate{

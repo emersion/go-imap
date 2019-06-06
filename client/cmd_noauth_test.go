@@ -111,6 +111,39 @@ func TestClient_Authenticate(t *testing.T) {
 	}
 }
 
+func TestClient_Authenticate_InitialResponse(t *testing.T) {
+	c, s := newTestClientWithGreeting(t, "* OK [CAPABILITY IMAP4rev1 SASL-IR STARTTLS AUTH=PLAIN] Server ready.\r\n")
+	defer s.Close()
+
+	if ok, err := c.SupportAuth(sasl.Plain); err != nil {
+		t.Fatalf("c.SupportAuth(sasl.Plain) = %v", err)
+	} else if !ok {
+		t.Fatalf("c.SupportAuth(sasl.Plain) = %v, want true", ok)
+	}
+
+	sasl := sasl.NewPlainClient("", "username", "password")
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Authenticate(sasl)
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "AUTHENTICATE PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk" {
+		t.Fatalf("client sent command %v, want AUTHENTICATE PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk", cmd)
+	}
+
+	s.WriteString(tag + " OK AUTHENTICATE completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Authenticate() = %v", err)
+	}
+
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
+	}
+}
+
 func TestClient_Login_Success(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
