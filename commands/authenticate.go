@@ -23,14 +23,15 @@ type AuthenticateConn interface {
 // 6.2.2.
 type Authenticate struct {
 	Mechanism       string
-	InitialResponse string
+	InitialResponse []byte
 }
 
 func (cmd *Authenticate) Command() *imap.Command {
-	if cmd.InitialResponse != "" {
+	if cmd.InitialResponse != nil {
+		encodedResponse := base64.StdEncoding.EncodeToString(cmd.InitialResponse)
 		return &imap.Command{
 			Name:      "AUTHENTICATE",
-			Arguments: []interface{}{imap.RawString(cmd.Mechanism), imap.RawString(cmd.InitialResponse)},
+			Arguments: []interface{}{imap.RawString(cmd.Mechanism), imap.RawString(encodedResponse)},
 		}
 	}
 	return &imap.Command{
@@ -54,8 +55,19 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 		return nil
 	}
 
-	if cmd.InitialResponse, ok = fields[1].(string); !ok {
-		return errors.New("InitialResponse must be a string")
+	encodedResponse, ok := fields[1].(string)
+	if !ok {
+		return errors.New("Initial response must be a string")
+	}
+	if encodedResponse == "=" {
+		cmd.InitialResponse = []byte{}
+		return nil
+	}
+
+	var err error
+	cmd.InitialResponse, err = base64.StdEncoding.DecodeString(encodedResponse)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -69,20 +81,7 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn Authenti
 
 	scanner := bufio.NewScanner(conn)
 
-	var response []byte
-	var err error
-	if cmd.InitialResponse != "" {
-		// "=" is invalid base64 but it is used to indicate empty initial
-		// response.
-		if cmd.InitialResponse == "=" {
-			response = []byte{}
-		} else {
-			response, err = base64.StdEncoding.DecodeString(cmd.InitialResponse)
-			if err != nil {
-				return err
-			}
-		}
-	}
+	response := cmd.InitialResponse
 	for {
 		challenge, done, err := sasl.Next(response)
 		if err != nil || done {
