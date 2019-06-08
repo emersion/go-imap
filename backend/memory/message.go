@@ -69,6 +69,6 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 }
 
 func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
-	hdr, body, _ := m.headerAndBody()
-	return backendutil.Match(hdr, body, seqNum, m.Uid, m.Date, m.Flags, c)
+	e, _ := m.entity()
+	return backendutil.Match(e, seqNum, m.Uid, m.Date, m.Flags, c)
 }
