@@ -27,16 +27,22 @@ type Authenticate struct {
 }
 
 func (cmd *Authenticate) Command() *imap.Command {
+	args := []interface{}{imap.RawString(cmd.Mechanism)}
 	if cmd.InitialResponse != nil {
-		encodedResponse := base64.StdEncoding.EncodeToString(cmd.InitialResponse)
-		return &imap.Command{
-			Name:      "AUTHENTICATE",
-			Arguments: []interface{}{imap.RawString(cmd.Mechanism), imap.RawString(encodedResponse)},
+		var encodedResponse string
+		if len(cmd.InitialResponse) == 0 {
+			// Empty initial response should be encoded as "=", not empty
+			// string.
+			encodedResponse = "="
+		} else {
+			encodedResponse = base64.StdEncoding.EncodeToString(cmd.InitialResponse)
 		}
+
+		args = append(args, imap.RawString(encodedResponse))
 	}
 	return &imap.Command{
 		Name:      "AUTHENTICATE",
-		Arguments: []interface{}{imap.RawString(cmd.Mechanism)},
+		Arguments: args,
 	}
 }
 
