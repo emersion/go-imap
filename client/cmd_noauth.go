@@ -111,6 +111,9 @@ func (c *Client) Authenticate(auth sasl.Client) error {
 		InitialResponse: ir,
 		RepliesCh:       make(chan []byte, 10),
 	}
+	if irOk {
+		res.InitialResponse = nil
+	}
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
