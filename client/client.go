@@ -68,6 +68,7 @@ type Client struct {
 	serverName string
 
 	loggedOut chan struct{}
+	continues chan<- bool
 	upgrading bool
 
 	handlers       []responses.Handler
@@ -231,6 +232,11 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 				// Wait for upgrade to finish.
 				c.conn.Wait()
 			}
+			// Cancel any pending literal write
+			select {
+			case c.continues <- false:
+			default:
+			}
 			return errUnregisterHandler
 		}
 
@@ -322,11 +328,11 @@ func (c *Client) Execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	return c.execute(cmdr, h)
 }
 
-func (c *Client) handleContinuationReqs(continues chan<- bool) {
+func (c *Client) handleContinuationReqs() {
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
 		if _, ok := resp.(*imap.ContinuationReq); ok {
 			go func() {
-				continues <- true
+				c.continues <- true
 			}()
 			return nil
 		}
@@ -572,11 +578,12 @@ func New(conn net.Conn) (*Client, error) {
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
 		loggedOut: make(chan struct{}),
+		continues: continues,
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
 	}
 
-	c.handleContinuationReqs(continues)
+	c.handleContinuationReqs()
 	c.handleUnilateral()
 	err := c.handleGreetAndStartReading()
 	return c, err
