@@ -30,7 +30,7 @@ func TestStartTLS(t *testing.T) {
 
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ STARTTLS LOGINDISABLED" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ SASL-IR STARTTLS LOGINDISABLED" {
 		t.Fatal("Bad CAPABILITY response:", scanner.Text())
 	}
 	scanner.Scan()
@@ -50,7 +50,7 @@ func TestStartTLS(t *testing.T) {
 	scanner = bufio.NewScanner(sc)
 
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ AUTH=PLAIN" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ SASL-IR AUTH=PLAIN" {
 		t.Fatal("Bad CAPABILITY response:", scanner.Text())
 	}
 }
@@ -95,6 +95,19 @@ func TestAuthenticate_Plain_Ok(t *testing.T) {
 
 	// :usename:password
 	io.WriteString(c, "AHVzZXJuYW1lAHBhc3N3b3Jk\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
+func TestAuthenticate_Plain_InitialResponse(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 AUTHENTICATE PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk\r\n")
 
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {

@@ -40,7 +40,7 @@ func TestServer_greeting(t *testing.T) {
 	scanner.Scan() // Wait for greeting
 	greeting := scanner.Text()
 
-	if greeting != "* OK [CAPABILITY IMAP4rev1 LITERAL+ AUTH=PLAIN] IMAP4rev1 Service Ready" {
+	if greeting != "* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR AUTH=PLAIN] IMAP4rev1 Service Ready" {
 		t.Fatal("Bad greeting:", greeting)
 	}
 }

@@ -49,6 +49,10 @@ func (c *serverConn) WriteString(s string) (n int, err error) {
 }
 
 func newTestClient(t *testing.T) (c *Client, s *serverConn) {
+	return newTestClientWithGreeting(t, "* OK [CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN] Server ready.\r\n")
+}
+
+func newTestClientWithGreeting(t *testing.T, greeting string) (c *Client, s *serverConn) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +65,6 @@ func newTestClient(t *testing.T) (c *Client, s *serverConn) {
 			panic(err)
 		}
 
-		greeting := "* OK [CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN] Server ready.\r\n"
 		if _, err := io.WriteString(conn, greeting); err != nil {
 			panic(err)
 		}
