@@ -41,7 +41,13 @@ func FetchEnvelope(h textproto.Header) (*imap.Envelope, error) {
 	env.Subject = h.Get("Subject")
 	env.From, _ = headerAddressList(h.Get("From"))
 	env.Sender, _ = headerAddressList(h.Get("Sender"))
+	if len(env.Sender) == 0 {
+		env.Sender = env.From
+	}
 	env.ReplyTo, _ = headerAddressList(h.Get("Reply-To"))
+	if len(env.ReplyTo) == 0 {
+		env.ReplyTo = env.From
+	}
 	env.To, _ = headerAddressList(h.Get("To"))
 	env.Cc, _ = headerAddressList(h.Get("Cc"))
 	env.Bcc, _ = headerAddressList(h.Get("Bcc"))

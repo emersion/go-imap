@@ -83,7 +83,7 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Reply-To": {""}},
+			Header: textproto.MIMEHeader{"Totally-Not-Reply-To": {""}},
 		},
 		res: false,
 	},
