@@ -312,3 +312,51 @@ func TestMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchEncoded(t *testing.T) {
+	encodedTestMsg := `From: "fox.cpp" <foxcpp@foxcpp.dev>
+To: "fox.cpp" <foxcpp@foxcpp.dev>
+Subject: =?utf-8?B?0J/RgNC+0LLQtdGA0LrQsCE=?=
+Date: Sun, 09 Jun 2019 00:06:43 +0300
+MIME-Version: 1.0
+Message-ID: <a2aeb99e-52dd-40d3-b99f-1fdaad77ed98@foxcpp.dev>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: quoted-printable
+
+=D0=AD=D1=82=D0=BE=D1=82 =D1=82=D0=B5=D0=BA=D1=81=D1=82 =D0=B4=D0=BE=D0=BB=
+=D0=B6=D0=B5=D0=BD =D0=B1=D1=8B=D1=82=D1=8C =D0=B7=D0=B0=D0=BA=D0=BE=D0=B4=
+=D0=B8=D1=80=D0=BE=D0=B2=D0=B0=D0=BD =D0=B2 base64 =D0=B8=D0=BB=D0=B8 quote=
+d-encoding.`
+	e, err := message.Read(strings.NewReader(encodedTestMsg))
+	if err != nil {
+		t.Fatal("Expected no error while reading entity, got:", err)
+	}
+
+	// Check encoded header.
+	crit := imap.SearchCriteria{
+		Header: textproto.MIMEHeader{"Subject": []string{"Проверка!"}},
+	}
+
+	ok, err := Match(e, 0, 0, time.Now(), []string{}, &crit)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+
+	if !ok {
+		t.Error("Expected match for encoded header")
+	}
+
+	// Encoded body.
+	crit = imap.SearchCriteria{
+		Body: []string{"или"},
+	}
+
+	ok, err = Match(e, 0, 0, time.Now(), []string{}, &crit)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+
+	if !ok {
+		t.Error("Expected match for encoded body")
+	}
+}

@@ -86,7 +86,11 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 				ok := false
 				values := e.Header.FieldsByKey(key)
 				for values.Next() {
-					if matchString(values.Value(), wantValue) {
+					decoded, err := values.Text()
+					if err != nil {
+						continue
+					}
+					if matchString(decoded, wantValue) {
 						ok = true
 						break
 					}
