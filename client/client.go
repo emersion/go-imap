@@ -585,8 +585,17 @@ func New(conn net.Conn) (*Client, error) {
 
 	c.handleContinuationReqs()
 	c.handleUnilateral()
-	err := c.handleGreetAndStartReading()
-	return c, err
+	if err := c.handleGreetAndStartReading(); err != nil {
+		return c, err
+	}
+
+	plusOk, _ := c.Support("LITERAL+")
+	minusOk, _ := c.Support("LITERAL-")
+	// We don't use non-sync literal if it is bigger than 4096 bytes, so
+	// LITERAL- is fine too.
+	c.conn.AllowAsyncLiterals = plusOk || minusOk
+
+	return c, nil
 }
 
 // Dial connects to an IMAP server using an unencrypted connection.

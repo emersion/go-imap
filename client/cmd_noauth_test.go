@@ -168,6 +168,65 @@ func TestClient_Login_Success(t *testing.T) {
 	}
 }
 
+func TestClient_Login_8bitSync(t *testing.T) {
+	c, s := newTestClientWithGreeting(t, "* OK [CAPABILITY IMAP4rev1 SASL-IR STARTTLS AUTH=PLAIN] Server ready.\r\n")
+	defer s.Close()
+
+	// Use of UTF-8 will force go-imap to send password in literal.
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Login("username", "пароль")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGIN \"username\" {12}" {
+		t.Fatalf("client sent command %v, want LOGIN \"username\" {12}", cmd)
+	}
+	s.WriteString("+ send literal\r\n")
+	pass := s.ScanLine()
+	if pass != "пароль" {
+		t.Fatalf("client sent %v, want {12}'пароль' literal", pass)
+	}
+	s.WriteString(tag + " OK LOGIN completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Login() = %v", err)
+	}
+
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
+	}
+}
+
+func TestClient_Login_8bitNonSync(t *testing.T) {
+	c, s := newTestClientWithGreeting(t, "* OK [CAPABILITY IMAP4rev1 LITERAL- SASL-IR STARTTLS AUTH=PLAIN] Server ready.\r\n")
+	defer s.Close()
+
+	// Use of UTF-8 will force go-imap to send password in literal.
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Login("username", "пароль")
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "LOGIN \"username\" {12+}" {
+		t.Fatalf("client sent command %v, want LOGIN \"username\" {12+}", cmd)
+	}
+	pass := s.ScanLine()
+	if pass != "пароль" {
+		t.Fatalf("client sent %v, want {12+}'пароль' literal", pass)
+	}
+	s.WriteString(tag + " OK LOGIN completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Login() = %v", err)
+	}
+
+	if state := c.State(); state != imap.AuthenticatedState {
+		t.Errorf("c.State() = %v, want %v", state, imap.AuthenticatedState)
+	}
+}
+
 func TestClient_Login_Error(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()

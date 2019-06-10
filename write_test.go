@@ -2,6 +2,7 @@ package imap
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 	"time"
 )
@@ -197,6 +198,35 @@ func TestWriter_WriteField_Literal(t *testing.T) {
 		t.Error(err)
 	}
 	if b.String() != "{11}\r\nhello world" {
+		t.Error("Not the expected literal")
+	}
+}
+
+func TestWriter_WriteField_NonSyncLiteral(t *testing.T) {
+	w, b := newWriter()
+	w.AllowAsyncLiterals = true
+
+	literal := bytes.NewBufferString("hello world")
+
+	if err := w.writeField(literal); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "{11+}\r\nhello world" {
+		t.Error("Not the expected literal")
+	}
+}
+
+func TestWriter_WriteField_LargeNonSyncLiteral(t *testing.T) {
+	w, b := newWriter()
+	w.AllowAsyncLiterals = true
+
+	s := strings.Repeat("A", 4097)
+	literal := bytes.NewBufferString(s)
+
+	if err := w.writeField(literal); err != nil {
+		t.Error(err)
+	}
+	if b.String() != "{4097}\r\n"+s {
 		t.Error("Not the expected literal")
 	}
 }

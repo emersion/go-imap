@@ -49,6 +49,8 @@ func isAscii(s string) bool {
 type Writer struct {
 	io.Writer
 
+	AllowAsyncLiterals bool
+
 	continues <-chan bool
 }
 
@@ -123,13 +125,19 @@ func (w *Writer) writeLiteral(l Literal) error {
 		return w.writeString(nilAtom)
 	}
 
-	header := string(literalStart) + strconv.Itoa(l.Len()) + string(literalEnd) + crlf
+	unsyncLiteral := w.AllowAsyncLiterals && l.Len() <= 4096
+
+	header := string(literalStart) + strconv.Itoa(l.Len())
+	if unsyncLiteral {
+		header += string('+')
+	}
+	header += string(literalEnd) + crlf
 	if err := w.writeString(header); err != nil {
 		return err
 	}
 
 	// If a channel is available, wait for a continuation request before sending data
-	if w.continues != nil {
+	if !unsyncLiteral && w.continues != nil {
 		// Make sure to flush the writer, otherwise we may never receive a continuation request
 		if err := w.Flush(); err != nil {
 			return err
