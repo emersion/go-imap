@@ -593,7 +593,7 @@ func New(conn net.Conn) (*Client, error) {
 	minusOk, _ := c.Support("LITERAL-")
 	// We don't use non-sync literal if it is bigger than 4096 bytes, so
 	// LITERAL- is fine too.
-	c.conn.AllowUnsyncLiterals = plusOk || minusOk
+	c.conn.AllowAsyncLiterals = plusOk || minusOk
 
 	return c, nil
 }

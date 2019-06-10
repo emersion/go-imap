@@ -204,7 +204,7 @@ func TestWriter_WriteField_Literal(t *testing.T) {
 
 func TestWriter_WriteField_NonSyncLiteral(t *testing.T) {
 	w, b := newWriter()
-	w.AllowUnsyncLiterals = true
+	w.AllowAsyncLiterals = true
 
 	literal := bytes.NewBufferString("hello world")
 
@@ -218,7 +218,7 @@ func TestWriter_WriteField_NonSyncLiteral(t *testing.T) {
 
 func TestWriter_WriteField_LargeNonSyncLiteral(t *testing.T) {
 	w, b := newWriter()
-	w.AllowUnsyncLiterals = true
+	w.AllowAsyncLiterals = true
 
 	s := strings.Repeat("A", 4097)
 	literal := bytes.NewBufferString(s)

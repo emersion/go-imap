@@ -49,7 +49,7 @@ func isAscii(s string) bool {
 type Writer struct {
 	io.Writer
 
-	AllowUnsyncLiterals bool
+	AllowAsyncLiterals bool
 
 	continues <-chan bool
 }
@@ -125,7 +125,7 @@ func (w *Writer) writeLiteral(l Literal) error {
 		return w.writeString(nilAtom)
 	}
 
-	unsyncLiteral := w.AllowUnsyncLiterals && l.Len() <= 4096
+	unsyncLiteral := w.AllowAsyncLiterals && l.Len() <= 4096
 
 	header := string(literalStart) + strconv.Itoa(l.Len())
 	if unsyncLiteral {
