@@ -134,3 +134,63 @@ func TestFetchBodySection(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchBodySection_NonMultipart(t *testing.T) {
+	// https://tools.ietf.org/html/rfc3501#page-55:
+	//  Every message has at least one part number.  Non-[MIME-IMB]
+	//  messages, and non-multipart [MIME-IMB] messages with no
+	//  encapsulated message, only have a part 1.
+
+	testMsgHdr := "From: Mitsuha Miyamizu <mitsuha.miyamizu@example.org>\r\n" +
+		"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
+		"Subject: Your Name.\r\n" +
+		"Message-Id: 42@example.org\r\n" +
+		"\r\n"
+	testMsgBody := "That's not multipart message. Thought it should be possible to get this text using BODY[1]."
+	testMsg := testMsgHdr + testMsgBody
+
+	tests := []struct {
+		section string
+		body    string
+	}{
+		{
+			section: "BODY[1.MIME]",
+			body:    testMsgHdr,
+		},
+		{
+			section: "BODY[1]",
+			body:    testMsgBody,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.section, func(t *testing.T) {
+			bufferedBody := bufio.NewReader(strings.NewReader(testMsg))
+
+			header, err := textproto.ReadHeader(bufferedBody)
+			if err != nil {
+				t.Fatal("Expected no error while reading mail, got:", err)
+			}
+
+			section, err := imap.ParseBodySectionName(imap.FetchItem(test.section))
+			if err != nil {
+				t.Fatal("Expected no error while parsing body section name, got:", err)
+			}
+
+			r, err := FetchBodySection(header, bufferedBody, section)
+			if err != nil {
+				t.Fatal("Expected no error while extracting body section, got:", err)
+			}
+
+			b, err := ioutil.ReadAll(r)
+			if err != nil {
+				t.Fatal("Expected no error while reading body section, got:", err)
+			}
+
+			if s := string(b); s != test.body {
+				t.Errorf("Expected body section %q to be \n%s\n but got \n%s", test.section, test.body, s)
+			}
+		})
+	}
+}
