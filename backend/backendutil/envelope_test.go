@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/textproto"
 )
 
@@ -49,8 +50,14 @@ func TestFetchEnvelopeBase64(t *testing.T) {
 	if err != nil {
 		t.Fatal("Expected no error while fetching envelope, got:", err)
 	}
-
-	if !reflect.DeepEqual(env, testEnvelope) {
-		t.Errorf("Expected envelope \n%+v\n but got \n%+v", testEnvelope, env)
+	if len(env.From) != 1 {
+		t.Fatal("Expected 1 address in envelope.From, got", len(env.From))
+	}
+	from, err := charset.DecodeHeader(env.From[0].PersonalName)
+	if err != nil {
+		t.Fatal("Expected no error while decoding PersonalName, got", err)
+	}
+	if from != testEnvelope.From[0].PersonalName {
+		t.Errorf("Expected PersonalName \n%+v\n, but got \n%+v", testEnvelope.From[0].PersonalName, from)
 	}
 }
