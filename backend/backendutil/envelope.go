@@ -5,11 +5,16 @@ import (
 	"strings"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/textproto"
 )
 
 func headerAddressList(value string) ([]*imap.Address, error) {
-	addrs, err := mail.ParseAddressList(value)
+	decodedValue, err := charset.DecodeHeader(value)
+	if err != nil {
+		return []*imap.Address{}, err
+	}
+	addrs, err := mail.ParseAddressList(decodedValue)
 	if err != nil {
 		return []*imap.Address{}, err
 	}

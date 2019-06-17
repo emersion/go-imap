@@ -38,3 +38,19 @@ func TestFetchEnvelope(t *testing.T) {
 		t.Errorf("Expected envelope \n%+v\n but got \n%+v", testEnvelope, env)
 	}
 }
+
+func TestFetchEnvelopeBase64(t *testing.T) {
+	hdr, err := textproto.ReadHeader(bufio.NewReader(strings.NewReader(testBase64MailString)))
+	if err != nil {
+		t.Fatal("Expected no error while reading mail, got:", err)
+	}
+
+	env, err := FetchEnvelope(hdr)
+	if err != nil {
+		t.Fatal("Expected no error while fetching envelope, got:", err)
+	}
+
+	if !reflect.DeepEqual(env, testEnvelope) {
+		t.Errorf("Expected envelope \n%+v\n but got \n%+v", testEnvelope, env)
+	}
+}

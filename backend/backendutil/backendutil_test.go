@@ -16,6 +16,16 @@ const testHeaderString = "Content-Type: multipart/mixed; boundary=message-bounda
 	"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
 	"\r\n"
 
+const testBase64HeaderString = "Content-Type: multipart/mixed; boundary=message-boundary\r\n" +
+	"Date: Sat, 18 Jun 2016 12:00:00 +0900\r\n" +
+	"Date: Sat, 19 Jun 2016 12:00:00 +0900\r\n" +
+	"From: =?ISO-8859-15?B?TWl0c3VoYSBNaXlhbWl6dQ==?= <mitsuha.miyamizu@example.org>\r\n" +
+	"Reply-To: =?ISO-8859-15?B?TWl0c3VoYSBNaXlhbWl6dQ==?= <mitsuha.miyamizu+replyto@example.org>\r\n" +
+	"Message-Id: 42@example.org\r\n" +
+	"Subject: Your Name.\r\n" +
+	"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
+	"\r\n"
+
 const testHeaderFromToString = "From: Mitsuha Miyamizu <mitsuha.miyamizu@example.org>\r\n" +
 	"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
 	"\r\n"
@@ -77,3 +87,4 @@ const testBodyString = "--message-boundary\r\n" +
 	"\r\n--message-boundary--\r\n"
 
 const testMailString = testHeaderString + testBodyString
+const testBase64MailString = testBase64HeaderString + testBodyString
