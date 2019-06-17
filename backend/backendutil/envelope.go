@@ -1,20 +1,16 @@
 package backendutil
 
 import (
+	"mime"
 	"net/mail"
 	"strings"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/textproto"
 )
 
-func headerAddressList(value string) ([]*imap.Address, error) {
-	decodedValue, err := charset.DecodeHeader(value)
-	if err != nil {
-		return []*imap.Address{}, err
-	}
-	addrs, err := mail.ParseAddressList(decodedValue)
+func headerAddressList(parser *mail.AddressParser, value string) ([]*imap.Address, error) {
+	addrs, err := parser.ParseList(value)
 	if err != nil {
 		return []*imap.Address{}, err
 	}
@@ -42,20 +38,21 @@ func headerAddressList(value string) ([]*imap.Address, error) {
 func FetchEnvelope(h textproto.Header) (*imap.Envelope, error) {
 	env := new(imap.Envelope)
 
+	parser := mail.AddressParser{&mime.WordDecoder{imap.CharsetReader}}
 	env.Date, _ = mail.ParseDate(h.Get("Date"))
 	env.Subject = h.Get("Subject")
-	env.From, _ = headerAddressList(h.Get("From"))
-	env.Sender, _ = headerAddressList(h.Get("Sender"))
+	env.From, _ = headerAddressList(&parser, h.Get("From"))
+	env.Sender, _ = headerAddressList(&parser, h.Get("Sender"))
 	if len(env.Sender) == 0 {
 		env.Sender = env.From
 	}
-	env.ReplyTo, _ = headerAddressList(h.Get("Reply-To"))
+	env.ReplyTo, _ = headerAddressList(&parser, h.Get("Reply-To"))
 	if len(env.ReplyTo) == 0 {
 		env.ReplyTo = env.From
 	}
-	env.To, _ = headerAddressList(h.Get("To"))
-	env.Cc, _ = headerAddressList(h.Get("Cc"))
-	env.Bcc, _ = headerAddressList(h.Get("Bcc"))
+	env.To, _ = headerAddressList(&parser, h.Get("To"))
+	env.Cc, _ = headerAddressList(&parser, h.Get("Cc"))
+	env.Bcc, _ = headerAddressList(&parser, h.Get("Bcc"))
 	env.InReplyTo = h.Get("In-Reply-To")
 	env.MessageId = h.Get("Message-Id")
 
