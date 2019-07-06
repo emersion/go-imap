@@ -47,6 +47,7 @@ func TestStartTLS(t *testing.T) {
 	if err = sc.Handshake(); err != nil {
 		t.Fatal(err)
 	}
+	io.WriteString(sc, "a001 CAPABILITY\r\n")
 	scanner = bufio.NewScanner(sc)
 
 	scanner.Scan()
