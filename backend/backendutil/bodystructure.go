@@ -28,7 +28,7 @@ func FetchBodyStructure(header textproto.Header, body io.Reader, extended bool) 
 
 	bs.Id = header.Get("Content-Id")
 	bs.Description = header.Get("Content-Description")
-	bs.Encoding = header.Get("Content-Encoding")
+	bs.Encoding = header.Get("Content-Transfer-Encoding")
 	// TODO: bs.Size
 
 	if mr := multipartReader(header, body); mr != nil {
