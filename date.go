@@ -52,8 +52,9 @@ var envelopeDateTimeLayouts = [...]string{
 	"Mon, _2 Jan 06 15:04 MST",
 }
 
-// TODO: this is a blunt way to strip any trailing CFWS (comments). A sharper
-// one would strip CFWS, and only those really valid according to RFC5322.
+// TODO: this is a blunt way to strip any trailing CFWS (comment). A sharper
+// one would strip multiple CFWS, and only if really valid according to
+// RFC5322.
 var commentRE = regexp.MustCompile(`([ \t]+\(.*\))$`)
 
 // Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
