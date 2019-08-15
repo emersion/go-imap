@@ -55,7 +55,7 @@ var envelopeDateTimeLayouts = [...]string{
 // TODO: this is a blunt way to strip any trailing CFWS (comment). A sharper
 // one would strip multiple CFWS, and only if really valid according to
 // RFC5322.
-var commentRE = regexp.MustCompile(`([ \t]+\(.*\))$`)
+var commentRE = regexp.MustCompile(`[ \t]+\(.*\)$`)
 
 // Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
 // Inspired by https://github.com/golang/go/blob/master/src/net/mail/message.go
