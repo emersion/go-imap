@@ -52,14 +52,15 @@ var envelopeDateTimeLayouts = [...]string{
 	"Mon, _2 Jan 06 15:04 MST",
 }
 
+// TODO: this is a blunt way to strip any trailing CFWS. A sharper one would
+// strip multiple comments, and only CFWSs that are really valid according to
+// RFC5322.
+var commentRE = regexp.MustCompile(`([[:space:]]+\(.*\))$`)
+
 // Try parsing the date based on the layouts defined in RFC 5322, section 3.3.
 // Inspired by https://github.com/golang/go/blob/master/src/net/mail/message.go
 func parseMessageDateTime(maybeDate string) (time.Time, error) {
-	// TODO: this is a blunt way to strip any trailing CFWS. A sharper one
-	// would strip multiple comments, and only CFWSs that are really valid
-	// according to RFC5322.
-	re := regexp.MustCompile(`([[:space:]]+\(.*\))$`)
-	maybeDate = re.ReplaceAllString(maybeDate, "")
+	maybeDate = commentRE.ReplaceAllString(maybeDate, "")
 	for _, layout := range envelopeDateTimeLayouts {
 		parsed, err := time.Parse(layout, maybeDate)
 		if err == nil {
