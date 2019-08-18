@@ -16,7 +16,7 @@ var errNoSuchPart = errors.New("backendutil: no such message body part")
 
 func multipartReader(header textproto.Header, body io.Reader) *textproto.MultipartReader {
 	contentType := header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "multipart/") {
+	if !strings.HasPrefix(strings.ToLower(contentType), "multipart/") {
 		return nil
 	}
 
