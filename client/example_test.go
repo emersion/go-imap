@@ -1,10 +1,12 @@
 package client_test
 
 import (
+	"bytes"
 	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/mail"
+	"time"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
@@ -135,6 +137,25 @@ func ExampleClient_Fetch() {
 		log.Fatal(err)
 	}
 	log.Println(body)
+}
+
+func ExampleClient_Append() {
+	// Let's assume c is a client
+	var c *client.Client
+
+	// Write the message to a buffer
+	var b bytes.Buffer
+	b.WriteString("From: <root@nsa.gov>\r\n")
+	b.WriteString("To: <root@gchq.gov.uk>\r\n")
+	b.WriteString("Subject: Hey there\r\n")
+	b.WriteString("\r\n")
+	b.WriteString("Hey <3")
+
+	// Append it to INBOX, with a flag
+	flags := []string{imap.FlaggedFlag}
+	if err := c.Append("INBOX", flags, time.Now(), &b); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleClient_Expunge() {
