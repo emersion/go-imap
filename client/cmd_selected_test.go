@@ -125,7 +125,7 @@ func TestClient_Search(t *testing.T) {
 		done <- err
 	}()
 
-	wantCmd := `SEARCH CHARSET "UTF-8" SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
+	wantCmd := `SEARCH CHARSET UTF-8 SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
 	tag, cmd := s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
@@ -162,7 +162,7 @@ func TestClient_Search_Uid(t *testing.T) {
 		done <- err
 	}()
 
-	wantCmd := "UID SEARCH CHARSET \"UTF-8\" UNDELETED"
+	wantCmd := "UID SEARCH CHARSET UTF-8 UNDELETED"
 	tag, cmd := s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
