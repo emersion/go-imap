@@ -140,6 +140,32 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 	return nil
 }
 
+func (u *User) PushMailboxUpdate(mbox *Mailbox) {
+	update := &backend.MailboxUpdate{}
+	update.Update = backend.NewUpdate(u.username, mbox.name)
+	status, err := mbox.status([]imap.StatusItem{imap.StatusMessages, imap.StatusUnseen}, false)
+	if err == nil {
+		update.MailboxStatus = status
+		u.backend.PushUpdate(update)
+	} else {
+		// Failed to get current mailbox status.
+	}
+}
+
+func (u *User) PushMessageUpdate(mailbox string, msg *imap.Message) {
+	update := &backend.MessageUpdate{}
+	update.Update = backend.NewUpdate(u.username, mailbox)
+	update.Message = msg
+	u.backend.PushUpdate(update)
+}
+
+func (u *User) PushExpungeUpdate(mailbox string, seqNum uint32) {
+	update := &backend.ExpungeUpdate{}
+	update.Update = backend.NewUpdate(u.username, mailbox)
+	update.SeqNum = seqNum
+	u.backend.PushUpdate(update)
+}
+
 func (u *User) Logout() error {
 	return nil
 }

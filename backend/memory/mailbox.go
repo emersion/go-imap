@@ -82,16 +82,15 @@ func (mbox *Mailbox) unseenSeqNum() uint32 {
 	return 0
 }
 
-func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
-	mbox.RLock()
-	defer mbox.RUnlock()
-
+func (mbox *Mailbox) status(items []imap.StatusItem, flags bool) (*imap.MailboxStatus, error) {
 	status := imap.NewMailboxStatus(mbox.name, items)
-	status.Flags = []string{
-		imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag, "nonjunk",
-	}
-	status.PermanentFlags = []string{
-		imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag, "nonjunk", "\\*",
+	if flags {
+		status.Flags = []string{
+			imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag, "nonjunk",
+		}
+		status.PermanentFlags = []string{
+			imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag, "nonjunk", "\\*",
+		}
 	}
 	status.UnseenSeqNum = mbox.unseenSeqNum()
 
@@ -111,6 +110,13 @@ func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error
 	}
 
 	return status, nil
+}
+
+func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
+	mbox.RLock()
+	defer mbox.RUnlock()
+
+	return mbox.status(items, true)
 }
 
 func (mbox *Mailbox) SetSubscribed(subscribed bool) error {
@@ -199,7 +205,14 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 		Flags: flags,
 		Body:  b,
 	})
+	mbox.user.PushMailboxUpdate(mbox)
 	return nil
+}
+
+func (mbox *Mailbox) pushMessageUpdate(msg *Message, seqNum uint32) {
+	uMsg := imap.NewMessage(seqNum, []imap.FetchItem{imap.FetchFlags})
+	uMsg.Flags = msg.Flags
+	mbox.user.PushMessageUpdate(mbox.name, uMsg)
 }
 
 func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
@@ -218,6 +231,7 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 		}
 
 		msg.Flags = backendutil.UpdateFlags(msg.Flags, op, flags)
+		mbox.pushMessageUpdate(msg, uint32(i+1))
 	}
 
 	return nil
@@ -247,6 +261,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 		msgCopy.Uid = dest.uidNext()
 		dest.Messages = append(dest.Messages, &msgCopy)
 	}
+	mbox.user.PushMailboxUpdate(dest)
 
 	return nil
 }
@@ -278,6 +293,8 @@ func (mbox *Mailbox) MoveMessages(uid bool, seqset *imap.SeqSet, destName string
 		msg.Flags = backendutil.UpdateFlags(msg.Flags, imap.AddFlags, []string{imap.DeletedFlag})
 	}
 
+	mbox.user.PushMailboxUpdate(dest)
+	mbox.user.PushMailboxUpdate(mbox)
 	return mbox.expunge()
 }
 
@@ -295,6 +312,8 @@ func (mbox *Mailbox) expunge() error {
 
 		if deleted {
 			mbox.Messages = append(mbox.Messages[:i], mbox.Messages[i+1:]...)
+			// send expunge update
+			mbox.user.PushExpungeUpdate(mbox.name, uint32(i+1))
 		}
 	}
 
