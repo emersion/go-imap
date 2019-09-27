@@ -2,6 +2,7 @@ package memory
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -9,6 +10,8 @@ import (
 )
 
 type User struct {
+	sync.RWMutex
+
 	backend   *Backend
 	username  string
 	password  string
@@ -57,6 +60,9 @@ func (u *User) Username() string {
 }
 
 func (u *User) ListMailboxes(subscribed bool) (mailboxes []backend.Mailbox, err error) {
+	u.RLock()
+	defer u.RUnlock()
+
 	for _, mailbox := range u.mailboxes {
 		if subscribed && !mailbox.Subscribed {
 			continue
@@ -68,6 +74,9 @@ func (u *User) ListMailboxes(subscribed bool) (mailboxes []backend.Mailbox, err 
 }
 
 func (u *User) GetMailbox(name string) (mailbox backend.Mailbox, err error) {
+	u.RLock()
+	defer u.RUnlock()
+
 	mailbox, ok := u.mailboxes[name]
 	if !ok {
 		err = errors.New("No such mailbox")
@@ -76,6 +85,9 @@ func (u *User) GetMailbox(name string) (mailbox backend.Mailbox, err error) {
 }
 
 func (u *User) CreateMailbox(name string) error {
+	u.Lock()
+	defer u.Unlock()
+
 	if _, ok := u.mailboxes[name]; ok {
 		return errors.New("Mailbox already exists")
 	}
@@ -85,6 +97,9 @@ func (u *User) CreateMailbox(name string) error {
 }
 
 func (u *User) DeleteMailbox(name string) error {
+	u.Lock()
+	defer u.Unlock()
+
 	if name == "INBOX" {
 		return errors.New("Cannot delete INBOX")
 	}
@@ -97,6 +112,9 @@ func (u *User) DeleteMailbox(name string) error {
 }
 
 func (u *User) RenameMailbox(existingName, newName string) error {
+	u.Lock()
+	defer u.Unlock()
+
 	mbox, ok := u.mailboxes[existingName]
 	if !ok {
 		return errors.New("No such mailbox")

@@ -3,16 +3,22 @@ package memory
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 )
 
 type Backend struct {
+	sync.RWMutex
+
 	users map[string]*User
 }
 
 func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.User, error) {
+	be.Lock()
+	defer be.Unlock()
+
 	user, ok := be.users[username]
 	// auto create users.
 	if !ok {

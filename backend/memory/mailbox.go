@@ -2,6 +2,7 @@ package memory
 
 import (
 	"io/ioutil"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -12,6 +13,8 @@ import (
 var Delimiter = "/"
 
 type Mailbox struct {
+	sync.RWMutex
+
 	Subscribed  bool
 	Messages    []*Message
 	UidValidity uint32
@@ -34,6 +37,9 @@ func (mbox *Mailbox) Name() string {
 }
 
 func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
+	mbox.RLock()
+	defer mbox.RUnlock()
+
 	info := &imap.MailboxInfo{
 		Delimiter: Delimiter,
 		Name:      mbox.name,
@@ -72,6 +78,9 @@ func (mbox *Mailbox) unseenSeqNum() uint32 {
 }
 
 func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
+	mbox.RLock()
+	defer mbox.RUnlock()
+
 	status := imap.NewMailboxStatus(mbox.name, items)
 	status.Flags = []string{
 		imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.SeenFlag, imap.DraftFlag, "nonjunk",
@@ -100,6 +109,9 @@ func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error
 }
 
 func (mbox *Mailbox) SetSubscribed(subscribed bool) error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
 	mbox.Subscribed = subscribed
 	return nil
 }
@@ -109,6 +121,8 @@ func (mbox *Mailbox) Check() error {
 }
 
 func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message) error {
+	mbox.RLock()
+	defer mbox.RUnlock()
 	defer close(ch)
 
 	for i, msg := range mbox.Messages {
@@ -136,6 +150,9 @@ func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.Fe
 }
 
 func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
+	mbox.RLock()
+	defer mbox.RUnlock()
+
 	var ids []uint32
 	for i, msg := range mbox.Messages {
 		seqNum := uint32(i + 1)
@@ -157,6 +174,9 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]
 }
 
 func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Literal) error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
 	if date.IsZero() {
 		date = time.Now()
 	}
@@ -177,6 +197,9 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 }
 
 func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
@@ -195,6 +218,9 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 }
 
 func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string) error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
 	dest, ok := mbox.user.mailboxes[destName]
 	if !ok {
 		return backend.ErrNoSuchMailbox
@@ -220,6 +246,9 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 }
 
 func (mbox *Mailbox) Expunge() error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
 	for i := len(mbox.Messages) - 1; i >= 0; i-- {
 		msg := mbox.Messages[i]
 
