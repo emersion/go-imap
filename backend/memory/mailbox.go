@@ -251,10 +251,37 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 	return nil
 }
 
-func (mbox *Mailbox) Expunge() error {
+func (mbox *Mailbox) MoveMessages(uid bool, seqset *imap.SeqSet, destName string) error {
 	mbox.Lock()
 	defer mbox.Unlock()
 
+	dest, ok := mbox.user.mailboxes[destName]
+	if !ok {
+		return backend.ErrNoSuchMailbox
+	}
+
+	for i, msg := range mbox.Messages {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i + 1)
+		}
+		if !seqset.Contains(id) {
+			continue
+		}
+
+		msgCopy := *msg
+		msgCopy.Uid = dest.uidNext()
+		dest.Messages = append(dest.Messages, &msgCopy)
+		// Mark source message as deleted
+		msg.Flags = backendutil.UpdateFlags(msg.Flags, imap.AddFlags, []string{imap.DeletedFlag})
+	}
+
+	return mbox.expunge()
+}
+
+func (mbox *Mailbox) expunge() error {
 	for i := len(mbox.Messages) - 1; i >= 0; i-- {
 		msg := mbox.Messages[i]
 
@@ -272,4 +299,11 @@ func (mbox *Mailbox) Expunge() error {
 	}
 
 	return nil
+}
+
+func (mbox *Mailbox) Expunge() error {
+	mbox.Lock()
+	defer mbox.Unlock()
+
+	return mbox.expunge()
 }
