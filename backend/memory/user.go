@@ -2,14 +2,54 @@ package memory
 
 import (
 	"errors"
+	"time"
 
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 )
 
 type User struct {
+	backend   *Backend
 	username  string
 	password  string
 	mailboxes map[string]*Mailbox
+}
+
+func NewUser(backend *Backend, username string, password string) *User {
+	user := &User{
+		backend:   backend,
+		username:  username,
+		password:  password,
+		mailboxes: map[string]*Mailbox{},
+	}
+
+	// Message for tests
+	body := "From: contact@example.org\r\n" +
+		"To: contact@example.org\r\n" +
+		"Subject: A little message, just for you\r\n" +
+		"Date: Wed, 11 May 2016 14:31:59 +0000\r\n" +
+		"Message-ID: <0000000@localhost/>\r\n" +
+		"Content-Type: text/plain\r\n" +
+		"\r\n" +
+		"Hi there :)"
+
+	user.CreateMailbox("INBOX")
+	inbox := user.mailboxes["INBOX"]
+	inbox.Messages = []*Message{
+		{
+			Uid:   6,
+			Date:  time.Now(),
+			Flags: []string{imap.SeenFlag},
+			Size:  uint32(len(body)),
+			Body:  []byte(body),
+		},
+	}
+	user.CreateMailbox("Sent")
+	user.CreateMailbox("Drafts")
+	user.CreateMailbox("Queue")
+	user.CreateMailbox("Trash")
+
+	return user
 }
 
 func (u *User) Username() string {
