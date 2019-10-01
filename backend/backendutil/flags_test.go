@@ -35,12 +35,21 @@ var updateFlagsTests = []struct {
 }
 
 func TestUpdateFlags(t *testing.T) {
-	current := []string{"a", "b", "c"}
+	flagsList := []string{"a", "b", "c"}
 	for _, test := range updateFlagsTests {
-		got := UpdateFlags(current[:], test.op, test.flags)
+		// Make a backup copy of 'test.flags'
+		origFlags := append(test.flags[:0:0], test.flags...)
+		// Copy flags
+		current := append(flagsList[:0:0], flagsList...)
+		got := UpdateFlags(current, test.op, test.flags)
 
 		if !reflect.DeepEqual(got, test.res) {
 			t.Errorf("Expected result to be \n%v\n but got \n%v", test.res, got)
+		}
+		// Verify that 'test.flags' wasn't modified
+		if !reflect.DeepEqual(origFlags, test.flags) {
+			t.Errorf("Unexpected change to operation flags list changed \nbefore %v\n after \n%v",
+				origFlags, test.flags)
 		}
 	}
 }
