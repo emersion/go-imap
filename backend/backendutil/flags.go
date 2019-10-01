@@ -6,35 +6,68 @@ import (
 
 // UpdateFlags executes a flag operation on the flag set current.
 func UpdateFlags(current []string, op imap.FlagsOp, flags []string) []string {
+	// Don't modify contents of 'flags' slice.  Only modify 'current'.
+	// See https://github.com/golang/go/wiki/SliceTricks
+
+	// Re-use current's backing store
+	newFlags := current[:0]
 	switch op {
 	case imap.SetFlags:
-		// TODO: keep \Recent if it is present
-		return flags
-	case imap.AddFlags:
-		// Check for duplicates
+		hasRecent := false
+		// keep recent flag
 		for _, flag := range current {
-			for i, addFlag := range flags {
+			if flag == imap.RecentFlag {
+				newFlags = append(newFlags, imap.RecentFlag)
+				hasRecent = true
+				break
+			}
+		}
+		// append new flags
+		for _, flag := range flags {
+			if flag == imap.RecentFlag {
+				// Make sure we don't add the recent flag multiple times.
+				if hasRecent {
+					// Already have the recent flag, skip.
+					continue
+				}
+				hasRecent = true
+			}
+			// append new flag
+			newFlags = append(newFlags, flag)
+		}
+	case imap.AddFlags:
+		// keep current flags
+		newFlags = current
+		// Only add new flag if it isn't already in current list.
+		for _, addFlag := range flags {
+			found := false
+			for _, flag := range current {
 				if addFlag == flag {
-					flags = append(flags[:i], flags[i+1:]...)
+					found = true
 					break
 				}
 			}
+			// new flag not found, add it.
+			if !found {
+				newFlags = append(newFlags, addFlag)
+			}
 		}
-		return append(current, flags...)
 	case imap.RemoveFlags:
-		// Iterate through flags from the last one to the first one, to be able to
-		// delete some of them.
-		for i := len(current) - 1; i >= 0; i-- {
-			flag := current[i]
-
+		// Filter current flags
+		for _, flag := range current {
+			remove := false
 			for _, removeFlag := range flags {
 				if removeFlag == flag {
-					current = append(current[:i], current[i+1:]...)
-					break
+					remove = true
 				}
 			}
+			if !remove {
+				newFlags = append(newFlags, flag)
+			}
 		}
-		return current
+	default:
+		// Unknown operation, return current flags unchanged
+		newFlags = current
 	}
-	return current
+	return newFlags
 }
