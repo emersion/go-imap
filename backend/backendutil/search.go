@@ -116,10 +116,10 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 			return false, err
 		}
 
-		if c.Larger > 0 && uint32(n) < c.Larger {
+		if c.Larger > 0 && uint32(n) <= c.Larger {
 			return false, nil
 		}
-		if c.Smaller > 0 && uint32(n) > c.Smaller {
+		if c.Smaller > 0 && uint32(n) >= c.Smaller {
 			return false, nil
 		}
 	}
