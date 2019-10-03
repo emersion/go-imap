@@ -356,16 +356,41 @@ func TestStore_InvalidFlags(t *testing.T) {
 	defer s.Close()
 	defer c.Close()
 
-	io.WriteString(c, "a001 STORE 1 +FLAGS somestring\r\n")
-	scanner.Scan()
-	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
-		t.Fatal("Invalid status response:", scanner.Text())
-	}
-
 	io.WriteString(c, "a001 STORE 1 +FLAGS ((nested)(lists))\r\n")
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
 		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
+func TestStore_SingleFlagNonList(t *testing.T) {
+	s, c, scanner := testServerSelected(t, false)
+	defer c.Close()
+	defer s.Close()
+
+	io.WriteString(c, "a001 STORE 1 FLAGS somestring\r\n")
+
+	gotOK := false
+	gotFetch := false
+	for scanner.Scan() {
+		res := scanner.Text()
+
+		if res == "* 1 FETCH (FLAGS (somestring))" {
+			gotFetch = true
+		} else if strings.HasPrefix(res, "a001 OK ") {
+			gotOK = true
+			break
+		} else {
+			t.Fatal("Unexpected response:", res)
+		}
+	}
+
+	if !gotFetch {
+		t.Fatal("Missing FETCH response.")
+	}
+
+	if !gotOK {
+		t.Fatal("Missing status response.")
 	}
 }
 

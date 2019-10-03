@@ -207,13 +207,22 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 		return err
 	}
 
-	flagsList, ok := cmd.Value.([]interface{})
-	if !ok {
-		return errors.New("Flags must be a list")
-	}
-	flags, err := imap.ParseStringList(flagsList)
-	if err != nil {
-		return err
+	var flags []string
+
+	if flagsList, ok := cmd.Value.([]interface{}); ok {
+		// Parse list of flags
+		if strs, err := imap.ParseStringList(flagsList); err == nil {
+			flags = strs
+		} else {
+			return err
+		}
+	} else {
+		// Parse single flag
+		if str, err := imap.ParseString(cmd.Value); err == nil {
+			flags = []string{str}
+		} else {
+			return err
+		}
 	}
 	for i, flag := range flags {
 		flags[i] = imap.CanonicalFlag(flag)
