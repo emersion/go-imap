@@ -360,3 +360,73 @@ d-encoding.`
 		t.Error("Expected match for encoded body")
 	}
 }
+
+func TestMatchIssue298Regression(t *testing.T) {
+	raw1 := "Subject: 1\r\n\r\n1"
+	raw2 := "Subject: 2\r\n\r\n22"
+	raw3 := "Subject: 3\r\n\r\n333"
+	e1, err := message.Read(strings.NewReader(raw1))
+	if err != nil {
+		t.Fatal("Expected no error while reading entity, got:", err)
+	}
+	e2, err := message.Read(strings.NewReader(raw2))
+	if err != nil {
+		t.Fatal("Expected no error while reading entity, got:", err)
+	}
+	e3, err := message.Read(strings.NewReader(raw3))
+	if err != nil {
+		t.Fatal("Expected no error while reading entity, got:", err)
+	}
+
+	// Search for body size > 1 ("LARGER 1"), which should match messages #2 and #3
+	criteria := &imap.SearchCriteria{
+		Larger: 1,
+	}
+	ok1, err := Match(e1, 1, 101, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if ok1 {
+		t.Errorf("Expected message #1 to not match search criteria")
+	}
+	ok2, err := Match(e2, 2, 102, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if !ok2 {
+		t.Errorf("Expected message #2 to match search criteria")
+	}
+	ok3, err := Match(e3, 3, 103, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if !ok3 {
+		t.Errorf("Expected message #3 to match search criteria")
+	}
+
+	// Search for body size < 3 ("SMALLER 3"), which should match messages #1 and #2
+	criteria = &imap.SearchCriteria{
+		Smaller: 3,
+	}
+	ok1, err = Match(e1, 1, 101, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if !ok1 {
+		t.Errorf("Expected message #1 to match search criteria")
+	}
+	ok2, err = Match(e2, 2, 102, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if !ok2 {
+		t.Errorf("Expected message #2 to match search criteria")
+	}
+	ok3, err = Match(e3, 3, 103, time.Now(), nil, criteria)
+	if err != nil {
+		t.Fatal("Expected no error while matching entity, got:", err)
+	}
+	if ok3 {
+		t.Errorf("Expected message #3 to not match search criteria")
+	}
+}
