@@ -104,6 +104,9 @@ func (cmd *Login) Handle(conn Conn) error {
 
 	ctx.State = imap.AuthenticatedState
 	ctx.User = user
+	// Update Mbox listener
+	s := conn.Server()
+	s.updateMboxListener(conn, user.Username(), "")
 	return afterAuthStatus(conn)
 }
 

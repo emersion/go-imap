@@ -39,7 +39,6 @@ type Conn interface {
 	Info() *imap.ConnInfo
 
 	setTLSConn(*tls.Conn)
-	silent() *bool // TODO: remove this
 	serve(Conn) error
 	commandHandler(cmd *imap.Command) (hdlr Handler, err error)
 }
@@ -71,7 +70,6 @@ type conn struct {
 	upgrade   chan bool
 	responses chan imap.WriterTo
 	loggedOut chan struct{}
-	silentVal bool
 }
 
 func newConn(s *Server, c net.Conn) *conn {
@@ -260,15 +258,12 @@ func (c *conn) canAuth() bool {
 	return c.IsTLS() || c.s.AllowInsecureAuth
 }
 
-func (c *conn) silent() *bool {
-	return &c.silentVal
-}
-
 func (c *conn) serve(conn Conn) (err error) {
 	c.conn = conn
 
 	defer func() {
 		c.ctx.State = imap.LogoutState
+		c.s.updateMboxListener(c, "", "")
 		close(c.loggedOut)
 	}()
 

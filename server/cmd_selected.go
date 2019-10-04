@@ -51,6 +51,9 @@ func (cmd *Close) Handle(conn Conn) error {
 	mailbox := ctx.Mailbox
 	ctx.Mailbox = nil
 	ctx.MailboxReadOnly = false
+	// Update Mbox listener
+	s := conn.Server()
+	s.updateMboxListener(conn, ctx.User.Username(), "")
 
 	// No need to send expunge updates here, since the mailbox is already unselected
 	return mailbox.Expunge()
@@ -240,10 +243,14 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 
 	// If the backend supports message updates, this will prevent this connection
 	// from receiving them
-	// TODO: find a better way to do this, without conn.silent
-	*conn.silent() = silent
+	srv := conn.Server()
+	if silent {
+		srv.silentMboxListener(conn, true)
+	}
 	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, op, flags)
-	*conn.silent() = false
+	if silent {
+		srv.silentMboxListener(conn, false)
+	}
 	if err != nil {
 		return err
 	}
