@@ -35,13 +35,29 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 	for _, item := range items {
 		switch item {
 		case imap.FetchEnvelope:
-			hdr, _, _ := m.headerAndBody()
-			fetched.Envelope, _ = backendutil.FetchEnvelope(hdr)
+			hdr, _, err := m.headerAndBody()
+			if err != nil {
+				return nil, err
+			}
+			if envelope, err := backendutil.FetchEnvelope(hdr); err != nil {
+				return nil, err
+			} else {
+				fetched.Envelope = envelope
+			}
 		case imap.FetchBody, imap.FetchBodyStructure:
-			hdr, body, _ := m.headerAndBody()
-			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
+			hdr, body, err := m.headerAndBody()
+			if err != nil {
+				return nil, err
+			}
+			if body, err := backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure); err != nil {
+				return nil, err
+			} else {
+				fetched.BodyStructure = body
+			}
 		case imap.FetchFlags:
-			fetched.Flags = m.Flags
+			// Copy flags, don't return reference to message's flags slice.
+			flags := append(m.Flags[:0:0], m.Flags...)
+			fetched.Flags = flags
 		case imap.FetchInternalDate:
 			fetched.InternalDate = m.Date
 		case imap.FetchRFC822Size:
