@@ -227,9 +227,14 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 	return nil
 }
 
-func (mbox *Mailbox) pushMessageUpdate(msg *Message, seqNum uint32) {
-	uMsg := imap.NewMessage(seqNum, []imap.FetchItem{imap.FetchFlags})
+func (mbox *Mailbox) pushMessageUpdate(uid bool, msg *Message, seqNum uint32) {
+	items := []imap.FetchItem{imap.FetchFlags}
+	if uid {
+		items = append(items, imap.FetchUid)
+	}
+	uMsg := imap.NewMessage(seqNum, items)
 	uMsg.Flags = msg.Flags
+	uMsg.Uid = msg.Uid
 	mbox.user.PushMessageUpdate(mbox.name, uMsg)
 }
 
@@ -256,14 +261,6 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 	mbox.Lock()
 	defer mbox.Unlock()
 
-	// Update mailbox flags list
-	if op == imap.AddFlags || op == imap.SetFlags {
-		if newFlags, changed := UpdateFlags(mbox.Flags, imap.AddFlags, flags); changed {
-			mbox.Flags = newFlags
-			mbox.user.PushMailboxUpdate(mbox)
-		}
-	}
-
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
@@ -277,7 +274,15 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 
 		if newFlags, changed := UpdateFlags(msg.Flags, op, flags); changed {
 			msg.Flags = newFlags
-			mbox.pushMessageUpdate(msg, uint32(i+1))
+			mbox.pushMessageUpdate(uid, msg, uint32(i+1))
+		}
+	}
+
+	// Update mailbox flags list
+	if op == imap.AddFlags || op == imap.SetFlags {
+		if newFlags, changed := UpdateFlags(mbox.Flags, imap.AddFlags, flags); changed {
+			mbox.Flags = newFlags
+			mbox.user.PushMailboxUpdate(mbox)
 		}
 	}
 
