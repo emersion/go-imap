@@ -72,9 +72,14 @@ func (mbox *Mailbox) uidNext() uint32 {
 	return uid
 }
 
-func (mbox *Mailbox) unseenSeqNum() uint32 {
+type messageStats struct {
+	unseenSeqNum uint32
+	unseenCount  uint32
+}
+
+func (mbox *Mailbox) getMsgStats() messageStats {
+	stats := messageStats{}
 	for i, msg := range mbox.Messages {
-		seqNum := uint32(i + 1)
 
 		seen := false
 		for _, flag := range msg.Flags {
@@ -85,10 +90,14 @@ func (mbox *Mailbox) unseenSeqNum() uint32 {
 		}
 
 		if !seen {
-			return seqNum
+			stats.unseenCount++
+			seqNum := uint32(i + 1)
+			if seqNum > stats.unseenSeqNum {
+				stats.unseenSeqNum = seqNum
+			}
 		}
 	}
-	return 0
+	return stats
 }
 
 func (mbox *Mailbox) status(items []imap.StatusItem, flags bool) (*imap.MailboxStatus, error) {
@@ -99,7 +108,8 @@ func (mbox *Mailbox) status(items []imap.StatusItem, flags bool) (*imap.MailboxS
 		status.Flags = flags
 		status.PermanentFlags = append(flags, "\\*")
 	}
-	status.UnseenSeqNum = mbox.unseenSeqNum()
+	msgStats := mbox.getMsgStats()
+	status.UnseenSeqNum = msgStats.unseenSeqNum
 
 	for _, name := range items {
 		switch name {
@@ -112,7 +122,7 @@ func (mbox *Mailbox) status(items []imap.StatusItem, flags bool) (*imap.MailboxS
 		case imap.StatusRecent:
 			status.Recent = 0 // TODO
 		case imap.StatusUnseen:
-			status.Unseen = 0 // TODO
+			status.Unseen = msgStats.unseenCount
 		}
 	}
 

@@ -143,7 +143,7 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 func (u *User) PushMailboxUpdate(mbox *Mailbox) {
 	update := &backend.MailboxUpdate{}
 	update.Update = backend.NewUpdate(u.username, mbox.name)
-	status, err := mbox.status([]imap.StatusItem{imap.StatusMessages, imap.StatusUnseen}, false)
+	status, err := mbox.status([]imap.StatusItem{imap.StatusMessages, imap.StatusUnseen}, true)
 	if err == nil {
 		update.MailboxStatus = status
 		u.backend.PushUpdate(update)
