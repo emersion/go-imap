@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bytes"
 	"crypto/tls"
 	"errors"
 	"io"
@@ -87,11 +88,17 @@ func ErrNoStatusResp() error {
 	return &errStatusResp{nil}
 }
 
+type mboxListener struct {
+	user    string
+	mailbox string
+	silent  bool
+}
+
 // An IMAP server.
 type Server struct {
 	locker    sync.Mutex
 	listeners map[net.Listener]struct{}
-	conns     map[Conn]struct{}
+	conns     map[Conn]*mboxListener
 
 	commands   map[string]HandlerFactory
 	auths      map[string]SASLServerFactory
@@ -127,7 +134,7 @@ type Server struct {
 func New(bkd backend.Backend) *Server {
 	s := &Server{
 		listeners: make(map[net.Listener]struct{}),
-		conns:     make(map[Conn]struct{}),
+		conns:     make(map[Conn]*mboxListener),
 		Backend:   bkd,
 		ErrorLog:  log.New(os.Stderr, "imap/server: ", log.LstdFlags),
 	}
@@ -268,7 +275,7 @@ func (s *Server) ListenAndServeTLS() error {
 
 func (s *Server) serveConn(conn Conn) error {
 	s.locker.Lock()
-	s.conns[conn] = struct{}{}
+	s.conns[conn] = &mboxListener{}
 	s.locker.Unlock()
 
 	defer func() {
@@ -281,6 +288,23 @@ func (s *Server) serveConn(conn Conn) error {
 	return conn.serve(conn)
 }
 
+func (s *Server) updateMboxListener(conn Conn, user string, mailbox string) {
+	s.locker.Lock()
+	if sub, ok := s.conns[conn]; ok {
+		sub.user = user
+		sub.mailbox = mailbox
+	}
+	s.locker.Unlock()
+}
+
+func (s *Server) silentMboxListener(conn Conn, silent bool) {
+	s.locker.Lock()
+	if sub, ok := s.conns[conn]; ok {
+		sub.silent = silent
+	}
+	s.locker.Unlock()
+}
+
 // Command gets a command handler factory for the provided command name.
 func (s *Server) Command(name string) HandlerFactory {
 	// Extensions can override builtin commands
@@ -291,6 +315,24 @@ func (s *Server) Command(name string) HandlerFactory {
 	}
 
 	return s.commands[name]
+}
+
+type bufResp struct {
+	bytes.Buffer
+}
+
+func (br *bufResp) WriteTo(w *imap.Writer) error {
+	_, err := w.Write(br.Buffer.Bytes())
+	return err
+}
+
+func bufferResp(res imap.WriterTo) (imap.WriterTo, error) {
+	buf := bufResp{}
+	bufWriter := imap.NewWriter(&buf)
+	if err := res.WriteTo(bufWriter); err != nil {
+		return nil, err
+	}
+	return &buf, nil
 }
 
 func (s *Server) listenUpdates() {
@@ -321,52 +363,40 @@ func (s *Server) listenUpdates() {
 		if res == nil {
 			continue
 		}
+		// Write response to buffer, so we can send it to multiple connections.
+		buf, err := bufferResp(res)
+		if err != nil {
+			s.ErrorLog.Printf("Failed to buffer update: %s\n", err)
+			continue
+		}
 
-		sends := make(chan struct{})
-		wait := 0
 		s.locker.Lock()
-		for conn := range s.conns {
-			ctx := conn.Context()
-
-			if update.Username() != "" && (ctx.User == nil || ctx.User.Username() != update.Username()) {
+		for conn, sub := range s.conns {
+			username := update.Username()
+			mailbox := update.Mailbox()
+			if username != "" && (sub.user == "" || sub.user != username) {
 				continue
 			}
-			if update.Mailbox() != "" && (ctx.Mailbox == nil || ctx.Mailbox.Name() != update.Mailbox()) {
+			if mailbox != "" && (sub.mailbox == "" || sub.mailbox != mailbox) {
 				continue
 			}
-			if *conn.silent() {
+			if sub.silent {
 				// If silent is set, do not send message updates
 				if _, ok := res.(*responses.Fetch); ok {
 					continue
 				}
 			}
 
-			conn := conn // Copy conn to a local variable
-			go func() {
-				done := make(chan struct{})
-				conn.Context().Responses <- &response{
-					response: res,
-					done:     done,
-				}
-				<-done
-				sends <- struct{}{}
-			}()
-
-			wait++
+			// Try sending to client.
+			select {
+			case conn.Context().Responses <- buf:
+			default:
+				// Connection's response channel is blocked (busy).  Skipping
+			}
 		}
 		s.locker.Unlock()
 
-		if wait > 0 {
-			go func() {
-				for done := 0; done < wait; done++ {
-					<-sends
-				}
-
-				close(update.Done())
-			}()
-		} else {
-			close(update.Done())
-		}
+		close(update.Done())
 	}
 }
 

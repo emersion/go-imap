@@ -41,6 +41,9 @@ func (cmd *Select) Handle(conn Conn) error {
 
 	ctx.Mailbox = mbox
 	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
+	// Update Mbox listener
+	s := conn.Server()
+	s.updateMboxListener(conn, ctx.User.Username(), mbox.Name())
 
 	res := &responses.Select{Mailbox: status}
 	if err := conn.WriteResp(res); err != nil {
