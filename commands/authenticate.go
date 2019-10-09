@@ -100,9 +100,11 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn Authenti
 			return err
 		}
 
-		scanner.Scan()
-		if err := scanner.Err(); err != nil {
-			return err
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return err
+			}
+			return errors.New("unexpected EOF")
 		}
 
 		encoded = scanner.Text()
