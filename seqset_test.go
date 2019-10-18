@@ -350,13 +350,13 @@ func TestSeqMerge(T *testing.T) {
 			T.Errorf("parseSeq(%q) unexpected error; %v", test.t, err)
 			continue
 		}
-		test_ok := test.out != ""
+		testOK := test.out != ""
 		for i := 0; i < 2; i++ {
-			if !test_ok {
+			if !testOK {
 				test.out = test.s
 			}
 			out, ok := s.Merge(t)
-			if out.String() != test.out || ok != test_ok {
+			if out.String() != test.out || ok != testOK {
 				T.Errorf("%q.Merge(%q) expected %q; got %q", test.s, test.t, test.out, out)
 			}
 			// Swap s & t, result should be identical
@@ -539,13 +539,13 @@ func TestSeqSetInfo(t *testing.T) {
 		if str := s.String(); str != test.s {
 			t.Errorf("%q.String() expected %q; got %q", test.s, test.s, str)
 		}
-		test_empty := len(test.s) == 0
-		if s.Empty() != test_empty {
-			t.Errorf("%q.Empty() expected %v", test.s, test_empty)
+		testEmpty := len(test.s) == 0
+		if s.Empty() != testEmpty {
+			t.Errorf("%q.Empty() expected %v", test.s, testEmpty)
 		}
-		test_dynamic := !test_empty && test.s[len(test.s)-1] == '*'
-		if s.Dynamic() != test_dynamic {
-			t.Errorf("%q.Dynamic() expected %v", test.s, test_dynamic)
+		testDynamic := !testEmpty && test.s[len(test.s)-1] == '*'
+		if s.Dynamic() != testDynamic {
+			t.Errorf("%q.Dynamic() expected %v", test.s, testDynamic)
 		}
 	}
 }
