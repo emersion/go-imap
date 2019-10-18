@@ -72,14 +72,14 @@ type ExpungeUpdate struct {
 	SeqNum uint32
 }
 
-// BackendUpdater is a Backend that implements Updater is able to send
+// Updater is a Backend that implements Updater is able to send
 // unilateral backend updates. Backends not implementing this interface don't
 // correctly send unilateral updates, for instance if a user logs in from two
 // connections and deletes a message from one of them, the over is not aware
 // that such a mesage has been deleted. More importantly, backends implementing
 // Updater can notify the user for external updates such as new message
 // notifications.
-type BackendUpdater interface {
+type Updater interface {
 	// Updates returns a set of channels where updates are sent to.
 	Updates() <-chan Update
 }

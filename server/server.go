@@ -207,7 +207,7 @@ func (s *Server) Serve(l net.Listener) error {
 		delete(s.listeners, l)
 	}()
 
-	updater, ok := s.Backend.(backend.BackendUpdater)
+	updater, ok := s.Backend.(backend.Updater)
 	if ok {
 		s.Updates = updater.Updates()
 		go s.listenUpdates()
