@@ -50,8 +50,8 @@ func TestClient_Select(t *testing.T) {
 		UnseenSeqNum:   12,
 		Messages:       172,
 		Recent:         1,
-		UidNext:        4392,
-		UidValidity:    3857529045,
+		UIDNext:        4392,
+		UIDValidity:    3857529045,
 	}
 	mbox.Items = nil
 	if !reflect.DeepEqual(mbox, want) {

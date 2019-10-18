@@ -65,19 +65,19 @@ var matchTests = []struct {
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {"42@example.org"}},
+			Header: textproto.MIMEHeader{"Message-ID": {"42@example.org"}},
 		},
 		res: true,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {"43@example.org"}},
+			Header: textproto.MIMEHeader{"Message-ID": {"43@example.org"}},
 		},
 		res: false,
 	},
 	{
 		criteria: &imap.SearchCriteria{
-			Header: textproto.MIMEHeader{"Message-Id": {""}},
+			Header: textproto.MIMEHeader{"Message-ID": {""}},
 		},
 		res: true,
 	},
@@ -160,7 +160,7 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: new(imap.SeqSet),
+					UID: new(imap.SeqSet),
 					Not: []*imap.SearchCriteria{{SeqNum: new(imap.SeqSet)}},
 				},
 				{
@@ -176,7 +176,7 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					UID: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
 					Not: []*imap.SearchCriteria{{SeqNum: new(imap.SeqSet)}},
 				},
 				{
@@ -192,7 +192,7 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					UID: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
 					Not: []*imap.SearchCriteria{{
 						SeqNum: &imap.SeqSet{Set: []imap.Seq{imap.Seq{42, 42}}},
 					}},
@@ -210,7 +210,7 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					UID: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
 					Not: []*imap.SearchCriteria{{
 						SeqNum: &imap.SeqSet{Set: []imap.Seq{{42, 42}}},
 					}},

@@ -20,7 +20,7 @@ var testEnvelope = &imap.Envelope{
 	Cc:        []*imap.Address{},
 	Bcc:       []*imap.Address{},
 	InReplyTo: "",
-	MessageId: "42@example.org",
+	MessageID: "42@example.org",
 }
 
 func TestFetchEnvelope(t *testing.T) {

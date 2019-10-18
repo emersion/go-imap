@@ -34,8 +34,8 @@ func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 func (mbox *Mailbox) uidNext() uint32 {
 	var uid uint32
 	for _, msg := range mbox.Messages {
-		if msg.Uid > uid {
-			uid = msg.Uid
+		if msg.UID > uid {
+			uid = msg.UID
 		}
 	}
 	uid++
@@ -88,10 +88,10 @@ func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error
 		switch name {
 		case imap.StatusMessages:
 			status.Messages = uint32(len(mbox.Messages))
-		case imap.StatusUidNext:
-			status.UidNext = mbox.uidNext()
-		case imap.StatusUidValidity:
-			status.UidValidity = 1
+		case imap.StatusUIDNext:
+			status.UIDNext = mbox.uidNext()
+		case imap.StatusUIDValidity:
+			status.UIDValidity = 1
 		case imap.StatusRecent:
 			status.Recent = 0 // TODO
 		case imap.StatusUnseen:
@@ -119,7 +119,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.Fe
 
 		var id uint32
 		if uid {
-			id = msg.Uid
+			id = msg.UID
 		} else {
 			id = seqNum
 		}
@@ -150,7 +150,7 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]
 
 		var id uint32
 		if uid {
-			id = msg.Uid
+			id = msg.UID
 		} else {
 			id = seqNum
 		}
@@ -170,7 +170,7 @@ func (mbox *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Lit
 	}
 
 	mbox.Messages = append(mbox.Messages, &Message{
-		Uid:   mbox.uidNext(),
+		UID:   mbox.uidNext(),
 		Date:  date,
 		Size:  uint32(len(b)),
 		Flags: flags,
@@ -183,7 +183,7 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
-			id = msg.Uid
+			id = msg.UID
 		} else {
 			id = uint32(i + 1)
 		}
@@ -206,7 +206,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
-			id = msg.Uid
+			id = msg.UID
 		} else {
 			id = uint32(i + 1)
 		}
@@ -215,7 +215,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 		}
 
 		msgCopy := *msg
-		msgCopy.Uid = dest.uidNext()
+		msgCopy.UID = dest.uidNext()
 		dest.Messages = append(dest.Messages, &msgCopy)
 	}
 

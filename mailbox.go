@@ -169,10 +169,10 @@ type MailboxStatus struct {
 	// The number of unread messages.
 	Unseen uint32
 	// The next UID.
-	UidNext uint32
+	UIDNext uint32
 	// Together with a UID, it is a unique identifier for a message.
 	// Must be greater than or equal to 1.
-	UidValidity uint32
+	UIDValidity uint32
 }
 
 // Create a new mailbox status that will contain the specified items.
@@ -211,10 +211,10 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 				status.Recent, err = ParseNumber(f)
 			case StatusUnseen:
 				status.Unseen, err = ParseNumber(f)
-			case StatusUidNext:
-				status.UidNext, err = ParseNumber(f)
-			case StatusUidValidity:
-				status.UidValidity, err = ParseNumber(f)
+			case StatusUIDNext:
+				status.UIDNext, err = ParseNumber(f)
+			case StatusUIDValidity:
+				status.UIDValidity, err = ParseNumber(f)
 			default:
 				status.Items[k] = f
 			}
@@ -238,10 +238,10 @@ func (status *MailboxStatus) Format() []interface{} {
 			v = status.Recent
 		case StatusUnseen:
 			v = status.Unseen
-		case StatusUidNext:
-			v = status.UidNext
-		case StatusUidValidity:
-			v = status.UidValidity
+		case StatusUIDNext:
+			v = status.UIDNext
+		case StatusUIDValidity:
+			v = status.UIDValidity
 		}
 
 		fields = append(fields, RawString(k), v)

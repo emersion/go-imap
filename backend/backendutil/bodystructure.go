@@ -26,7 +26,7 @@ func FetchBodyStructure(header textproto.Header, body io.Reader, extended bool) 
 		bs.MIMESubType = "plain"
 	}
 
-	bs.Id = header.Get("Content-Id")
+	bs.ID = header.Get("Content-ID")
 	bs.Description = header.Get("Content-Description")
 	bs.Encoding = header.Get("Content-Transfer-Encoding")
 	// TODO: bs.Size

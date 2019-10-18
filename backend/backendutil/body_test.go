@@ -144,7 +144,7 @@ func TestFetchBodySection_NonMultipart(t *testing.T) {
 	testMsgHdr := "From: Mitsuha Miyamizu <mitsuha.miyamizu@example.org>\r\n" +
 		"To: Taki Tachibana <taki.tachibana@example.org>\r\n" +
 		"Subject: Your Name.\r\n" +
-		"Message-Id: 42@example.org\r\n" +
+		"Message-ID: 42@example.org\r\n" +
 		"\r\n"
 	testMsgBody := "That's not multipart message. Thought it should be possible to get this text using BODY[1]."
 	testMsg := testMsgHdr + testMsgBody

@@ -15,11 +15,11 @@ var (
 )
 
 // A command handler that supports UIDs.
-type UidHandler interface {
+type UIDHandler interface {
 	Handler
 
 	// Handle this command using UIDs for a given connection.
-	UidHandle(conn Conn) error
+	UIDhandle(conn Conn) error
 }
 
 type Check struct {
@@ -138,7 +138,7 @@ func (cmd *Search) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Search) UidHandle(conn Conn) error {
+func (cmd *Search) UIDhandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
@@ -172,16 +172,16 @@ func (cmd *Fetch) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Fetch) UidHandle(conn Conn) error {
+func (cmd *Fetch) UIDhandle(conn Conn) error {
 	// Append UID to the list of requested items if it isn't already present
-	hasUid := false
+	hasUID := false
 	for _, item := range cmd.Items {
 		if item == "UID" {
-			hasUid = true
+			hasUID = true
 			break
 		}
 	}
-	if !hasUid {
+	if !hasUID {
 		cmd.Items = append(cmd.Items, "UID")
 	}
 
@@ -251,7 +251,7 @@ func (cmd *Store) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Store) UidHandle(conn Conn) error {
+func (cmd *Store) UIDhandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
@@ -272,27 +272,27 @@ func (cmd *Copy) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Copy) UidHandle(conn Conn) error {
+func (cmd *Copy) UIDhandle(conn Conn) error {
 	return cmd.handle(true, conn)
 }
 
-type Uid struct {
-	commands.Uid
+type UID struct {
+	commands.UID
 }
 
-func (cmd *Uid) Handle(conn Conn) error {
+func (cmd *UID) Handle(conn Conn) error {
 	inner := cmd.Cmd.Command()
 	hdlr, err := conn.commandHandler(inner)
 	if err != nil {
 		return err
 	}
 
-	uidHdlr, ok := hdlr.(UidHandler)
+	uidHdlr, ok := hdlr.(UIDHandler)
 	if !ok {
 		return errors.New("Command unsupported with UID")
 	}
 
-	if err := uidHdlr.UidHandle(conn); err != nil {
+	if err := uidHdlr.UIDhandle(conn); err != nil {
 		return err
 	}
 

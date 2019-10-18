@@ -1,3 +1,5 @@
+github.com/alexkohler/prealloc v0.0.0-20181002111628-4fce4887dad9 h1:31kqHz4wQqRjuSSD66Nwb8QeNxA1Fr7PL7yGtCRoMhk=
+github.com/alexkohler/prealloc v0.0.0-20181002111628-4fce4887dad9/go.mod h1:CmbNRwpsIT6OOr1myakD2xc96sG7MWgs2VePr8EjW58=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/emersion/go-message v0.10.4-0.20190609165112-592ace5bc1ca h1:OYhqtJI4eOLvGtRIsUfP87VMJ1J/o6ks1tah9DlYkn4=

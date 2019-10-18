@@ -7,13 +7,13 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// Uid is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another
+// UID is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another
 // command (e.g. wrapping a Fetch command will result in a UID FETCH).
-type Uid struct {
+type UID struct {
 	Cmd imap.Commander
 }
 
-func (cmd *Uid) Command() *imap.Command {
+func (cmd *UID) Command() *imap.Command {
 	inner := cmd.Cmd.Command()
 
 	args := []interface{}{imap.RawString(inner.Name)}
@@ -25,7 +25,7 @@ func (cmd *Uid) Command() *imap.Command {
 	}
 }
 
-func (cmd *Uid) Parse(fields []interface{}) error {
+func (cmd *UID) Parse(fields []interface{}) error {
 	if len(fields) < 0 {
 		return errors.New("No command name specified")
 	}

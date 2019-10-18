@@ -60,7 +60,7 @@ func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
 // only if it matches each one of its fields.
 type SearchCriteria struct {
 	SeqNum *SeqSet // Sequence number is in sequence set
-	Uid    *SeqSet // UID is in sequence set
+	UID    *SeqSet // UID is in sequence set
 
 	// Time and timezone are ignored
 	Since      time.Time // Internal date is since this date
@@ -237,7 +237,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 	case "UID":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else if c.Uid, err = ParseSeqSet(maybeString(f)); err != nil {
+		} else if c.UID, err = ParseSeqSet(maybeString(f)); err != nil {
 			return nil, err
 		}
 	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
@@ -278,8 +278,8 @@ func (c *SearchCriteria) Format() []interface{} {
 	if c.SeqNum != nil {
 		fields = append(fields, c.SeqNum)
 	}
-	if c.Uid != nil {
-		fields = append(fields, RawString("UID"), c.Uid)
+	if c.UID != nil {
+		fields = append(fields, RawString("UID"), c.UID)
 	}
 
 	if !c.Since.IsZero() && !c.Before.IsZero() && c.Before.Sub(c.Since) == 24*time.Hour {

@@ -13,7 +13,7 @@ import (
 )
 
 type Message struct {
-	Uid   uint32
+	UID   uint32
 	Date  time.Time
 	Size  uint32
 	Flags []string
@@ -46,8 +46,8 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 			fetched.InternalDate = m.Date
 		case imap.FetchRFC822Size:
 			fetched.Size = m.Size
-		case imap.FetchUid:
-			fetched.Uid = m.Uid
+		case imap.FetchUID:
+			fetched.UID = m.UID
 		default:
 			section, err := imap.ParseBodySectionName(item)
 			if err != nil {
@@ -70,5 +70,5 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 
 func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
 	e, _ := m.entity()
-	return backendutil.Match(e, seqNum, m.Uid, m.Date, m.Flags, c)
+	return backendutil.Match(e, seqNum, m.UID, m.Date, m.Flags, c)
 }

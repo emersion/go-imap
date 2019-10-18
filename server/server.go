@@ -188,7 +188,7 @@ func New(bkd backend.Backend) *Server {
 		"FETCH":   func() Handler { return &Fetch{} },
 		"STORE":   func() Handler { return &Store{} },
 		"COPY":    func() Handler { return &Copy{} },
-		"UID":     func() Handler { return &Uid{} },
+		"UID":     func() Handler { return &UID{} },
 	}
 
 	return s

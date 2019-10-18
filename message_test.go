@@ -55,15 +55,15 @@ var messageTests = []struct {
 				FetchBody:       nil,
 				FetchFlags:      nil,
 				FetchRFC822Size: nil,
-				FetchUid:        nil,
+				FetchUID:        nil,
 			},
 			Body:          map[*BodySectionName]Literal{},
 			Envelope:      envelopeTests[0].envelope,
 			BodyStructure: bodyStructureTests[0].bodyStructure,
 			Flags:         []string{SeenFlag, AnsweredFlag},
 			Size:          4242,
-			Uid:           2424,
-			itemsOrder:    []FetchItem{FetchEnvelope, FetchBody, FetchFlags, FetchRFC822Size, FetchUid},
+			UID:           2424,
+			itemsOrder:    []FetchItem{FetchEnvelope, FetchBody, FetchFlags, FetchRFC822Size, FetchUID},
 		},
 		fields: []interface{}{
 			RawString("ENVELOPE"), envelopeTests[0].fields,
@@ -165,8 +165,8 @@ var bodySectionNameTests = []struct {
 		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"From", "To"}}},
 	},
 	{
-		raw:    "BODY[HEADER.FIELDS.NOT (Content-Id)]",
-		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"Content-Id"}, NotFields: true}},
+		raw:    "BODY[HEADER.FIELDS.NOT (Content-ID)]",
+		parsed: &BodySectionName{BodyPartName: BodyPartName{Specifier: HeaderSpecifier, Fields: []string{"Content-ID"}, NotFields: true}},
 	},
 }
 
@@ -267,7 +267,7 @@ var envelopeTests = []struct {
 			Cc:        []*Address{},
 			Bcc:       []*Address{},
 			InReplyTo: "42@example.org",
-			MessageId: "43@example.org",
+			MessageID: "43@example.org",
 		},
 		fields: []interface{}{
 			"Tue, 10 Nov 2009 23:00:00 -0600",
@@ -447,7 +447,7 @@ var bodyStructureTests = []struct {
 			MIMEType:    "image",
 			MIMESubType: "jpeg",
 			Params:      map[string]string{},
-			Id:          "<foo4%25foo1@bar.net>",
+			ID:          "<foo4%25foo1@bar.net>",
 			Description: "A picture of cat",
 			Encoding:    "base64",
 			Size:        4242,

@@ -154,7 +154,7 @@ type Message struct {
 	// The message size.
 	Size uint32
 	// The message unique identifier. It must be greater than or equal to 1.
-	Uid uint32
+	UID uint32
 	// The message body sections.
 	Body map[*BodySectionName]Literal
 
@@ -238,8 +238,8 @@ func (m *Message) Parse(fields []interface{}) error {
 				m.InternalDate, _ = time.Parse(DateTimeLayout, date)
 			case FetchRFC822Size:
 				m.Size, _ = ParseNumber(f)
-			case FetchUid:
-				m.Uid, _ = ParseNumber(f)
+			case FetchUID:
+				m.UID, _ = ParseNumber(f)
 			default:
 				// Likely to be a section of the body
 				// First check that the section name is correct
@@ -277,8 +277,8 @@ func (m *Message) formatItem(k FetchItem) []interface{} {
 		v = m.InternalDate
 	case FetchRFC822Size:
 		v = m.Size
-	case FetchUid:
-		v = m.Uid
+	case FetchUID:
+		v = m.UID
 	default:
 		for section, literal := range m.Body {
 			if section.value == k {
@@ -723,10 +723,10 @@ type Envelope struct {
 	Cc []*Address
 	// The Bcc header addresses.
 	Bcc []*Address
-	// The In-Reply-To header. Contains the parent Message-Id.
+	// The In-Reply-To header. Contains the parent Message-ID.
 	InReplyTo string
-	// The Message-Id header.
-	MessageId string
+	// The Message-ID header.
+	MessageID string
 }
 
 // Parse an envelope from fields.
@@ -762,8 +762,8 @@ func (e *Envelope) Parse(fields []interface{}) error {
 	if inReplyTo, ok := fields[8].(string); ok {
 		e.InReplyTo = inReplyTo
 	}
-	if msgId, ok := fields[9].(string); ok {
-		e.MessageId = msgId
+	if msgID, ok := fields[9].(string); ok {
+		e.MessageID = msgID
 	}
 
 	return nil
@@ -781,7 +781,7 @@ func (e *Envelope) Format() (fields []interface{}) {
 		FormatAddressList(e.Cc),
 		FormatAddressList(e.Bcc),
 		e.InReplyTo,
-		e.MessageId,
+		e.MessageID,
 	}
 }
 
@@ -797,8 +797,8 @@ type BodyStructure struct {
 	// The MIME parameters.
 	Params map[string]string
 
-	// The Content-Id header.
-	Id string
+	// The Content-ID header.
+	ID string
 	// The Content-Description header.
 	Description string
 	// The Content-Encoding header.
@@ -915,7 +915,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		params, _ := fields[2].([]interface{})
 		bs.Params, _ = parseHeaderParamList(params)
 
-		bs.Id, _ = fields[3].(string)
+		bs.ID, _ = fields[3].(string)
 		if desc, err := ParseString(fields[4]); err == nil {
 			bs.Description, _ = decodeHeader(desc)
 		}
@@ -1026,8 +1026,8 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 		fields[1] = bs.MIMESubType
 		fields[2] = formatHeaderParamList(bs.Params)
 
-		if bs.Id != "" {
-			fields[3] = bs.Id
+		if bs.ID != "" {
+			fields[3] = bs.ID
 		}
 		if bs.Description != "" {
 			fields[4] = encodeHeader(bs.Description)

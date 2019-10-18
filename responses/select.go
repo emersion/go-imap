@@ -41,11 +41,11 @@ func (r *Select) Handle(resp imap.Resp) error {
 			flags, _ := resp.Arguments[0].([]interface{})
 			mbox.PermanentFlags, _ = imap.ParseStringList(flags)
 		case "UIDNEXT":
-			mbox.UidNext, _ = imap.ParseNumber(resp.Arguments[0])
-			item = imap.StatusUidNext
+			mbox.UIDNext, _ = imap.ParseNumber(resp.Arguments[0])
+			item = imap.StatusUIDNext
 		case "UIDVALIDITY":
-			mbox.UidValidity, _ = imap.ParseNumber(resp.Arguments[0])
-			item = imap.StatusUidValidity
+			mbox.UIDValidity, _ = imap.ParseNumber(resp.Arguments[0])
+			item = imap.StatusUIDValidity
 		default:
 			return ErrUnhandled
 		}
@@ -115,21 +115,21 @@ func (r *Select) WriteTo(w *imap.Writer) error {
 			if err := res.WriteTo(w); err != nil {
 				return err
 			}
-		case imap.StatusUidNext:
+		case imap.StatusUIDNext:
 			statusRes := &imap.StatusResp{
 				Type:      imap.StatusRespOk,
-				Code:      imap.CodeUidNext,
-				Arguments: []interface{}{mbox.UidNext},
+				Code:      imap.CodeUIDNext,
+				Arguments: []interface{}{mbox.UIDNext},
 				Info:      "Predicted next UID",
 			}
 			if err := statusRes.WriteTo(w); err != nil {
 				return err
 			}
-		case imap.StatusUidValidity:
+		case imap.StatusUIDValidity:
 			statusRes := &imap.StatusResp{
 				Type:      imap.StatusRespOk,
-				Code:      imap.CodeUidValidity,
-				Arguments: []interface{}{mbox.UidValidity},
+				Code:      imap.CodeUIDValidity,
+				Arguments: []interface{}{mbox.UIDValidity},
 				Info:      "UIDs valid",
 			}
 			if err := statusRes.WriteTo(w); err != nil {

@@ -93,7 +93,7 @@ func (c *Client) executeSearch(uid bool, criteria *imap.SearchCriteria, charset 
 		Criteria: criteria,
 	}
 	if uid {
-		cmd = &commands.Uid{Cmd: cmd}
+		cmd = &commands.UID{Cmd: cmd}
 	}
 
 	res := new(responses.Search)
@@ -145,7 +145,7 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch
 		Items:  items,
 	}
 	if uid {
-		cmd = &commands.Uid{Cmd: cmd}
+		cmd = &commands.UID{Cmd: cmd}
 	}
 
 	res := &responses.Fetch{Messages: ch}
@@ -198,7 +198,7 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value
 		Value:  value,
 	}
 	if uid {
-		cmd = &commands.Uid{Cmd: cmd}
+		cmd = &commands.UID{Cmd: cmd}
 	}
 
 	var h responses.Handler
@@ -237,7 +237,7 @@ func (c *Client) copy(uid bool, seqset *imap.SeqSet, dest string) error {
 		Mailbox: dest,
 	}
 	if uid {
-		cmd = &commands.Uid{Cmd: cmd}
+		cmd = &commands.UID{Cmd: cmd}
 	}
 
 	status, err := c.execute(cmd, nil)

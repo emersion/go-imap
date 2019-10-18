@@ -40,7 +40,7 @@ func New() *Backend {
 			user: user,
 			Messages: []*Message{
 				{
-					Uid:   6,
+					UID:   6,
 					Date:  time.Now(),
 					Flags: []string{"\\Seen"},
 					Size:  uint32(len(body)),

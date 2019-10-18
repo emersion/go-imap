@@ -51,8 +51,8 @@ const (
 	CodeReadOnly       StatusRespCode = "READ-ONLY"
 	CodeReadWrite      StatusRespCode = "READ-WRITE"
 	CodeTryCreate      StatusRespCode = "TRYCREATE"
-	CodeUidNext        StatusRespCode = "UIDNEXT"
-	CodeUidValidity    StatusRespCode = "UIDVALIDITY"
+	CodeUIDNext        StatusRespCode = "UIDNEXT"
+	CodeUIDValidity    StatusRespCode = "UIDVALIDITY"
 	CodeUnseen         StatusRespCode = "UNSEEN"
 )
 

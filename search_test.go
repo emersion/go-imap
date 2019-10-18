@@ -31,7 +31,7 @@ var searchCriteriaTests = []struct {
 			`OR (ON "5-Nov-1984" DRAFT FLAGGED UNANSWERED UNDELETED OLD) (UNDRAFT UNFLAGGED UNSEEN))`,
 		criteria: &SearchCriteria{
 			SeqNum:     searchSeqSet1,
-			Uid:        searchSeqSet2,
+			UID:        searchSeqSet2,
 			Since:      searchDate2,
 			Before:     searchDate1,
 			SentSince:  searchDate2,

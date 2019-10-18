@@ -136,7 +136,7 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 		}
 	}
 
-	if c.SeqNum != nil || c.Uid != nil {
+	if c.SeqNum != nil || c.UID != nil {
 		if !matchSeqNumAndUid(seqNum, uid, c) {
 			return false, nil
 		}
@@ -187,7 +187,7 @@ func matchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
 	if c.SeqNum != nil && !c.SeqNum.Contains(seqNum) {
 		return false
 	}
-	if c.Uid != nil && !c.Uid.Contains(uid) {
+	if c.UID != nil && !c.UID.Contains(uid) {
 		return false
 	}
 	return true

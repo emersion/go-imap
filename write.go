@@ -36,7 +36,7 @@ func FormatStringList(list []string) (fields []interface{}) {
 }
 
 // Check if a string is 8-bit clean.
-func isAscii(s string) bool {
+func isASCII(s string) bool {
 	for _, c := range s {
 		if c > unicode.MaxASCII || unicode.IsControl(c) {
 			return false
@@ -77,7 +77,7 @@ func (w *Writer) writeQuoted(s string) error {
 }
 
 func (w *Writer) writeQuotedOrLiteral(s string) error {
-	if !isAscii(s) {
+	if !isASCII(s) {
 		// IMAP doesn't allow 8-bit data outside literals
 		return w.writeLiteral(bytes.NewBufferString(s))
 	}
