@@ -37,7 +37,7 @@ var updateFlagsTests = []struct {
 func TestUpdateFlags(t *testing.T) {
 	current := []string{"a", "b", "c"}
 	for _, test := range updateFlagsTests {
-		got := UpdateFlags(current[:], test.op, test.flags)
+		got := UpdateFlags(current, test.op, test.flags)
 
 		if !reflect.DeepEqual(got, test.res) {
 			t.Errorf("Expected result to be \n%v\n but got \n%v", test.res, got)
