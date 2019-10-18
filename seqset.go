@@ -150,11 +150,11 @@ func (s *SeqSet) AddNum(q ...uint32) {
 }
 
 // AddRange inserts a new sequence range into the set.
-func (s *SeqSet) AddRange(Start, Stop uint32) {
-	if (Stop < Start && Stop != 0) || Start == 0 {
-		s.insert(Seq{Stop, Start})
+func (s *SeqSet) AddRange(start, Stop uint32) {
+	if (Stop < start && Stop != 0) || start == 0 {
+		s.insert(Seq{Stop, start})
 	} else {
-		s.insert(Seq{Start, Stop})
+		s.insert(Seq{start, Stop})
 	}
 }
 
