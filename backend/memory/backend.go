@@ -19,7 +19,7 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 		return user, nil
 	}
 
-	return nil, errors.New("Bad username or password")
+	return nil, errors.New("bad username or password")
 }
 
 func New() *Backend {

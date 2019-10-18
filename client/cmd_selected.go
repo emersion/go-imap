@@ -10,7 +10,7 @@ import (
 
 // ErrNoMailboxSelected is returned if a command that requires a mailbox to be
 // selected is called when there isn't.
-var ErrNoMailboxSelected = errors.New("No mailbox selected")
+var ErrNoMailboxSelected = errors.New("no mailbox selected")
 
 // Check requests a checkpoint of the currently selected mailbox. A checkpoint
 // refers to any implementation-dependent housekeeping associated with the

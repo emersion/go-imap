@@ -30,7 +30,7 @@ func (cmd *Select) Command() *imap.Command {
 
 func (cmd *Select) Parse(fields []interface{}) error {
 	if len(fields) < 1 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {

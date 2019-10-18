@@ -9,7 +9,7 @@ import (
 
 // ErrInvalidCredentials is returned by Backend.Login when a username or a
 // password is incorrect.
-var ErrInvalidCredentials = errors.New("Invalid credentials")
+var ErrInvalidCredentials = errors.New("invalid credentials")
 
 // Backend is an IMAP server backend. A backend operation always deals with
 // users.

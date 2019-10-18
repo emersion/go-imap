@@ -10,8 +10,8 @@ import (
 
 // imap errors in Selected state.
 var (
-	ErrNoMailboxSelected = errors.New("No mailbox selected")
-	ErrMailboxReadOnly   = errors.New("Mailbox opened in read-only mode")
+	ErrNoMailboxSelected = errors.New("no mailbox selected")
+	ErrMailboxReadOnly   = errors.New("mailbox opened in read-only mode")
 )
 
 // A command handler that supports UIDs.
@@ -209,7 +209,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 
 	flagsList, ok := cmd.Value.([]interface{})
 	if !ok {
-		return errors.New("Flags must be a list")
+		return errors.New("flags must be a list")
 	}
 	flags, err := imap.ParseStringList(flagsList)
 	if err != nil {
@@ -289,7 +289,7 @@ func (cmd *UID) Handle(conn Conn) error {
 
 	uidHdlr, ok := hdlr.(UIDHandler)
 	if !ok {
-		return errors.New("Command unsupported with UID")
+		return errors.New("command unsupported with UID")
 	}
 
 	if err := uidHdlr.UIDhandle(conn); err != nil {

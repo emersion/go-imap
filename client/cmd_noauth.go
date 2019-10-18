@@ -14,14 +14,14 @@ import (
 var (
 	// ErrAlreadyLoggedIn is returned if Login or Authenticate is called when the
 	// client is already logged in.
-	ErrAlreadyLoggedIn = errors.New("Already logged in")
+	ErrAlreadyLoggedIn = errors.New("already logged in")
 	// ErrTLSAlreadyEnabled is returned if StartTLS is called when TLS is already
 	// enabled.
 	ErrTLSAlreadyEnabled = errors.New("TLS is already enabled")
 	// ErrLoginDisabled is returned if Login or Authenticate is called when the
 	// server has disabled authentication. Most of the time, calling enabling TLS
 	// solves the problem.
-	ErrLoginDisabled = errors.New("Login is disabled in current state")
+	ErrLoginDisabled = errors.New("login is disabled in current state")
 )
 
 // SupportStartTLS checks if the server supports STARTTLS.

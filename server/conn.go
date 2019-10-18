@@ -361,7 +361,7 @@ func (c *conn) WaitReady() {
 func (c *conn) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
 	newHandler := c.s.Command(cmd.Name)
 	if newHandler == nil {
-		err = errors.New("Unknown command")
+		err = errors.New("unknown command")
 		return
 	}
 

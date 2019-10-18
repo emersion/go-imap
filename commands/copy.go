@@ -24,11 +24,11 @@ func (cmd *Copy) Command() *imap.Command {
 
 func (cmd *Copy) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	if seqSet, ok := fields[0].(string); !ok {
-		return errors.New("Invalid sequence set")
+		return errors.New("invalid sequence set")
 	} else if seqSet, err := imap.ParseSeqSet(seqSet); err != nil {
 		return err
 	} else {

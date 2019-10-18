@@ -48,12 +48,12 @@ func (cmd *Authenticate) Command() *imap.Command {
 
 func (cmd *Authenticate) Parse(fields []interface{}) error {
 	if len(fields) < 1 {
-		return errors.New("Not enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	var ok bool
 	if cmd.Mechanism, ok = fields[0].(string); !ok {
-		return errors.New("Mechanism must be a string")
+		return errors.New("mechanism must be a string")
 	}
 	cmd.Mechanism = strings.ToUpper(cmd.Mechanism)
 
@@ -63,7 +63,7 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 
 	encodedResponse, ok := fields[1].(string)
 	if !ok {
-		return errors.New("Initial response must be a string")
+		return errors.New("initial response must be a string")
 	}
 	if encodedResponse == "=" {
 		cmd.InitialResponse = []byte{}
@@ -82,7 +82,7 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn AuthenticateConn) error {
 	sasl, ok := mechanisms[cmd.Mechanism]
 	if !ok {
-		return errors.New("Unsupported mechanism")
+		return errors.New("unsupported mechanism")
 	}
 
 	scanner := bufio.NewScanner(conn)

@@ -11,7 +11,7 @@ import (
 
 // ErrNotLoggedIn is returned if a function that requires the client to be
 // logged in is called then the client isn't.
-var ErrNotLoggedIn = errors.New("Not logged in")
+var ErrNotLoggedIn = errors.New("not logged in")
 
 func (c *Client) ensureAuthenticated() error {
 	state := c.State()

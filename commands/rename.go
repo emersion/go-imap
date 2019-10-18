@@ -26,7 +26,7 @@ func (cmd *Rename) Command() *imap.Command {
 
 func (cmd *Rename) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	dec := utf7.Encoding.NewDecoder()

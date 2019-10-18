@@ -94,7 +94,7 @@ func ParseFlagsOp(item StoreItem) (op FlagsOp, silent bool, err error) {
 	op = FlagsOp(itemStr)
 
 	if op != SetFlags && op != AddFlags && op != RemoveFlags {
-		err = errors.New("Unsupported STORE operation")
+		err = errors.New("unsupported STORE operation")
 	}
 	return
 }

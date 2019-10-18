@@ -34,7 +34,7 @@ func (cmd *List) Command() *imap.Command {
 
 func (cmd *List) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	dec := utf7.Encoding.NewDecoder()

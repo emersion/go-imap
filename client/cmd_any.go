@@ -9,7 +9,7 @@ import (
 
 // ErrAlreadyLoggedOut is returned if Logout is called when the client is
 // already logged out.
-var ErrAlreadyLoggedOut = errors.New("Already logged out")
+var ErrAlreadyLoggedOut = errors.New("already logged out")
 
 // Capability requests a listing of capabilities that the server supports.
 // Capabilities are often returned by the server with the greeting or with the

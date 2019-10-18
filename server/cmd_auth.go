@@ -11,7 +11,7 @@ import (
 
 // imap errors in Authenticated state.
 var (
-	ErrNotAuthenticated = errors.New("Not authenticated")
+	ErrNotAuthenticated = errors.New("not authenticated")
 )
 
 type Select struct {

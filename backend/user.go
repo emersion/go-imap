@@ -6,10 +6,10 @@ var (
 	// ErrNoSuchMailbox is returned by User.GetMailbox, User.DeleteMailbox and
 	// User.RenameMailbox when retrieving, deleting or renaming a mailbox that
 	// doesn't exist.
-	ErrNoSuchMailbox = errors.New("No such mailbox")
+	ErrNoSuchMailbox = errors.New("no such mailbox")
 	// ErrMailboxAlreadyExists is returned by User.CreateMailbox and
 	// User.RenameMailbox when creating or renaming mailbox that already exists.
-	ErrMailboxAlreadyExists = errors.New("Mailbox already exists")
+	ErrMailboxAlreadyExists = errors.New("mailbox already exists")
 )
 
 // User represents a user in the mail storage system. A user operation always
