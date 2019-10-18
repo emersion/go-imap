@@ -218,7 +218,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
 		select {
 		case <-unregister:
-			// If an error occured while sending the command, abort
+			// If an error occurred while sending the command, abort
 			return errUnregisterHandler
 		default:
 		}
