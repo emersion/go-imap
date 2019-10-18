@@ -79,7 +79,7 @@ func ParseNumber(f interface{}) (uint32, error) {
 		return 0, newParseError("expected a number, got a non-atom")
 	}
 
-	nbr, err := strconv.ParseUint(string(s), 10, 32)
+	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
 		return 0, &parseError{err}
 	}

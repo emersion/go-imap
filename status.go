@@ -94,7 +94,7 @@ func (r *StatusResp) WriteTo(w *Writer) error {
 		tag = "*"
 	}
 
-	if err := w.writeFields([]interface{}{RawString(tag), RawString(r.Type)}); err != nil {
+	if err := w.writeFields([]interface{}{tag, RawString(r.Type)}); err != nil {
 		return err
 	}
 
