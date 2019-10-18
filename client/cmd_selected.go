@@ -127,9 +127,9 @@ func (c *Client) Search(criteria *imap.SearchCriteria) (seqNums []uint32, err er
 	return c.search(false, criteria)
 }
 
-// UidSearch is identical to Search, but UIDs are returned instead of message
+// UIDSearch is identical to Search, but UIDs are returned instead of message
 // sequence numbers.
-func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) {
+func (c *Client) UIDSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) {
 	return c.search(true, criteria)
 }
 
@@ -163,9 +163,9 @@ func (c *Client) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *ima
 	return c.fetch(false, seqset, items, ch)
 }
 
-// UidFetch is identical to Fetch, but seqset is interpreted as containing
+// UIDFetch is identical to Fetch, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+func (c *Client) UIDFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
 	return c.fetch(true, seqset, items, ch)
 }
 
@@ -221,9 +221,9 @@ func (c *Client) Store(seqset *imap.SeqSet, item imap.StoreItem, value interface
 	return c.store(false, seqset, item, value, ch)
 }
 
-// UidStore is identical to Store, but seqset is interpreted as containing
+// UIDStore is identical to Store, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidStore(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
+func (c *Client) UIDStore(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
 	return c.store(true, seqset, item, value, ch)
 }
 
@@ -253,8 +253,8 @@ func (c *Client) Copy(seqset *imap.SeqSet, dest string) error {
 	return c.copy(false, seqset, dest)
 }
 
-// UidCopy is identical to Copy, but seqset is interpreted as containing unique
+// UIDCopy is identical to Copy, but seqset is interpreted as containing unique
 // identifiers instead of message sequence numbers.
-func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error {
+func (c *Client) UIDCopy(seqset *imap.SeqSet, dest string) error {
 	return c.copy(true, seqset, dest)
 }

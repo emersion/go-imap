@@ -158,7 +158,7 @@ func TestClient_Search_Uid(t *testing.T) {
 	var results []uint32
 	go func() {
 		var err error
-		results, err = c.UidSearch(criteria)
+		results, err = c.UIDSearch(criteria)
 		done <- err
 	}()
 
@@ -351,7 +351,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	done := make(chan error, 1)
 	messages := make(chan *imap.Message, 1)
 	go func() {
-		done <- c.UidFetch(seqset, fields, messages)
+		done <- c.UIDFetch(seqset, fields, messages)
 	}()
 
 	tag, cmd := s.ScanCmd()
@@ -363,7 +363,7 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	s.WriteString(tag + " OK UID FETCH completed\r\n")
 
 	if err := <-done; err != nil {
-		t.Fatalf("c.UidFetch() = %v", err)
+		t.Fatalf("c.UIDFetch() = %v", err)
 	}
 
 	msg := <-messages
@@ -445,7 +445,7 @@ func TestClient_Store_Uid(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- c.UidStore(seqset, imap.AddFlags, []interface{}{imap.DeletedFlag}, nil)
+		done <- c.UIDStore(seqset, imap.AddFlags, []interface{}{imap.DeletedFlag}, nil)
 	}()
 
 	tag, cmd := s.ScanCmd()
@@ -456,7 +456,7 @@ func TestClient_Store_Uid(t *testing.T) {
 	s.WriteString(tag + " OK STORE completed\r\n")
 
 	if err := <-done; err != nil {
-		t.Fatalf("c.UidStore() = %v", err)
+		t.Fatalf("c.UIDStore() = %v", err)
 	}
 }
 
@@ -495,7 +495,7 @@ func TestClient_Copy_Uid(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- c.UidCopy(seqset, "Drafts")
+		done <- c.UIDCopy(seqset, "Drafts")
 	}()
 
 	tag, cmd := s.ScanCmd()
@@ -506,6 +506,6 @@ func TestClient_Copy_Uid(t *testing.T) {
 	s.WriteString(tag + " OK UID COPY completed\r\n")
 
 	if err := <-done; err != nil {
-		t.Fatalf("c.UidCopy() = %v", err)
+		t.Fatalf("c.UIDCopy() = %v", err)
 	}
 }
