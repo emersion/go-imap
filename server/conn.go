@@ -337,7 +337,6 @@ func (c *conn) serve(conn Conn) (err error) {
 		}
 
 		if res != nil {
-
 			if err := c.WriteResp(res); err != nil {
 				c.s.ErrorLog.Println("cannot write response:", err)
 				continue

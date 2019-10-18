@@ -566,7 +566,6 @@ func (c *Client) SetDebug(w io.Writer) {
 	if err != nil {
 		log.Println("SetDebug:", err)
 	}
-
 }
 
 // New creates a new client from an existing connection.
