@@ -194,7 +194,7 @@ var matchTests = []struct {
 				{
 					UID: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
 					Not: []*imap.SearchCriteria{{
-						SeqNum: &imap.SeqSet{Set: []imap.Seq{imap.Seq{42, 42}}},
+						SeqNum: &imap.SeqSet{Set: []imap.Seq{{42, 42}}},
 					}},
 				},
 				{

@@ -21,7 +21,7 @@ func (r *List) Name() string {
 	if r.Subscribed {
 		return lsubName
 	}
-  return listName
+	return listName
 }
 
 func (r *List) Handle(resp imap.Resp) error {
