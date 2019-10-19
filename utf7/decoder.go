@@ -109,16 +109,18 @@ func decode(b64 []byte) []byte {
 	// (if padding is required), UTF-16-BE bytes, and decoded UTF-8 bytes.
 	// Since a 2-byte UTF-16 sequence may expand into a 3-byte UTF-8 sequence,
 	// double the space allocation for UTF-8.
-	if n := len(b64); b64[n-1] == '=' {
-		return nil
-	} else if n&3 == 0 {
-		b = make([]byte, b64Enc.DecodedLen(n)*3)
-	} else {
-		n += 4 - n&3
-		b = make([]byte, n+b64Enc.DecodedLen(n)*3)
-		copy(b[copy(b, b64):n], []byte("=="))
-		b64, b = b[:n], b[n:]
-	}
+  n1 := len(b64)
+	switch{
+  case b64[n1-1] == '=':
+    return nil
+  case n1&3 == 0:
+    b = make([]byte, b64Enc.DecodedLen(n1)*3)
+  default:
+    n1 += 4 - n1&3
+    b = make([]byte, n1+b64Enc.DecodedLen(n1)*3)
+    copy(b[copy(b, b64):n1], []byte("=="))
+    b64, b = b[:n1], b[n1:]
+  }
 
 	// Decode Base64 into the first 1/3rd of b
 	n, err := b64Enc.Decode(b, b64)
