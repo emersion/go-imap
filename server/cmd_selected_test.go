@@ -234,6 +234,18 @@ func TestFetch(t *testing.T) {
 	}
 }
 
+func TestFetch_NotSelected(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 FETCH 1 (UID FLAGS)\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestFetch_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, true)
 	defer s.Close()
