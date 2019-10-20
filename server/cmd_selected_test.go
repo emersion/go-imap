@@ -27,6 +27,19 @@ func testServerSelected(t *testing.T, readOnly bool) (s *server.Server, c net.Co
 	return
 }
 
+func TestNoop_Selected(t *testing.T) {
+	s, c, scanner := testServerSelected(t, false)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 NOOP\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
 func TestCheck(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
 	defer s.Close()
