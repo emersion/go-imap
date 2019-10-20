@@ -15,6 +15,7 @@ var Delimiter = "/"
 type Mailbox struct {
 	sync.RWMutex
 
+	Attributes  []string
 	Subscribed  bool
 	Messages    []*Message
 	UidValidity uint32
@@ -23,11 +24,14 @@ type Mailbox struct {
 	user *User
 }
 
-func NewMailbox(user *User, name string) *Mailbox {
+func NewMailbox(user *User, name string, specialUse string) *Mailbox {
 	mbox := &Mailbox{
 		name: name, user: user,
 		UidValidity: 1, // Use 1 for tests.  Should use timestamp instead.
 		Messages:    []*Message{},
+	}
+	if specialUse != "" {
+		mbox.Attributes = []string{specialUse}
 	}
 	return mbox
 }
@@ -41,8 +45,9 @@ func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
 	defer mbox.RUnlock()
 
 	info := &imap.MailboxInfo{
-		Delimiter: Delimiter,
-		Name:      mbox.name,
+		Attributes: mbox.Attributes,
+		Delimiter:  Delimiter,
+		Name:       mbox.name,
 	}
 	return info, nil
 }
@@ -113,6 +118,7 @@ func (mbox *Mailbox) SetSubscribed(subscribed bool) error {
 	defer mbox.Unlock()
 
 	mbox.Subscribed = subscribed
+
 	return nil
 }
 
