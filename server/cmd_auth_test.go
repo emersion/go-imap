@@ -26,25 +26,24 @@ func TestSelect_Ok(t *testing.T) {
 	io.WriteString(c, "a001 SELECT INBOX\r\n")
 
 	got := map[string]bool{
-		"OK":             false,
-		"FLAGS":          false,
-		"EXISTS":         false,
-		"RECENT":         false,
-		"PERMANENTFLAGS": false,
-		"UIDNEXT":        false,
-		"UIDVALIDITY":    false,
+		"OK":          false,
+		"FLAGS":       false,
+		"EXISTS":      false,
+		"RECENT":      false,
+		"UIDNEXT":     false,
+		"UIDVALIDITY": false,
 	}
 
 	for scanner.Scan() {
 		res := scanner.Text()
 
-		if res == "* FLAGS (\\Seen)" {
+		if res == "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft nonjunk)" {
 			got["FLAGS"] = true
 		} else if res == "* 1 EXISTS" {
 			got["EXISTS"] = true
 		} else if res == "* 0 RECENT" {
 			got["RECENT"] = true
-		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\*)]") {
+		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft nonjunk \\*)]") {
 			got["PERMANENTFLAGS"] = true
 		} else if strings.HasPrefix(res, "* OK [UIDNEXT 7]") {
 			got["UIDNEXT"] = true
@@ -60,7 +59,7 @@ func TestSelect_Ok(t *testing.T) {
 
 	for name, val := range got {
 		if !val {
-			t.Error("Did not got response:", name)
+			t.Error("Did not get response:", name)
 		}
 	}
 }
@@ -561,14 +560,25 @@ func TestAppend_Selected(t *testing.T) {
 
 	io.WriteString(c, "Hello World\r\n")
 
-	scanner.Scan()
-	if scanner.Text() != "* 2 EXISTS" {
-		t.Fatal("Invalid untagged response:", scanner.Text())
+	gotOK := false
+	for scanner.Scan() {
+		res := scanner.Text()
+
+		if res == "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft nonjunk)" {
+		} else if res == "* 2 EXISTS" {
+		} else if res == "* 0 RECENT" {
+		} else if strings.HasPrefix(res, "* OK [PERMANENTFLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft nonjunk \\*)]") {
+		} else if strings.HasPrefix(res, "* OK [UNSEEN 2]") {
+		} else if strings.HasPrefix(res, "a001 OK ") {
+			gotOK = true
+			break
+		} else {
+			t.Fatal("Unexpected response:", res)
+		}
 	}
 
-	scanner.Scan()
-	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
-		t.Fatal("Invalid status response:", scanner.Text())
+	if !gotOK {
+		t.Fatal("Missing status response.")
 	}
 }
 
