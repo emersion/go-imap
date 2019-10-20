@@ -32,6 +32,12 @@ var updateFlagsTests = []struct {
 		flags: []string{"a", "d", "e"},
 		res:   []string{"a", "d", "e"},
 	},
+	// Test unknown op for code coverage.
+	{
+		op:    imap.FlagsOp("TestUnknownOp"),
+		flags: []string{"a", "d", "e"},
+		res:   []string{"a", "b", "c"},
+	},
 }
 
 func TestUpdateFlags(t *testing.T) {
@@ -51,5 +57,30 @@ func TestUpdateFlags(t *testing.T) {
 			t.Errorf("Unexpected change to operation flags list changed \nbefore %v\n after \n%v",
 				origFlags, test.flags)
 		}
+	}
+}
+
+func TestUpdateFlags_Recent(t *testing.T) {
+	current := []string{}
+
+	current = UpdateFlags(current, imap.SetFlags, []string{imap.RecentFlag})
+
+	res := []string{imap.RecentFlag}
+	if !reflect.DeepEqual(current, res) {
+		t.Errorf("Expected result to be \n%v\n but got \n%v", res, current)
+	}
+
+	current = UpdateFlags(current, imap.SetFlags, []string{"something"})
+
+	res = []string{imap.RecentFlag, "something"}
+	if !reflect.DeepEqual(current, res) {
+		t.Errorf("Expected result to be \n%v\n but got \n%v", res, current)
+	}
+
+	current = UpdateFlags(current, imap.SetFlags, []string{"another", imap.RecentFlag})
+
+	res = []string{imap.RecentFlag, "another"}
+	if !reflect.DeepEqual(current, res) {
+		t.Errorf("Expected result to be \n%v\n but got \n%v", res, current)
 	}
 }
