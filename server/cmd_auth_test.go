@@ -397,6 +397,18 @@ func TestList_Subscribed(t *testing.T) {
 	}
 }
 
+func TestTLS_AlreadyAuthenticated(t *testing.T) {
+	s, c, scanner := testServerAuthenticated(t)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 STARTTLS\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestList_NotAuthenticated(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
 	defer s.Close()
