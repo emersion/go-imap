@@ -103,6 +103,26 @@ func TestLogin_Ok(t *testing.T) {
 	}
 }
 
+func TestLogin_AlreadyAuthenticated(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 LOGIN username password\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+
+	io.WriteString(c, "a001 LOGIN username password\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 NO ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
 func TestLogin_AutoLogout(t *testing.T) {
 	server.SetMinAutoLogout(1 * time.Second)
 	s, c, scanner := testServerGreeted(t)
