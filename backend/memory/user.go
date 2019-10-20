@@ -40,7 +40,7 @@ func (u *User) CreateMailbox(name string) error {
 		return errors.New("Mailbox already exists")
 	}
 
-	u.mailboxes[name] = &Mailbox{name: name, user: u}
+	u.mailboxes[name] = NewMailbox(u, name)
 	return nil
 }
 

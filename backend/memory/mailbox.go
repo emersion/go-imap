@@ -12,11 +12,21 @@ import (
 var Delimiter = "/"
 
 type Mailbox struct {
-	Subscribed bool
-	Messages   []*Message
+	Subscribed  bool
+	Messages    []*Message
+	UidValidity uint32
 
 	name string
 	user *User
+}
+
+func NewMailbox(user *User, name string) *Mailbox {
+	mbox := &Mailbox{
+		name: name, user: user,
+		UidValidity: 1, // Use 1 for tests.  Should use timestamp instead.
+		Messages:    []*Message{},
+	}
+	return mbox
 }
 
 func (mbox *Mailbox) Name() string {
@@ -91,7 +101,7 @@ func (mbox *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error
 		case imap.StatusUidNext:
 			status.UidNext = mbox.uidNext()
 		case imap.StatusUidValidity:
-			status.UidValidity = 1
+			status.UidValidity = mbox.UidValidity
 		case imap.StatusRecent:
 			status.Recent = 0 // TODO
 		case imap.StatusUnseen:
