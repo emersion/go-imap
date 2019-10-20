@@ -412,6 +412,52 @@ func TestStore_NonList(t *testing.T) {
 	}
 }
 
+func TestStore_RecentFlag(t *testing.T) {
+	s, c, scanner := testServerSelected(t, false)
+	defer c.Close()
+	defer s.Close()
+
+	// Add Recent flag
+	io.WriteString(c, "a001 STORE 1 FLAGS \\Recent\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Recent))" {
+		t.Fatal("Invalid FETCH response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	// Set flags to: something
+	// Should still get Recent flag back
+	io.WriteString(c, "a001 STORE 1 FLAGS something\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Recent something))" {
+		t.Fatal("Invalid FETCH response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+
+	// Try adding Recent flag again
+	io.WriteString(c, "a001 STORE 1 FLAGS \\Recent anotherflag\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "* 1 FETCH (FLAGS (\\Recent anotherflag))" {
+		t.Fatal("Invalid FETCH response:", scanner.Text())
+	}
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Invalid status response:", scanner.Text())
+	}
+}
+
 func TestStore_Uid(t *testing.T) {
 	s, c, scanner := testServerSelected(t, false)
 	defer s.Close()
