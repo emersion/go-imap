@@ -19,7 +19,13 @@ import (
 )
 
 // The minimum autologout duration defined in RFC 3501 section 5.4.
-const MinAutoLogout = 30 * time.Minute
+var (
+	MinAutoLogout = 30 * time.Minute
+)
+
+func SetMinAutoLogout(dur time.Duration) {
+	MinAutoLogout = dur
+}
 
 // A command handler.
 type Handler interface {

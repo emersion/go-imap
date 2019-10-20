@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"crypto/tls"
 	"io"
+	"log"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-imap/internal"
+	"github.com/emersion/go-imap/server"
 )
 
 func TestStartTLS(t *testing.T) {
@@ -65,6 +68,41 @@ func TestLogin_Ok(t *testing.T) {
 	scanner.Scan()
 	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
 		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
+func TestLogin_AutoLogout(t *testing.T) {
+	server.SetMinAutoLogout(1 * time.Second)
+	s, c, scanner := testServerGreeted(t)
+	defer s.Close()
+	defer c.Close()
+	s.AutoLogout = 2 * time.Second
+
+	// Login
+	io.WriteString(c, "a001 LOGIN username password\r\n")
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 OK ") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+
+	//// Test for auto logout
+
+	// background goroutine to wait for auto logout
+	done := make(chan string)
+	go (func() {
+		defer close(done)
+		if scanner.Scan() {
+			log.Println("Got response: ", scanner.Text())
+		} else {
+			log.Println("Got error: ", scanner.Err())
+		}
+	})()
+
+	select {
+	case <-done:
+		// Auto logout
+	case <-time.After(10 * time.Second):
+		t.Fatal("AutoLogout Failed.")
 	}
 }
 
