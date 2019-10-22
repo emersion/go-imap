@@ -213,6 +213,8 @@ func (c *conn) send() {
 			// Request to send the response
 			if err := c.writeAndFlush(res); err != nil {
 				c.Server().ErrorLog.Println("cannot send response: ", err)
+				c.Close()
+				return
 			}
 		case <-c.loggedOut:
 			return
