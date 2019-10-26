@@ -124,8 +124,8 @@ func TestLogin_AlreadyAuthenticated(t *testing.T) {
 }
 
 func TestLogin_AutoLogout(t *testing.T) {
-	server.SetMinAutoLogout(1 * time.Second)
 	s, c, scanner := testServerGreeted(t)
+	s.MinAutoLogout = 1 * time.Second
 	defer s.Close()
 	defer c.Close()
 	s.AutoLogout = 2 * time.Second

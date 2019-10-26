@@ -18,15 +18,6 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// The minimum autologout duration defined in RFC 3501 section 5.4.
-var (
-	MinAutoLogout = 30 * time.Minute
-)
-
-func SetMinAutoLogout(dur time.Duration) {
-	MinAutoLogout = dur
-}
-
 // A command handler.
 type Handler interface {
 	imap.Parser
@@ -122,6 +113,8 @@ type Server struct {
 	// automatically, set this to zero. The duration MUST be at least
 	// MinAutoLogout (as stated in RFC 3501 section 5.4).
 	AutoLogout time.Duration
+	// MinAutoLogout can be overridden, but RFC 3501 says it MUST be at least 30 minutes.
+	MinAutoLogout time.Duration
 	// Allow authentication over unencrypted connections.
 	AllowInsecureAuth bool
 	// An io.Writer to which all network activity will be mirrored.
@@ -143,6 +136,8 @@ func New(bkd backend.Backend) *Server {
 		conns:     make(map[Conn]*mboxListener),
 		Backend:   bkd,
 		ErrorLog:  log.New(os.Stderr, "imap/server: ", log.LstdFlags),
+		// The minimum autologout duration defined in RFC 3501 section 5.4.
+		MinAutoLogout: 30 * time.Minute,
 	}
 
 	s.auths = map[string]SASLServerFactory{

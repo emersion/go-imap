@@ -136,8 +136,8 @@ func (c *conn) setDeadline() {
 	}
 
 	dur := c.s.AutoLogout
-	if dur < MinAutoLogout {
-		dur = MinAutoLogout
+	if dur < c.s.MinAutoLogout {
+		dur = c.s.MinAutoLogout
 	}
 	t := time.Now().Add(dur)
 
