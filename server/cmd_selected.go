@@ -93,14 +93,14 @@ func (cmd *Expunge) Handle(conn Conn) error {
 
 	// If the backend doesn't support expunge updates, let's do it ourselves
 	if conn.Server().Updates == nil {
-		done := make(chan error)
-		defer close(done)
+		done := make(chan error, 1)
 
 		ch := make(chan uint32)
 		res := &responses.Expunge{SeqNums: ch}
 
 		go (func() {
 			done <- conn.WriteResp(res)
+			// Don't need to drain 'ch', sender will stop sending when error written to 'done.
 		})()
 
 		// Iterate sequence numbers from the last one to the first one, as deleting
@@ -166,11 +166,10 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 
 	done := make(chan error, 1)
 	go (func() {
-		err := conn.WriteResp(res)
+		done <- conn.WriteResp(res)
 		// Make sure to drain the message channel.
 		for _ = range ch {
 		}
-		done <- err
 	})()
 
 	err := ctx.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch)
