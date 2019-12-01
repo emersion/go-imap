@@ -153,6 +153,9 @@ func (w *Writer) writeLiteral(l Literal) error {
 
 	n, err := io.CopyN(w, l, literalLen)
 	if err != nil {
+		if err == io.EOF && n != literalLen {
+			return fmt.Errorf("imap: size of Literal is not equal to Len() (%d != %d)", n, l.Len())
+		}
 		return err
 	}
 	if n != literalLen {
