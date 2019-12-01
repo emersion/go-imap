@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strconv"
 	"time"
 	"unicode"
@@ -120,6 +121,17 @@ func (w *Writer) writeList(fields []interface{}) error {
 	return w.writeString(string(listEnd))
 }
 
+// LiteralLengthErr is returned when the Len() of the Literal object does not
+// match the actual length of the byte stream.
+type LiteralLengthErr struct {
+	Actual   int
+	Expected int
+}
+
+func (e LiteralLengthErr) Error() string {
+	return fmt.Sprintf("imap: size of Literal is not equal to Len() (%d != %d)", e.Expected, e.Actual)
+}
+
 func (w *Writer) writeLiteral(l Literal) error {
 	if l == nil {
 		return w.writeString(nilAtom)
@@ -154,12 +166,13 @@ func (w *Writer) writeLiteral(l Literal) error {
 	n, err := io.CopyN(w, l, literalLen)
 	if err != nil {
 		if err == io.EOF && n != literalLen {
-			return fmt.Errorf("imap: size of Literal is not equal to Len() (%d != %d)", n, l.Len())
+			return LiteralLengthErr{int(n), l.Len()}
 		}
 		return err
 	}
-	if n != literalLen {
-		return fmt.Errorf("imap: size of Literal is not equal to Len() (%d != %d)", n, l.Len())
+	extra, _ := io.Copy(ioutil.Discard, l)
+	if extra != 0 {
+		return LiteralLengthErr{int(n + extra), l.Len()}
 	}
 
 	return nil

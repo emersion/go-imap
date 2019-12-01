@@ -257,6 +257,18 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	if err := cmd.WriteTo(c.conn.Writer); err != nil {
 		// Error while sending the command
 		close(unregister)
+
+		if err, ok := err.(imap.LiteralLengthErr); ok {
+			// Expected > Actual
+			//  The server is waiting for us to write
+			//  more bytes, we don't have them. Run.
+			// Expected < Actual
+			//  We are about to send a potentially truncated message, we don't
+			//  want this (ths terminating CRLF is not sent at this point).
+			c.conn.Close()
+			return nil, err
+		}
+
 		return nil, err
 	}
 	// Flush writer if we are upgrading
