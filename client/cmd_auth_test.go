@@ -320,6 +320,103 @@ func TestClient_Status(t *testing.T) {
 	}
 }
 
+type literalWrap struct {
+	io.Reader
+	L int
+}
+
+func (lw literalWrap) Len() int {
+	return lw.L
+}
+
+func TestClient_Append_SmallerLiteral(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	msg := "Hello World!\r\nHello Gophers!\r\n"
+	date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+	flags := []string{imap.SeenFlag, imap.DraftFlag}
+
+	r := bytes.NewBufferString(msg)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Append("INBOX", flags, date, literalWrap{r, 35})
+
+		// The buffer is not flushed on error, force it so io.ReadFull can
+		// continue.
+		c.conn.Flush()
+	}()
+
+	tag, _ := s.ScanCmd()
+	s.WriteString("+ send literal\r\n")
+
+	b := make([]byte, 30)
+	// The client will close connection.
+	if _, err := io.ReadFull(s, b); err != io.EOF {
+		t.Error("Expected EOF, got", err)
+	}
+
+	s.WriteString(tag + " OK APPEND completed\r\n")
+
+	err, ok := (<-done).(imap.LiteralLengthErr)
+	if !ok {
+		t.Fatalf("c.Append() = %v", err)
+	}
+	if err.Expected != 35 {
+		t.Fatalf("err.Expected = %v", err.Expected)
+	}
+	if err.Actual != 30 {
+		t.Fatalf("err.Actual = %v", err.Actual)
+	}
+}
+
+func TestClient_Append_BiggerLiteral(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	msg := "Hello World!\r\nHello Gophers!\r\n"
+	date := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+	flags := []string{imap.SeenFlag, imap.DraftFlag}
+
+	r := bytes.NewBufferString(msg)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Append("INBOX", flags, date, literalWrap{r, 25})
+
+		// The buffer is not flushed on error, force it so io.ReadFull can
+		// continue.
+		c.conn.Flush()
+	}()
+
+	tag, _ := s.ScanCmd()
+	s.WriteString("+ send literal\r\n")
+
+	// The client will close connection.
+	b := make([]byte, 25)
+	if _, err := io.ReadFull(s, b); err != io.EOF {
+		t.Error("Expected EOF, got", err)
+	}
+
+	s.WriteString(tag + " OK APPEND completed\r\n")
+
+	err, ok := (<-done).(imap.LiteralLengthErr)
+	if !ok {
+		t.Fatalf("c.Append() = %v", err)
+	}
+	if err.Expected != 25 {
+		t.Fatalf("err.Expected = %v", err.Expected)
+	}
+	if err.Actual != 30 {
+		t.Fatalf("err.Actual = %v", err.Actual)
+	}
+}
+
 func TestClient_Append(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
