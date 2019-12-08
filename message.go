@@ -1082,3 +1082,20 @@ func (bs *BodyStructure) Format() (fields []interface{}) {
 
 	return
 }
+
+// Filename parses the body structure's filename, if it's an attachment. An
+// empty string is returned if the filename isn't specified. An error is
+// returned if and only if a charset error occurs, in which case the undecoded
+// filename is returned too.
+func (bs *BodyStructure) Filename() (string, error) {
+	raw, ok := bs.DispositionParams["filename"]
+	if !ok {
+		// Using "name" in Content-Type is discouraged
+		raw = bs.Params["name"]
+	}
+	decoded, err := wordDecoder.DecodeHeader(raw)
+	if err != nil {
+		return raw, err
+	}
+	return decoded, nil
+}

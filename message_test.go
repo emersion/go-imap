@@ -600,3 +600,45 @@ func TestBodyStructure_Format(t *testing.T) {
 		}
 	}
 }
+
+func TestBodyStructureFilename(t *testing.T) {
+	tests := []struct {
+		bs BodyStructure
+		filename string
+	}{
+		{
+			bs: BodyStructure{
+				DispositionParams: map[string]string{"filename": "cat.png"},
+			},
+			filename: "cat.png",
+		},
+		{
+			bs: BodyStructure{
+				Params: map[string]string{"name": "cat.png"},
+			},
+			filename: "cat.png",
+		},
+		{
+			bs: BodyStructure{},
+			filename: "",
+		},
+		{
+			bs: BodyStructure{
+				DispositionParams: map[string]string{"filename": "=?UTF-8?Q?Opis_przedmiotu_zam=c3=b3wienia_-_za=c5=82=c4=85cznik_nr_1?= =?UTF-8?Q?=2epdf?="},
+			},
+			filename: "Opis przedmiotu zamówienia - załącznik nr 1.pdf",
+		},
+	}
+
+	for i, test := range tests {
+		got, err := test.bs.Filename()
+		if err != nil {
+			t.Errorf("Invalid body structure filename for #%v: error: %v", i, err)
+			continue
+		}
+
+		if got != test.filename {
+			t.Errorf("Invalid body structure filename for #%v: got '%v', want '%v'", i, got, test.filename)
+		}
+	}
+}
