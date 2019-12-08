@@ -635,6 +635,11 @@ type Address struct {
 	HostName string
 }
 
+// Address returns the mailbox address (e.g. "foo@example.org").
+func (addr *Address) Address() string {
+	return addr.MailboxName + "@" + addr.HostName
+}
+
 // Parse an address from fields.
 func (addr *Address) Parse(fields []interface{}) error {
 	if len(fields) < 4 {
