@@ -790,16 +790,16 @@ func (e *Envelope) Format() (fields []interface{}) {
 type BodyStructure struct {
 	// Basic fields
 
-	// The MIME type.
+	// The MIME type (e.g. "text", "image")
 	MIMEType string
-	// The MIME subtype.
+	// The MIME subtype (e.g. "plain", "png")
 	MIMESubType string
-	// The MIME parameters.
+	// The MIME parameters. Values are encoded.
 	Params map[string]string
 
 	// The Content-Id header.
 	Id string
-	// The Content-Description header.
+	// The Content-Description header. This is the raw encoded value.
 	Description string
 	// The Content-Encoding header.
 	Encoding string
@@ -824,7 +824,7 @@ type BodyStructure struct {
 
 	// The Content-Disposition header field value.
 	Disposition string
-	// The Content-Disposition header field parameters.
+	// The Content-Disposition header field parameters. Values are encoded.
 	DispositionParams map[string]string
 	// The Content-Language header field, if multipart.
 	Language []string
