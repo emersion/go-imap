@@ -1100,3 +1100,38 @@ func (bs *BodyStructure) Filename() (string, error) {
 	}
 	return decodeHeader(raw)
 }
+
+// BodyStructureWalkFunc is the type of the function called for each body
+// structure visited by BodyStructure.Walk. The path argument contains the IMAP
+// part path (see BodyPartName).
+//
+// The function should return true to visit all of the part's children or false
+// to skip them.
+type BodyStructureWalkFunc func(path []int, part *BodyStructure) (walkChildren bool)
+
+// Walk walks the body structure tree, calling f for each part in the tree,
+// including bs itself. The parts are visited in DFS pre-order.
+func (bs *BodyStructure) Walk(f BodyStructureWalkFunc) {
+	// Non-multipart messages only have part 1
+	if len(bs.Parts) == 0 {
+		f([]int{1}, bs)
+		return
+	}
+
+	bs.walk(f, nil)
+}
+
+func (bs *BodyStructure) walk(f BodyStructureWalkFunc, path []int) {
+	if !f(path, bs) {
+		return
+	}
+
+	for i, part := range bs.Parts {
+		num := i + 1
+
+		partPath := append([]int(nil), path...)
+		partPath = append(partPath, num)
+
+		part.walk(f, partPath)
+	}
+}
