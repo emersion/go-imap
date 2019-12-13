@@ -1098,9 +1098,5 @@ func (bs *BodyStructure) Filename() (string, error) {
 		// Using "name" in Content-Type is discouraged
 		raw = bs.Params["name"]
 	}
-	decoded, err := wordDecoder.DecodeHeader(raw)
-	if err != nil {
-		return raw, err
-	}
-	return decoded, nil
+	return decodeHeader(raw)
 }
