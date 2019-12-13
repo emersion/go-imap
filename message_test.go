@@ -642,3 +642,99 @@ func TestBodyStructureFilename(t *testing.T) {
 		}
 	}
 }
+
+func TestBodyStructureWalk(t *testing.T) {
+	textPlain := &BodyStructure{
+		MIMEType: "text",
+		MIMESubType: "plain",
+	}
+
+	textHTML := &BodyStructure{
+		MIMEType: "text",
+		MIMESubType: "plain",
+	}
+
+	multipartAlternative := &BodyStructure{
+		MIMEType: "multipart",
+		MIMESubType: "alternative",
+		Parts: []*BodyStructure{textPlain, textHTML},
+	}
+
+	imagePNG := &BodyStructure{
+		MIMEType: "image",
+		MIMESubType: "png",
+	}
+
+	multipartMixed := &BodyStructure{
+		MIMEType: "multipart",
+		MIMESubType: "mixed",
+		Parts: []*BodyStructure{multipartAlternative, imagePNG},
+	}
+
+	type testNode struct {
+		path []int
+		part *BodyStructure
+	}
+
+	tests := []struct {
+		bs *BodyStructure
+		nodes []testNode
+		walkChildren bool
+	}{
+		{
+			bs: textPlain,
+			nodes: []testNode{
+				{ path: []int{1}, part: textPlain },
+			},
+		},
+		{
+			bs: multipartAlternative,
+			nodes: []testNode{
+				{ path: nil, part: multipartAlternative },
+				{ path: []int{1}, part: textPlain },
+				{ path: []int{2}, part: textHTML },
+			},
+			walkChildren: true,
+		},
+		{
+			bs: multipartMixed,
+			nodes: []testNode{
+				{ path: nil, part: multipartMixed },
+				{ path: []int{1}, part: multipartAlternative },
+				{ path: []int{1, 1}, part: textPlain },
+				{ path: []int{1, 2}, part: textHTML },
+				{ path: []int{2}, part: imagePNG },
+			},
+			walkChildren: true,
+		},
+		{
+			bs: multipartMixed,
+			nodes: []testNode{
+				{ path: nil, part: multipartMixed },
+			},
+			walkChildren: false,
+		},
+	}
+
+	for i, test := range tests {
+		j := 0
+		test.bs.Walk(func(path []int, part *BodyStructure) bool {
+			if j >= len(test.nodes) {
+				t.Errorf("Test #%v: invalid node count: got > %v, want %v", i, j, len(test.nodes))
+				return false
+			}
+			n := &test.nodes[j]
+			if !reflect.DeepEqual(path, n.path) {
+				t.Errorf("Test #%v: node #%v: invalid path: got %v, want %v", i, j, path, n.path)
+			}
+			if part != n.part {
+				t.Errorf("Test #%v: node #%v: invalid part: got %v, want %v", i, j, part, n.part)
+			}
+			j++
+			return test.walkChildren
+		})
+		if j != len(test.nodes) {
+			t.Errorf("Test #%v: invalid node count: got %v, want %v", i, j, len(test.nodes))
+		}
+	}
+}
