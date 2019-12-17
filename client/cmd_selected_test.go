@@ -389,15 +389,15 @@ func TestClient_Store(t *testing.T) {
 	done := make(chan error, 1)
 	updates := make(chan *imap.Message, 1)
 	go func() {
-		done <- c.Store(seqset, imap.AddFlags, []interface{}{imap.SeenFlag}, updates)
+		done <- c.Store(seqset, imap.AddFlags, []interface{}{imap.SeenFlag, "foobar"}, updates)
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "STORE 2 +FLAGS (\\Seen)" {
-		t.Fatalf("client sent command %v, want %v", cmd, "STORE 2 +FLAGS (\\Seen)")
+	if cmd != "STORE 2 +FLAGS (\\Seen foobar)" {
+		t.Fatalf( "client sent command %v, want %v", cmd, "STORE 2 +FLAGS (\\Seen foobar)")
 	}
 
-	s.WriteString("* 2 FETCH (FLAGS (\\Seen))\r\n")
+	s.WriteString("* 2 FETCH (FLAGS (\\Seen foobar))\r\n")
 	s.WriteString(tag + " OK STORE completed\r\n")
 
 	if err := <-done; err != nil {
@@ -405,7 +405,7 @@ func TestClient_Store(t *testing.T) {
 	}
 
 	msg := <-updates
-	if len(msg.Flags) != 1 || msg.Flags[0] != "\\Seen" {
+	if len(msg.Flags) != 2 || msg.Flags[0] != "\\Seen" || msg.Flags[1] != "foobar" {
 		t.Errorf("Bad message flags: %v", msg.Flags)
 	}
 }
@@ -420,12 +420,12 @@ func TestClient_Store_Silent(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- c.Store(seqset, imap.AddFlags, []interface{}{imap.SeenFlag}, nil)
+		done <- c.Store(seqset, imap.AddFlags, []interface{}{imap.SeenFlag, "foobar"}, nil)
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "STORE 2:3 +FLAGS.SILENT (\\Seen)" {
-		t.Fatalf("client sent command %v, want %v", cmd, "STORE 2:3 +FLAGS.SILENT (\\Seen)")
+	if cmd != "STORE 2:3 +FLAGS.SILENT (\\Seen foobar)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "STORE 2:3 +FLAGS.SILENT (\\Seen foobar)")
 	}
 
 	s.WriteString(tag + " OK STORE completed\r\n")
@@ -445,12 +445,12 @@ func TestClient_Store_Uid(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- c.UidStore(seqset, imap.AddFlags, []interface{}{imap.DeletedFlag}, nil)
+		done <- c.UidStore(seqset, imap.AddFlags, []interface{}{imap.DeletedFlag, "foobar"}, nil)
 	}()
 
 	tag, cmd := s.ScanCmd()
-	if cmd != "UID STORE 27:901 +FLAGS.SILENT (\\Deleted)" {
-		t.Fatalf("client sent command %v, want %v", cmd, "UID STORE 27:901 +FLAGS.SILENT (\\Deleted)")
+	if cmd != "UID STORE 27:901 +FLAGS.SILENT (\\Deleted foobar)" {
+		t.Fatalf( "client sent command %v, want %v", cmd, "UID STORE 27:901 +FLAGS.SILENT (\\Deleted foobar)")
 	}
 
 	s.WriteString(tag + " OK STORE completed\r\n")
