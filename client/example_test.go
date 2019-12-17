@@ -151,8 +151,8 @@ func ExampleClient_Append() {
 	b.WriteString("\r\n")
 	b.WriteString("Hey <3")
 
-	// Append it to INBOX, with a flag
-	flags := []string{imap.FlaggedFlag}
+	// Append it to INBOX, with two flags
+	flags := []string{imap.FlaggedFlag, "foobar"}
 	if err := c.Append("INBOX", flags, time.Now(), &b); err != nil {
 		log.Fatal(err)
 	}
