@@ -330,7 +330,7 @@ func (c *SearchCriteria) Format() []interface{} {
 		case AnsweredFlag, DeletedFlag, DraftFlag, FlaggedFlag, RecentFlag, SeenFlag:
 			subfields = []interface{}{RawString(strings.ToUpper(strings.TrimPrefix(flag, "\\")))}
 		default:
-			subfields = []interface{}{RawString("KEYWORD"), flag}
+			subfields = []interface{}{RawString("KEYWORD"), RawString(flag)}
 		}
 		fields = append(fields, subfields...)
 	}
@@ -342,7 +342,7 @@ func (c *SearchCriteria) Format() []interface{} {
 		case RecentFlag:
 			subfields = []interface{}{RawString("OLD")}
 		default:
-			subfields = []interface{}{RawString("UNKEYWORD"), flag}
+			subfields = []interface{}{RawString("UNKEYWORD"), RawString(flag)}
 		}
 		fields = append(fields, subfields...)
 	}
