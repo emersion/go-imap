@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Message flags, defined in RFC 3501 section 2.3.2.
+// System message flags, defined in RFC 3501 section 2.3.2.
 const (
 	SeenFlag     = "\\Seen"
 	AnsweredFlag = "\\Answered"
@@ -20,6 +20,11 @@ const (
 	DraftFlag    = "\\Draft"
 	RecentFlag   = "\\Recent"
 )
+
+// TryCreateFlag is a special flag in MailboxStatus.PermanentFlags indicating
+// that it is possible to create new keywords by attempting to store those
+// flags in the mailbox.
+const TryCreateFlag = "\\*"
 
 var flags = []string{
 	SeenFlag,
