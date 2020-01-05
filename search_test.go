@@ -65,6 +65,10 @@ var searchCriteriaTests = []struct {
 			}},
 		},
 	},
+	{
+		expected: "(ALL)",
+		criteria: &SearchCriteria{},
+	},
 }
 
 func TestSearchCriteria_Format(t *testing.T) {
