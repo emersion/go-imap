@@ -122,7 +122,8 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria) (ids []uint32, 
 // match the searching criteria. When multiple keys are specified, the result is
 // the intersection (AND function) of all the messages that match those keys.
 // Criteria must be UTF-8 encoded. See RFC 3501 section 6.4.4 for a list of
-// searching criteria.
+// searching criteria. When no criteria has been set, all messages in the mailbox
+// will be searched using ALL criteria.
 func (c *Client) Search(criteria *imap.SearchCriteria) (seqNums []uint32, err error) {
 	return c.search(false, criteria)
 }

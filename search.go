@@ -362,5 +362,10 @@ func (c *SearchCriteria) Format() []interface{} {
 		fields = append(fields, RawString("OR"), or[0].Format(), or[1].Format())
 	}
 
+	// Not a single criteria given, add ALL criteria as fallback
+	if len(fields) == 0 {
+		fields = append(fields, RawString("ALL"))
+	}
+
 	return fields
 }
