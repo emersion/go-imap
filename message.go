@@ -463,9 +463,9 @@ func (section *BodySectionName) resp() *BodySectionName {
 	if len(resp.Partial) == 2 {
 		resp.Partial = []int{resp.Partial[0]}
 	}
-    if !strings.HasPrefix(string(resp.value), string(FetchRFC822)) {
-        resp.value = ""
-    }
+	if !strings.HasPrefix(string(resp.value), string(FetchRFC822)) {
+		resp.value = ""
+	}
 	return &resp
 }
 
