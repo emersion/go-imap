@@ -71,6 +71,7 @@ type SearchCriteria struct {
 	Header textproto.MIMEHeader // Each header field value is present
 	Body   []string             // Each string is in the body
 	Text   []string             // Each string is in the text (header + body)
+	XGMRaw []string             // Gmail X-GM-RAW fields to be added to the query
 
 	WithFlags    []string // Each flag is present
 	WithoutFlags []string // Each flag is not present
@@ -249,6 +250,12 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 		} else {
 			c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag(maybeString(f)))
 		}
+	case "X-GM-RAW":
+		if f, fields, err = popSearchField(fields); err != nil {
+			return nil, err
+		} else {
+			c.XGMRaw = append(c.XGMRaw, convertField(f, charsetReader))
+		}
 	default: // Try to parse a sequence set
 		if c.SeqNum, err = ParseSeqSet(key); err != nil {
 			return nil, err
@@ -360,6 +367,10 @@ func (c *SearchCriteria) Format() []interface{} {
 
 	for _, or := range c.Or {
 		fields = append(fields, RawString("OR"), or[0].Format(), or[1].Format())
+	}
+
+	for _, gmRaw := range c.XGMRaw {
+		fields = append(fields, RawString("X-GM-RAW"), gmRaw)
 	}
 
 	// Not a single criteria given, add ALL criteria as fallback

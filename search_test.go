@@ -28,7 +28,8 @@ var searchCriteriaTests = []struct {
 			`ANSWERED DELETED KEYWORD cc UNKEYWORD microsoft ` +
 			`LARGER 4242 SMALLER 4342 ` +
 			`NOT (SENTON "21-Nov-1997" HEADER "Content-Type" "text/csv") ` +
-			`OR (ON "5-Nov-1984" DRAFT FLAGGED UNANSWERED UNDELETED OLD) (UNDRAFT UNFLAGGED UNSEEN))`,
+			`OR (ON "5-Nov-1984" DRAFT FLAGGED UNANSWERED UNDELETED OLD) (UNDRAFT UNFLAGGED UNSEEN) ` +
+			`X-GM-RAW "has:attachment")`,
 		criteria: &SearchCriteria{
 			SeqNum:     searchSeqSet1,
 			Uid:        searchSeqSet2,
@@ -63,6 +64,7 @@ var searchCriteriaTests = []struct {
 					WithoutFlags: []string{DraftFlag, FlaggedFlag, SeenFlag},
 				},
 			}},
+			XGMRaw: []string{"has:attachment"},
 		},
 	},
 	{
