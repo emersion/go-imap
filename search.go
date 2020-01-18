@@ -275,13 +275,9 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 			c.SeqNum = seqNum
 		} else {
 			// If ParseSeqSet fails, assume we have raw fields
-			//if c.Raw == nil {
-			//	c.Raw = make([]Raw, 0)
-			//}
 			var rawValue []interface{}
 			rawValue, fields = parseRawField(fields)
 			c.Raw = append(c.Raw, Raw{Key: key, Value: rawValue})
-			//c.Raw[key], fields = parseRawField(fields)
 		}
 	}
 
