@@ -56,6 +56,25 @@ func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
 	return fields[0], fields[1:], nil
 }
 
+func parseRawField(fields []interface{}) ([]interface{}, []interface{}) {
+	// Fields is empty. This means this isn't a raw field value but rather another raw key
+	if len(fields) == 0 {
+		return nil, fields
+	}
+
+	if value, ok := fields[0].([]interface{}); ok {
+		return value, fields[1:]
+	} else {
+		// First fields element isn't an array. This means this isn't a raw field value but rather another raw key
+		return nil, fields
+	}
+}
+
+type Raw struct {
+	Key   string
+	Value []interface{}
+}
+
 // SearchCriteria is a search criteria. A message matches the criteria if and
 // only if it matches each one of its fields.
 type SearchCriteria struct {
@@ -71,7 +90,6 @@ type SearchCriteria struct {
 	Header textproto.MIMEHeader // Each header field value is present
 	Body   []string             // Each string is in the body
 	Text   []string             // Each string is in the text (header + body)
-	XGMRaw []string             // Gmail X-GM-RAW fields to be added to the query
 
 	WithFlags    []string // Each flag is present
 	WithoutFlags []string // Each flag is not present
@@ -81,6 +99,8 @@ type SearchCriteria struct {
 
 	Not []*SearchCriteria    // Each criteria doesn't match
 	Or  [][2]*SearchCriteria // Each criteria pair has at least one match of two
+
+	Raw []Raw // Raw keys and values to be added to the search
 }
 
 // NewSearchCriteria creates a new search criteria.
@@ -250,15 +270,18 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 		} else {
 			c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag(maybeString(f)))
 		}
-	case "X-GM-RAW":
-		if f, fields, err = popSearchField(fields); err != nil {
-			return nil, err
+	default: // Try to parse a sequence set, otherwise assume we have raw fields
+		if seqNum, err := ParseSeqSet(key); err == nil {
+			c.SeqNum = seqNum
 		} else {
-			c.XGMRaw = append(c.XGMRaw, convertField(f, charsetReader))
-		}
-	default: // Try to parse a sequence set
-		if c.SeqNum, err = ParseSeqSet(key); err != nil {
-			return nil, err
+			// If ParseSeqSet fails, assume we have raw fields
+			//if c.Raw == nil {
+			//	c.Raw = make([]Raw, 0)
+			//}
+			var rawValue []interface{}
+			rawValue, fields = parseRawField(fields)
+			c.Raw = append(c.Raw, Raw{Key: key, Value: rawValue})
+			//c.Raw[key], fields = parseRawField(fields)
 		}
 	}
 
@@ -369,8 +392,12 @@ func (c *SearchCriteria) Format() []interface{} {
 		fields = append(fields, RawString("OR"), or[0].Format(), or[1].Format())
 	}
 
-	for _, gmRaw := range c.XGMRaw {
-		fields = append(fields, RawString("X-GM-RAW"), gmRaw)
+	for _, raw := range c.Raw {
+		if raw.Value == nil {
+			fields = append(fields, RawString(raw.Key))
+		} else {
+			fields = append(fields, RawString(raw.Key), raw.Value)
+		}
 	}
 
 	// Not a single criteria given, add ALL criteria as fallback
