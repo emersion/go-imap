@@ -56,23 +56,23 @@ func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
 	return fields[0], fields[1:], nil
 }
 
-func parseRawField(fields []interface{}) ([]interface{}, []interface{}) {
+func parseRawField(fields []interface{}) (interface{}, []interface{}) {
 	// Fields is empty. This means this isn't a raw field value but rather another raw key
 	if len(fields) == 0 {
 		return nil, fields
 	}
 
-	if value, ok := fields[0].([]interface{}); ok {
-		return value, fields[1:]
-	} else {
-		// First fields element isn't an array. This means this isn't a raw field value but rather another raw key
+	// First element in fields is an array of interfaces, this means this field doesn't have a value and is nil
+	if _, ok := fields[0].([]interface{}); ok {
 		return nil, fields
 	}
+
+	return fields[0], fields[1:]
 }
 
 type Raw struct {
 	Key   string
-	Value []interface{}
+	Value interface{}
 }
 
 // SearchCriteria is a search criteria. A message matches the criteria if and
@@ -275,7 +275,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 			c.SeqNum = seqNum
 		} else {
 			// If ParseSeqSet fails, assume we have raw fields
-			var rawValue []interface{}
+			var rawValue interface{}
 			rawValue, fields = parseRawField(fields)
 			c.Raw = append(c.Raw, Raw{Key: key, Value: rawValue})
 		}
@@ -389,11 +389,11 @@ func (c *SearchCriteria) Format() []interface{} {
 	}
 
 	for _, raw := range c.Raw {
-		if raw.Value == nil {
-			fields = append(fields, RawString(raw.Key))
-		} else {
-			fields = append(fields, RawString(raw.Key), raw.Value)
+		field := []interface{}{RawString(raw.Key)}
+		if raw.Value != nil {
+			field = append(field, raw.Value)
 		}
+		fields = append(fields, field)
 	}
 
 	// Not a single criteria given, add ALL criteria as fallback
