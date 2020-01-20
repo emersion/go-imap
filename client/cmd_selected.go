@@ -63,6 +63,10 @@ func (c *Client) Terminate() error {
 // the currently selected mailbox. If ch is not nil, sends sequence IDs of each
 // deleted message to this channel.
 func (c *Client) Expunge(ch chan uint32) error {
+	if ch != nil {
+		defer close(ch)
+	}
+
 	if c.State() != imap.SelectedState {
 		return ErrNoMailboxSelected
 	}
@@ -72,7 +76,6 @@ func (c *Client) Expunge(ch chan uint32) error {
 	var h responses.Handler
 	if ch != nil {
 		h = &responses.Expunge{SeqNums: ch}
-		defer close(ch)
 	}
 
 	status, err := c.execute(cmd, h)
@@ -171,6 +174,10 @@ func (c *Client) UidFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *
 }
 
 func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
+	if ch != nil {
+		defer close(ch)
+	}
+
 	if c.State() != imap.SelectedState {
 		return ErrNoMailboxSelected
 	}
@@ -205,7 +212,6 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value
 	var h responses.Handler
 	if ch != nil {
 		h = &responses.Fetch{Messages: ch}
-		defer close(ch)
 	}
 
 	status, err := c.execute(cmd, h)

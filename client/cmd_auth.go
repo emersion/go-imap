@@ -160,11 +160,11 @@ func (c *Client) Unsubscribe(name string) error {
 // wildcard, and matches zero or more characters at this position. The
 // character "%" is similar to "*", but it does not match a hierarchy delimiter.
 func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) error {
+	defer close(ch)
+
 	if err := c.ensureAuthenticated(); err != nil {
 		return err
 	}
-
-	defer close(ch)
 
 	cmd := &commands.List{
 		Reference: ref,
@@ -182,11 +182,11 @@ func (c *Client) List(ref, name string, ch chan *imap.MailboxInfo) error {
 // Lsub returns a subset of names from the set of names that the user has
 // declared as being "active" or "subscribed".
 func (c *Client) Lsub(ref, name string, ch chan *imap.MailboxInfo) error {
+	defer close(ch)
+
 	if err := c.ensureAuthenticated(); err != nil {
 		return err
 	}
-
-	defer close(ch)
 
 	cmd := &commands.List{
 		Reference:  ref,
