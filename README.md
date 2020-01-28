@@ -141,6 +141,7 @@ to learn how to use them.
 * [ENABLE](https://github.com/emersion/go-imap-enable)
 * [ID](https://github.com/ProtonMail/go-imap-id)
 * [IDLE](https://github.com/emersion/go-imap-idle)
+* [METADATA](https://github.com/emersion/go-imap-metadata)
 * [MOVE](https://github.com/emersion/go-imap-move)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
