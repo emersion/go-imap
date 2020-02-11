@@ -298,34 +298,34 @@ func (s *Server) listenUpdates() {
 		update := <-s.Updates
 
 		var res imap.WriterTo
-		switch update := update.(type) {
-		case *backend.StatusUpdate:
-			res = update.StatusResp
-		case *backend.MailboxUpdate:
-			res = &responses.Select{Mailbox: update.MailboxStatus}
-		case *backend.MessageUpdate:
-			ch := make(chan *imap.Message, 1)
-			ch <- update.Message
-			close(ch)
 
-			res = &responses.Fetch{Messages: ch}
-		case *backend.ExpungeUpdate:
-			ch := make(chan uint32, 1)
-			ch <- update.SeqNum
-			close(ch)
-
-			res = &responses.Expunge{SeqNums: ch}
-		default:
-			s.ErrorLog.Printf("unhandled update: %T\n", update)
-		}
-		if res == nil {
-			continue
-		}
-
-		sends := make(chan struct{})
-		wait := 0
+		wg := sync.WaitGroup{}
 		s.locker.Lock()
 		for conn := range s.conns {
+			switch update := update.(type) {
+			case *backend.StatusUpdate:
+				res = update.StatusResp
+			case *backend.MailboxUpdate:
+				res = &responses.Select{Mailbox: update.MailboxStatus}
+			case *backend.MessageUpdate:
+				ch := make(chan *imap.Message, 1)
+				ch <- update.Message
+				close(ch)
+
+				res = &responses.Fetch{Messages: ch}
+			case *backend.ExpungeUpdate:
+				ch := make(chan uint32, 1)
+				ch <- update.SeqNum
+				close(ch)
+
+				res = &responses.Expunge{SeqNums: ch}
+			default:
+				s.ErrorLog.Printf("unhandled update: %T\n", update)
+			}
+			if res == nil {
+				continue
+			}
+
 			ctx := conn.Context()
 
 			if update.Username() != "" && (ctx.User == nil || ctx.User.Username() != update.Username()) {
@@ -341,32 +341,23 @@ func (s *Server) listenUpdates() {
 				}
 			}
 
-			conn := conn // Copy conn to a local variable
-			go func() {
-				done := make(chan struct{})
-				conn.Context().Responses <- &response{
-					response: res,
-					done:     done,
-				}
-				<-done
-				sends <- struct{}{}
-			}()
+			done := make(chan struct{})
+			conn.Context().Responses <- &response{
+				response: res,
+				done:     done,
+			}
 
-			wait++
+			wg.Add(1)
+			go func() {
+				<-done
+				wg.Done()
+			}()
 		}
 		s.locker.Unlock()
 
-		if wait > 0 {
-			go func() {
-				for done := 0; done < wait; done++ {
-					<-sends
-				}
+		wg.Wait()
 
-				close(update.Done())
-			}()
-		} else {
-			close(update.Done())
-		}
+		close(update.Done())
 	}
 }
 
