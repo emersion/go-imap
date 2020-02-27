@@ -603,7 +603,7 @@ func TestBodyStructure_Format(t *testing.T) {
 
 func TestBodyStructureFilename(t *testing.T) {
 	tests := []struct {
-		bs BodyStructure
+		bs       BodyStructure
 		filename string
 	}{
 		{
@@ -619,7 +619,7 @@ func TestBodyStructureFilename(t *testing.T) {
 			filename: "cat.png",
 		},
 		{
-			bs: BodyStructure{},
+			bs:       BodyStructure{},
 			filename: "",
 		},
 		{
@@ -645,30 +645,30 @@ func TestBodyStructureFilename(t *testing.T) {
 
 func TestBodyStructureWalk(t *testing.T) {
 	textPlain := &BodyStructure{
-		MIMEType: "text",
+		MIMEType:    "text",
 		MIMESubType: "plain",
 	}
 
 	textHTML := &BodyStructure{
-		MIMEType: "text",
+		MIMEType:    "text",
 		MIMESubType: "plain",
 	}
 
 	multipartAlternative := &BodyStructure{
-		MIMEType: "multipart",
+		MIMEType:    "multipart",
 		MIMESubType: "alternative",
-		Parts: []*BodyStructure{textPlain, textHTML},
+		Parts:       []*BodyStructure{textPlain, textHTML},
 	}
 
 	imagePNG := &BodyStructure{
-		MIMEType: "image",
+		MIMEType:    "image",
 		MIMESubType: "png",
 	}
 
 	multipartMixed := &BodyStructure{
-		MIMEType: "multipart",
+		MIMEType:    "multipart",
 		MIMESubType: "mixed",
-		Parts: []*BodyStructure{multipartAlternative, imagePNG},
+		Parts:       []*BodyStructure{multipartAlternative, imagePNG},
 	}
 
 	type testNode struct {
@@ -677,40 +677,40 @@ func TestBodyStructureWalk(t *testing.T) {
 	}
 
 	tests := []struct {
-		bs *BodyStructure
-		nodes []testNode
+		bs           *BodyStructure
+		nodes        []testNode
 		walkChildren bool
 	}{
 		{
 			bs: textPlain,
 			nodes: []testNode{
-				{ path: []int{1}, part: textPlain },
+				{path: []int{1}, part: textPlain},
 			},
 		},
 		{
 			bs: multipartAlternative,
 			nodes: []testNode{
-				{ path: nil, part: multipartAlternative },
-				{ path: []int{1}, part: textPlain },
-				{ path: []int{2}, part: textHTML },
+				{path: nil, part: multipartAlternative},
+				{path: []int{1}, part: textPlain},
+				{path: []int{2}, part: textHTML},
 			},
 			walkChildren: true,
 		},
 		{
 			bs: multipartMixed,
 			nodes: []testNode{
-				{ path: nil, part: multipartMixed },
-				{ path: []int{1}, part: multipartAlternative },
-				{ path: []int{1, 1}, part: textPlain },
-				{ path: []int{1, 2}, part: textHTML },
-				{ path: []int{2}, part: imagePNG },
+				{path: nil, part: multipartMixed},
+				{path: []int{1}, part: multipartAlternative},
+				{path: []int{1, 1}, part: textPlain},
+				{path: []int{1, 2}, part: textHTML},
+				{path: []int{2}, part: imagePNG},
 			},
 			walkChildren: true,
 		},
 		{
 			bs: multipartMixed,
 			nodes: []testNode{
-				{ path: nil, part: multipartMixed },
+				{path: nil, part: multipartMixed},
 			},
 			walkChildren: false,
 		},

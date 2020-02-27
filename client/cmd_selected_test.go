@@ -394,7 +394,7 @@ func TestClient_Store(t *testing.T) {
 
 	tag, cmd := s.ScanCmd()
 	if cmd != "STORE 2 +FLAGS (\\Seen foobar)" {
-		t.Fatalf( "client sent command %v, want %v", cmd, "STORE 2 +FLAGS (\\Seen foobar)")
+		t.Fatalf("client sent command %v, want %v", cmd, "STORE 2 +FLAGS (\\Seen foobar)")
 	}
 
 	s.WriteString("* 2 FETCH (FLAGS (\\Seen foobar))\r\n")
@@ -450,7 +450,7 @@ func TestClient_Store_Uid(t *testing.T) {
 
 	tag, cmd := s.ScanCmd()
 	if cmd != "UID STORE 27:901 +FLAGS.SILENT (\\Deleted foobar)" {
-		t.Fatalf( "client sent command %v, want %v", cmd, "UID STORE 27:901 +FLAGS.SILENT (\\Deleted foobar)")
+		t.Fatalf("client sent command %v, want %v", cmd, "UID STORE 27:901 +FLAGS.SILENT (\\Deleted foobar)")
 	}
 
 	s.WriteString(tag + " OK STORE completed\r\n")
