@@ -166,6 +166,11 @@ func (cmd *List) Handle(conn Conn) error {
 		close(ch)
 		return err
 	}
+	defer func() {
+		for _, mbox := range mailboxes {
+			closeMailbox(mbox)
+		}
+	}()
 
 	for _, mbox := range mailboxes {
 		info, err := mbox.Info()
