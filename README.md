@@ -128,6 +128,16 @@ func main() {
 
 You can now use `telnet localhost 1143` to manually connect to the server.
 
+## Extensions
+
+Support for several IMAP extensions is included in go-imap itself. This
+includes:
+
+* [LITERAL+](https://tools.ietf.org/html/rfc7888)
+* [SASL-IR](https://tools.ietf.org/html/rfc4959)
+
+Support for other extensions is provided via separate packages. See below.
+
 ## Extending go-imap
 
 ### Extensions
