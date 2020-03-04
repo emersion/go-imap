@@ -135,6 +135,7 @@ includes:
 
 * [LITERAL+](https://tools.ietf.org/html/rfc7888)
 * [SASL-IR](https://tools.ietf.org/html/rfc4959)
+* [SPECIAL-USE](https://tools.ietf.org/html/rfc6154)
 
 Support for other extensions is provided via separate packages. See below.
 
@@ -156,7 +157,6 @@ to learn how to use them.
 * [NAMESPACE](https://github.com/foxcpp/go-imap-namespace)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
-* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
 * [UNSELECT](https://github.com/emersion/go-imap-unselect)
 * [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
 

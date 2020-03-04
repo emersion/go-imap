@@ -418,7 +418,6 @@ func TestEmptyAddressList(t *testing.T) {
 	}
 }
 
-
 var paramsListTest = []struct {
 	fields []interface{}
 	params map[string]string
