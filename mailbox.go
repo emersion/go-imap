@@ -58,6 +58,16 @@ const (
 	TrashAttr = "\\Trash"
 )
 
+// Mailbox attributes defined in RFC 3348 (CHILDREN extension)
+const (
+	// The presence of this attribute indicates that the mailbox has child
+	// mailboxes.
+	HasChildrenAttr = "\\HasChildren"
+	// The presence of this attribute indicates that the mailbox has no child
+	// mailboxes.
+	HasNoChildrenAttr = "\\HasNoChildren"
+)
+
 // Basic mailbox info.
 type MailboxInfo struct {
 	// The mailbox attributes.

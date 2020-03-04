@@ -136,6 +136,7 @@ includes:
 * [LITERAL+](https://tools.ietf.org/html/rfc7888)
 * [SASL-IR](https://tools.ietf.org/html/rfc4959)
 * [SPECIAL-USE](https://tools.ietf.org/html/rfc6154)
+* [CHILDREN](https://tools.ietf.org/html/rfc3348)
 
 Support for other extensions is provided via separate packages. See below.
 
