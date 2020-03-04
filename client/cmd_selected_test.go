@@ -632,3 +632,30 @@ func TestClient_Copy_Uid(t *testing.T) {
 		t.Fatalf("c.UidCopy() = %v", err)
 	}
 }
+
+func TestClient_Unselect(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Unselect()
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "UNSELECT" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UNSELECT")
+	}
+
+	s.WriteString(tag + " OK UNSELECT completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Unselect() = %v", err)
+	}
+
+	if c.State() != imap.AuthenticatedState {
+		t.Fatal("Client is not Authenticated after UNSELECT")
+	}
+}

@@ -8,9 +8,15 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
-// ErrNoMailboxSelected is returned if a command that requires a mailbox to be
-// selected is called when there isn't.
-var ErrNoMailboxSelected = errors.New("No mailbox selected")
+var (
+	// ErrNoMailboxSelected is returned if a command that requires a mailbox to be
+	// selected is called when there isn't.
+	ErrNoMailboxSelected = errors.New("No mailbox selected")
+
+	// ErrExtensionUnsupported is returned if a command uses a extension that
+	// is not supported by the server.
+	ErrExtensionUnsupported = errors.New("The required extension is not supported by the server")
+)
 
 // Check requests a checkpoint of the currently selected mailbox. A checkpoint
 // refers to any implementation-dependent housekeeping associated with the
@@ -264,4 +270,31 @@ func (c *Client) Copy(seqset *imap.SeqSet, dest string) error {
 // identifiers instead of message sequence numbers.
 func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error {
 	return c.copy(true, seqset, dest)
+}
+
+// Unselect frees server's resources associated with the selected mailbox and
+// returns the server to the authenticated state. This command performs the same
+// actions as Close, except that no messages are permanently removed from the
+// currently selected mailbox.
+//
+// If client does not support the UNSELECT extension, ErrExtensionUnsupported
+// is returned.
+func (c *Client) Unselect() error {
+	if ok, err := c.Support("UNSELECT"); !ok || err != nil {
+		return ErrExtensionUnsupported
+	}
+
+	if c.State() != imap.SelectedState {
+		return ErrNoMailboxSelected
+	}
+
+	cmd := &commands.Unselect{}
+	if status, err := c.Execute(cmd, nil); err != nil {
+		return err
+	} else if err := status.Err(); err != nil {
+		return err
+	}
+
+	c.SetState(imap.AuthenticatedState, nil)
+	return nil
 }

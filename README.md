@@ -133,6 +133,7 @@ includes:
 * [SASL-IR](https://tools.ietf.org/html/rfc4959)
 * [SPECIAL-USE](https://tools.ietf.org/html/rfc6154)
 * [CHILDREN](https://tools.ietf.org/html/rfc3348)
+* [UNSELECT](https://tools.ietf.org/html/rfc3691)
 
 Support for other extensions is provided via separate packages. See below.
 
@@ -154,7 +155,6 @@ to learn how to use them.
 * [NAMESPACE](https://github.com/foxcpp/go-imap-namespace)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
-* [UNSELECT](https://github.com/emersion/go-imap-unselect)
 * [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
 
 ### Server backends

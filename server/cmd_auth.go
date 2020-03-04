@@ -275,3 +275,18 @@ func (cmd *Append) Handle(conn Conn) error {
 
 	return nil
 }
+
+type Unselect struct {
+	commands.Unselect
+}
+
+func (cmd *Unselect) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
+		return ErrNoMailboxSelected
+	}
+
+	ctx.Mailbox = nil
+	ctx.MailboxReadOnly = false
+	return nil
+}

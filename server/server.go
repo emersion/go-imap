@@ -185,6 +185,8 @@ func New(bkd backend.Backend) *Server {
 		"STORE":   func() Handler { return &Store{} },
 		"COPY":    func() Handler { return &Copy{} },
 		"UID":     func() Handler { return &Uid{} },
+
+		"UNSELECT": func() Handler { return &Unselect{} },
 	}
 
 	return s
@@ -400,7 +402,13 @@ func (s *Server) Close() error {
 // Enable some IMAP extensions on this server.
 // Wiki entry: https://github.com/emersion/go-imap/wiki/Using-extensions
 func (s *Server) Enable(extensions ...Extension) {
-	s.extensions = append(s.extensions, extensions...)
+	for _, ext := range extensions {
+		// Ignore built-in extensions
+		if ext.Command("UNSELECT") != nil {
+			continue
+		}
+		s.extensions = append(s.extensions, ext)
+	}
 }
 
 // Enable an authentication mechanism on this server.
