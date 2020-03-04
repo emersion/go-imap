@@ -1,9 +1,13 @@
 package server
 
 import (
+	"compress/flate"
+	"net"
+
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/internal"
 	"github.com/emersion/go-imap/responses"
 )
 
@@ -48,5 +52,27 @@ func (cmd *Logout) Handle(conn Conn) error {
 
 	// Request to close the connection
 	conn.Context().State = imap.LogoutState
+	return nil
+}
+
+type Compress struct {
+	commands.Compress
+}
+
+func (cmd *Compress) Handle(conn Conn) error {
+	if cmd.Mechanism != imap.CompressDeflate {
+		return imap.CompressUnsupportedError{Mechanism: cmd.Mechanism}
+	}
+	return nil
+}
+
+func (cmd *Compress) Upgrade(conn Conn) error {
+	err := conn.Upgrade(func(conn net.Conn) (net.Conn, error) {
+		return internal.CreateDeflateConn(conn, flate.DefaultCompression)
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
