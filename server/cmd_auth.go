@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"io"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
@@ -36,9 +37,13 @@ func (cmd *Select) Handle(conn Conn) error {
 
 	status, err := mbox.Status(items)
 	if err != nil {
+		closeMailbox(mbox)
 		return err
 	}
 
+	if ctx.Mailbox != nil {
+		closeMailbox(ctx.Mailbox)
+	}
 	ctx.Mailbox = mbox
 	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
@@ -110,6 +115,7 @@ func (cmd *Subscribe) Handle(conn Conn) error {
 	if err != nil {
 		return err
 	}
+	defer closeMailbox(mbox)
 
 	return mbox.SetSubscribed(true)
 }
@@ -128,6 +134,7 @@ func (cmd *Unsubscribe) Handle(conn Conn) error {
 	if err != nil {
 		return err
 	}
+	defer closeMailbox(mbox)
 
 	return mbox.SetSubscribed(false)
 }
@@ -204,6 +211,7 @@ func (cmd *Status) Handle(conn Conn) error {
 	if err != nil {
 		return err
 	}
+	defer closeMailbox(mbox)
 
 	status, err := mbox.Status(cmd.Items)
 	if err != nil {
@@ -241,6 +249,7 @@ func (cmd *Append) Handle(conn Conn) error {
 	} else if err != nil {
 		return err
 	}
+	defer closeMailbox(mbox)
 
 	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message); err != nil {
 		return err
@@ -264,4 +273,12 @@ func (cmd *Append) Handle(conn Conn) error {
 	}
 
 	return nil
+}
+
+func closeMailbox(mbox backend.Mailbox) {
+	c, ok := mbox.(io.Closer)
+	if !ok {
+		return
+	}
+	c.Close()
 }
