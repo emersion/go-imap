@@ -221,6 +221,10 @@ type MailboxStatus struct {
 	// Together with a UID, it is a unique identifier for a message.
 	// Must be greater than or equal to 1.
 	UidValidity uint32
+
+	// Per-mailbox limit of message size. Set only if server supports the
+	// APPENDLIMIT extension.
+	AppendLimit uint32
 }
 
 // Create a new mailbox status that will contain the specified items.
@@ -263,6 +267,8 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 				status.UidNext, err = ParseNumber(f)
 			case StatusUidValidity:
 				status.UidValidity, err = ParseNumber(f)
+			case StatusAppendLimit:
+				status.AppendLimit, err = ParseNumber(f)
 			default:
 				status.Items[k] = f
 			}
@@ -290,6 +296,8 @@ func (status *MailboxStatus) Format() []interface{} {
 			v = status.UidNext
 		case StatusUidValidity:
 			v = status.UidValidity
+		case StatusAppendLimit:
+			v = status.AppendLimit
 		}
 
 		fields = append(fields, RawString(k), v)

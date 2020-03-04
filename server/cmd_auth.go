@@ -253,6 +253,13 @@ func (cmd *Append) Handle(conn Conn) error {
 	}
 
 	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message); err != nil {
+		if err == backend.ErrTooBig {
+			return ErrStatusResp(&imap.StatusResp{
+				Type: imap.StatusRespNo,
+				Code: "TOOBIG",
+				Info: "Message size exceeding limit",
+			})
+		}
 		return err
 	}
 
