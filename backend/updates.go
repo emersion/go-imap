@@ -60,6 +60,12 @@ type MailboxUpdate struct {
 	*imap.MailboxStatus
 }
 
+// MailboxInfoUpdate is a maiblox info update.
+type MailboxInfoUpdate struct {
+	Update
+	*imap.MailboxInfo
+}
+
 // MessageUpdate is a message update.
 type MessageUpdate struct {
 	Update

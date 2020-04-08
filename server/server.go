@@ -303,6 +303,12 @@ func (s *Server) listenUpdates() {
 			res = update.StatusResp
 		case *backend.MailboxUpdate:
 			res = &responses.Select{Mailbox: update.MailboxStatus}
+		case *backend.MailboxInfoUpdate:
+			ch := make(chan *imap.MailboxInfo, 1)
+			ch <- update.MailboxInfo
+			close(ch)
+
+			res = &responses.List{Mailboxes: ch}
 		case *backend.MessageUpdate:
 			ch := make(chan *imap.Message, 1)
 			ch <- update.Message
