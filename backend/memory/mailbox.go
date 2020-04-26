@@ -241,3 +241,7 @@ func (mbox *Mailbox) Expunge() error {
 
 	return nil
 }
+
+func (mbox *Mailbox) Close() error {
+	return nil
+}
