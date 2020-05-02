@@ -1,6 +1,6 @@
 # go-imap
 
-[![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
+[![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://pkg.go.dev/github.com/emersion/go-imap)
 [![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap.svg)](https://builds.sr.ht/~emersion/go-imap?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
 
@@ -13,7 +13,7 @@ go get github.com/emersion/go-imap/...
 
 ## Usage
 
-### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
+### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://pkg.go.dev/github.com/emersion/go-imap/client)
 
 ```go
 package main
@@ -96,7 +96,7 @@ func main() {
 }
 ```
 
-### Server [![GoDoc](https://godoc.org/github.com/emersion/go-imap/server?status.svg)](https://godoc.org/github.com/emersion/go-imap/server)
+### Server [![GoDoc](https://godoc.org/github.com/emersion/go-imap/server?status.svg)](https://pkg.go.dev/github.com/emersion/go-imap/server)
 
 ```go
 package main
