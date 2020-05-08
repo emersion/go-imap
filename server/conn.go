@@ -377,8 +377,8 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 	}
 
 	hdlrErr := hdlr.Handle(c.conn)
-	if statusErr, ok := hdlrErr.(*errStatusResp); ok {
-		res = statusErr.resp
+	if statusErr, ok := hdlrErr.(*imap.ErrStatusResp); ok {
+		res = statusErr.Resp
 	} else if hdlrErr != nil {
 		res = &imap.StatusResp{
 			Type: imap.StatusRespNo,
