@@ -27,7 +27,7 @@ type Handler interface {
 	// Handle this command for a given connection.
 	//
 	// By default, after this function has returned a status response is sent. To
-	// prevent this behavior handlers can use ErrStatusResp or ErrNoStatusResp.
+	// prevent this behavior handlers can use imap.ErrStatusResp.
 	Handle(conn Conn) error
 }
 
@@ -65,26 +65,22 @@ type ConnExtension interface {
 	NewConn(c Conn) Conn
 }
 
-type errStatusResp struct {
-	resp *imap.StatusResp
-}
-
-func (err *errStatusResp) Error() string {
-	return ""
-}
-
 // ErrStatusResp can be returned by a Handler to replace the default status
 // response. The response tag must be empty.
 //
-// To disable the default status response, use ErrNoStatusResp instead.
+// Deprecated: Use imap.ErrStatusResp{res} instead.
+//
+// To disable the default status response, use imap.ErrStatusResp{nil} instead.
 func ErrStatusResp(res *imap.StatusResp) error {
-	return &errStatusResp{res}
+	return &imap.ErrStatusResp{res}
 }
 
 // ErrNoStatusResp can be returned by a Handler to prevent the default status
 // response from being sent.
+//
+// Deprecated: Use imap.ErrStatusResp{nil} instead
 func ErrNoStatusResp() error {
-	return &errStatusResp{nil}
+	return &imap.ErrStatusResp{nil}
 }
 
 // An IMAP server.
