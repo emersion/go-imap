@@ -157,6 +157,26 @@ func TestAuthenticate_Plain_Ok(t *testing.T) {
 	}
 }
 
+func TestAuthenticate_Plain_Cancel(t *testing.T) {
+	s, c, scanner := testServerGreeted(t)
+	defer s.Close()
+	defer c.Close()
+
+	io.WriteString(c, "a001 AUTHENTICATE PLAIN\r\n")
+
+	scanner.Scan()
+	if scanner.Text() != "+" {
+		t.Fatal("Bad continuation request:", scanner.Text())
+	}
+
+	io.WriteString(c, "*\r\n")
+
+	scanner.Scan()
+	if !strings.HasPrefix(scanner.Text(), "a001 BAD negotiation cancelled") {
+		t.Fatal("Bad status response:", scanner.Text())
+	}
+}
+
 func TestAuthenticate_Plain_InitialResponse(t *testing.T) {
 	s, c, scanner := testServerGreeted(t)
 	defer s.Close()
