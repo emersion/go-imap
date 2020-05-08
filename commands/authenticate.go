@@ -109,6 +109,12 @@ func (cmd *Authenticate) Handle(mechanisms map[string]sasl.Server, conn Authenti
 
 		encoded = scanner.Text()
 		if encoded != "" {
+			if encoded == "*" {
+				return &imap.ErrStatusResp{Resp: &imap.StatusResp{
+					Type: imap.StatusRespBad,
+					Info: "negotiation cancelled",
+				}}
+			}
 			response, err = base64.StdEncoding.DecodeString(encoded)
 			if err != nil {
 				return err
