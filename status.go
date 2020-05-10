@@ -129,5 +129,8 @@ type ErrStatusResp struct {
 }
 
 func (err *ErrStatusResp) Error() string {
-	return ""
+	if err.Resp == nil {
+		return "imap: suppressed response"
+	}
+	return err.Resp.Info
 }
