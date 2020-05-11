@@ -3,6 +3,7 @@ package memory
 import (
 	"errors"
 
+	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 )
 
@@ -16,13 +17,17 @@ func (u *User) Username() string {
 	return u.username
 }
 
-func (u *User) ListMailboxes(subscribed bool) (mailboxes []backend.Mailbox, err error) {
+func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err error) {
 	for _, mailbox := range u.mailboxes {
 		if subscribed && !mailbox.Subscribed {
 			continue
 		}
 
-		mailboxes = append(mailboxes, mailbox)
+		mboxInfo, err := mailbox.Info()
+		if err != nil {
+			return nil, err
+		}
+		info = append(info, *mboxInfo)
 	}
 	return
 }
