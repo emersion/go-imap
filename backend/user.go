@@ -1,6 +1,10 @@
 package backend
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/emersion/go-imap"
+)
 
 var (
 	// ErrNoSuchMailbox is returned by User.GetMailbox, User.DeleteMailbox and
@@ -18,9 +22,9 @@ type User interface {
 	// Username returns this user's username.
 	Username() string
 
-	// ListMailboxes returns a list of mailboxes belonging to this user. If
-	// subscribed is set to true, only returns subscribed mailboxes.
-	ListMailboxes(subscribed bool) ([]Mailbox, error)
+	// ListMailboxes returns information about mailboxes belonging to this
+	// user. If subscribed is set to true, only returns subscribed mailboxes.
+	ListMailboxes(subscribed bool) ([]imap.MailboxInfo, error)
 
 	// GetMailbox returns a mailbox. If it doesn't exist, it returns
 	// ErrNoSuchMailbox.

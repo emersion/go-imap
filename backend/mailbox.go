@@ -12,6 +12,9 @@ type Mailbox interface {
 	// Name returns this mailbox name.
 	Name() string
 
+	// Closes the mailbox.
+	Close() error
+
 	// Info returns this mailbox info.
 	Info() (*imap.MailboxInfo, error)
 
