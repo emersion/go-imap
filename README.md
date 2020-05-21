@@ -70,7 +70,7 @@ func main() {
 	// Get the last 4 messages
 	from := uint32(1)
 	to := mbox.Messages
-	if mbox.Messages > 3 {
+	if to > 3 {
 		// We're using unsigned integers here, only substract if the result is > 0
 		from = mbox.Messages - 3
 	}
