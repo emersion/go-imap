@@ -261,11 +261,11 @@ var envelopeTests = []struct {
 			Date:      t,
 			Subject:   "Hello World!",
 			From:      []*Address{addrTests[0].addr},
-			Sender:    []*Address{},
-			ReplyTo:   []*Address{},
-			To:        []*Address{},
-			Cc:        []*Address{},
-			Bcc:       []*Address{},
+			Sender:    nil,
+			ReplyTo:   nil,
+			To:        nil,
+			Cc:        nil,
+			Bcc:       nil,
 			InReplyTo: "42@example.org",
 			MessageId: "43@example.org",
 		},
@@ -273,11 +273,11 @@ var envelopeTests = []struct {
 			"Tue, 10 Nov 2009 23:00:00 -0600",
 			"Hello World!",
 			[]interface{}{addrTests[0].fields},
-			[]interface{}{},
-			[]interface{}{},
-			[]interface{}{},
-			[]interface{}{},
-			[]interface{}{},
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
 			"42@example.org",
 			"43@example.org",
 		},
@@ -391,6 +391,15 @@ func TestAddressList(t *testing.T) {
 	}
 }
 
+func TestEmptyAddressList(t *testing.T) {
+	addrs := make([]*Address, 0)
+
+	gotFields := FormatAddressList(addrs)
+	if !reflect.DeepEqual(gotFields, nil) {
+		t.Error("Invalid address list fields: got", gotFields, "but expected nil")
+	}
+}
+
 var paramsListTest = []struct {
 	fields []interface{}
 	params map[string]string
@@ -479,12 +488,12 @@ var bodyStructureTests = []struct {
 			Size:        42,
 			Lines:       67,
 			Envelope: &Envelope{
-				From:    []*Address{},
-				Sender:  []*Address{},
-				ReplyTo: []*Address{},
-				To:      []*Address{},
-				Cc:      []*Address{},
-				Bcc:     []*Address{},
+				From:    nil,
+				Sender:  nil,
+				ReplyTo: nil,
+				To:      nil,
+				Cc:      nil,
+				Bcc:     nil,
 			},
 			BodyStructure: &BodyStructure{
 				Params: map[string]string{},
