@@ -392,9 +392,9 @@ func TestAddressList(t *testing.T) {
 }
 
 func TestEmptyAddressList(t *testing.T) {
-    addrs := make([]*Address, 0)
+	addrs := make([]*Address, 0)
 
-    gotFields := FormatAddressList(addrs)
+	gotFields := FormatAddressList(addrs)
 	if gotFields != nil {
 		t.Error("Invalid address list fields: got", gotFields, "but expected nil")
 	}
