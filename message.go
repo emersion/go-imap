@@ -707,12 +707,11 @@ func ParseAddressList(fields []interface{}) (addrs []*Address) {
 
 // Format an address list to fields.
 func FormatAddressList(addrs []*Address) (fields []interface{}) {
-	addr_len := len(addrs)
-	if addr_len == 0 {
+	if len(addrs) == 0 {
 		return nil
 	}
 
-	fields = make([]interface{}, addr_len)
+	fields = make([]interface{}, len(addrs))
 
 	for i, addr := range addrs {
 		fields[i] = addr.Format()

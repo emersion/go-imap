@@ -391,6 +391,15 @@ func TestAddressList(t *testing.T) {
 	}
 }
 
+func TestEmptyAddressList(t *testing.T) {
+    addrs := make([]*Address, 0)
+
+    gotFields := FormatAddressList(addrs)
+	if gotFields != nil {
+		t.Error("Invalid address list fields: got", gotFields, "but expected nil")
+	}
+}
+
 var paramsListTest = []struct {
 	fields []interface{}
 	params map[string]string
