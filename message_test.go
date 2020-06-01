@@ -395,7 +395,7 @@ func TestEmptyAddressList(t *testing.T) {
 	addrs := make([]*Address, 0)
 
 	gotFields := FormatAddressList(addrs)
-	if gotFields != nil {
+	if !reflect.DeepEqual(gotFields, nil) {
 		t.Error("Invalid address list fields: got", gotFields, "but expected nil")
 	}
 }
@@ -488,12 +488,12 @@ var bodyStructureTests = []struct {
 			Size:        42,
 			Lines:       67,
 			Envelope: &Envelope{
-				From:    []*Address{},
-				Sender:  []*Address{},
-				ReplyTo: []*Address{},
-				To:      []*Address{},
-				Cc:      []*Address{},
-				Bcc:     []*Address{},
+				From:    nil,
+				Sender:  nil,
+				ReplyTo: nil,
+				To:      nil,
+				Cc:      nil,
+				Bcc:     nil,
 			},
 			BodyStructure: &BodyStructure{
 				Params: map[string]string{},

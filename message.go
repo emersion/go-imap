@@ -706,18 +706,18 @@ func ParseAddressList(fields []interface{}) (addrs []*Address) {
 }
 
 // Format an address list to fields.
-func FormatAddressList(addrs []*Address) (fields []interface{}) {
+func FormatAddressList(addrs []*Address) interface{} {
 	if len(addrs) == 0 {
 		return nil
 	}
 
-	fields = make([]interface{}, len(addrs))
+	fields := make([]interface{}, len(addrs))
 
 	for i, addr := range addrs {
 		fields[i] = addr.Format()
 	}
 
-	return
+	return fields
 }
 
 // A message envelope, ie. message metadata from its headers.
