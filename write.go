@@ -195,11 +195,7 @@ func (w *Writer) writeField(field interface{}) error {
 	case Literal:
 		return w.writeLiteral(field)
 	case []interface{}:
-		if len(field) == 0 {
-			return w.writeString(nilAtom)
-		} else {
-			return w.writeList(field)
-		}
+		return w.writeList(field)
 	case envelopeDateTime:
 		return w.writeDateTime(time.Time(field), envelopeDateTimeLayout)
 	case searchDate:
