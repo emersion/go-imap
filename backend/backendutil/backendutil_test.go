@@ -53,7 +53,7 @@ const testHTMLHeaderString = "Content-Disposition: inline\r\n" +
 	"Content-Type: text/html\r\n" +
 	"\r\n"
 
-const testHTMLBodyString = "<div>What's <i>your</i> name?</div>"
+const testHTMLBodyString = "<div>What's <i>your\r\n</i> name?</div>"
 
 const testHTMLString = testHTMLHeaderString + testHTMLBodyString
 
