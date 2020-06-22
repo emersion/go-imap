@@ -13,22 +13,22 @@ import (
 )
 
 type countReader struct {
-	r           io.Reader
-	total       uint32
-	newlines    uint32
-	lastNewline bool
+	r          io.Reader
+	bytes      uint32
+	newlines   uint32
+	endsWithLF bool
 }
 
 func (r *countReader) Read(b []byte) (int, error) {
 	n, err := r.r.Read(b)
-	r.total += uint32(n)
+	r.bytes += uint32(n)
 	if n != 0 {
-		r.newlines += uint32(bytes.Count(b[:n], []byte{'\r'}))
-		r.lastNewline = b[n-1] == '\n'
+		r.newlines += uint32(bytes.Count(b[:n], []byte{'\n'}))
+		r.endsWithLF = b[n-1] == '\n'
 	}
 	// If the stream does not end with a newline - count missing newline.
 	if err == io.EOF {
-		if !r.lastNewline {
+		if !r.endsWithLF {
 			r.newlines++
 		}
 	}
@@ -88,7 +88,6 @@ func FetchBodyStructure(header textproto.Header, body io.Reader, extended bool) 
 			if err != nil {
 				return nil, err
 			}
-			// TODO: Limit recursion.
 			bs.BodyStructure, err = FetchBodyStructure(subMsgHdr, bufBody, extended)
 			if err != nil {
 				return nil, err
@@ -100,7 +99,7 @@ func FetchBodyStructure(header textproto.Header, body io.Reader, extended bool) 
 		if _, err := io.Copy(ioutil.Discard, &countedBody); err != nil {
 			return nil, err
 		}
-		bs.Size = countedBody.total
+		bs.Size = countedBody.bytes
 		if needLines {
 			bs.Lines = countedBody.newlines
 		}
