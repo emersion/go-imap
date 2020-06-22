@@ -1,7 +1,7 @@
 # go-imap
 
 [![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
-[![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap.svg)](https://builds.sr.ht/~emersion/go-imap?)
+[![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap/commits.svg)](https://builds.sr.ht/~emersion/go-imap/commits?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
