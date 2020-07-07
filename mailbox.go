@@ -43,8 +43,7 @@ type MailboxInfo struct {
 	// The mailbox attributes.
 	Attributes []string
 	// The server's path separator.
-	Delimiter       string
-	HasNILDelimiter bool
+	Delimiter string
 	// The mailbox name.
 	Name string
 }
@@ -66,7 +65,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 		if fields[1] != nil {
 			return errors.New("Mailbox delimiter must be a string")
 		}
-		info.HasNILDelimiter = true
+		info.Delimiter = ""
 	}
 
 	if name, err := ParseString(fields[2]); err != nil {
@@ -92,7 +91,7 @@ func (info *MailboxInfo) Format() []interface{} {
 	// a nil field (so that it's later converted to an unquoted NIL atom).
 	var del interface{}
 
-	if !info.HasNILDelimiter {
+	if info.Delimiter != "" {
 		del = info.Delimiter
 	}
 
@@ -137,12 +136,12 @@ func (info *MailboxInfo) match(name, pattern string) bool {
 func (info *MailboxInfo) Match(reference, pattern string) bool {
 	name := info.Name
 
-	if !info.HasNILDelimiter && strings.HasPrefix(pattern, info.Delimiter) {
+	if info.Delimiter != "" && strings.HasPrefix(pattern, info.Delimiter) {
 		reference = ""
 		pattern = strings.TrimPrefix(pattern, info.Delimiter)
 	}
 	if reference != "" {
-		if !info.HasNILDelimiter && !strings.HasSuffix(reference, info.Delimiter) {
+		if info.Delimiter != "" && !strings.HasSuffix(reference, info.Delimiter) {
 			reference += info.Delimiter
 		}
 		if !strings.HasPrefix(name, reference) {
