@@ -217,9 +217,10 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 
 	r.UnreadRune()
 
-	if atom == "NIL" {
+	if atom == nilAtom {
 		return nil, nil
 	}
+
 	return atom, nil
 }
 

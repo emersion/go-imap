@@ -61,7 +61,11 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 	var ok bool
 	if info.Delimiter, ok = fields[1].(string); !ok {
-		return errors.New("Mailbox delimiter must be a string")
+		// The delimiter may be specified as NIL, which gets converted to a nil interface.
+		if fields[1] != nil {
+			return errors.New("Mailbox delimiter must be a string")
+		}
+		info.Delimiter = ""
 	}
 
 	if name, err := ParseString(fields[2]); err != nil {
@@ -82,8 +86,17 @@ func (info *MailboxInfo) Format() []interface{} {
 	for i, attr := range info.Attributes {
 		attrs[i] = RawString(attr)
 	}
+
+	// If the delimiter is NIL, we need to treat it specially by inserting
+	// a nil field (so that it's later converted to an unquoted NIL atom).
+	var del interface{}
+
+	if info.Delimiter != "" {
+		del = info.Delimiter
+	}
+
 	// Thunderbird doesn't understand delimiters if not quoted
-	return []interface{}{attrs, info.Delimiter, FormatMailboxName(name)}
+	return []interface{}{attrs, del, FormatMailboxName(name)}
 }
 
 // TODO: optimize this
@@ -123,12 +136,12 @@ func (info *MailboxInfo) match(name, pattern string) bool {
 func (info *MailboxInfo) Match(reference, pattern string) bool {
 	name := info.Name
 
-	if strings.HasPrefix(pattern, info.Delimiter) {
+	if info.Delimiter != "" && strings.HasPrefix(pattern, info.Delimiter) {
 		reference = ""
 		pattern = strings.TrimPrefix(pattern, info.Delimiter)
 	}
 	if reference != "" {
-		if !strings.HasSuffix(reference, info.Delimiter) {
+		if info.Delimiter != "" && !strings.HasSuffix(reference, info.Delimiter) {
 			reference += info.Delimiter
 		}
 		if !strings.HasPrefix(name, reference) {
