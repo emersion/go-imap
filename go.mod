@@ -5,6 +5,5 @@ go 1.13
 require (
 	github.com/emersion/go-message v0.11.1
 	github.com/emersion/go-sasl v0.0.0-20191210011802-430746ea8b9b
-	github.com/stretchr/testify v1.3.0
 	golang.org/x/text v0.3.2
 )
