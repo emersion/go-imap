@@ -26,15 +26,10 @@ func (cmd *Select) Handle(conn Conn) (err error) {
 	// 		currently selected mailbox before attempting the new selection.
 	// 		Consequently, if a mailbox is selected and a SELECT command that
 	// 		fails is attempted, no mailbox is selected.
-	// Thus if SELECT fails for whatever reason we should unselect.
 	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
 	// server doesn't announce the UNSELECT capability.
-	defer func() {
-		if err != nil {
-			ctx.Mailbox = nil
-			ctx.MailboxReadOnly = false
-		}
-	}()
+	ctx.Mailbox = nil
+	ctx.MailboxReadOnly = false
 
 	if ctx.User == nil {
 		return ErrNotAuthenticated
