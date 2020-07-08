@@ -20,10 +20,20 @@ type Select struct {
 
 func (cmd *Select) Handle(conn Conn) error {
 	ctx := conn.Context()
+
+	// As per RFC1730#6.3.1,
+	// 		The SELECT command automatically deselects any
+	// 		currently selected mailbox before attempting the new selection.
+	// 		Consequently, if a mailbox is selected and a SELECT command that
+	// 		fails is attempted, no mailbox is selected.
+	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
+	// server doesn't announce the UNSELECT capability.
+	ctx.Mailbox = nil
+	ctx.MailboxReadOnly = false
+
 	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
-
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
@@ -149,7 +159,7 @@ func (cmd *List) Handle(conn Conn) error {
 	go (func() {
 		done <- conn.WriteResp(res)
 		// Make sure to drain the channel.
-		for _ = range ch {
+		for range ch {
 		}
 	})()
 
