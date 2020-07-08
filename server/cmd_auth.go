@@ -18,7 +18,7 @@ type Select struct {
 	commands.Select
 }
 
-func (cmd *Select) Handle(conn Conn) (err error) {
+func (cmd *Select) Handle(conn Conn) error {
 	ctx := conn.Context()
 
 	// As per RFC1730#6.3.1,
@@ -36,7 +36,7 @@ func (cmd *Select) Handle(conn Conn) (err error) {
 	}
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
-		return
+		return err
 	}
 
 	items := []imap.StatusItem{
@@ -46,15 +46,15 @@ func (cmd *Select) Handle(conn Conn) (err error) {
 
 	status, err := mbox.Status(items)
 	if err != nil {
-		return
+		return err
 	}
 
 	ctx.Mailbox = mbox
 	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	res := &responses.Select{Mailbox: status}
-	if err = conn.WriteResp(res); err != nil {
-		return
+	if err := conn.WriteResp(res); err != nil {
+		return err
 	}
 
 	var code imap.StatusRespCode = imap.CodeReadWrite
