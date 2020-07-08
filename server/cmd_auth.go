@@ -18,28 +18,30 @@ type Select struct {
 	commands.Select
 }
 
-func (cmd *Select) Handle(conn Conn) error {
+func (cmd *Select) Handle(conn Conn) (err error) {
 	ctx := conn.Context()
-	if ctx.User == nil {
-		return ErrNotAuthenticated
-	}
 
 	// As per RFC1730#6.3.1,
 	// 		The SELECT command automatically deselects any
 	// 		currently selected mailbox before attempting the new selection.
 	// 		Consequently, if a mailbox is selected and a SELECT command that
 	// 		fails is attempted, no mailbox is selected.
-	// Thus if this GetMailbox call fails to find a mailbox, this is not an
-	// error and we should simply unselect.
+	// Thus if SELECT fails for whatever reason we should unselect.
 	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
 	// server doesn't announce the UNSELECT capability.
+	defer func() {
+		if err != nil {
+			ctx.Mailbox = nil
+			ctx.MailboxReadOnly = false
+		}
+	}()
+
+	if ctx.User == nil {
+		return ErrNotAuthenticated
+	}
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if errors.Is(err, backend.ErrNoSuchMailbox) {
-		ctx.Mailbox = nil
-		ctx.MailboxReadOnly = false
-		return nil
-	} else if err != nil {
-		return err
+	if err != nil {
+		return
 	}
 
 	items := []imap.StatusItem{
@@ -49,15 +51,15 @@ func (cmd *Select) Handle(conn Conn) error {
 
 	status, err := mbox.Status(items)
 	if err != nil {
-		return err
+		return
 	}
 
 	ctx.Mailbox = mbox
 	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
 	res := &responses.Select{Mailbox: status}
-	if err := conn.WriteResp(res); err != nil {
-		return err
+	if err = conn.WriteResp(res); err != nil {
+		return
 	}
 
 	var code imap.StatusRespCode = imap.CodeReadWrite
