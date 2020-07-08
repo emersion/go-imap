@@ -24,8 +24,21 @@ func (cmd *Select) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
+	// As per RFC1730#6.3.1,
+	// 		The SELECT command automatically deselects any
+	// 		currently selected mailbox before attempting the new selection.
+	// 		Consequently, if a mailbox is selected and a SELECT command that
+	// 		fails is attempted, no mailbox is selected.
+	// Thus if this GetMailbox call fails to find a mailbox, this is not an
+	// error and we should simply unselect.
+	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
+	// server doesn't announce the UNSELECT capability.
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
+	if errors.Is(err, backend.ErrNoSuchMailbox) {
+		ctx.Mailbox = nil
+		ctx.MailboxReadOnly = false
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -149,7 +162,7 @@ func (cmd *List) Handle(conn Conn) error {
 	go (func() {
 		done <- conn.WriteResp(res)
 		// Make sure to drain the channel.
-		for _ = range ch {
+		for range ch {
 		}
 	})()
 
