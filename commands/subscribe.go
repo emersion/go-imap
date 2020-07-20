@@ -22,8 +22,8 @@ func (cmd *Subscribe) Command() *imap.Command {
 }
 
 func (cmd *Subscribe) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
-		return errors.New("No enough arguments")
+	if len(fields) == 0 {
+		return errors.New("not enough arguments")
 	}
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
@@ -34,8 +34,7 @@ func (cmd *Subscribe) Parse(fields []interface{}) error {
 	return nil
 }
 
-// An UNSUBSCRIBE command.
-// See RFC 3501 section 6.3.7
+// Unsubscribe is an UNSUBSCRIBE command, as defined in RFC 3501 section 6.3.7.
 type Unsubscribe struct {
 	Mailbox string
 }
@@ -50,8 +49,8 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 }
 
 func (cmd *Unsubscribe) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
-		return errors.New("No enogh arguments")
+	if len(fields) == 0 {
+		return errors.New("not enogh arguments")
 	}
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {

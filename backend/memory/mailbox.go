@@ -9,7 +9,7 @@ import (
 	"github.com/emersion/go-imap/backend/backendutil"
 )
 
-var Delimiter = "/"
+const Delimiter = "/"
 
 type Mailbox struct {
 	Subscribed bool
@@ -52,7 +52,7 @@ func (mbox *Mailbox) flags() []string {
 		}
 	}
 
-	var flags []string
+	flags := make([]string, 0, len(flagsMap))
 	for f := range flagsMap {
 		flags = append(flags, f)
 	}
@@ -139,7 +139,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.Fe
 }
 
 func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
-	var ids []uint32
+	var ids []uint32 //nolint[prealloc]
 	for i, msg := range mbox.Messages {
 		seqNum := uint32(i + 1)
 

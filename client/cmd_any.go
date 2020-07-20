@@ -9,7 +9,7 @@ import (
 
 // ErrAlreadyLoggedOut is returned if Logout is called when the client is
 // already logged out.
-var ErrAlreadyLoggedOut = errors.New("Already logged out")
+var ErrAlreadyLoggedOut = errors.New("already logged out")
 
 // Capability requests a listing of capabilities that the server supports.
 // Capabilities are often returned by the server with the greeting or with the
@@ -75,7 +75,7 @@ func (c *Client) Logout() error {
 
 	cmd := new(commands.Logout)
 
-	if status, err := c.execute(cmd, nil); err == errClosed {
+	if status, err := c.execute(cmd, nil); err == errClosed { //nolint[gocritic]
 		// Server closed connection, that's what we want anyway
 		return nil
 	} else if err != nil {

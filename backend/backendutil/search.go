@@ -55,7 +55,7 @@ func bodyLen(e *message.Entity) (int, error) {
 
 // Match returns true if a message and its metadata matches the provided
 // criteria.
-func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) {
+func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string, c *imap.SearchCriteria) (bool, error) { //nolint[gocyclo]
 	// TODO: support encoded header fields for Bcc, Cc, From, To
 	// TODO: add header size for Larger and Smaller
 
@@ -137,7 +137,7 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 	}
 
 	if c.SeqNum != nil || c.Uid != nil {
-		if !matchSeqNumAndUid(seqNum, uid, c) {
+		if !matchSeqNumAndUID(seqNum, uid, c) {
 			return false, nil
 		}
 	}
@@ -183,7 +183,7 @@ func matchFlags(flags []string, c *imap.SearchCriteria) bool {
 	return true
 }
 
-func matchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
+func matchSeqNumAndUID(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
 	if c.SeqNum != nil && !c.SeqNum.Contains(seqNum) {
 		return false
 	}

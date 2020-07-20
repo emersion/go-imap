@@ -6,7 +6,7 @@ import (
 
 const fetchName = "FETCH"
 
-// A FETCH response.
+// Fetch is a FETCH response.
 // See RFC 3501 section 7.4.2
 type Fetch struct {
 	Messages chan *imap.Message

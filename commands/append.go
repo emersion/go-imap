@@ -44,7 +44,7 @@ func (cmd *Append) Command() *imap.Command {
 
 func (cmd *Append) Parse(fields []interface{}) (err error) {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	// Parse mailbox name
@@ -60,7 +60,7 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	litIndex := len(fields) - 1
 	var ok bool
 	if cmd.Message, ok = fields[litIndex].(imap.Literal); !ok {
-		return errors.New("Message must be a literal")
+		return errors.New("message must be a literal")
 	}
 
 	// Remaining fields a optional
@@ -82,12 +82,12 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 		// Parse date
 		if len(fields) > 0 {
 			if date, ok := fields[0].(string); !ok {
-				return errors.New("Date must be a string")
+				return errors.New("date must be a string")
 			} else if cmd.Date, err = time.Parse(imap.DateTimeLayout, date); err != nil {
 				return err
 			}
 		}
 	}
 
-	return
+	return nil
 }

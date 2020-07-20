@@ -4,7 +4,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A CAPABILITY response.
+// Capability is a CAPABILITY response.
 // See RFC 3501 section 7.2.1
 type Capability struct {
 	Caps []string

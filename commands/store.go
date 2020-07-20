@@ -23,12 +23,12 @@ func (cmd *Store) Command() *imap.Command {
 
 func (cmd *Store) Parse(fields []interface{}) error {
 	if len(fields) < 3 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	seqset, ok := fields[0].(string)
 	if !ok {
-		return errors.New("Invalid sequence set")
+		return errors.New("invalid sequence set")
 	}
 	var err error
 	if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
@@ -36,8 +36,8 @@ func (cmd *Store) Parse(fields []interface{}) error {
 	}
 
 	if item, ok := fields[1].(string); !ok {
-		return errors.New("Item name must be a string")
-	} else {
+		return errors.New("item name must be a string")
+	} else { //nolint[golint]
 		cmd.Item = imap.StoreItem(strings.ToUpper(item))
 	}
 

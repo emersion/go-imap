@@ -9,7 +9,7 @@ const (
 	lsubName = "LSUB"
 )
 
-// A LIST response.
+// List is a LIST response.
 // If Subscribed is set to true, LSUB will be used instead.
 // See RFC 3501 section 7.2.2
 type List struct {
@@ -20,9 +20,8 @@ type List struct {
 func (r *List) Name() string {
 	if r.Subscribed {
 		return lsubName
-	} else {
-		return listName
 	}
+	return listName
 }
 
 func (r *List) Handle(resp imap.Resp) error {

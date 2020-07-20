@@ -10,12 +10,12 @@ import (
 
 // imap errors in Selected state.
 var (
-	ErrNoMailboxSelected = errors.New("No mailbox selected")
-	ErrMailboxReadOnly   = errors.New("Mailbox opened in read-only mode")
+	ErrNoMailboxSelected = errors.New("no mailbox selected")
+	ErrMailboxReadOnly   = errors.New("mailbox opened in read-only mode")
 )
 
-// A command handler that supports UIDs.
-type UidHandler interface {
+// UidHandler is a command handler that supports UIDs.
+type UidHandler interface { //nolint[golint]
 	Handler
 
 	// Handle this command using UIDs for a given connection.
@@ -144,7 +144,7 @@ func (cmd *Search) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Search) UidHandle(conn Conn) error {
+func (cmd *Search) UidHandle(conn Conn) error { //nolint[golint]
 	return cmd.handle(true, conn)
 }
 
@@ -165,7 +165,7 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 	go (func() {
 		done <- conn.WriteResp(res)
 		// Make sure to drain the message channel.
-		for _ = range ch {
+		for range ch {
 		}
 	})()
 
@@ -181,16 +181,16 @@ func (cmd *Fetch) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Fetch) UidHandle(conn Conn) error {
+func (cmd *Fetch) UidHandle(conn Conn) error { //nolint[golint]
 	// Append UID to the list of requested items if it isn't already present
-	hasUid := false
+	hasUID := false
 	for _, item := range cmd.Items {
 		if item == "UID" {
-			hasUid = true
+			hasUID = true
 			break
 		}
 	}
-	if !hasUid {
+	if !hasUID {
 		cmd.Items = append(cmd.Items, "UID")
 	}
 
@@ -269,7 +269,7 @@ func (cmd *Store) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Store) UidHandle(conn Conn) error {
+func (cmd *Store) UidHandle(conn Conn) error { //nolint[golint]
 	return cmd.handle(true, conn)
 }
 
@@ -290,11 +290,11 @@ func (cmd *Copy) Handle(conn Conn) error {
 	return cmd.handle(false, conn)
 }
 
-func (cmd *Copy) UidHandle(conn Conn) error {
+func (cmd *Copy) UidHandle(conn Conn) error { //nolint[golint]
 	return cmd.handle(true, conn)
 }
 
-type Uid struct {
+type Uid struct { //nolint[golint]
 	commands.Uid
 }
 
@@ -307,7 +307,7 @@ func (cmd *Uid) Handle(conn Conn) error {
 
 	uidHdlr, ok := hdlr.(UidHandler)
 	if !ok {
-		return errors.New("Command unsupported with UID")
+		return errors.New("command unsupported with UID")
 	}
 
 	if err := uidHdlr.UidHandle(conn); err != nil {

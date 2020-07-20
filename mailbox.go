@@ -51,7 +51,7 @@ type MailboxInfo struct {
 // Parse mailbox info from fields.
 func (info *MailboxInfo) Parse(fields []interface{}) error {
 	if len(fields) < 3 {
-		return errors.New("Mailbox info needs at least 3 fields")
+		return errors.New("mailbox info needs at least 3 fields")
 	}
 
 	var err error
@@ -63,7 +63,7 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 	if info.Delimiter, ok = fields[1].(string); !ok {
 		// The delimiter may be specified as NIL, which gets converted to a nil interface.
 		if fields[1] != nil {
-			return errors.New("Mailbox delimiter must be a string")
+			return errors.New("mailbox delimiter must be a string")
 		}
 		info.Delimiter = ""
 	}
@@ -210,7 +210,7 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 		if i%2 == 0 {
 			if kstr, ok := f.(string); !ok {
 				return fmt.Errorf("cannot parse mailbox status: key is not a string, but a %T", f)
-			} else {
+			} else { //nolint[golint]
 				k = StatusItem(strings.ToUpper(kstr))
 			}
 		} else {
@@ -242,7 +242,7 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 }
 
 func (status *MailboxStatus) Format() []interface{} {
-	var fields []interface{}
+	var fields []interface{} //nolint[prealloc]
 	for k, v := range status.Items {
 		switch k {
 		case StatusMessages:

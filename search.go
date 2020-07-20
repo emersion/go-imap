@@ -87,7 +87,7 @@ func NewSearchCriteria() *SearchCriteria {
 	return &SearchCriteria{Header: make(textproto.MIMEHeader)}
 }
 
-func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.Reader) io.Reader) ([]interface{}, error) {
+func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.Reader) io.Reader) ([]interface{}, error) { //nolint
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -130,7 +130,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 	case "BODY":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.Body = append(c.Body, convertField(f, charsetReader))
 		}
 	case "HEADER":
@@ -139,7 +139,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 			return nil, err
 		} else if f2, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			if c.Header == nil {
 				c.Header = make(textproto.MIMEHeader)
 			}
@@ -148,7 +148,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 	case "KEYWORD":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.WithFlags = append(c.WithFlags, CanonicalFlag(maybeString(f)))
 		}
 	case "LARGER":
@@ -175,7 +175,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 			return nil, err
 		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.Since = t
 			c.Before = t.Add(24 * time.Hour)
 		}
@@ -200,7 +200,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 			return nil, err
 		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.SentSince = t
 			c.SentBefore = t.Add(24 * time.Hour)
 		}
@@ -231,7 +231,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 	case "TEXT":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.Text = append(c.Text, convertField(f, charsetReader))
 		}
 	case "UID":
@@ -246,7 +246,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 	case "UNKEYWORD":
 		if f, fields, err = popSearchField(fields); err != nil {
 			return nil, err
-		} else {
+		} else { //nolint[golint]
 			c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag(maybeString(f)))
 		}
 	default: // Try to parse a sequence set
@@ -272,8 +272,8 @@ func (c *SearchCriteria) ParseWithCharset(fields []interface{}, charsetReader fu
 }
 
 // Format formats search criteria to fields. UTF-8 is used.
-func (c *SearchCriteria) Format() []interface{} {
-	var fields []interface{}
+func (c *SearchCriteria) Format() []interface{} { //nolint
+	var fields []interface{} //nolint[prealloc]
 
 	if c.SeqNum != nil {
 		fields = append(fields, c.SeqNum)

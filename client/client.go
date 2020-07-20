@@ -62,7 +62,7 @@ type MessageUpdate struct {
 func (u *MessageUpdate) update() {}
 
 // Client is an IMAP client.
-type Client struct {
+type Client struct { //nolint[maligned]
 	conn       *imap.Conn
 	isTLS      bool
 	serverName string
@@ -161,9 +161,8 @@ func (c *Client) readOnce() (bool, error) {
 		}
 		if imap.IsParseError(err) {
 			return true, err
-		} else {
-			return false, err
 		}
+		return false, err
 	}
 
 	if err := c.handle(resp); err != nil && err != responses.ErrUnhandled {
@@ -199,12 +198,10 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	} else if err := c.conn.SetDeadline(time.Time{}); err != nil {
 		// It's possible the client had a timeout set from a previous command, but no
 		// longer does. Ensure we respect that. The zero time means no deadline.
-		if err := c.conn.SetDeadline(time.Time{}); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// Check if we are upgrading.
@@ -218,7 +215,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
 		select {
 		case <-unregister:
-			// If an error occured while sending the command, abort
+			// If an error occurred while sending the command, abort
 			return errUnregisterHandler
 		default:
 		}
@@ -246,7 +243,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 				// If the response handler returns an error, abort
 				doneHandle <- handleResult{nil, err}
 				return errUnregisterHandler
-			} else {
+			} else { //nolint[golint]
 				return err
 			}
 		}
@@ -265,7 +262,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 			// Expected < Actual
 			//  We are about to send a potentially truncated message, we don't
 			//  want this (ths terminating CRLF is not sent at this point).
-			c.conn.Close()
+			_ = c.conn.Close()
 			return nil, err
 		}
 
@@ -385,7 +382,7 @@ func (c *Client) handleUnilateral() {
 				c.mailbox = nil
 				c.locker.Unlock()
 
-				c.conn.Close()
+				_ = c.conn.Close()
 
 				if c.Updates != nil {
 					c.Updates <- &StatusUpdate{resp}
@@ -400,7 +397,7 @@ func (c *Client) handleUnilateral() {
 			}
 
 			switch name {
-			case "CAPABILITY":
+			case "CAPABILITY": //nolint[goconst]
 				c.gotStatusCaps(fields)
 			case "EXISTS":
 				if c.Mailbox() == nil {
@@ -578,7 +575,6 @@ func (c *Client) SetDebug(w io.Writer) {
 	if err != nil {
 		log.Println("SetDebug:", err)
 	}
-
 }
 
 // New creates a new client from an existing connection.

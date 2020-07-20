@@ -23,7 +23,7 @@ func ReadResp(r *Reader) (Resp, error) {
 
 	if tag == "+" {
 		if err := r.ReadSp(); err != nil {
-			r.UnreadRune()
+			_ = r.UnreadRune()
 		}
 
 		resp := &ContinuationReq{}
@@ -59,7 +59,7 @@ func ReadResp(r *Reader) (Resp, error) {
 					if err != nil {
 						return nil, err
 					}
-					r.UnreadRune()
+					_ = r.UnreadRune()
 
 					if char == '[' {
 						// Contains code & arguments
@@ -78,10 +78,10 @@ func ReadResp(r *Reader) (Resp, error) {
 				}
 			}
 		} else {
-			r.UnreadRune()
+			_ = r.UnreadRune()
 		}
 	} else {
-		r.UnreadRune()
+		_ = r.UnreadRune()
 	}
 
 	// Not a status so it's data
@@ -93,7 +93,7 @@ func ReadResp(r *Reader) (Resp, error) {
 		return nil, err
 	}
 
-	resp.Fields = append(fields, remaining...)
+	resp.Fields = append(fields, remaining...) //nolint[gocritic]
 	return resp, nil
 }
 
@@ -122,7 +122,7 @@ func (r *DataResp) WriteTo(w *Writer) error {
 		tag = RawString("*")
 	}
 
-	fields := []interface{}{RawString(tag)}
+	fields := []interface{}{tag}
 	fields = append(fields, r.Fields...)
 	return w.writeLine(fields...)
 }

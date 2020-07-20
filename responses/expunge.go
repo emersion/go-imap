@@ -6,7 +6,7 @@ import (
 
 const expungeName = "EXPUNGE"
 
-// An EXPUNGE response.
+// Expunge is an EXPUNGE response.
 // See RFC 3501 section 7.4.1
 type Expunge struct {
 	SeqNums chan uint32

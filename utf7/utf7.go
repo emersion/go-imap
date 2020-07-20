@@ -1,4 +1,4 @@
-// Modified UTF-7 encoding defined in RFC 3501 section 5.1.3
+// Package utf7 provides UTF-7 encoding defined in RFC 3501 section 5.1.3.
 package utf7
 
 import (
@@ -14,7 +14,7 @@ const (
 	repl = '\uFFFD' // Unicode replacement code point
 )
 
-var b64Enc = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,")
+var b64Enc = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,") //nolint[gochecknoglobals]
 
 type enc struct{}
 
@@ -31,4 +31,4 @@ func (e enc) NewEncoder() *encoding.Encoder {
 }
 
 // Encoding is the modified UTF-7 encoding.
-var Encoding encoding.Encoding = enc{}
+var Encoding encoding.Encoding = enc{} //nolint[gochecknoglobals]

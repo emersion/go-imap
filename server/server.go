@@ -17,10 +17,10 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// The minimum autologout duration defined in RFC 3501 section 5.4.
+// MinAutoLogout is the minimum autologout duration defined in RFC 3501 section 5.4.
 const MinAutoLogout = 30 * time.Minute
 
-// A command handler.
+// Handler is a command handler.
 type Handler interface {
 	imap.Parser
 
@@ -31,8 +31,8 @@ type Handler interface {
 	Handle(conn Conn) error
 }
 
-// A connection upgrader. If a Handler is also an Upgrader, the connection will
-// be upgraded after the Handler succeeds.
+// Upgrader is a connection upgrader. If a Handler is also an Upgrader,
+// the connection will be upgraded after the Handler succeeds.
 //
 // This should only be used by libraries implementing an IMAP extension (e.g.
 // COMPRESS).
@@ -41,13 +41,13 @@ type Upgrader interface {
 	Upgrade(conn Conn) error
 }
 
-// A function that creates handlers.
+// HandlerFactory is a function that creates handlers.
 type HandlerFactory func() Handler
 
-// A function that creates SASL servers.
+// SASLServerFactory is a function that creates SASL servers.
 type SASLServerFactory func(conn Conn) sasl.Server
 
-// An IMAP extension.
+// Extension is an IMAP extension.
 type Extension interface {
 	// Get capabilities provided by this extension for a given connection.
 	Capabilities(c Conn) []string
@@ -55,7 +55,7 @@ type Extension interface {
 	Command(name string) HandlerFactory
 }
 
-// An extension that provides additional features to each connection.
+// ConnExtension is an extension that provides additional features to each connection.
 type ConnExtension interface {
 	Extension
 
@@ -72,7 +72,7 @@ type ConnExtension interface {
 //
 // To disable the default status response, use imap.ErrStatusResp{nil} instead.
 func ErrStatusResp(res *imap.StatusResp) error {
-	return &imap.ErrStatusResp{res}
+	return &imap.ErrStatusResp{Resp: res}
 }
 
 // ErrNoStatusResp can be returned by a Handler to prevent the default status
@@ -80,11 +80,11 @@ func ErrStatusResp(res *imap.StatusResp) error {
 //
 // Deprecated: Use imap.ErrStatusResp{nil} instead
 func ErrNoStatusResp() error {
-	return &imap.ErrStatusResp{nil}
+	return &imap.ErrStatusResp{Resp: nil}
 }
 
-// An IMAP server.
-type Server struct {
+// Server is an IMAP server.
+type Server struct { //nolint[maligned]
 	locker    sync.Mutex
 	listeners map[net.Listener]struct{}
 	conns     map[Conn]struct{}
@@ -119,7 +119,7 @@ type Server struct {
 	MaxLiteralSize uint32
 }
 
-// Create a new IMAP server from an existing listener.
+// New creates a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
 		listeners: make(map[net.Listener]struct{}),
@@ -132,7 +132,7 @@ func New(bkd backend.Backend) *Server {
 		sasl.Plain: func(conn Conn) sasl.Server {
 			return sasl.NewPlainServer(func(identity, username, password string) error {
 				if identity != "" && identity != username {
-					return errors.New("Identities not supported")
+					return errors.New("identities not supported")
 				}
 
 				user, err := bkd.Login(conn.Info(), username, password)
@@ -199,7 +199,7 @@ func (s *Server) Serve(l net.Listener) error {
 	defer func() {
 		s.locker.Lock()
 		defer s.locker.Unlock()
-		l.Close()
+		_ = l.Close()
 		delete(s.listeners, l)
 	}()
 
@@ -222,7 +222,7 @@ func (s *Server) Serve(l net.Listener) error {
 			}
 		}
 
-		go s.serveConn(conn)
+		go s.serveConn(conn) //nolint[errcheck]
 	}
 }
 
@@ -270,7 +270,7 @@ func (s *Server) serveConn(conn Conn) error {
 	defer func() {
 		s.locker.Lock()
 		defer s.locker.Unlock()
-		conn.Close()
+		_ = conn.Close()
 		delete(s.conns, conn)
 	}()
 
@@ -381,17 +381,17 @@ func (s *Server) ForEachConn(f func(Conn)) {
 	}
 }
 
-// Stops listening and closes all current connections.
+// Close stops listening and closes all current connections.
 func (s *Server) Close() error {
 	s.locker.Lock()
 	defer s.locker.Unlock()
 
 	for l := range s.listeners {
-		l.Close()
+		_ = l.Close()
 	}
 
 	for conn := range s.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	return nil
@@ -405,7 +405,7 @@ func (s *Server) Enable(extensions ...Extension) {
 	s.extensions = append(s.extensions, extensions...)
 }
 
-// Enable an authentication mechanism on this server.
+// EnableAuth enables an authentication mechanism on this server.
 //
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.

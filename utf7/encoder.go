@@ -51,7 +51,7 @@ func (e *encoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		}
 	}
 
-	return
+	return nDst, nSrc, err
 }
 
 func (e *encoder) Reset() {}

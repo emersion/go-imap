@@ -143,7 +143,7 @@ func (c *conn) setDeadline() {
 	}
 	t := time.Now().Add(dur)
 
-	c.Conn.SetDeadline(t)
+	_ = c.Conn.SetDeadline(t)
 }
 
 func (c *conn) WriteResp(r imap.WriterTo) error {
@@ -156,7 +156,7 @@ func (c *conn) WriteResp(r imap.WriterTo) error {
 
 func (c *conn) Close() error {
 	if c.ctx.User != nil {
-		c.ctx.User.Logout()
+		_ = c.ctx.User.Logout()
 	}
 
 	return c.Conn.Close()
@@ -274,7 +274,7 @@ func (c *conn) serve(conn Conn) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			c.WriteResp(&imap.StatusResp{
+			_ = c.WriteResp(&imap.StatusResp{
 				Type: imap.StatusRespBye,
 				Info: "Internal server error, closing connection.",
 			})
@@ -337,7 +337,6 @@ func (c *conn) serve(conn Conn) (err error) {
 		}
 
 		if res != nil {
-
 			if err := c.WriteResp(res); err != nil {
 				c.s.ErrorLog.Println("cannot write response:", err)
 				continue
@@ -361,7 +360,7 @@ func (c *conn) WaitReady() {
 func (c *conn) commandHandler(cmd *imap.Command) (hdlr Handler, err error) {
 	newHandler := c.s.Command(cmd.Name)
 	if newHandler == nil {
-		err = errors.New("Unknown command")
+		err = errors.New("unknown command")
 		return
 	}
 
@@ -377,7 +376,7 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 	}
 
 	hdlrErr := hdlr.Handle(c.conn)
-	if statusErr, ok := hdlrErr.(*imap.ErrStatusResp); ok {
+	if statusErr, ok := hdlrErr.(*imap.ErrStatusResp); ok { //nolint[gocritic]
 		res = statusErr.Resp
 	} else if hdlrErr != nil {
 		res = &imap.StatusResp{

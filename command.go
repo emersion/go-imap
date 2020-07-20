@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// A value that can be converted to a command.
+// Commander provides conversion to a command.
 type Commander interface {
 	Command() *Command
 }
 
-// A command.
+// Command is a command.
 type Command struct {
 	// The command tag. It acts as a unique identifier for this command. If empty,
 	// the command is untagged.
@@ -21,7 +21,7 @@ type Command struct {
 	Arguments []interface{}
 }
 
-// Implements the Commander interface.
+// Command implements the Commander interface.
 func (cmd *Command) Command() *Command {
 	return cmd
 }

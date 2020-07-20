@@ -29,16 +29,16 @@ func (cmd *Search) Command() *imap.Command {
 
 func (cmd *Search) Parse(fields []interface{}) error {
 	if len(fields) == 0 {
-		return errors.New("Missing search criteria")
+		return errors.New("missing search criteria")
 	}
 
 	// Parse charset
 	if f, ok := fields[0].(string); ok && strings.EqualFold(f, "CHARSET") {
 		if len(fields) < 2 {
-			return errors.New("Missing CHARSET value")
+			return errors.New("missing CHARSET value")
 		}
 		if cmd.Charset, ok = fields[1].(string); !ok {
-			return errors.New("Charset must be a string")
+			return errors.New("charset must be a string")
 		}
 		fields = fields[2:]
 	}

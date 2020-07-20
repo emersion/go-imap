@@ -6,7 +6,7 @@ import (
 
 const searchName = "SEARCH"
 
-// A SEARCH response.
+// Search is a SEARCH response.
 // See RFC 3501 section 7.2.5
 type Search struct {
 	Ids []uint32
@@ -22,7 +22,7 @@ func (r *Search) Handle(resp imap.Resp) error {
 	for i, f := range fields {
 		if id, err := imap.ParseNumber(f); err != nil {
 			return err
-		} else {
+		} else { //nolint[golint]
 			r.Ids[i] = id
 		}
 	}

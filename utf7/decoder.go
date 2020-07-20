@@ -93,7 +93,7 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		d.ascii = true
 	}
 
-	return
+	return nDst, nSrc, err
 }
 
 func (d *decoder) Reset() {
@@ -109,7 +109,7 @@ func decode(b64 []byte) []byte {
 	// (if padding is required), UTF-16-BE bytes, and decoded UTF-8 bytes.
 	// Since a 2-byte UTF-16 sequence may expand into a 3-byte UTF-8 sequence,
 	// double the space allocation for UTF-8.
-	if n := len(b64); b64[n-1] == '=' {
+	if n := len(b64); b64[n-1] == '=' { //nolint[gocritic]
 		return nil
 	} else if n&3 == 0 {
 		b = make([]byte, b64Enc.DecodedLen(n)*3)

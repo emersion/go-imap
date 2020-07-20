@@ -21,7 +21,7 @@ func (cmd *Login) Command() *imap.Command {
 
 func (cmd *Login) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("Not enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	var err error

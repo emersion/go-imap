@@ -27,12 +27,12 @@ func (cmd *Fetch) Command() *imap.Command {
 
 func (cmd *Fetch) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	var err error
 	if seqset, ok := fields[0].(string); !ok {
-		return errors.New("Sequence set must be an atom")
+		return errors.New("sequence set must be an atom")
 	} else if cmd.SeqSet, err = imap.ParseSeqSet(seqset); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (cmd *Fetch) Parse(fields []interface{}) error {
 			cmd.Items = append(cmd.Items, item.Expand()...)
 		}
 	default:
-		return errors.New("Items must be either a string or a list")
+		return errors.New("items must be either a string or a list")
 	}
 
 	return nil

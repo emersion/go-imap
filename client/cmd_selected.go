@@ -10,7 +10,7 @@ import (
 
 // ErrNoMailboxSelected is returned if a command that requires a mailbox to be
 // selected is called when there isn't.
-var ErrNoMailboxSelected = errors.New("No mailbox selected")
+var ErrNoMailboxSelected = errors.New("no mailbox selected")
 
 // Check requests a checkpoint of the currently selected mailbox. A checkpoint
 // refers to any implementation-dependent housekeeping associated with the
@@ -133,7 +133,7 @@ func (c *Client) Search(criteria *imap.SearchCriteria) (seqNums []uint32, err er
 
 // UidSearch is identical to Search, but UIDs are returned instead of message
 // sequence numbers.
-func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) {
+func (c *Client) UidSearch(criteria *imap.SearchCriteria) (uids []uint32, err error) { //nolint[golint]
 	return c.search(true, criteria)
 }
 
@@ -169,7 +169,7 @@ func (c *Client) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *ima
 
 // UidFetch is identical to Fetch, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+func (c *Client) UidFetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error { //nolint[golint]
 	return c.fetch(true, seqset, items, ch)
 }
 
@@ -230,7 +230,7 @@ func (c *Client) Store(seqset *imap.SeqSet, item imap.StoreItem, value interface
 
 // UidStore is identical to Store, but seqset is interpreted as containing
 // unique identifiers instead of message sequence numbers.
-func (c *Client) UidStore(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error {
+func (c *Client) UidStore(seqset *imap.SeqSet, item imap.StoreItem, value interface{}, ch chan *imap.Message) error { //nolint[golint]
 	return c.store(true, seqset, item, value, ch)
 }
 
@@ -262,6 +262,6 @@ func (c *Client) Copy(seqset *imap.SeqSet, dest string) error {
 
 // UidCopy is identical to Copy, but seqset is interpreted as containing unique
 // identifiers instead of message sequence numbers.
-func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error {
+func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error { //nolint[golint]
 	return c.copy(true, seqset, dest)
 }

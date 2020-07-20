@@ -9,7 +9,7 @@ import (
 
 // Uid is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another
 // command (e.g. wrapping a Fetch command will result in a UID FETCH).
-type Uid struct {
+type Uid struct { //nolint[golint]
 	Cmd imap.Commander
 }
 
@@ -26,13 +26,13 @@ func (cmd *Uid) Command() *imap.Command {
 }
 
 func (cmd *Uid) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
-		return errors.New("No command name specified")
+	if len(fields) == 0 {
+		return errors.New("no command name specified")
 	}
 
 	name, ok := fields[0].(string)
 	if !ok {
-		return errors.New("Command name must be a string")
+		return errors.New("command name must be a string")
 	}
 
 	cmd.Cmd = &imap.Command{

@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// A connection state.
+// ConnState is a connection state.
 // See RFC 3501 section 3.
 type ConnState int
 
@@ -47,7 +47,7 @@ const (
 	ConnectedState = NotAuthenticatedState | AuthenticatedState | SelectedState
 )
 
-// A function that upgrades a connection.
+// ConnUpgrader is a function that upgrades a connection.
 //
 // This should only be used by libraries implementing an IMAP extension (e.g.
 // COMPRESS).
@@ -136,7 +136,7 @@ func newMultiFlusher(flushers ...flusher) flusher {
 	return &multiFlusher{flushers}
 }
 
-// Underlying connection state information.
+// ConnInfo is an underlying connection state information.
 type ConnInfo struct {
 	RemoteAddr net.Addr
 	LocalAddr  net.Addr
@@ -145,7 +145,7 @@ type ConnInfo struct {
 	TLS *tls.ConnectionState
 }
 
-// An IMAP connection.
+// Conn is an IMAP connection.
 type Conn struct {
 	net.Conn
 	*Reader
@@ -265,13 +265,13 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	return nil
 }
 
-// Called by reader/writer goroutines to wait for Upgrade to finish
+// Wait called by reader/writer goroutines to wait for Upgrade to finish
 func (c *Conn) Wait() {
 	c.waiter.Wait()
 }
 
-// Called by Upgrader to wait for reader/writer goroutines to be ready for
-// upgrade.
+// WaitReady called by Upgrader to wait for reader/writer goroutines to be
+// ready for upgrade.
 func (c *Conn) WaitReady() {
 	c.waiter.WaitReady()
 }

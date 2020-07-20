@@ -7,14 +7,13 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
-// An AUTHENTICATE response.
+// Authenticate is an AUTHENTICATE response.
 type Authenticate struct {
 	Mechanism       sasl.Client
 	InitialResponse []byte
 	RepliesCh       chan []byte
 }
 
-// Implements
 func (r *Authenticate) Replies() <-chan []byte {
 	return r.RepliesCh
 }
@@ -46,13 +45,13 @@ func (r *Authenticate) Handle(resp imap.Resp) error {
 
 	challenge, err := base64.StdEncoding.DecodeString(cont.Info)
 	if err != nil {
-		r.cancel()
+		_ = r.cancel()
 		return err
 	}
 
 	reply, err := r.Mechanism.Next(challenge)
 	if err != nil {
-		r.cancel()
+		_ = r.cancel()
 		return err
 	}
 

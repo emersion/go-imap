@@ -50,7 +50,7 @@ func testServerTLS(t *testing.T) (s *server.Server, c net.Conn, scanner *bufio.S
 
 	c = sc
 	scanner = bufio.NewScanner(c)
-	return
+	return s, c, scanner
 }
 
 func TestStartTLS(t *testing.T) {

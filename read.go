@@ -28,9 +28,9 @@ const (
 
 // TODO: add CTL to atomSpecials
 var (
-	quotedSpecials = string([]rune{dquote, '\\'})
-	respSpecials   = string([]rune{respCodeEnd})
-	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
+	quotedSpecials = string([]rune{dquote, '\\'})                                                                   //nolint[gochecknoglobals]
+	respSpecials   = string([]rune{respCodeEnd})                                                                    //nolint[gochecknoglobals]
+	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials //nolint[gochecknoglobals,deadcode]
 )
 
 type parseError struct {
@@ -79,7 +79,7 @@ func ParseNumber(f interface{}) (uint32, error) {
 		return 0, newParseError("expected a number, got a non-atom")
 	}
 
-	nbr, err := strconv.ParseUint(string(s), 10, 32)
+	nbr, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
 		return 0, &parseError{err}
 	}
@@ -127,12 +127,12 @@ func ParseStringList(f interface{}) ([]string, error) {
 	return list, nil
 }
 
-func trimSuffix(str string, suffix rune) string {
+func trimSuffix(str string) string {
 	return str[:len(str)-1]
 }
 
 // An IMAP reader.
-type Reader struct {
+type Reader struct { //nolint[maligned]
 	MaxLiteralSize uint32 // The maximum literal size.
 
 	reader
@@ -215,7 +215,7 @@ func (r *Reader) ReadAtom() (interface{}, error) {
 		atom += string(char)
 	}
 
-	r.UnreadRune()
+	_ = r.UnreadRune()
 
 	if atom == nilAtom {
 		return nil, nil
@@ -236,11 +236,11 @@ func (r *Reader) ReadLiteral() (Literal, error) {
 	if err != nil {
 		return nil, err
 	}
-	lstr = trimSuffix(lstr, literalEnd)
+	lstr = trimSuffix(lstr)
 
 	nonSync := strings.HasSuffix(lstr, "+")
 	if nonSync {
-		lstr = trimSuffix(lstr, '+')
+		lstr = trimSuffix(lstr)
 	}
 
 	n, err := strconv.ParseUint(lstr, 10, 32)
@@ -287,7 +287,7 @@ func (r *Reader) ReadQuotedString() (string, error) {
 			escaped = true
 		} else {
 			if char == cr || char == lf {
-				r.UnreadRune()
+				_ = r.UnreadRune()
 				return "", newParseError("CR or LF not allowed in quoted string")
 			}
 			if char == dquote && !escaped {
@@ -298,7 +298,7 @@ func (r *Reader) ReadQuotedString() (string, error) {
 				return "", newParseError("quoted string cannot contain backslash followed by a non-quoted-specials char")
 			}
 
-			buf.WriteRune(char)
+			_, _ = buf.WriteRune(char)
 			escaped = false
 		}
 	}
@@ -345,12 +345,12 @@ func (r *Reader) ReadFields() (fields []interface{}, err error) {
 		}
 		if char == cr || char == lf || char == listEnd || char == respCodeEnd {
 			if char == cr || char == lf {
-				r.UnreadRune()
+				_ = r.UnreadRune()
 			}
 			return
 		}
 		if char == listStart {
-			r.UnreadRune()
+			_ = r.UnreadRune()
 			continue
 		}
 		if char != sp {
@@ -375,7 +375,7 @@ func (r *Reader) ReadList() (fields []interface{}, err error) {
 		return
 	}
 
-	r.UnreadRune()
+	_ = r.UnreadRune()
 	if char, _, err = r.ReadRune(); err != nil {
 		return
 	}
@@ -391,7 +391,7 @@ func (r *Reader) ReadLine() (fields []interface{}, err error) {
 		return
 	}
 
-	r.UnreadRune()
+	_ = r.UnreadRune()
 	err = r.ReadCrlf()
 	return
 }
@@ -431,7 +431,7 @@ func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err 
 
 	fields = fields[1:]
 
-	r.UnreadRune()
+	_ = r.UnreadRune()
 	char, _, err = r.ReadRune()
 	if err != nil {
 		return
@@ -439,7 +439,7 @@ func (r *Reader) ReadRespCode() (code StatusRespCode, fields []interface{}, err 
 	if char != respCodeEnd {
 		err = newParseError("response code doesn't end with a close bracket")
 	}
-	return
+	return code, fields, err
 }
 
 func (r *Reader) ReadInfo() (info string, err error) {

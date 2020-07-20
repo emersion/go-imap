@@ -85,7 +85,7 @@ type ExpungeUpdate struct {
 // that such a mesage has been deleted. More importantly, backends implementing
 // Updater can notify the user for external updates such as new message
 // notifications.
-type BackendUpdater interface {
+type BackendUpdater interface { //nolint[golint]
 	// Updates returns a set of channels where updates are sent to.
 	Updates() <-chan Update
 }

@@ -30,14 +30,14 @@ func (cmd *Status) Command() *imap.Command {
 
 func (cmd *Status) Parse(fields []interface{}) error {
 	if len(fields) < 2 {
-		return errors.New("No enough arguments")
+		return errors.New("not enough arguments")
 	}
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
 	} else if mailbox, err := utf7.Encoding.NewDecoder().String(mailbox); err != nil {
 		return err
-	} else {
+	} else { //nolint[golint]
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
 
@@ -48,8 +48,8 @@ func (cmd *Status) Parse(fields []interface{}) error {
 	cmd.Items = make([]imap.StatusItem, len(items))
 	for i, f := range items {
 		if s, ok := f.(string); !ok {
-			return errors.New("Got a non-string field in a STATUS command parameter")
-		} else {
+			return errors.New("got a non-string field in a STATUS command parameter")
+		} else { //nolint[golint]
 			cmd.Items[i] = imap.StatusItem(strings.ToUpper(s))
 		}
 	}

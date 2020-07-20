@@ -94,13 +94,13 @@ func ParseFlagsOp(item StoreItem) (op FlagsOp, silent bool, err error) {
 	op = FlagsOp(itemStr)
 
 	if op != SetFlags && op != AddFlags && op != RemoveFlags {
-		err = errors.New("Unsupported STORE operation")
+		err = errors.New("unsupported STORE operation")
 	}
 	return
 }
 
-// CharsetReader, if non-nil, defines a function to generate charset-conversion
+// CharsetReader defines, if non-nil, a function to generate charset-conversion
 // readers, converting from the provided charset into UTF-8. Charsets are always
 // lower-case. utf-8 and us-ascii charsets are handled by default. One of the
 // the CharsetReader's result values must be non-nil.
-var CharsetReader func(charset string, r io.Reader) (io.Reader, error)
+var CharsetReader func(charset string, r io.Reader) (io.Reader, error) //nolint[gochecknoglobals]

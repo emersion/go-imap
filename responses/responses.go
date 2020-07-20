@@ -1,4 +1,4 @@
-// IMAP responses defined in RFC 3501.
+// Package responses implements IMAP responses defined in RFC 3501.
 package responses
 
 import (

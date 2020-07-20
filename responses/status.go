@@ -9,7 +9,7 @@ import (
 
 const statusName = "STATUS"
 
-// A STATUS response.
+// Status is a STATUS response.
 // See RFC 3501 section 7.2.4
 type Status struct {
 	Mailbox *imap.MailboxStatus

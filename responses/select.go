@@ -6,7 +6,7 @@ import (
 	"github.com/emersion/go-imap"
 )
 
-// A SELECT response.
+// Select is a SELECT response.
 type Select struct {
 	Mailbox *imap.MailboxStatus
 }

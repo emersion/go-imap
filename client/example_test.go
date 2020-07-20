@@ -58,7 +58,7 @@ func ExampleClient() {
 	from := uint32(1)
 	to := mbox.Messages
 	if mbox.Messages > 3 {
-		// We're using unsigned integers here, only substract if the result is > 0
+		// We're using unsigned integers here, only subtract if the result is > 0
 		from = mbox.Messages - 3
 	}
 	seqset := new(imap.SeqSet)

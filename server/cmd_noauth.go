@@ -12,8 +12,8 @@ import (
 
 // IMAP errors in Not Authenticated state.
 var (
-	ErrAlreadyAuthenticated = errors.New("Already authenticated")
-	ErrAuthDisabled         = errors.New("Authentication disabled")
+	ErrAlreadyAuthenticated = errors.New("already authenticated")
+	ErrAuthDisabled         = errors.New("authentication disabled")
 )
 
 type StartTLS struct {
