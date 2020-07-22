@@ -143,6 +143,7 @@ to learn how to use them.
 * [IDLE](https://github.com/emersion/go-imap-idle)
 * [METADATA](https://github.com/emersion/go-imap-metadata)
 * [MOVE](https://github.com/emersion/go-imap-move)
+* [NAMESPACE](https://github.com/foxcpp/go-imap-namespace)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
 * [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
