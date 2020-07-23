@@ -313,7 +313,7 @@ func (c *Client) State() imap.ConnState {
 func (c *Client) Mailbox() *imap.MailboxStatus {
 	// c.Mailbox fields are not supposed to change, so we can return the pointer.
 	c.locker.Lock()
-	mbox := c.mailbox
+	mbox := c.mailbox.DeepCopy()
 	c.locker.Unlock()
 	return mbox
 }
