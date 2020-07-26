@@ -34,7 +34,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox, conn)
+	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox, cmd.ReadOnly, conn)
 	if err != nil {
 		return err
 	}
