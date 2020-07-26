@@ -18,7 +18,8 @@ type Mailbox struct {
 
 type SelectedMailbox struct {
 	*Mailbox
-	conn backend.Conn
+	conn     backend.Conn
+	readOnly bool
 }
 
 func (mbox *Mailbox) Name() string {

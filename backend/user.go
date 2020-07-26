@@ -50,7 +50,7 @@ type User interface {
 	//
 	// Returned MailboxStatus should have Messages, Recent, Unseen, UidNext
 	// and UidValidity populated.
-	GetMailbox(name string, conn Conn) (*imap.MailboxStatus, Mailbox, error)
+	GetMailbox(name string, readOnly bool, conn Conn) (*imap.MailboxStatus, Mailbox, error)
 
 	// CreateMailbox creates a new mailbox.
 	//
