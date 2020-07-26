@@ -39,7 +39,7 @@ type Mailbox interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a message update.
-	UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, operation imap.FlagsOp, flags []string) error
+	UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, operation imap.FlagsOp, silent bool, flags []string) error
 
 	// CopyMessages copies the specified message(s) to the end of the specified
 	// destination mailbox. The flags and internal date of the message(s) SHOULD

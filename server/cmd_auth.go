@@ -36,7 +36,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
+	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox, conn)
 	if err != nil {
 		return err
 	}
@@ -234,24 +234,6 @@ func (cmd *Append) Handle(conn Conn) error {
 		}
 		return err
 	}
-
-	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
-	// Do this only if the backend doesn't send updates itself
-	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == cmd.Mailbox {
-		status, err := ctx.User.Status(cmd.Mailbox, []imap.StatusItem{imap.StatusMessages})
-		if err != nil {
-			return err
-		}
-		status.Flags = nil
-		status.PermanentFlags = nil
-		status.UnseenSeqNum = 0
-
-		res := &responses.Select{Mailbox: status}
-		if err := conn.WriteResp(res); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
