@@ -34,12 +34,21 @@ func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err erro
 	return
 }
 
-func (u *User) GetMailbox(name string) (mailbox backend.Mailbox, err error) {
+func (u *User) GetMailbox(name string) (*imap.MailboxStatus, backend.Mailbox, error) {
 	mailbox, ok := u.mailboxes[name]
 	if !ok {
-		err = errors.New("No such mailbox")
+		return nil, nil, backend.ErrNoSuchMailbox
 	}
-	return
+
+	status, err := u.Status(name, []imap.StatusItem{
+		imap.StatusMessages, imap.StatusRecent, imap.StatusUnseen,
+		imap.StatusUidNext, imap.StatusUidValidity,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return status, mailbox, nil
 }
 
 func (u *User) Status(name string, items []imap.StatusItem) (*imap.MailboxStatus, error) {

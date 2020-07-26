@@ -36,17 +36,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	items := []imap.StatusItem{
-		imap.StatusMessages, imap.StatusRecent, imap.StatusUnseen,
-		imap.StatusUidNext, imap.StatusUidValidity,
-	}
-
-	status, err := ctx.User.Status(cmd.Mailbox, items)
-	if err != nil {
-		return err
-	}
-
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
+	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
 	if err != nil {
 		return err
 	}
@@ -62,7 +52,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return err
 	}
 
-	var code imap.StatusRespCode = imap.CodeReadWrite
+	code := imap.CodeReadWrite
 	if ctx.MailboxReadOnly {
 		code = imap.CodeReadOnly
 	}

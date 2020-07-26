@@ -47,7 +47,10 @@ type User interface {
 
 	// GetMailbox returns a mailbox. If it doesn't exist, it returns
 	// ErrNoSuchMailbox.
-	GetMailbox(name string) (Mailbox, error)
+	//
+	// Returned MailboxStatus should have Messages, Recent, Unseen, UidNext
+	// and UidValidity populated.
+	GetMailbox(name string) (*imap.MailboxStatus, Mailbox, error)
 
 	// CreateMailbox creates a new mailbox.
 	//
