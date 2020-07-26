@@ -34,7 +34,7 @@ func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err erro
 	return
 }
 
-func (u *User) GetMailbox(name string) (*imap.MailboxStatus, backend.Mailbox, error) {
+func (u *User) GetMailbox(name string, conn backend.Conn) (*imap.MailboxStatus, backend.Mailbox, error) {
 	mailbox, ok := u.mailboxes[name]
 	if !ok {
 		return nil, nil, backend.ErrNoSuchMailbox
@@ -48,7 +48,10 @@ func (u *User) GetMailbox(name string) (*imap.MailboxStatus, backend.Mailbox, er
 		return nil, nil, err
 	}
 
-	return status, mailbox, nil
+	return status, &SelectedMailbox{
+		Mailbox: mailbox,
+		conn:    conn,
+	}, nil
 }
 
 func (u *User) Status(name string, items []imap.StatusItem) (*imap.MailboxStatus, error) {

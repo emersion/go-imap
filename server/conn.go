@@ -11,6 +11,7 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
+	"github.com/emersion/go-imap/responses"
 )
 
 // Conn is a connection to a client.
@@ -38,8 +39,9 @@ type Conn interface {
 
 	Info() *imap.ConnInfo
 
+	SendUpdate(upd backend.Update) error
+
 	setTLSConn(*tls.Conn)
-	silent() *bool // TODO: remove this
 	serve(Conn) error
 	commandHandler(cmd *imap.Command) (hdlr Handler, err error)
 }
@@ -400,4 +402,39 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 
 	up, _ = hdlr.(Upgrader)
 	return
+}
+
+func (c *conn) SendUpdate(upd backend.Update) error {
+	var res imap.WriterTo
+	switch update := upd.(type) {
+	case *backend.StatusUpdate:
+		res = update.StatusResp
+	case *backend.MailboxUpdate:
+		res = &responses.Select{Mailbox: update.MailboxStatus}
+	case *backend.MailboxInfoUpdate:
+		ch := make(chan *imap.MailboxInfo, 1)
+		ch <- update.MailboxInfo
+		close(ch)
+
+		res = &responses.List{Mailboxes: ch}
+	case *backend.MessageUpdate:
+		ch := make(chan *imap.Message, 1)
+		ch <- update.Message
+		close(ch)
+
+		res = &responses.Fetch{Messages: ch}
+	case *backend.ExpungeUpdate:
+		ch := make(chan uint32, 1)
+		ch <- update.SeqNum
+		close(ch)
+
+		res = &responses.Expunge{SeqNums: ch}
+	default:
+		c.s.ErrorLog.Printf("unhandled update: %T\n", update)
+	}
+	if res == nil {
+		return nil
+	}
+
+	return c.WriteResp(res)
 }

@@ -16,6 +16,11 @@ type Mailbox struct {
 	user *User
 }
 
+type SelectedMailbox struct {
+	*Mailbox
+	conn backend.Conn
+}
+
 func (mbox *Mailbox) Name() string {
 	return mbox.name
 }
@@ -127,7 +132,7 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]
 	return ids, nil
 }
 
-func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
+func (mbox *SelectedMailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, silent bool, flags []string) error {
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
@@ -140,6 +145,16 @@ func (mbox *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.
 		}
 
 		msg.Flags = backendutil.UpdateFlags(msg.Flags, op, flags)
+
+		if !silent {
+			updMsg := imap.NewMessage(uint32(i+1), []imap.FetchItem{imap.FetchFlags})
+			updMsg.Flags = msg.Flags
+			if uid {
+				updMsg.Items[imap.FetchUid] = nil
+				updMsg.Uid = msg.Uid
+			}
+			mbox.conn.SendUpdate(&backend.MessageUpdate{Message: updMsg})
+		}
 	}
 
 	return nil
@@ -170,7 +185,7 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 	return nil
 }
 
-func (mbox *Mailbox) Expunge() error {
+func (mbox *SelectedMailbox) Expunge() error {
 	for i := len(mbox.Messages) - 1; i >= 0; i-- {
 		msg := mbox.Messages[i]
 
@@ -184,6 +199,8 @@ func (mbox *Mailbox) Expunge() error {
 
 		if deleted {
 			mbox.Messages = append(mbox.Messages[:i], mbox.Messages[i+1:]...)
+
+			mbox.conn.SendUpdate(&backend.ExpungeUpdate{SeqNum: uint32(i + 1)})
 		}
 	}
 
