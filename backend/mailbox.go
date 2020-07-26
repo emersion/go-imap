@@ -1,8 +1,6 @@
 package backend
 
 import (
-	"time"
-
 	"github.com/emersion/go-imap"
 )
 
@@ -17,16 +15,6 @@ type Mailbox interface {
 
 	// Info returns this mailbox info.
 	Info() (*imap.MailboxInfo, error)
-
-	// Status returns this mailbox status. The fields Name, Flags, PermanentFlags
-	// and UnseenSeqNum in the returned MailboxStatus must be always populated.
-	// This function does not affect the state of any messages in the mailbox. See
-	// RFC 3501 section 6.3.10 for a list of items that can be requested.
-	Status(items []imap.StatusItem) (*imap.MailboxStatus, error)
-
-	// SetSubscribed adds or removes the mailbox to the server's set of "active"
-	// or "subscribed" mailboxes.
-	SetSubscribed(subscribed bool) error
 
 	// Check requests a checkpoint of the currently selected mailbox. A checkpoint
 	// refers to any implementation-dependent housekeeping associated with the
@@ -46,14 +34,6 @@ type Mailbox interface {
 	// SearchMessages searches messages. The returned list must contain UIDs if
 	// uid is set to true, or sequence numbers otherwise.
 	SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error)
-
-	// CreateMessage appends a new message to this mailbox. The \Recent flag will
-	// be added no matter flags is empty or not. If date is nil, the current time
-	// will be used.
-	//
-	// If the Backend implements Updater, it must notify the client immediately
-	// via a mailbox update.
-	CreateMessage(flags []string, date time.Time, body imap.Literal) error
 
 	// UpdateMessagesFlags alters flags for the specified message(s).
 	//

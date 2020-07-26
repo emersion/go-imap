@@ -2,6 +2,7 @@ package backend
 
 import (
 	"errors"
+	"time"
 
 	"github.com/emersion/go-imap"
 )
@@ -21,6 +22,24 @@ var (
 type User interface {
 	// Username returns this user's username.
 	Username() string
+
+	// Status returns mailbox status. The fields Name, Flags, PermanentFlags
+	// and UnseenSeqNum in the returned MailboxStatus must be always populated.
+	// This function does not affect the state of any messages in the mailbox. See
+	// RFC 3501 section 6.3.10 for a list of items that can be requested.
+	Status(mbox string, items []imap.StatusItem) (*imap.MailboxStatus, error)
+
+	// SetSubscribed adds or removes the mailbox to the server's set of "active"
+	// or "subscribed" mailboxes.
+	SetSubscribed(mbox string, subscribed bool) error
+
+	// CreateMessage appends a new message to mailbox. The \Recent flag will
+	// be added no matter flags is empty or not. If date is nil, the current time
+	// will be used.
+	//
+	// If the Backend implements Updater, it must notify the client immediately
+	// via a mailbox update.
+	CreateMessage(mbox string, flags []string, date time.Time, body imap.Literal) error
 
 	// ListMailboxes returns information about mailboxes belonging to this
 	// user. If subscribed is set to true, only returns subscribed mailboxes.

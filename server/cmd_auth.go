@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -34,19 +33,19 @@ func (cmd *Select) Handle(conn Conn) error {
 	if ctx.User == nil {
 		return ErrNotAuthenticated
 	}
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
-		return err
-	}
 
 	items := []imap.StatusItem{
 		imap.StatusMessages, imap.StatusRecent, imap.StatusUnseen,
 		imap.StatusUidNext, imap.StatusUidValidity,
 	}
 
-	status, err := mbox.Status(items)
+	status, err := ctx.User.Status(cmd.Mailbox, items)
 	if err != nil {
-		mbox.Close()
+		return err
+	}
+
+	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
+	if err != nil {
 		return err
 	}
 
@@ -120,13 +119,7 @@ func (cmd *Subscribe) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
-		return err
-	}
-	defer mbox.Close()
-
-	return mbox.SetSubscribed(true)
+	return ctx.User.SetSubscribed(cmd.Mailbox, true)
 }
 
 type Unsubscribe struct {
@@ -139,13 +132,7 @@ func (cmd *Unsubscribe) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
-		return err
-	}
-	defer mbox.Close()
-
-	return mbox.SetSubscribed(false)
+	return ctx.User.SetSubscribed(cmd.Mailbox, false)
 }
 
 type List struct {
@@ -212,13 +199,7 @@ func (cmd *Status) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err != nil {
-		return err
-	}
-	defer mbox.Close()
-
-	status, err := mbox.Status(cmd.Items)
+	status, err := ctx.User.Status(cmd.Mailbox, cmd.Items)
 	if err != nil {
 		return err
 	}
@@ -244,26 +225,14 @@ func (cmd *Append) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err == backend.ErrNoSuchMailbox {
-		return ErrStatusResp(&imap.StatusResp{
-			Type: imap.StatusRespNo,
-			Code: imap.CodeTryCreate,
-			Info: err.Error(),
-		})
-	} else if err != nil {
-		return err
-	}
-	defer mbox.Close()
-
-	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message); err != nil {
+	if err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message); err != nil {
 		return err
 	}
 
 	// If APPEND targets the currently selected mailbox, send an untagged EXISTS
 	// Do this only if the backend doesn't send updates itself
-	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == mbox.Name() {
-		status, err := mbox.Status([]imap.StatusItem{imap.StatusMessages})
+	if conn.Server().Updates == nil && ctx.Mailbox != nil && ctx.Mailbox.Name() == cmd.Mailbox {
+		status, err := ctx.User.Status(cmd.Mailbox, []imap.StatusItem{imap.StatusMessages})
 		if err != nil {
 			return err
 		}
