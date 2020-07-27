@@ -215,5 +215,16 @@ func (cmd *Append) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	return ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message)
+	if err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message); err != nil {
+		return err
+	}
+
+	// If User.CreateMessage is called the backend has no way of knowing it should
+	// send any updates while RFC 3501 says it "SHOULD" send EXISTS. This call
+	// requests it to send any relevant updates. It may result in it sending
+	// more updates than just EXISTS, in particular we allow EXPUNGE updates.
+	if ctx.Mailbox != nil && ctx.Mailbox.Name() == cmd.Mailbox {
+		return ctx.Mailbox.Poll(true)
+	}
+	return nil
 }
