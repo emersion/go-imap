@@ -81,7 +81,7 @@ func (mbox *Mailbox) unseenSeqNum() uint32 {
 	return 0
 }
 
-func (mbox *Mailbox) Check() error {
+func (mbox *Mailbox) Poll(_ bool) error {
 	return nil
 }
 

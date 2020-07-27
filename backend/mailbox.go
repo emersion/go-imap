@@ -16,13 +16,11 @@ type Mailbox interface {
 	// Info returns this mailbox info.
 	Info() (*imap.MailboxInfo, error)
 
-	// Check requests a checkpoint of the currently selected mailbox. A checkpoint
-	// refers to any implementation-dependent housekeeping associated with the
-	// mailbox (e.g., resolving the server's in-memory state of the mailbox with
-	// the state on its disk). A checkpoint MAY take a non-instantaneous amount of
-	// real time to complete. If a server implementation has no such housekeeping
-	// considerations, CHECK is equivalent to NOOP.
-	Check() error
+	// Poll requests any pending mailbox updates to be sent.
+	//
+	// Argument indicates whether EXPUNGE updates are permitted to be
+	// sent.
+	Poll(expunge bool) error
 
 	// ListMessages returns a list of messages. seqset must be interpreted as UIDs
 	// if uid is set to true and as message sequence numbers otherwise. See RFC

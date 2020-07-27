@@ -51,10 +51,3 @@ type ExpungeUpdate struct {
 }
 
 func (*ExpungeUpdate) Update() {}
-
-// MailboxPoller is a Mailbox that is able to poll updates for new messages or
-// message status updates during a period of inactivity.
-type MailboxPoller interface {
-	// Poll requests mailbox updates.
-	Poll() error
-}
