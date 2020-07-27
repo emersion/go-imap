@@ -35,7 +35,7 @@ func (cmd *Check) Handle(conn Conn) error {
 		return ErrMailboxReadOnly
 	}
 
-	return ctx.Mailbox.Check()
+	return ctx.Mailbox.Poll(true)
 }
 
 type Close struct {
