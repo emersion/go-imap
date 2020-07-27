@@ -9,6 +9,9 @@ import (
 	"github.com/emersion/go-imap/server"
 )
 
+// Extnesions that are always advertised by go-imap server.
+const builtinExtensions = "LITERAL+ SASL-IR"
+
 func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 	bkd := memory.New()
 
@@ -40,7 +43,7 @@ func TestServer_greeting(t *testing.T) {
 	scanner.Scan() // Wait for greeting
 	greeting := scanner.Text()
 
-	if greeting != "* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR AUTH=PLAIN] IMAP4rev1 Service Ready" {
+	if greeting != "* OK [CAPABILITY IMAP4rev1 "+builtinExtensions+" AUTH=PLAIN] IMAP4rev1 Service Ready" {
 		t.Fatal("Bad greeting:", greeting)
 	}
 }

@@ -30,7 +30,7 @@ func testServerTLS(t *testing.T) (s *server.Server, c net.Conn, scanner *bufio.S
 
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ SASL-IR STARTTLS LOGINDISABLED" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 "+builtinExtensions+" STARTTLS LOGINDISABLED" {
 		t.Fatal("Bad CAPABILITY response:", scanner.Text())
 	}
 	scanner.Scan()
@@ -61,7 +61,7 @@ func TestStartTLS(t *testing.T) {
 	io.WriteString(c, "a001 CAPABILITY\r\n")
 
 	scanner.Scan()
-	if scanner.Text() != "* CAPABILITY IMAP4rev1 LITERAL+ SASL-IR AUTH=PLAIN" {
+	if scanner.Text() != "* CAPABILITY IMAP4rev1 "+builtinExtensions+" AUTH=PLAIN" {
 		t.Fatal("Bad CAPABILITY response:", scanner.Text())
 	}
 }
