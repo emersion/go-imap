@@ -29,6 +29,9 @@ func (cmd *Select) Handle(conn Conn) error {
 	// 		fails is attempted, no mailbox is selected.
 	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
 	// server doesn't announce the UNSELECT capability.
+	if ctx.Mailbox != nil {
+		ctx.Mailbox.Close()
+	}
 	ctx.Mailbox = nil
 	ctx.MailboxReadOnly = false
 
@@ -41,9 +44,6 @@ func (cmd *Select) Handle(conn Conn) error {
 		return err
 	}
 
-	if ctx.Mailbox != nil {
-		ctx.Mailbox.Close()
-	}
 	ctx.Mailbox = mbox
 	ctx.MailboxReadOnly = cmd.ReadOnly || status.ReadOnly
 
