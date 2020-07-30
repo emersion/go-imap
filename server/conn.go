@@ -157,6 +157,9 @@ func (c *conn) WriteResp(r imap.WriterTo) error {
 }
 
 func (c *conn) Close() error {
+	if c.ctx.Mailbox != nil {
+		c.ctx.Mailbox.Close()
+	}
 	if c.ctx.User != nil {
 		c.ctx.User.Logout()
 	}
