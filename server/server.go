@@ -84,7 +84,7 @@ func ErrNoStatusResp() error {
 }
 
 // Server is an IMAP server.
-type Server struct { //nolint[maligned]
+type Server struct {
 	locker    sync.Mutex
 	listeners map[net.Listener]struct{}
 	conns     map[Conn]struct{}

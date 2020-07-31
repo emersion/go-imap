@@ -12,7 +12,7 @@ import (
 	"github.com/emersion/go-message/textproto"
 )
 
-type Message struct { //nolint[maligned]
+type Message struct {
 	Uid   uint32 //nolint[stylecheck]
 	Date  time.Time
 	Size  uint32

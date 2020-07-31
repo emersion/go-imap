@@ -91,7 +91,7 @@ func ParseParamList(fields []interface{}) (map[string]string, error) {
 }
 
 func FormatParamList(params map[string]string) []interface{} {
-	var fields []interface{} //nolint[prealloc]
+	var fields []interface{}
 	for key, value := range params {
 		fields = append(fields, key, value)
 	}

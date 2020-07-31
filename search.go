@@ -273,7 +273,7 @@ func (c *SearchCriteria) ParseWithCharset(fields []interface{}, charsetReader fu
 
 // Format formats search criteria to fields. UTF-8 is used.
 func (c *SearchCriteria) Format() []interface{} { //nolint
-	var fields []interface{} //nolint[prealloc]
+	var fields []interface{}
 
 	if c.SeqNum != nil {
 		fields = append(fields, c.SeqNum)

@@ -62,7 +62,7 @@ type MessageUpdate struct {
 func (u *MessageUpdate) update() {}
 
 // Client is an IMAP client.
-type Client struct { //nolint[maligned]
+type Client struct {
 	conn       *imap.Conn
 	isTLS      bool
 	serverName string

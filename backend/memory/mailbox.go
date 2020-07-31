@@ -139,7 +139,7 @@ func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.Fe
 }
 
 func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
-	var ids []uint32 //nolint[prealloc]
+	var ids []uint32
 	for i, msg := range mbox.Messages {
 		seqNum := uint32(i + 1)
 

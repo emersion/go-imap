@@ -132,7 +132,7 @@ func trimSuffix(str string) string {
 }
 
 // An IMAP reader.
-type Reader struct { //nolint[maligned]
+type Reader struct {
 	MaxLiteralSize uint32 // The maximum literal size.
 
 	reader

@@ -242,7 +242,7 @@ func (status *MailboxStatus) Parse(fields []interface{}) error {
 }
 
 func (status *MailboxStatus) Format() []interface{} {
-	var fields []interface{} //nolint[prealloc]
+	var fields []interface{}
 	for k, v := range status.Items {
 		switch k {
 		case StatusMessages:
