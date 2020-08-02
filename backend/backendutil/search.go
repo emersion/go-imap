@@ -10,6 +10,7 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
+	"github.com/emersion/go-message/textproto"
 )
 
 func matchString(s, substr string) bool {
@@ -41,16 +42,28 @@ type lengther interface {
 	Len() int
 }
 
+type countWriter struct {
+	N int
+}
+
+func (w *countWriter) Write(b []byte) (int, error) {
+	w.N += len(b)
+	return len(b), nil
+}
+
 func bodyLen(e *message.Entity) (int, error) {
+	headerSize := countWriter{}
+	textproto.WriteHeader(&headerSize, e.Header.Header)
+
 	if l, ok := e.Body.(lengther); ok {
-		return l.Len(), nil
+		return l.Len() + headerSize.N, nil
 	}
 
 	b, err := bufferBody(e)
 	if err != nil {
 		return 0, err
 	}
-	return b.Len(), nil
+	return b.Len() + headerSize.N, nil
 }
 
 // Match returns true if a message and its metadata matches the provided
@@ -66,12 +79,12 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 		if err != nil {
 			return false, err
 		}
-		t = t.Round(24 * time.Hour)
+		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 
 		if !c.SentBefore.IsZero() && !t.Before(c.SentBefore) {
 			return false, nil
 		}
-		if !c.SentSince.IsZero() && !t.After(c.SentSince) {
+		if !c.SentSince.IsZero() && t.Before(c.SentSince) {
 			return false, nil
 		}
 	}
@@ -104,8 +117,17 @@ func Match(e *message.Entity, seqNum, uid uint32, date time.Time, flags []string
 		}
 	}
 	for _, text := range c.Text {
-		// TODO: also match header fields
-		if ok, err := matchBody(e, text); err != nil || !ok {
+		headerMatch := false
+		for f := e.Header.Fields(); f.Next(); {
+			decoded, err := f.Text()
+			if err != nil {
+				continue
+			}
+			if strings.Contains(f.Key()+": "+decoded, text) {
+				headerMatch = true
+			}
+		}
+		if ok, err := matchBody(e, text); err != nil || !ok && !headerMatch {
 			return false, err
 		}
 	}
@@ -194,7 +216,10 @@ func matchSeqNumAndUid(seqNum uint32, uid uint32, c *imap.SearchCriteria) bool {
 }
 
 func matchDate(date time.Time, c *imap.SearchCriteria) bool {
-	date = date.Round(24 * time.Hour)
+	// We discard time zone information by setting it to UTC.
+	// RFC 3501 explicitly requires zone unaware date comparison.
+	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+
 	if !c.Since.IsZero() && !date.After(c.Since) {
 		return false
 	}
