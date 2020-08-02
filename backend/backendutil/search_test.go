@@ -378,9 +378,9 @@ func TestMatchIssue298Regression(t *testing.T) {
 		t.Fatal("Expected no error while reading entity, got:", err)
 	}
 
-	// Search for body size > 1 ("LARGER 1"), which should match messages #2 and #3
+	// Search for body size > 15 ("LARGER 15"), which should match messages #2 and #3
 	criteria := &imap.SearchCriteria{
-		Larger: 1,
+		Larger: 15,
 	}
 	ok1, err := Match(e1, 1, 101, time.Now(), nil, criteria)
 	if err != nil {
@@ -404,9 +404,9 @@ func TestMatchIssue298Regression(t *testing.T) {
 		t.Errorf("Expected message #3 to match search criteria")
 	}
 
-	// Search for body size < 3 ("SMALLER 3"), which should match messages #1 and #2
+	// Search for body size < 17 ("SMALLER 17"), which should match messages #1 and #2
 	criteria = &imap.SearchCriteria{
-		Smaller: 3,
+		Smaller: 17,
 	}
 	ok1, err = Match(e1, 1, 101, time.Now(), nil, criteria)
 	if err != nil {
