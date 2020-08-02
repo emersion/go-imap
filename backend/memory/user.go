@@ -121,7 +121,7 @@ func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, bo
 
 func (u *User) CreateMailbox(name string) error {
 	if _, ok := u.mailboxes[name]; ok {
-		return errors.New("Mailbox already exists")
+		return backend.ErrMailboxAlreadyExists
 	}
 
 	u.mailboxes[name] = &Mailbox{name: name, user: u}
@@ -133,7 +133,7 @@ func (u *User) DeleteMailbox(name string) error {
 		return errors.New("Cannot delete INBOX")
 	}
 	if _, ok := u.mailboxes[name]; !ok {
-		return errors.New("No such mailbox")
+		return backend.ErrNoSuchMailbox
 	}
 
 	delete(u.mailboxes, name)
@@ -143,7 +143,7 @@ func (u *User) DeleteMailbox(name string) error {
 func (u *User) RenameMailbox(existingName, newName string) error {
 	mbox, ok := u.mailboxes[existingName]
 	if !ok {
-		return errors.New("No such mailbox")
+		return backend.ErrNoSuchMailbox
 	}
 
 	u.mailboxes[newName] = &Mailbox{

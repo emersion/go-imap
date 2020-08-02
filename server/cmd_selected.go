@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -214,7 +215,18 @@ func (cmd *Copy) handle(uid bool, conn Conn) error {
 		return ErrNoMailboxSelected
 	}
 
-	return ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
+	err := ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
+	if err != nil {
+		if err == backend.ErrNoSuchMailbox {
+			return ErrStatusResp(&imap.StatusResp{
+				Type: imap.StatusRespNo,
+				Code: imap.CodeTryCreate,
+				Info: "No such mailbox",
+			})
+		}
+		return err
+	}
+	return nil
 }
 
 func (cmd *Copy) Handle(conn Conn) error {
