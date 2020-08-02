@@ -787,18 +787,32 @@ func (e *Envelope) Parse(fields []interface{}) error {
 
 // Format an envelope to fields.
 func (e *Envelope) Format() (fields []interface{}) {
-	return []interface{}{
-		envelopeDateTime(e.Date),
-		encodeHeader(e.Subject),
+	fields = make([]interface{}, 0, 10)
+	fields = append(fields, envelopeDateTime(e.Date))
+	if e.Subject != "" {
+		fields = append(fields, encodeHeader(e.Subject))
+	} else {
+		fields = append(fields, nil)
+	}
+	fields = append(fields,
 		FormatAddressList(e.From),
 		FormatAddressList(e.Sender),
 		FormatAddressList(e.ReplyTo),
 		FormatAddressList(e.To),
 		FormatAddressList(e.Cc),
 		FormatAddressList(e.Bcc),
-		e.InReplyTo,
-		e.MessageId,
+	)
+	if e.InReplyTo != "" {
+		fields = append(fields, e.InReplyTo)
+	} else {
+		fields = append(fields, nil)
 	}
+	if e.MessageId != "" {
+		fields = append(fields, e.MessageId)
+	} else {
+		fields = append(fields, nil)
+	}
+	return fields
 }
 
 // A body structure.
