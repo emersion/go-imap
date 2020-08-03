@@ -13,9 +13,6 @@ type Mailbox interface {
 	// Closes the mailbox.
 	Close() error
 
-	// Info returns this mailbox info.
-	Info() (*imap.MailboxInfo, error)
-
 	// Poll requests any pending mailbox updates to be sent.
 	//
 	// Argument indicates whether EXPUNGE updates are permitted to be

@@ -25,7 +25,7 @@ func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err erro
 			continue
 		}
 
-		mboxInfo, err := mailbox.Info()
+		mboxInfo, err := mailbox.info()
 		if err != nil {
 			return nil, err
 		}

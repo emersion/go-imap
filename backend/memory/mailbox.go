@@ -26,7 +26,7 @@ func (mbox *Mailbox) Name() string {
 	return mbox.name
 }
 
-func (mbox *Mailbox) Info() (*imap.MailboxInfo, error) {
+func (mbox *Mailbox) info() (*imap.MailboxInfo, error) {
 	info := &imap.MailboxInfo{
 		Delimiter: Delimiter,
 		Name:      mbox.name,
