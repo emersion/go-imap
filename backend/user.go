@@ -39,18 +39,18 @@ type User interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a mailbox update.
-	CreateMessage(mbox string, flags []string, date time.Time, body imap.Literal) error
+	CreateMessage(mbox string, flags []string, date time.Time, body imap.Literal, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// ListMailboxes returns information about mailboxes belonging to this
 	// user. If subscribed is set to true, only returns subscribed mailboxes.
-	ListMailboxes(subscribed bool) ([]imap.MailboxInfo, error)
+	ListMailboxes(subscribed bool, opts []ExtensionOption) ([]imap.MailboxInfo, error)
 
 	// GetMailbox returns a mailbox. If it doesn't exist, it returns
 	// ErrNoSuchMailbox.
 	//
 	// Returned MailboxStatus should have Messages, Recent, Unseen, UidNext
 	// and UidValidity populated.
-	GetMailbox(name string, readOnly bool, conn Conn) (*imap.MailboxStatus, Mailbox, error)
+	GetMailbox(name string, readOnly bool, conn Conn, opts []ExtensionOption) (*imap.MailboxStatus, Mailbox, error)
 
 	// CreateMailbox creates a new mailbox.
 	//
@@ -70,7 +70,7 @@ type User interface {
 	// deleted, its unique identifiers MUST be greater than any unique identifiers
 	// used in the previous incarnation of the mailbox UNLESS the new incarnation
 	// has a different unique identifier validity value.
-	CreateMailbox(name string) error
+	CreateMailbox(name string, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// DeleteMailbox permanently remove the mailbox with the given name. It is an
 	// error to // attempt to delete INBOX or a mailbox name that does not exist.
@@ -83,7 +83,7 @@ type User interface {
 	// be preserved so that a new mailbox created with the same name will not
 	// reuse the identifiers of the former incarnation, UNLESS the new incarnation
 	// has a different unique identifier validity value.
-	DeleteMailbox(name string) error
+	DeleteMailbox(name string, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// RenameMailbox changes the name of a mailbox. It is an error to attempt to
 	// rename from a mailbox name that does not exist or to a mailbox name that
@@ -110,7 +110,7 @@ type User interface {
 	// messages in INBOX to a new mailbox with the given name, leaving INBOX
 	// empty.  If the server implementation supports inferior hierarchical names
 	// of INBOX, these are unaffected by a rename of INBOX.
-	RenameMailbox(existingName, newName string) error
+	RenameMailbox(existingName, newName string, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// Logout is called when this User will no longer be used, likely because the
 	// client closed the connection.

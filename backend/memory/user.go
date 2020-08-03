@@ -19,7 +19,7 @@ func (u *User) Username() string {
 	return u.username
 }
 
-func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err error) {
+func (u *User) ListMailboxes(subscribed bool, _ []backend.ExtensionOption) (info []imap.MailboxInfo, err error) {
 	for _, mailbox := range u.mailboxes {
 		if subscribed && !mailbox.Subscribed {
 			continue
@@ -34,7 +34,7 @@ func (u *User) ListMailboxes(subscribed bool) (info []imap.MailboxInfo, err erro
 	return
 }
 
-func (u *User) GetMailbox(name string, readOnly bool, conn backend.Conn) (*imap.MailboxStatus, backend.Mailbox, error) {
+func (u *User) GetMailbox(name string, readOnly bool, conn backend.Conn, _ []backend.ExtensionOption) (*imap.MailboxStatus, backend.Mailbox, error) {
 	mailbox, ok := u.mailboxes[name]
 	if !ok {
 		return nil, nil, backend.ErrNoSuchMailbox
@@ -94,10 +94,10 @@ func (u *User) SetSubscribed(name string, subscribed bool) error {
 	return nil
 }
 
-func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, body imap.Literal) error {
+func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, body imap.Literal, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	mbox, ok := u.mailboxes[mboxName]
 	if !ok {
-		return backend.ErrNoSuchMailbox
+		return nil, backend.ErrNoSuchMailbox
 	}
 
 	if date.IsZero() {
@@ -106,7 +106,7 @@ func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, bo
 
 	b, err := ioutil.ReadAll(body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mbox.Messages = append(mbox.Messages, &Message{
@@ -116,34 +116,34 @@ func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, bo
 		Flags: flags,
 		Body:  b,
 	})
-	return nil
+	return nil, nil
 }
 
-func (u *User) CreateMailbox(name string) error {
+func (u *User) CreateMailbox(name string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	if _, ok := u.mailboxes[name]; ok {
-		return backend.ErrMailboxAlreadyExists
+		return nil, backend.ErrMailboxAlreadyExists
 	}
 
 	u.mailboxes[name] = &Mailbox{name: name, user: u}
-	return nil
+	return nil, nil
 }
 
-func (u *User) DeleteMailbox(name string) error {
+func (u *User) DeleteMailbox(name string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	if name == "INBOX" {
-		return errors.New("Cannot delete INBOX")
+		return nil, errors.New("Cannot delete INBOX")
 	}
 	if _, ok := u.mailboxes[name]; !ok {
-		return backend.ErrNoSuchMailbox
+		return nil, backend.ErrNoSuchMailbox
 	}
 
 	delete(u.mailboxes, name)
-	return nil
+	return nil, nil
 }
 
-func (u *User) RenameMailbox(existingName, newName string) error {
+func (u *User) RenameMailbox(existingName, newName string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	mbox, ok := u.mailboxes[existingName]
 	if !ok {
-		return backend.ErrNoSuchMailbox
+		return nil, backend.ErrNoSuchMailbox
 	}
 
 	u.mailboxes[newName] = &Mailbox{
@@ -158,7 +158,7 @@ func (u *User) RenameMailbox(existingName, newName string) error {
 		delete(u.mailboxes, existingName)
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (u *User) Logout() error {

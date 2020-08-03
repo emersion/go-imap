@@ -38,7 +38,7 @@ func (cmd *Select) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox, cmd.ReadOnly, conn)
+	status, mbox, err := ctx.User.GetMailbox(cmd.Mailbox, cmd.ReadOnly, conn, nil)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,8 @@ func (cmd *Create) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	return ctx.User.CreateMailbox(cmd.Mailbox)
+	_, err := ctx.User.CreateMailbox(cmd.Mailbox, nil)
+	return err
 }
 
 type Delete struct {
@@ -84,7 +85,8 @@ func (cmd *Delete) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	return ctx.User.DeleteMailbox(cmd.Mailbox)
+	_, err := ctx.User.DeleteMailbox(cmd.Mailbox, nil)
+	return err
 }
 
 type Rename struct {
@@ -97,7 +99,8 @@ func (cmd *Rename) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	return ctx.User.RenameMailbox(cmd.Existing, cmd.New)
+	_, err := ctx.User.RenameMailbox(cmd.Existing, cmd.New, nil)
+	return err
 }
 
 type Subscribe struct {
@@ -147,7 +150,7 @@ func (cmd *List) Handle(conn Conn) error {
 		}
 	})()
 
-	mboxInfo, err := ctx.User.ListMailboxes(cmd.Subscribed)
+	mboxInfo, err := ctx.User.ListMailboxes(cmd.Subscribed, nil)
 	if err != nil {
 		// Close channel to signal end of results
 		close(ch)
@@ -216,7 +219,7 @@ func (cmd *Append) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	if err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message); err != nil {
+	if _, err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message, nil); err != nil {
 		if err == backend.ErrNoSuchMailbox {
 			return ErrStatusResp(&imap.StatusResp{
 				Type: imap.StatusRespNo,

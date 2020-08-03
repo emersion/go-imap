@@ -54,7 +54,8 @@ func (cmd *Close) Handle(conn Conn) error {
 	ctx.MailboxReadOnly = false
 
 	// No need to send expunge updates here, since the mailbox is already unselected
-	return mailbox.Expunge()
+	_, err := mailbox.Expunge(nil)
+	return err
 }
 
 type Expunge struct {
@@ -70,7 +71,8 @@ func (cmd *Expunge) Handle(conn Conn) error {
 		return ErrMailboxReadOnly
 	}
 
-	return ctx.Mailbox.Expunge()
+	_, err := ctx.Mailbox.Expunge(nil)
+	return err
 }
 
 type Search struct {
@@ -83,7 +85,7 @@ func (cmd *Search) handle(uid bool, conn Conn) error {
 		return ErrNoMailboxSelected
 	}
 
-	ids, err := ctx.Mailbox.SearchMessages(uid, cmd.Criteria)
+	_, ids, err := ctx.Mailbox.SearchMessages(uid, cmd.Criteria, nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 		}
 	})()
 
-	err := ctx.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch)
+	_, err := ctx.Mailbox.ListMessages(uid, cmd.SeqSet, cmd.Items, ch, nil)
 	if err != nil {
 		return err
 	}
@@ -189,7 +191,7 @@ func (cmd *Store) handle(uid bool, conn Conn) error {
 		flags[i] = imap.CanonicalFlag(flag)
 	}
 
-	err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, op, silent, flags)
+	_, err = ctx.Mailbox.UpdateMessagesFlags(uid, cmd.SeqSet, op, silent, flags, nil)
 	if err != nil {
 		return err
 	}
@@ -215,7 +217,7 @@ func (cmd *Copy) handle(uid bool, conn Conn) error {
 		return ErrNoMailboxSelected
 	}
 
-	err := ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox)
+	_, err := ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox, nil)
 	if err != nil {
 		if err == backend.ErrNoSuchMailbox {
 			return ErrStatusResp(&imap.StatusResp{

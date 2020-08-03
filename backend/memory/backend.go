@@ -22,6 +22,10 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 	return nil, errors.New("Bad username or password")
 }
 
+func (be *Backend) SupportedExtensions() []backend.Extension {
+	return nil
+}
+
 func New() *Backend {
 	user := &User{username: "username", password: "password"}
 

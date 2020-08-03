@@ -24,17 +24,19 @@ type Mailbox interface {
 	// 3501 section 6.4.5 for a list of items that can be requested.
 	//
 	// Messages must be sent to ch. When the function returns, ch must be closed.
-	ListMessages(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message) error
+	ListMessages(uid bool, seqset *imap.SeqSet, items []imap.FetchItem,
+		ch chan<- *imap.Message, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// SearchMessages searches messages. The returned list must contain UIDs if
 	// uid is set to true, or sequence numbers otherwise.
-	SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error)
+	SearchMessages(uid bool, criteria *imap.SearchCriteria, opts []ExtensionOption) ([]ExtensionResult, []uint32, error)
 
 	// UpdateMessagesFlags alters flags for the specified message(s).
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a message update.
-	UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, operation imap.FlagsOp, silent bool, flags []string) error
+	UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, operation imap.FlagsOp,
+		silent bool, flags []string, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// CopyMessages copies the specified message(s) to the end of the specified
 	// destination mailbox. The flags and internal date of the message(s) SHOULD
@@ -45,12 +47,12 @@ type Mailbox interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a mailbox update.
-	CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error
+	CopyMessages(uid bool, seqset *imap.SeqSet, dest string, opts []ExtensionOption) ([]ExtensionResult, error)
 
 	// Expunge permanently removes all messages that have the \Deleted flag set
 	// from the currently selected mailbox.
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via an expunge update.
-	Expunge() error
+	Expunge(opts []ExtensionOption) ([]ExtensionResult, error)
 }

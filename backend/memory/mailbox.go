@@ -85,7 +85,7 @@ func (mbox *Mailbox) Poll(_ bool) error {
 	return nil
 }
 
-func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message) error {
+func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.FetchItem, ch chan<- *imap.Message, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	defer close(ch)
 
 	for i, msg := range mbox.Messages {
@@ -109,10 +109,10 @@ func (mbox *Mailbox) ListMessages(uid bool, seqSet *imap.SeqSet, items []imap.Fe
 		ch <- m
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
+func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria, _ []backend.ExtensionOption) ([]backend.ExtensionResult, []uint32, error) {
 	var ids []uint32
 	for i, msg := range mbox.Messages {
 		seqNum := uint32(i + 1)
@@ -130,10 +130,11 @@ func (mbox *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]
 		}
 		ids = append(ids, id)
 	}
-	return ids, nil
+	return nil, ids, nil
 }
 
-func (mbox *SelectedMailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, silent bool, flags []string) error {
+func (mbox *SelectedMailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp,
+	silent bool, flags []string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
@@ -158,13 +159,13 @@ func (mbox *SelectedMailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, 
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string) error {
+func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	dest, ok := mbox.user.mailboxes[destName]
 	if !ok {
-		return backend.ErrNoSuchMailbox
+		return nil, backend.ErrNoSuchMailbox
 	}
 
 	for i, msg := range mbox.Messages {
@@ -183,10 +184,10 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 		dest.Messages = append(dest.Messages, &msgCopy)
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (mbox *SelectedMailbox) Expunge() error {
+func (mbox *SelectedMailbox) Expunge(_ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
 	for i := len(mbox.Messages) - 1; i >= 0; i-- {
 		msg := mbox.Messages[i]
 
@@ -205,7 +206,7 @@ func (mbox *SelectedMailbox) Expunge() error {
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (mbox *Mailbox) Close() error {
