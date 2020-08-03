@@ -63,6 +63,10 @@ type Expunge struct {
 }
 
 func (cmd *Expunge) Handle(conn Conn) error {
+	if cmd.SeqSet != nil {
+		return errors.New("Unexpected argment")
+	}
+
 	ctx := conn.Context()
 	if ctx.Mailbox == nil {
 		return ErrNoMailboxSelected
@@ -72,6 +76,28 @@ func (cmd *Expunge) Handle(conn Conn) error {
 	}
 
 	_, err := ctx.Mailbox.Expunge(nil)
+	return err
+}
+
+func (cmd *Expunge) UidHandle(conn Conn) error {
+	if _, ok := conn.Server().backendExts[backend.ExtUIDPLUS]; !ok {
+		return errors.New("Unknown command")
+	}
+	if cmd.SeqSet == nil {
+		return errors.New("Missing set argment")
+	}
+
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
+		return ErrNoMailboxSelected
+	}
+	if ctx.MailboxReadOnly {
+		return ErrMailboxReadOnly
+	}
+
+	_, err := ctx.Mailbox.Expunge([]backend.ExtensionOption{
+		backend.ExpungeSeqSet{SeqSet: cmd.SeqSet},
+	})
 	return err
 }
 
@@ -217,7 +243,7 @@ func (cmd *Copy) handle(uid bool, conn Conn) error {
 		return ErrNoMailboxSelected
 	}
 
-	_, err := ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox, nil)
+	resp, err := ctx.Mailbox.CopyMessages(uid, cmd.SeqSet, cmd.Mailbox, nil)
 	if err != nil {
 		if err == backend.ErrNoSuchMailbox {
 			return ErrStatusResp(&imap.StatusResp{
@@ -228,6 +254,30 @@ func (cmd *Copy) handle(uid bool, conn Conn) error {
 		}
 		return err
 	}
+
+	var customResp *imap.StatusResp
+	for _, value := range resp {
+		switch value := value.(type) {
+		case backend.CopyUIDs:
+			customResp = &imap.StatusResp{
+				Type: imap.StatusRespOk,
+				Code: "COPYUID",
+				Arguments: []interface{}{
+					value.UIDValidity,
+					value.Source,
+					value.Dest,
+				},
+				Info: "COPY completed",
+			}
+		default:
+			conn.Server().ErrorLog.Printf("ExtensionResult of unknown type returned by backend: %T", value)
+			// Returning an error here would make it look like the command failed.
+		}
+	}
+	if customResp != nil {
+		return &imap.ErrStatusResp{Resp: customResp}
+	}
+
 	return nil
 }
 

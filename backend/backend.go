@@ -13,6 +13,10 @@ var ErrInvalidCredentials = errors.New("Invalid credentials")
 
 type Extension string
 
+const (
+	ExtUIDPLUS Extension = "UIDPLUS"
+)
+
 // Backend is an IMAP server backend. A backend operation always deals with
 // users.
 type Backend interface {

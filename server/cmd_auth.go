@@ -219,7 +219,8 @@ func (cmd *Append) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	if _, err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message, nil); err != nil {
+	res, err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message, nil)
+	if err != nil {
 		if err == backend.ErrNoSuchMailbox {
 			return ErrStatusResp(&imap.StatusResp{
 				Type: imap.StatusRespNo,
@@ -237,5 +238,29 @@ func (cmd *Append) Handle(conn Conn) error {
 	if ctx.Mailbox != nil && ctx.Mailbox.Name() == cmd.Mailbox {
 		return ctx.Mailbox.Poll(true)
 	}
+
+	var customResp *imap.StatusResp
+	for _, value := range res {
+		switch value := value.(type) {
+		case backend.AppendUID:
+			customResp = &imap.StatusResp{
+				Tag:  "",
+				Type: imap.StatusRespOk,
+				Code: "APPENDUID",
+				Arguments: []interface{}{
+					value.UIDValidity,
+					value.UID,
+				},
+				Info: "APPEND completed",
+			}
+		default:
+			conn.Server().ErrorLog.Printf("ExtensionResult of unknown type returned by backend: %T", value)
+			// Returning an error here would make it look like the command failed.
+		}
+	}
+	if customResp != nil {
+		return &imap.ErrStatusResp{Resp: customResp}
+	}
+
 	return nil
 }

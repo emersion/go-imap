@@ -109,14 +109,21 @@ func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, bo
 		return nil, err
 	}
 
+	uid := mbox.uidNext()
 	mbox.Messages = append(mbox.Messages, &Message{
-		Uid:   mbox.uidNext(),
+		Uid:   uid,
 		Date:  date,
 		Size:  uint32(len(b)),
 		Flags: flags,
 		Body:  b,
 	})
-	return nil, nil
+
+	return []backend.ExtensionResult{
+		backend.AppendUID{
+			UIDValidity: 1,
+			UID:         uid,
+		},
+	}, nil
 }
 
 func (u *User) CreateMailbox(name string, _ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {

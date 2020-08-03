@@ -88,9 +88,10 @@ type Server struct {
 	listeners map[net.Listener]struct{}
 	conns     map[Conn]struct{}
 
-	commands   map[string]HandlerFactory
-	auths      map[string]SASLServerFactory
-	extensions []Extension
+	commands    map[string]HandlerFactory
+	auths       map[string]SASLServerFactory
+	extensions  []Extension
+	backendExts map[backend.Extension]struct{}
 
 	// TCP address to listen on.
 	Addr string
@@ -119,10 +120,15 @@ type Server struct {
 // Create a new IMAP server from an existing listener.
 func New(bkd backend.Backend) *Server {
 	s := &Server{
-		listeners: make(map[net.Listener]struct{}),
-		conns:     make(map[Conn]struct{}),
-		Backend:   bkd,
-		ErrorLog:  log.New(os.Stderr, "imap/server: ", log.LstdFlags),
+		listeners:   make(map[net.Listener]struct{}),
+		conns:       make(map[Conn]struct{}),
+		backendExts: map[backend.Extension]struct{}{},
+		Backend:     bkd,
+		ErrorLog:    log.New(os.Stderr, "imap/server: ", log.LstdFlags),
+	}
+
+	for _, ext := range bkd.SupportedExtensions() {
+		s.backendExts[ext] = struct{}{}
 	}
 
 	s.auths = map[string]SASLServerFactory{

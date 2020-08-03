@@ -168,6 +168,8 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 		return nil, backend.ErrNoSuchMailbox
 	}
 
+	var srcSet, destSet imap.SeqSet
+
 	for i, msg := range mbox.Messages {
 		var id uint32
 		if uid {
@@ -179,15 +181,32 @@ func (mbox *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, destName string
 			continue
 		}
 
+		srcSet.AddNum(msg.Uid)
+
 		msgCopy := *msg
 		msgCopy.Uid = dest.uidNext()
 		dest.Messages = append(dest.Messages, &msgCopy)
+		destSet.AddNum(msgCopy.Uid)
 	}
 
-	return nil, nil
+	return []backend.ExtensionResult{
+		backend.CopyUIDs{
+			Source:      &srcSet,
+			UIDValidity: 1,
+			Dest:        &destSet,
+		},
+	}, nil
 }
 
-func (mbox *SelectedMailbox) Expunge(_ []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
+func (mbox *SelectedMailbox) Expunge(opts []backend.ExtensionOption) ([]backend.ExtensionResult, error) {
+	var allowedUIDs *imap.SeqSet
+	for _, opt := range opts {
+		switch opt := opt.(type) {
+		case backend.ExpungeSeqSet:
+			allowedUIDs = opt.SeqSet
+		}
+	}
+
 	for i := len(mbox.Messages) - 1; i >= 0; i-- {
 		msg := mbox.Messages[i]
 
@@ -197,6 +216,10 @@ func (mbox *SelectedMailbox) Expunge(_ []backend.ExtensionOption) ([]backend.Ext
 				deleted = true
 				break
 			}
+		}
+
+		if allowedUIDs != nil && !allowedUIDs.Contains(msg.Uid) {
+			continue
 		}
 
 		if deleted {

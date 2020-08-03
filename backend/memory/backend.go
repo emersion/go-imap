@@ -23,7 +23,9 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 }
 
 func (be *Backend) SupportedExtensions() []backend.Extension {
-	return nil
+	return []backend.Extension{
+		backend.ExtUIDPLUS,
+	}
 }
 
 func New() *Backend {

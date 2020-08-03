@@ -184,6 +184,13 @@ func (c *conn) Capabilities() []string {
 		}
 	}
 
+	for _, ext := range c.Server().Backend.SupportedExtensions() {
+		switch ext {
+		case backend.ExtUIDPLUS:
+			caps = append(caps, "UIDPLUS")
+		}
+	}
+
 	for _, ext := range c.s.extensions {
 		caps = append(caps, ext.Capabilities(c)...)
 	}
