@@ -398,17 +398,13 @@ func (s *Server) Close() error {
 }
 
 // Enable some IMAP extensions on this server.
-//
-// This function should not be called directly, it must only be used by
-// libraries implementing extensions of the IMAP protocol.
+// Wiki entry: https://github.com/emersion/go-imap/wiki/Using-extensions
 func (s *Server) Enable(extensions ...Extension) {
 	s.extensions = append(s.extensions, extensions...)
 }
 
 // Enable an authentication mechanism on this server.
-//
-// This function should not be called directly, it must only be used by
-// libraries implementing extensions of the IMAP protocol.
+// Wiki entry: https://github.com/emersion/go-imap/wiki/Using-authentication-mechanisms
 func (s *Server) EnableAuth(name string, f SASLServerFactory) {
 	s.auths[name] = f
 }
