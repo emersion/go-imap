@@ -119,6 +119,11 @@ func encodeHeader(s string) string {
 	return mime.QEncoding.Encode("utf-8", s)
 }
 
+func stringLowered(i interface{}) (string, bool) {
+	s, ok := i.(string)
+	return strings.ToLower(s), ok
+}
+
 func parseHeaderParamList(fields []interface{}) (map[string]string, error) {
 	params, err := ParseParamList(fields)
 	if err != nil {
@@ -126,8 +131,14 @@ func parseHeaderParamList(fields []interface{}) (map[string]string, error) {
 	}
 
 	for k, v := range params {
+		if lower := strings.ToLower(k); lower != k {
+			delete(params, k)
+			k = lower
+		}
+
 		params[k], _ = decodeHeader(v)
 	}
+
 	return params, nil
 }
 
@@ -911,6 +922,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
 				if s, ok := disp[0].(string); ok {
 					bs.Disposition, _ = decodeHeader(s)
+					bs.Disposition = strings.ToLower(bs.Disposition)
 				}
 				if params, ok := disp[1].([]interface{}); ok {
 					bs.DispositionParams, _ = parseHeaderParamList(params)
@@ -939,8 +951,8 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			return errors.New("Non-multipart body part doesn't have 7 fields")
 		}
 
-		bs.MIMEType, _ = fields[0].(string)
-		bs.MIMESubType, _ = fields[1].(string)
+		bs.MIMEType, _ = stringLowered(fields[0])
+		bs.MIMESubType, _ = stringLowered(fields[1])
 
 		params, _ := fields[2].([]interface{})
 		bs.Params, _ = parseHeaderParamList(params)
@@ -949,7 +961,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		if desc, err := ParseString(fields[4]); err == nil {
 			bs.Description, _ = decodeHeader(desc)
 		}
-		bs.Encoding, _ = fields[5].(string)
+		bs.Encoding, _ = stringLowered(fields[5])
 		bs.Size, _ = ParseNumber(fields[6])
 
 		end := 7
@@ -993,6 +1005,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 			if disp, ok := fields[end].([]interface{}); ok && len(disp) >= 2 {
 				if s, ok := disp[0].(string); ok {
 					bs.Disposition, _ = decodeHeader(s)
+					bs.Disposition = strings.ToLower(bs.Disposition)
 				}
 				if params, ok := disp[1].([]interface{}); ok {
 					bs.DispositionParams, _ = parseHeaderParamList(params)

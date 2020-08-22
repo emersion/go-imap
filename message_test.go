@@ -593,6 +593,36 @@ func TestBodyStructure_Parse(t *testing.T) {
 	}
 }
 
+func TestBodyStructure_Parse_uppercase(t *testing.T) {
+	fields := []interface{}{
+		"APPLICATION", "PDF", []interface{}{"NAME", "Document.pdf"}, nil, nil,
+		"BASE64", RawString("4242"), nil,
+		[]interface{}{"ATTACHMENT", []interface{}{"FILENAME", "Document.pdf"}},
+		nil, nil,
+	}
+
+	expected := &BodyStructure{
+		MIMEType:          "application",
+		MIMESubType:       "pdf",
+		Params:            map[string]string{"name": "Document.pdf"},
+		Encoding:          "base64",
+		Size:              4242,
+		Extended:          true,
+		MD5:               "",
+		Disposition:       "attachment",
+		DispositionParams: map[string]string{"filename": "Document.pdf"},
+		Language:          nil,
+		Location:          []string{},
+	}
+
+	bs := &BodyStructure{}
+	if err := bs.Parse(fields); err != nil {
+		t.Errorf("Cannot parse: %v", err)
+	} else if !reflect.DeepEqual(bs, expected) {
+		t.Errorf("Invalid body structure: got \n%+v\n but expected \n%+v", bs, expected)
+	}
+}
+
 func TestBodyStructure_Format(t *testing.T) {
 	for i, test := range bodyStructureTests {
 		fields := test.bodyStructure.Format()
