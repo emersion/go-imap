@@ -43,17 +43,20 @@ type Close struct {
 }
 
 func (cmd *Close) Handle(conn Conn) error {
-	ctx := conn.Context()
-	if ctx.Mailbox == nil {
-		return ErrNoMailboxSelected
-	}
+	return closeMailbox(conn.Context())
+}
 
-	mailbox := ctx.Mailbox
+func closeMailbox(ctx *Context) error {
+	previousMailbox := ctx.Mailbox
 	ctx.Mailbox = nil
 	ctx.MailboxReadOnly = false
 
+	if previousMailbox == nil {
+		return ErrNoMailboxSelected
+	}
+
 	// No need to send expunge updates here, since the mailbox is already unselected
-	return mailbox.Expunge()
+	return previousMailbox.Expunge()
 }
 
 type Expunge struct {

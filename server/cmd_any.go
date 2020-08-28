@@ -37,6 +37,13 @@ type Logout struct {
 }
 
 func (cmd *Logout) Handle(conn Conn) error {
+	// RFC3501#section-6.4.2 CLOSE
+	// 		The SELECT, EXAMINE, and LOGOUT commands implicitly close the
+	// 		currently selected mailbox without doing an expunge.
+	if err := closeMailbox(conn.Context()); err != nil && err != ErrNoMailboxSelected {
+		conn.Server().ErrorLog.Printf("CLOSE-LOGOUT failed: %v", err)
+	}
+
 	res := &imap.StatusResp{
 		Type: imap.StatusRespBye,
 		Info: "Closing connection",

@@ -26,10 +26,16 @@ func (cmd *Select) Handle(conn Conn) error {
 	// 		currently selected mailbox before attempting the new selection.
 	// 		Consequently, if a mailbox is selected and a SELECT command that
 	// 		fails is attempted, no mailbox is selected.
+	//
 	// For example, some clients (e.g. Apple Mail) perform SELECT "" when the
 	// server doesn't announce the UNSELECT capability.
-	ctx.Mailbox = nil
-	ctx.MailboxReadOnly = false
+	//
+	// RFC3501#section-6.4.2 CLOSE
+	// 		The SELECT, EXAMINE, and LOGOUT commands implicitly close the
+	// 		currently selected mailbox without doing an expunge.
+	if err := closeMailbox(ctx); err != nil && err != ErrNoMailboxSelected {
+		conn.Server().ErrorLog.Printf("CLOSE-SELECT failed: %v", err)
+	}
 
 	if ctx.User == nil {
 		return ErrNotAuthenticated
