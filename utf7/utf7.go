@@ -1,4 +1,4 @@
-// Modified UTF-7 encoding defined in RFC 3501 section 5.1.3
+// Package utf7 implements modified UTF-7 encoding defined in RFC 3501 section 5.1.3
 package utf7
 
 import (
