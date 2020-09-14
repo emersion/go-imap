@@ -337,6 +337,10 @@ func (m *Message) GetBody(section *BodySectionName) Literal {
 
 	for s, body := range m.Body {
 		if section.Equal(s) {
+			if body == nil {
+				// Server can return nil, we need to treat as empty string per RFC 3501
+				body = bytes.NewReader(nil)
+			}
 			return body
 		}
 	}
