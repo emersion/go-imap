@@ -372,6 +372,24 @@ func TestAddress_Format(t *testing.T) {
 	}
 }
 
+func TestEmptyAddress(t *testing.T) {
+	fields := []interface{}{nil, nil, nil, nil}
+	addr := &Address{}
+	err := addr.Parse(fields)
+	if err == nil {
+		t.Error("A nil address did not return an error")
+	}
+}
+
+func TestEmptyGroupAddress(t *testing.T) {
+	fields := []interface{}{nil, nil, "undisclosed-recipients", nil}
+	addr := &Address{}
+	err := addr.Parse(fields)
+	if err == nil {
+		t.Error("An empty group did not return an error when parsed as address")
+	}
+}
+
 func TestAddressList(t *testing.T) {
 	fields := make([]interface{}, len(addrTests))
 	addrs := make([]*Address, len(addrTests))
@@ -399,6 +417,7 @@ func TestEmptyAddressList(t *testing.T) {
 		t.Error("Invalid address list fields: got", gotFields, "but expected nil")
 	}
 }
+
 
 var paramsListTest = []struct {
 	fields []interface{}
