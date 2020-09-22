@@ -674,12 +674,18 @@ func (addr *Address) Parse(fields []interface{}) error {
 	if s, err := ParseString(fields[1]); err == nil {
 		addr.AtDomainList, _ = decodeHeader(s)
 	}
-	if s, err := ParseString(fields[2]); err == nil {
-		addr.MailboxName, _ = decodeHeader(s)
+
+	s, err := ParseString(fields[2])
+	if err != nil {
+		return errors.New("Mailbox name could not be parsed")
 	}
-	if s, err := ParseString(fields[3]); err == nil {
-		addr.HostName, _ = decodeHeader(s)
+	addr.MailboxName, _ = decodeHeader(s)
+
+	s, err = ParseString(fields[3])
+	if err != nil {
+		return errors.New("Host name could not be parsed")
 	}
+	addr.HostName, _ = decodeHeader(s)
 
 	return nil
 }
@@ -706,13 +712,11 @@ func (addr *Address) Format() []interface{} {
 
 // Parse an address list from fields.
 func ParseAddressList(fields []interface{}) (addrs []*Address) {
-	addrs = make([]*Address, len(fields))
-
-	for i, f := range fields {
+	for _, f := range fields {
 		if addrFields, ok := f.([]interface{}); ok {
 			addr := &Address{}
 			if err := addr.Parse(addrFields); err == nil {
-				addrs[i] = addr
+				addrs = append(addrs, addr)
 			}
 		}
 	}
