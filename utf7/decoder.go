@@ -77,6 +77,9 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		}
 
 		if nDst+len(b) > len(dst) {
+			if atEOF {
+				d.ascii = true
+			}
 			err = transform.ErrShortDst
 			return
 		}
