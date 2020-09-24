@@ -72,6 +72,10 @@ var decode = []struct {
 	{"&AGE-&Jjo-", "", false},
 	{"&U,BTFw-&ZeVnLIqe-", "", false},
 
+	// Long input with Base64 at the end
+	{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &2D3eCg- &2D3eCw- &2D3eDg-",
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \U0001f60a \U0001f60b \U0001f60e", true},
+
 	// ASCII in Base64
 	{"&AGE-", "", false},            // "a"
 	{"&ACY-", "", false},            // "&"
