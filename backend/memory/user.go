@@ -94,7 +94,7 @@ func (u *User) SetSubscribed(name string, subscribed bool) error {
 	return nil
 }
 
-func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, body imap.Literal) error {
+func (u *User) CreateMessage(mboxName string, flags []string, date time.Time, body imap.Literal, _ backend.Mailbox) error {
 	mbox, ok := u.mailboxes[mboxName]
 	if !ok {
 		return backend.ErrNoSuchMailbox

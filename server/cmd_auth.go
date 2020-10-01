@@ -218,7 +218,7 @@ func (cmd *Append) Handle(conn Conn) error {
 		return ErrNotAuthenticated
 	}
 
-	if err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message); err != nil {
+	if err := ctx.User.CreateMessage(cmd.Mailbox, cmd.Flags, cmd.Date, cmd.Message, ctx.Mailbox); err != nil {
 		if err == backend.ErrNoSuchMailbox {
 			return ErrStatusResp(&imap.StatusResp{
 				Type: imap.StatusRespNo,

@@ -39,7 +39,10 @@ type User interface {
 	//
 	// If the Backend implements Updater, it must notify the client immediately
 	// via a mailbox update.
-	CreateMessage(mbox string, flags []string, date time.Time, body imap.Literal) error
+	//
+	// If a mailbox is selected on the current connection, then it is passed as
+	// the selectedMailbox parameter. If none is selected, nil is passed
+	CreateMessage(mbox string, flags []string, date time.Time, body imap.Literal, selectedMailbox Mailbox) error
 
 	// ListMailboxes returns information about mailboxes belonging to this
 	// user. If subscribed is set to true, only returns subscribed mailboxes.
