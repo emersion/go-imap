@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -152,13 +151,6 @@ func (c *Client) readOnce() (bool, error) {
 	if err == io.EOF || c.State() == imap.LogoutState {
 		return false, nil
 	} else if err != nil {
-		if opErr, ok := err.(*net.OpError); ok {
-			if syscallErr, ok := opErr.Err.(*os.SyscallError); ok {
-				if syscallErr.Err == syscall.ECONNRESET {
-					return false, nil
-				}
-			}
-		}
 		if imap.IsParseError(err) {
 			return true, err
 		} else {
