@@ -68,6 +68,11 @@ const (
 	HasNoChildrenAttr = "\\HasNoChildren"
 )
 
+// This mailbox attribute is a signal that the mailbox contains messages that
+// are likely important to the user. This attribute is defined in RFC 8457
+// section 3.
+const ImportantAttr = "\\Important"
+
 // Basic mailbox info.
 type MailboxInfo struct {
 	// The mailbox attributes.

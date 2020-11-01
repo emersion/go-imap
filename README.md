@@ -133,6 +133,7 @@ You can now use `telnet localhost 1143` to manually connect to the server.
 Support for several IMAP extensions is included in go-imap itself. This
 includes:
 
+* [IMPORTANT](https://tools.ietf.org/html/rfc8457)
 * [LITERAL+](https://tools.ietf.org/html/rfc7888)
 * [SASL-IR](https://tools.ietf.org/html/rfc4959)
 * [SPECIAL-USE](https://tools.ietf.org/html/rfc6154)
