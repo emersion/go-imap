@@ -7,10 +7,6 @@
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
 
-```shell
-go get github.com/emersion/go-imap/...
-```
-
 ## Usage
 
 ### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
