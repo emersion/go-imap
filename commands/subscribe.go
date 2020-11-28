@@ -28,8 +28,8 @@ func (cmd *Subscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		return err
+		//} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
+		//	return err
 	}
 	return nil
 }
@@ -56,8 +56,8 @@ func (cmd *Unsubscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		return err
+		//} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
+		//	return err
 	}
 	return nil
 }

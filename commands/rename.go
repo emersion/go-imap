@@ -29,7 +29,7 @@ func (cmd *Rename) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	dec := utf7.Encoding.NewDecoder()
+	//dec := utf7.Encoding.NewDecoder()
 
 	if existingName, err := imap.ParseString(fields[0]); err != nil {
 		return err
