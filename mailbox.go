@@ -9,6 +9,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+type Delimiter struct {
+	Delimiter string
+}
+
 // The primary mailbox, as defined in RFC 3501 section 5.1.
 const InboxName = "INBOX"
 
@@ -124,10 +128,11 @@ func (info *MailboxInfo) Format() []interface{} {
 
 	// If the delimiter is NIL, we need to treat it specially by inserting
 	// a nil field (so that it's later converted to an unquoted NIL atom).
-	var del interface{}
+	del := new(Delimiter)
+	del.Delimiter = info.Delimiter
 
-	if info.Delimiter != "" {
-		del = info.Delimiter
+	if info.Delimiter == "" {
+		del = nil
 	}
 
 	// Thunderbird doesn't understand delimiters if not quoted

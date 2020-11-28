@@ -55,6 +55,14 @@ type Writer struct {
 	continues <-chan bool
 }
 
+func (w *Writer) writeDelimiter(d Delimiter) error {
+	del := d.Delimiter
+	if del == "\\" || del == "\"" {
+		del = "\\" + del
+	}
+	return w.writeString("\"" + del + "\"")
+}
+
 // Helper function to write a string to w.
 func (w *Writer) writeString(s string) error {
 	_, err := io.WriteString(w.Writer, s)
@@ -184,6 +192,8 @@ func (w *Writer) writeField(field interface{}) error {
 	}
 
 	switch field := field.(type) {
+	case Delimiter:
+		return w.writeDelimiter(field)
 	case RawString:
 		return w.writeString(string(field))
 	case string:
