@@ -130,9 +130,9 @@ func (info *MailboxInfo) Format() []interface{} {
 	log.Println("Formatting")
 
 	log.Println("Info:")
-	fmt.Printf("%+v\n", info)
+	fmt.Printf("%#v\n", info)
 	log.Println("Info Delimiter:")
-	fmt.Printf("%+v\n", info.Delimiter)
+	fmt.Printf("%#v\n", info.Delimiter)
 
 	// If the delimiter is NIL, we need to treat it specially by inserting
 	// a nil field (so that it's later converted to an unquoted NIL atom).
@@ -140,16 +140,16 @@ func (info *MailboxInfo) Format() []interface{} {
 	del.Delimiter = info.Delimiter
 
 	log.Println("Del:")
-	fmt.Printf("%+v\n", del)
+	fmt.Printf("%#v\n", del)
 	log.Println("Del Delimiter:")
-	fmt.Printf("%+v\n", del.Delimiter)
+	fmt.Printf("%#v\n", del.Delimiter)
 
 	if info.Delimiter == "" {
 		del = nil
 	}
 
 	log.Println("NIL Delimiter:")
-	fmt.Printf("%+v\n", del)
+	fmt.Printf("%#v\n", del)
 
 	// Thunderbird doesn't understand delimiters if not quoted
 	return []interface{}{attrs, del, FormatMailboxName(name)}
