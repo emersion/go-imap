@@ -197,7 +197,7 @@ func (w *Writer) writeField(field interface{}) error {
 	fmt.Printf("%#v\n", reflect.TypeOf(field))
 
 	switch field := field.(type) {
-	case Delimiter:
+	case *Delimiter:
 		return w.writeDelimiter(field)
 	case RawString:
 		return w.writeString(string(field))
