@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 )
@@ -61,6 +62,13 @@ func (w *Writer) writeDelimiter(d *Delimiter) error {
 		del = "\\" + del
 	}
 	return w.writeString("\"" + del + "\"")
+}
+
+func (w *Writer) writeFolderName(fn *FolderName) error {
+	if strings.EqualFold(fn.Name, "INBOX") {
+		return w.writeString("INBOX")
+	}
+	return w.writeQuotedOrLiteral(fn.Name)
 }
 
 // Helper function to write a string to w.
@@ -194,6 +202,8 @@ func (w *Writer) writeField(field interface{}) error {
 	switch field := field.(type) {
 	case *Delimiter:
 		return w.writeDelimiter(field)
+	case *FolderName:
+		return w.writeFolderName(field)
 	case RawString:
 		return w.writeString(string(field))
 	case string:

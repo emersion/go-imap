@@ -13,6 +13,10 @@ type Delimiter struct {
 	Delimiter string
 }
 
+type FolderName struct {
+	Name string
+}
+
 // The primary mailbox, as defined in RFC 3501 section 5.1.
 const InboxName = "INBOX"
 
@@ -120,7 +124,6 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
-	name := info.Name
 	//name, _ := utf7.Encoding.NewEncoder().String(info.Name)
 	attrs := make([]interface{}, len(info.Attributes))
 	for i, attr := range info.Attributes {
@@ -136,8 +139,11 @@ func (info *MailboxInfo) Format() []interface{} {
 		del = nil
 	}
 
+	name := new(FolderName)
+	name.Name = info.Name
+
 	// Thunderbird doesn't understand delimiters if not quoted
-	return []interface{}{attrs, del, FormatMailboxName(name)}
+	return []interface{}{attrs, del, name}
 }
 
 // TODO: optimize this
@@ -301,12 +307,4 @@ func (status *MailboxStatus) Format() []interface{} {
 		fields = append(fields, RawString(k), v)
 	}
 	return fields
-}
-
-func FormatMailboxName(name string) interface{} {
-	// Some e-mails servers don't handle quoted INBOX names correctly so we special-case it.
-	if strings.EqualFold(name, "INBOX") {
-		return RawString(name)
-	}
-	return name
 }
