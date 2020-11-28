@@ -56,7 +56,7 @@ type Writer struct {
 	continues <-chan bool
 }
 
-func (w *Writer) writeDelimiter(d Delimiter) error {
+func (w *Writer) writeDelimiter(d *Delimiter) error {
 	del := d.Delimiter
 	if del == "\\" || del == "\"" {
 		del = "\\" + del
