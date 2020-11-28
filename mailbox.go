@@ -120,8 +120,8 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 
 // Format mailbox info to fields.
 func (info *MailboxInfo) Format() []interface{} {
-	name, _ := info.Name
-	//utf7.Encoding.NewEncoder().String(info.Name)
+	name := info.Name
+	//name, _ := utf7.Encoding.NewEncoder().String(info.Name)
 	attrs := make([]interface{}, len(info.Attributes))
 	for i, attr := range info.Attributes {
 		attrs[i] = RawString(attr)
