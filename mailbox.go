@@ -3,6 +3,7 @@ package imap
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -126,14 +127,22 @@ func (info *MailboxInfo) Format() []interface{} {
 		attrs[i] = RawString(attr)
 	}
 
+	log.Println("Info: " + fmt.Sprint(info))
+	log.Println("Info Delimiter: " + fmt.Sprint(info.Delimiter))
+
 	// If the delimiter is NIL, we need to treat it specially by inserting
 	// a nil field (so that it's later converted to an unquoted NIL atom).
 	del := new(Delimiter)
 	del.Delimiter = info.Delimiter
 
+	log.Println("Del: " + fmt.Sprint(del))
+	log.Println("Del Delimiter: " + fmt.Sprint(del.Delimiter))
+
 	if info.Delimiter == "" {
 		del = nil
 	}
+
+	log.Println("NIL Delimiter: " + fmt.Sprint(del))
 
 	// Thunderbird doesn't understand delimiters if not quoted
 	return []interface{}{attrs, del, FormatMailboxName(name)}
