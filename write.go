@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 	"time"
 	"unicode"
@@ -190,6 +191,10 @@ func (w *Writer) writeField(field interface{}) error {
 	if field == nil {
 		return w.writeString(nilAtom)
 	}
+
+	fmt.Printf("Writing field")
+	fmt.Printf("%#v\n", field)
+	fmt.Printf("%#v\n", reflect.TypeOf(field))
 
 	switch field := field.(type) {
 	case Delimiter:
