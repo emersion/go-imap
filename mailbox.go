@@ -127,6 +127,8 @@ func (info *MailboxInfo) Format() []interface{} {
 		attrs[i] = RawString(attr)
 	}
 
+	log.Println("Formatting")
+
 	log.Println("Info: " + fmt.Sprint(info))
 	log.Println("Info Delimiter: " + fmt.Sprint(info.Delimiter))
 
