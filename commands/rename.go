@@ -33,16 +33,16 @@ func (cmd *Rename) Parse(fields []interface{}) error {
 
 	if existingName, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if existingName, err := dec.String(existingName); err != nil {
-		return err
+		//} else if existingName, err := dec.String(existingName); err != nil {
+		//	return err
 	} else {
 		cmd.Existing = imap.CanonicalMailboxName(existingName)
 	}
 
 	if newName, err := imap.ParseString(fields[1]); err != nil {
 		return err
-	} else if newName, err := dec.String(newName); err != nil {
-		return err
+		//} else if newName, err := dec.String(newName); err != nil {
+		//	return err
 	} else {
 		cmd.New = imap.CanonicalMailboxName(newName)
 	}

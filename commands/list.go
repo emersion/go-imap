@@ -41,8 +41,8 @@ func (cmd *List) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-	} else if mailbox, err := dec.String(mailbox); err != nil {
-		return err
+		//} else if mailbox, err := dec.String(mailbox); err != nil {
+		//	return err
 	} else {
 		// TODO: canonical mailbox path
 		cmd.Reference = imap.CanonicalMailboxName(mailbox)
@@ -50,8 +50,8 @@ func (cmd *List) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[1]); err != nil {
 		return err
-	} else if mailbox, err := dec.String(mailbox); err != nil {
-		return err
+		//} else if mailbox, err := dec.String(mailbox); err != nil {
+		//	return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}
