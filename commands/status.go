@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/utf7"
 )
 
 // Status is a STATUS command, as defined in RFC 3501 section 6.3.10.
@@ -15,7 +14,7 @@ type Status struct {
 }
 
 func (cmd *Status) Command() *imap.Command {
-	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
+	mailbox := cmd.Mailbox
 
 	items := make([]interface{}, len(cmd.Items))
 	for i, item := range cmd.Items {
@@ -35,8 +34,6 @@ func (cmd *Status) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-		//} else if mailbox, err := utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		//	return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}

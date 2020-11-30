@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/utf7"
 )
 
 // Append is an APPEND command, as defined in RFC 3501 section 6.3.11.
@@ -19,7 +18,7 @@ type Append struct {
 func (cmd *Append) Command() *imap.Command {
 	var args []interface{}
 
-	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
+	mailbox := cmd.Mailbox
 	args = append(args, imap.FormatMailboxName(mailbox))
 
 	if cmd.Flags != nil {
@@ -50,8 +49,6 @@ func (cmd *Append) Parse(fields []interface{}) (err error) {
 	// Parse mailbox name
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-		//} else if mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		//	return err
 	} else {
 		cmd.Mailbox = imap.CanonicalMailboxName(mailbox)
 	}

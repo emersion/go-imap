@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/utf7"
 )
 
 // Subscribe is a SUBSCRIBE command, as defined in RFC 3501 section 6.3.6.
@@ -13,7 +12,7 @@ type Subscribe struct {
 }
 
 func (cmd *Subscribe) Command() *imap.Command {
-	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
+	mailbox := cmd.Mailbox
 
 	return &imap.Command{
 		Name:      "SUBSCRIBE",
@@ -28,8 +27,6 @@ func (cmd *Subscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-		//} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		//	return err
 	}
 	return nil
 }
@@ -41,7 +38,7 @@ type Unsubscribe struct {
 }
 
 func (cmd *Unsubscribe) Command() *imap.Command {
-	mailbox, _ := utf7.Encoding.NewEncoder().String(cmd.Mailbox)
+	mailbox := cmd.Mailbox
 
 	return &imap.Command{
 		Name:      "UNSUBSCRIBE",
@@ -56,8 +53,6 @@ func (cmd *Unsubscribe) Parse(fields []interface{}) error {
 
 	if mailbox, err := imap.ParseString(fields[0]); err != nil {
 		return err
-		//} else if cmd.Mailbox, err = utf7.Encoding.NewDecoder().String(mailbox); err != nil {
-		//	return err
 	}
 	return nil
 }
