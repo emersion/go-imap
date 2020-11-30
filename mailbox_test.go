@@ -26,8 +26,8 @@ var mailboxInfoTests = []struct {
 	{
 		fields: []interface{}{
 			[]interface{}{"\\Noselect", "\\Recent", "\\Unseen"},
-			"/",
-			"INBOX",
+			&imap.Delimiter{Delimiter: "/"},
+			&imap.FolderName{Name: "INBOX"},
 		},
 		info: &imap.MailboxInfo{
 			Attributes: []string{"\\Noselect", "\\Recent", "\\Unseen"},
@@ -60,7 +60,11 @@ func TestMailboxInfo_Format(t *testing.T) {
 	for _, test := range mailboxInfoTests {
 		fields := test.info.Format()
 
-		if fmt.Sprint(fields) != fmt.Sprint(test.fields) {
+		flagsSame := fmt.Sprint(test.fields[0]) == fmt.Sprint(fields[0])
+		delimiterSame := reflect.DeepEqual(fields[1], test.fields[1])
+		folderNameSame := reflect.DeepEqual(fields[2], test.fields[2])
+
+		if !flagsSame || !delimiterSame || !folderNameSame {
 			t.Fatal("Invalid fields:", fields)
 		}
 	}

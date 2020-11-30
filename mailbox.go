@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-
-	"github.com/emersion/go-imap/utf7"
 )
 
 type Delimiter struct {
@@ -102,18 +100,18 @@ func (info *MailboxInfo) Parse(fields []interface{}) error {
 		return err
 	}
 
-	var ok bool
-	if info.Delimiter, ok = fields[1].(string); !ok {
-		// The delimiter may be specified as NIL, which gets converted to a nil interface.
-		if fields[1] != nil {
-			return errors.New("Mailbox delimiter must be a string")
-		}
+	// fmt.Printf("AAAA")
+	// fmt.Printf("%#v\n", fields[1])
+
+	// var ok bool
+	if fields[1] == nil {
 		info.Delimiter = ""
+	} else {
+		del := fields[1].(*Delimiter).Delimiter
+		info.Delimiter = del
 	}
 
-	if name, err := ParseString(fields[2]); err != nil {
-		return err
-	} else if name, err := utf7.Encoding.NewDecoder().String(name); err != nil {
+	if name, err := ParseString(fields[2].(*FolderName).Name); err != nil {
 		return err
 	} else {
 		info.Name = CanonicalMailboxName(name)
