@@ -25,7 +25,7 @@ func (cmd *Subscribe) Parse(fields []interface{}) error {
 		return errors.New("No enough arguments")
 	}
 
-	if mailbox, err := imap.ParseString(fields[0]); err != nil {
+	if _, err := imap.ParseString(fields[0]); err != nil {
 		return err
 	}
 	return nil
@@ -51,7 +51,7 @@ func (cmd *Unsubscribe) Parse(fields []interface{}) error {
 		return errors.New("No enogh arguments")
 	}
 
-	if mailbox, err := imap.ParseString(fields[0]); err != nil {
+	if _, err := imap.ParseString(fields[0]); err != nil {
 		return err
 	}
 	return nil
