@@ -7,6 +7,7 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
+	"github.com/emersion/go-imap/utf7"
 )
 
 type Backend struct {
@@ -34,9 +35,11 @@ func New() *Backend {
 		"\r\n" +
 		"Hi there :)"
 
+	inboxName, _ := utf7.Encoding.NewEncoder().String("INBOX")
+
 	user.mailboxes = map[string]*Mailbox{
 		"INBOX": {
-			name: "INBOX",
+			name: inboxName,
 			user: user,
 			Messages: []*Message{
 				{
