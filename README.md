@@ -1,6 +1,6 @@
 # go-imap
 
-[![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
+[![godocs.io](https://godocs.io/github.com/emersion/go-imap?status.svg)](https://godocs.io/github.com/emersion/go-imap)
 [![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap/commits.svg)](https://builds.sr.ht/~emersion/go-imap/commits?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
 
@@ -9,7 +9,7 @@ can be used to build a client and/or a server.
 
 ## Usage
 
-### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
+### Client [![godocs.io](https://godocs.io/github.com/emersion/go-imap/client?status.svg)](https://godocs.io/github.com/emersion/go-imap/client)
 
 ```go
 package main
@@ -92,7 +92,7 @@ func main() {
 }
 ```
 
-### Server [![GoDoc](https://godoc.org/github.com/emersion/go-imap/server?status.svg)](https://godoc.org/github.com/emersion/go-imap/server)
+### Server [![godocs.io](https://godocs.io/github.com/emersion/go-imap/server?status.svg)](https://godocs.io/github.com/emersion/go-imap/server)
 
 ```go
 package main
