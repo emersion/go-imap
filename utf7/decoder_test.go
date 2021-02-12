@@ -1,6 +1,7 @@
 package utf7_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap/utf7"
@@ -75,6 +76,10 @@ var decode = []struct {
 	// Long input with Base64 at the end
 	{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &2D3eCg- &2D3eCw- &2D3eDg-",
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \U0001f60a \U0001f60b \U0001f60e", true},
+
+	// Long input in Base64 between short ASCII
+	{"00000000000000000000 &MEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEIwQjBCMEI- 00000000000000000000",
+		"00000000000000000000 " + strings.Repeat("\U00003042", 37) + " 00000000000000000000", true},
 
 	// ASCII in Base64
 	{"&AGE-", "", false},            // "a"
