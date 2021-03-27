@@ -233,7 +233,7 @@ func (c *Client) Status(name string, items []imap.StatusItem) (*imap.MailboxStat
 // Append appends the literal argument as a new message to the end of the
 // specified destination mailbox. This argument SHOULD be in the format of an
 // RFC 2822 message. flags and date are optional arguments and can be set to
-// nil.
+// nil and the empty struct.
 func (c *Client) Append(mbox string, flags []string, date time.Time, msg imap.Literal) error {
 	if err := c.ensureAuthenticated(); err != nil {
 		return err
