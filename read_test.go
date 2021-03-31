@@ -40,6 +40,37 @@ func TestParseNumber(t *testing.T) {
 	}
 }
 
+func TestParseNumber64bit(t *testing.T) {
+	tests := []struct {
+		f   interface{}
+		n   uint64
+		err bool
+	}{
+		{f: "42", n: 42},
+		{f: "0", n: 0},
+		{f: "5294967295", n: 5294967295}, // overflows uint32
+		{f: "-1", err: true},
+		{f: "1.2", err: true},
+		{f: nil, err: true},
+		{f: bytes.NewBufferString("cc"), err: true},
+	}
+
+	for _, test := range tests {
+		n, err := imap.ParseNumber64bit(test.f)
+		if err != nil {
+			if !test.err {
+				t.Errorf("Cannot parse number %v", test.f)
+			}
+		} else {
+			if test.err {
+				t.Errorf("Parsed invalid number %v", test.f)
+			} else if n != test.n {
+				t.Errorf("Invalid parsed number: got %v but expected %v", n, test.n)
+			}
+		}
+	}
+}
+
 func TestParseStringList(t *testing.T) {
 	tests := []struct {
 		field interface{}

@@ -182,6 +182,25 @@ func TestReadResp_StatusResp(t *testing.T) {
 				Info:      "LOGIN completed",
 			},
 		},
+		{
+			input: "* OK [HIGHESTMODSEQ 12111230047] here is the highest mod seq\r\n",
+			expected: &imap.StatusResp{
+				Tag:       "*",
+				Type:      imap.StatusRespOk,
+				Code:      imap.CodeHighestModseq,
+				Arguments: []interface{}{"12111230047"},
+				Info:      "here is the highest mod seq",
+			},
+		},
+		{
+			input: "* OK [NOMODSEQ] sorry modseq not supported\r\n",
+			expected: &imap.StatusResp{
+				Tag:       "*",
+				Type:      imap.StatusRespOk,
+				Code:      imap.CodeNoModseq,
+				Info:      "sorry modseq not supported",
+			},
+		},
 	}
 
 	for _, test := range tests {
