@@ -49,8 +49,6 @@ func (r *Select) Handle(resp imap.Resp) error {
 		case "HIGHESTMODSEQ":
 			mbox.HighestModseq, _ = imap.ParseNumber64bit(resp.Arguments[0])
 			item = imap.StatusHighestModseq
-		case "NOMODSEQ":
-			mbox.NoModseq = true
 		default:
 			return ErrUnhandled
 		}

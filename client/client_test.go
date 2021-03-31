@@ -189,9 +189,4 @@ func TestClient_unilateral(t *testing.T) {
 	if update, ok := (<-updates).(*StatusUpdate); !ok || update.Status.Code != imap.CodeHighestModseq {
 		t.Errorf("Invalid HIGHESTMODSEQ number: expected %v but got %v", imap.CodeHighestModseq, update.Status.Code)
 	}
-
-	s.WriteString("* OK [NOMODSEQ] Sorry, this mailbox format doesn't support modsequences\r\n")
-	if update, ok := (<-updates).(*StatusUpdate); !ok || update.Status.Code != imap.CodeNoModseq {
-		t.Errorf("Invalid NOMODSEQ number: expected %v but got %v", imap.CodeNoModseq, update.Status.Code)
-	}
 }

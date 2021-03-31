@@ -192,15 +192,6 @@ func TestReadResp_StatusResp(t *testing.T) {
 				Info:      "here is the highest mod seq",
 			},
 		},
-		{
-			input: "* OK [NOMODSEQ] sorry modseq not supported\r\n",
-			expected: &imap.StatusResp{
-				Tag:       "*",
-				Type:      imap.StatusRespOk,
-				Code:      imap.CodeNoModseq,
-				Info:      "sorry modseq not supported",
-			},
-		},
 	}
 
 	for _, test := range tests {

@@ -412,36 +412,6 @@ func (c *Client) handleUnilateral() {
 				if c.Updates != nil {
 					c.Updates <- &MailboxUpdate{c.Mailbox()}
 				}
-			case "HIGHESTMODSEQ":
-				if c.Mailbox() == nil {
-					break
-				}
-
-				if highestModseq, err := imap.ParseNumber64bit(fields[0]); err == nil {
-					c.locker.Lock()
-					c.mailbox.HighestModseq = highestModseq
-					c.locker.Unlock()
-
-					c.mailbox.ItemsLocker.Lock()
-					c.mailbox.Items[imap.StatusHighestModseq] = nil
-					c.mailbox.ItemsLocker.Unlock()
-				}
-
-				if c.Updates != nil {
-					c.Updates <- &MailboxUpdate{c.Mailbox()}
-				}
-			case "NOMODSEQ":
-				if c.Mailbox() == nil {
-					break
-				}
-
-				c.locker.Lock()
-				c.mailbox.NoModseq = true
-				c.locker.Unlock()
-
-				if c.Updates != nil {
-					c.Updates <- &MailboxUpdate{c.Mailbox()}
-				}
 			case "RECENT":
 				if c.Mailbox() == nil {
 					break

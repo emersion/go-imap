@@ -224,10 +224,6 @@ type MailboxStatus struct {
 	// Highest mod-sequence value of all messages in the mailbox.
 	// See RFC 7162 section 3.1.2.1.
 	HighestModseq uint64
-	// If the persistent storage for the mailbox is not supported,
-	// then NOMODSEQ response code is returned.
-	// See RFC 7162 section 3.1.2.2
-	NoModseq bool
 }
 
 // Create a new mailbox status that will contain the specified items.

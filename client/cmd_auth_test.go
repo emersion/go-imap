@@ -36,6 +36,7 @@ func TestClient_Select(t *testing.T) {
 	s.WriteString("* OK [UIDNEXT 4392] Predicted next UID\r\n")
 	s.WriteString("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n")
 	s.WriteString("* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n")
+	s.WriteString("* OK [HIGHESTMODSEQ 715194045007]\r\n")
 	s.WriteString(tag + " OK SELECT completed\r\n")
 
 	if err := <-done; err != nil {
@@ -52,6 +53,7 @@ func TestClient_Select(t *testing.T) {
 		Recent:         1,
 		UidNext:        4392,
 		UidValidity:    3857529045,
+		HighestModseq:  715194045007,
 	}
 	mbox.Items = nil
 	if !reflect.DeepEqual(mbox, want) {
@@ -306,6 +308,40 @@ func TestClient_Status(t *testing.T) {
 	}
 
 	s.WriteString("* STATUS INBOX (MESSAGES 42 RECENT 1)\r\n")
+	s.WriteString(tag + " OK STATUS completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Status() = %v", err)
+	}
+
+	if mbox.Messages != 42 {
+		t.Errorf("Bad mailbox messages: %v", mbox.Messages)
+	}
+	if mbox.Recent != 1 {
+		t.Errorf("Bad mailbox recent: %v", mbox.Recent)
+	}
+}
+
+func TestClient_Status_HighestModseq(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.AuthenticatedState, nil)
+
+	done := make(chan error, 1)
+	var mbox *imap.MailboxStatus
+	go func() {
+		var err error
+		mbox, err = c.Status("INBOX", []imap.StatusItem{imap.StatusMessages, imap.StatusRecent, imap.StatusHighestModseq})
+		done <- err
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "STATUS INBOX (MESSAGES RECENT HIGHESTMODSEQ)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "STATUS \"INBOX\" (MESSAGES RECENT HIGHESTMODSEQ)")
+	}
+
+	s.WriteString("* STATUS INBOX (MESSAGES 42 RECENT 1 HIGHESTMODSEQ 1235)\r\n")
 	s.WriteString(tag + " OK STATUS completed\r\n")
 
 	if err := <-done; err != nil {

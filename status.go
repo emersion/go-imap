@@ -55,7 +55,6 @@ const (
 	CodeUidValidity    StatusRespCode = "UIDVALIDITY"
 	CodeUnseen         StatusRespCode = "UNSEEN"
 	CodeHighestModseq  StatusRespCode = "HIGHESTMODSEQ"
-	CodeNoModseq       StatusRespCode = "NOMODSEQ"
 )
 
 // A status response.
