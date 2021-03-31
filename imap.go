@@ -12,11 +12,12 @@ import (
 type StatusItem string
 
 const (
-	StatusMessages    StatusItem = "MESSAGES"
-	StatusRecent      StatusItem = "RECENT"
-	StatusUidNext     StatusItem = "UIDNEXT"
-	StatusUidValidity StatusItem = "UIDVALIDITY"
-	StatusUnseen      StatusItem = "UNSEEN"
+	StatusMessages      StatusItem = "MESSAGES"
+	StatusRecent        StatusItem = "RECENT"
+	StatusUidNext       StatusItem = "UIDNEXT"
+	StatusUidValidity   StatusItem = "UIDVALIDITY"
+	StatusUnseen        StatusItem = "UNSEEN"
+	StatusHighestModseq StatusItem = "HIGHESTMODSEQ" // From extensions describe in RFC 7162 section 3.1.2.1
 )
 
 // A FetchItem is a message data item that can be fetched.
