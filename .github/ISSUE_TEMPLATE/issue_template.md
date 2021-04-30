@@ -1,3 +1,7 @@
+---
+name: Bug report or feature request
+---
+
 <!--
 
 Please read the following before submitting a new issue:
