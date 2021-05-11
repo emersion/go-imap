@@ -33,16 +33,16 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 		return err
 	}
 
+	if r.Uid && msg.Uid == 0 {
+		// we requested UIDs and got a message without --> unilateral update --> ignore
+		return ErrUnhandled
+	}
+
 	var num uint32
 	if r.Uid {
 		num = msg.Uid
 	} else {
 		num = seqNum
-	}
-
-	if r.Uid && msg.Uid == 0 {
-		// we requested UIDs and got a message without --> unilateral update --> ignore
-		return ErrUnhandled
 	}
 
 	// check whether we obtained a result we requested with our SeqSet
