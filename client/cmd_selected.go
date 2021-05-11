@@ -152,7 +152,7 @@ func (c *Client) fetch(uid bool, seqset *imap.SeqSet, items []imap.FetchItem, ch
 		cmd = &commands.Uid{Cmd: cmd}
 	}
 
-	res := &responses.Fetch{Messages: ch}
+	res := &responses.Fetch{Messages: ch, SeqSet: seqset, Uid: uid}
 
 	status, err := c.execute(cmd, res)
 	if err != nil {
@@ -211,7 +211,7 @@ func (c *Client) store(uid bool, seqset *imap.SeqSet, item imap.StoreItem, value
 
 	var h responses.Handler
 	if ch != nil {
-		h = &responses.Fetch{Messages: ch}
+		h = &responses.Fetch{Messages: ch, SeqSet: seqset, Uid: uid}
 	}
 
 	status, err := c.execute(cmd, h)
