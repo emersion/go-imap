@@ -466,6 +466,41 @@ func TestClient_Fetch_Unilateral_Uid(t *testing.T) {
 	}
 }
 
+func TestClient_Fetch_Uid_Dynamic(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	seqset, _ := imap.ParseSeqSet("4:*")
+	fields := []imap.FetchItem{imap.FetchFlags}
+
+	done := make(chan error, 1)
+	messages := make(chan *imap.Message, 1)
+	go func() {
+		done <- c.UidFetch(seqset, fields, messages)
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "UID FETCH 4:* (FLAGS)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UID FETCH 4:* (FLAGS)")
+	}
+
+	s.WriteString("* 23 FETCH (UID 2 FLAGS (\\Seen))\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Fetch() = %v", err)
+	}
+
+	msg, ok := <-messages
+	if !ok {
+		t.Errorf("No message supplied")
+	} else if msg.Uid != 2 {
+		t.Errorf("First message has bad UID: %v", msg.Uid)
+	}
+}
+
 func TestClient_Store(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
