@@ -34,7 +34,7 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 	}
 
 	if r.Uid && msg.Uid == 0 {
-		// we requested UIDs and got a message without --> unilateral update --> ignore
+		// we requested UIDs and got a message without one --> unilateral update --> ignore
 		return ErrUnhandled
 	}
 
@@ -45,9 +45,11 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 		num = seqNum
 	}
 
-	// check whether we obtained a result we requested with our SeqSet
-	// If it does not, but the msg contains a UID and the set is dynamic (i.e. * or n:*), the server
-	// supplied us with the max UID. That is fine.
+	// Check whether we obtained a result we requested with our SeqSet
+	// If the result is not contained in our SeqSet we have to handle an additional special case:
+	// In case we requested UIDs with a dynamic sequence (i.e. * or n:*) and the maximum UID of the mailbox
+	// is less then our n, the server will supply us with the max UID (cf. RFC 3501 §6.4.8 and §9 `seq-range`).
+	// Thus, such a result is correct and has to be returned by us.
 	if !r.SeqSet.Contains(num) && (!r.Uid || !r.SeqSet.Dynamic()) {
 		return ErrUnhandled
 	}
