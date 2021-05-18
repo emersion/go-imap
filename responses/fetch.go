@@ -10,6 +10,8 @@ const fetchName = "FETCH"
 // See RFC 3501 section 7.4.2
 type Fetch struct {
 	Messages chan *imap.Message
+	SeqSet   *imap.SeqSet
+	Uid      bool
 }
 
 func (r *Fetch) Handle(resp imap.Resp) error {
@@ -29,6 +31,27 @@ func (r *Fetch) Handle(resp imap.Resp) error {
 	msg := &imap.Message{SeqNum: seqNum}
 	if err := msg.Parse(msgFields); err != nil {
 		return err
+	}
+
+	if r.Uid && msg.Uid == 0 {
+		// we requested UIDs and got a message without one --> unilateral update --> ignore
+		return ErrUnhandled
+	}
+
+	var num uint32
+	if r.Uid {
+		num = msg.Uid
+	} else {
+		num = seqNum
+	}
+
+	// Check whether we obtained a result we requested with our SeqSet
+	// If the result is not contained in our SeqSet we have to handle an additional special case:
+	// In case we requested UIDs with a dynamic sequence (i.e. * or n:*) and the maximum UID of the mailbox
+	// is less then our n, the server will supply us with the max UID (cf. RFC 3501 §6.4.8 and §9 `seq-range`).
+	// Thus, such a result is correct and has to be returned by us.
+	if !r.SeqSet.Contains(num) && (!r.Uid || !r.SeqSet.Dynamic()) {
+		return ErrUnhandled
 	}
 
 	r.Messages <- msg

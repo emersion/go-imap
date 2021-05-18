@@ -378,6 +378,129 @@ func TestClient_Fetch_Uid(t *testing.T) {
 	}
 }
 
+func TestClient_Fetch_Unilateral(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	seqset, _ := imap.ParseSeqSet("1:4")
+	fields := []imap.FetchItem{imap.FetchFlags}
+
+	done := make(chan error, 1)
+	messages := make(chan *imap.Message, 3)
+	go func() {
+		done <- c.Fetch(seqset, fields, messages)
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "FETCH 1:4 (FLAGS)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "FETCH 1:4 (FLAGS)")
+	}
+
+	s.WriteString("* 2 FETCH (FLAGS (\\Seen))\r\n")
+	s.WriteString("* 123 FETCH (FLAGS (\\Deleted))\r\n")
+	s.WriteString("* 4 FETCH (FLAGS (\\Seen))\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Fetch() = %v", err)
+	}
+
+	msg := <-messages
+	if msg.SeqNum != 2 {
+		t.Errorf("First message has bad sequence number: %v", msg.SeqNum)
+	}
+	msg = <-messages
+	if msg.SeqNum != 4 {
+		t.Errorf("Second message has bad sequence number: %v", msg.SeqNum)
+	}
+
+	_, ok := <-messages
+	if ok {
+		t.Errorf("More than two messages")
+	}
+}
+
+func TestClient_Fetch_Unilateral_Uid(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	seqset, _ := imap.ParseSeqSet("1:4")
+	fields := []imap.FetchItem{imap.FetchFlags}
+
+	done := make(chan error, 1)
+	messages := make(chan *imap.Message, 3)
+	go func() {
+		done <- c.UidFetch(seqset, fields, messages)
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "UID FETCH 1:4 (FLAGS)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UID FETCH 1:4 (FLAGS)")
+	}
+
+	s.WriteString("* 23 FETCH (UID 2 FLAGS (\\Seen))\r\n")
+	s.WriteString("* 123 FETCH (FLAGS (\\Deleted))\r\n")
+	s.WriteString("* 49 FETCH (UID 4 FLAGS (\\Seen))\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Fetch() = %v", err)
+	}
+
+	msg := <-messages
+	if msg.Uid != 2 {
+		t.Errorf("First message has bad UID: %v", msg.Uid)
+	}
+	msg = <-messages
+	if msg.Uid != 4 {
+		t.Errorf("Second message has bad UID: %v", msg.Uid)
+	}
+
+	_, ok := <-messages
+	if ok {
+		t.Errorf("More than two messages")
+	}
+}
+
+func TestClient_Fetch_Uid_Dynamic(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	seqset, _ := imap.ParseSeqSet("4:*")
+	fields := []imap.FetchItem{imap.FetchFlags}
+
+	done := make(chan error, 1)
+	messages := make(chan *imap.Message, 1)
+	go func() {
+		done <- c.UidFetch(seqset, fields, messages)
+	}()
+
+	tag, cmd := s.ScanCmd()
+	if cmd != "UID FETCH 4:* (FLAGS)" {
+		t.Fatalf("client sent command %v, want %v", cmd, "UID FETCH 4:* (FLAGS)")
+	}
+
+	s.WriteString("* 23 FETCH (UID 2 FLAGS (\\Seen))\r\n")
+	s.WriteString(tag + " OK FETCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Fetch() = %v", err)
+	}
+
+	msg, ok := <-messages
+	if !ok {
+		t.Errorf("No message supplied")
+	} else if msg.Uid != 2 {
+		t.Errorf("First message has bad UID: %v", msg.Uid)
+	}
+}
+
 func TestClient_Store(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
