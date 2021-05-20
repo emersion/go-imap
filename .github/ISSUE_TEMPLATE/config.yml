@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question
-    url: "https://webchat.freenode.net/##emersion"
-    about: "Please ask questions in ##emersion on Freenode"
+    url: "https://libera.chat/"
+    about: "Please ask questions in #emersion on Libera Chat"
