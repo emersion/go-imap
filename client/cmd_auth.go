@@ -252,3 +252,27 @@ func (c *Client) Append(mbox string, flags []string, date time.Time, msg imap.Li
 	}
 	return status.Err()
 }
+
+// Enable requests the server to enable the named extensions. The extensions
+// which were successfully enabled are returned.
+//
+// See RFC 5161 section 3.1.
+func (c *Client) Enable(caps []string) ([]string, error) {
+	if ok, err := c.Support("ENABLE"); !ok || err != nil {
+		return nil, ErrExtensionUnsupported
+	}
+
+	// ENABLE is invalid if a mailbox has been selected.
+	if c.State() != imap.AuthenticatedState {
+		return nil, ErrNotLoggedIn
+	}
+
+	cmd := &commands.Enable{Caps: caps}
+	res := &responses.Enabled{}
+
+	if status, err := c.Execute(cmd, res); err != nil {
+		return nil, err
+	} else {
+		return res.Caps, status.Err()
+	}
+}
