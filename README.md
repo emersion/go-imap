@@ -128,16 +128,16 @@ You can now use `telnet localhost 1143` to manually connect to the server.
 Support for several IMAP extensions is included in go-imap itself. This
 includes:
 
+* [APPENDLIMIT](https://tools.ietf.org/html/rfc7889)
+* [CHILDREN](https://tools.ietf.org/html/rfc3348)
+* [ENABLE](https://tools.ietf.org/html/rfc5161)
+* [IDLE](https://tools.ietf.org/html/rfc2177)
 * [IMPORTANT](https://tools.ietf.org/html/rfc8457)
 * [LITERAL+](https://tools.ietf.org/html/rfc7888)
+* [MOVE](https://tools.ietf.org/html/rfc6851)
 * [SASL-IR](https://tools.ietf.org/html/rfc4959)
 * [SPECIAL-USE](https://tools.ietf.org/html/rfc6154)
-* [CHILDREN](https://tools.ietf.org/html/rfc3348)
 * [UNSELECT](https://tools.ietf.org/html/rfc3691)
-* [APPENDLIMIT](https://tools.ietf.org/html/rfc7889)
-* [ENABLE](https://tools.ietf.org/html/rfc5161)
-* [MOVE](https://tools.ietf.org/html/rfc6851)
-* [IDLE](https://tools.ietf.org/html/rfc2177)
 
 Support for other extensions is provided via separate packages. See below.
 
