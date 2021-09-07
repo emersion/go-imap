@@ -135,6 +135,7 @@ includes:
 * [CHILDREN](https://tools.ietf.org/html/rfc3348)
 * [UNSELECT](https://tools.ietf.org/html/rfc3691)
 * [APPENDLIMIT](https://tools.ietf.org/html/rfc7889)
+* [COMPRESS](https://tools.ietf.org/html/rfc4978)
 
 Support for other extensions is provided via separate packages. See below.
 
@@ -146,7 +147,6 @@ Commands defined in IMAP extensions are available in other packages. See [the
 wiki](https://github.com/emersion/go-imap/wiki/Using-extensions#using-client-extensions)
 to learn how to use them.
 
-* [COMPRESS](https://github.com/emersion/go-imap-compress)
 * [ENABLE](https://github.com/emersion/go-imap-enable)
 * [ID](https://github.com/ProtonMail/go-imap-id)
 * [IDLE](https://github.com/emersion/go-imap-idle)

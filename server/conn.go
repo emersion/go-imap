@@ -163,7 +163,7 @@ func (c *conn) Close() error {
 }
 
 func (c *conn) Capabilities() []string {
-	caps := []string{"IMAP4rev1", "LITERAL+", "SASL-IR", "CHILDREN", "UNSELECT"}
+	caps := []string{"IMAP4rev1", "LITERAL+", "SASL-IR", "CHILDREN", "UNSELECT", "COMPRESS=DEFLATE"}
 
 	appendLimitSet := false
 	if c.ctx.State == imap.AuthenticatedState {

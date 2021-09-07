@@ -1,15 +1,22 @@
 package client
 
 import (
+	"compress/flate"
 	"errors"
+	"net"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/commands"
+	"github.com/emersion/go-imap/internal"
 )
 
 // ErrAlreadyLoggedOut is returned if Logout is called when the client is
 // already logged out.
 var ErrAlreadyLoggedOut = errors.New("Already logged out")
+
+// ErrAlreadyCompress is returned by Client.Compress when compression has
+// already been enabled on the client.
+var ErrAlreadyCompressed = errors.New("COMPRESS is already enabled")
 
 // Capability requests a listing of capabilities that the server supports.
 // Capabilities are often returned by the server with the greeting or with the
@@ -84,5 +91,37 @@ func (c *Client) Logout() error {
 	} else if status != nil {
 		return status.Err()
 	}
+	return nil
+}
+
+// Compress instructs the server to use the named compression mechanism for all
+// commands and/or responses.
+func (c *Client) Compress(mech string) error {
+	if c.isCompressed {
+		return ErrAlreadyCompressed
+	}
+
+	if ok, err := c.Support("COMPRESS=" + mech); !ok || err != nil {
+		return imap.CompressUnsupportedError{Mechanism: mech}
+	}
+	if mech != imap.CompressDeflate {
+		return imap.CompressUnsupportedError{Mechanism: mech}
+	}
+
+	cmd := &commands.Compress{Mechanism: mech}
+	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
+		if status, err := c.Execute(cmd, nil); err != nil {
+			return nil, err
+		} else if err := status.Err(); err != nil {
+			return nil, err
+		}
+
+		return internal.CreateDeflateConn(conn, flate.DefaultCompression)
+	})
+	if err != nil {
+		return err
+	}
+
+	c.isCompressed = true
 	return nil
 }

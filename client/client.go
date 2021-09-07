@@ -66,9 +66,10 @@ type Client struct {
 	isTLS      bool
 	serverName string
 
-	loggedOut chan struct{}
-	continues chan<- bool
-	upgrading bool
+	loggedOut    chan struct{}
+	continues    chan<- bool
+	upgrading    bool
+	isCompressed bool
 
 	handlers       []responses.Handler
 	handlersLocker sync.Mutex
