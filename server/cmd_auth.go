@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bufio"
 	"errors"
+	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
@@ -295,5 +297,28 @@ func (cmd *Unselect) Handle(conn Conn) error {
 
 	ctx.Mailbox = nil
 	ctx.MailboxReadOnly = false
+	return nil
+}
+
+type Idle struct {
+	commands.Idle
+}
+
+func (cmd *Idle) Handle(conn Conn) error {
+	cont := &imap.ContinuationReq{Info: "idling"}
+	if err := conn.WriteResp(cont); err != nil {
+		return err
+	}
+
+	// Wait for DONE
+	scanner := bufio.NewScanner(conn)
+	scanner.Scan()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	if strings.ToUpper(scanner.Text()) != "DONE" {
+		return errors.New("Expected DONE")
+	}
 	return nil
 }

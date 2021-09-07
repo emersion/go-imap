@@ -177,6 +177,7 @@ func New(bkd backend.Backend) *Server {
 		"STATUS":   func() Handler { return &Status{} },
 		"APPEND":   func() Handler { return &Append{} },
 		"UNSELECT": func() Handler { return &Unselect{} },
+		"IDLE":     func() Handler { return &Idle{} },
 
 		"CHECK":   func() Handler { return &Check{} },
 		"CLOSE":   func() Handler { return &Close{} },

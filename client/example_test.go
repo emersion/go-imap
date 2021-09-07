@@ -281,3 +281,43 @@ func ExampleClient_Search() {
 
 	log.Println("Done!")
 }
+
+func ExampleClient_Idle() {
+	// Let's assume c is a client
+	var c *client.Client
+
+	// Select a mailbox
+	if _, err := c.Select("INBOX", false); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a channel to receive mailbox updates
+	updates := make(chan client.Update)
+	c.Updates = updates
+
+	// Start idling
+	stopped := false
+	stop := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Idle(stop, nil)
+	}()
+
+	// Listen for updates
+	for {
+		select {
+		case update := <-updates:
+			log.Println("New update:", update)
+			if !stopped {
+				close(stop)
+				stopped = true
+			}
+		case err := <-done:
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Println("Not idling anymore")
+			return
+		}
+	}
+}
