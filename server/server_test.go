@@ -10,7 +10,7 @@ import (
 )
 
 // Extnesions that are always advertised by go-imap server.
-const builtinExtensions = "LITERAL+ SASL-IR CHILDREN UNSELECT APPENDLIMIT"
+const builtinExtensions = "LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT"
 
 func testServer(t *testing.T) (s *server.Server, conn net.Conn) {
 	bkd := memory.New()

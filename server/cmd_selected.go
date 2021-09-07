@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/commands"
 	"github.com/emersion/go-imap/responses"
 )
@@ -292,6 +293,30 @@ func (cmd *Copy) Handle(conn Conn) error {
 
 func (cmd *Copy) UidHandle(conn Conn) error {
 	return cmd.handle(true, conn)
+}
+
+type Move struct {
+	commands.Move
+}
+
+func (h *Move) handle(uid bool, conn Conn) error {
+	mailbox := conn.Context().Mailbox
+	if mailbox == nil {
+		return ErrNoMailboxSelected
+	}
+
+	if m, ok := mailbox.(backend.MoveMailbox); ok {
+		return m.MoveMessages(uid, h.SeqSet, h.Mailbox)
+	}
+	return errors.New("MOVE extension not supported")
+}
+
+func (h *Move) Handle(conn Conn) error {
+	return h.handle(false, conn)
+}
+
+func (h *Move) UidHandle(conn Conn) error {
+	return h.handle(true, conn)
 }
 
 type Uid struct {

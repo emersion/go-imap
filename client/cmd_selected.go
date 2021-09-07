@@ -272,6 +272,73 @@ func (c *Client) UidCopy(seqset *imap.SeqSet, dest string) error {
 	return c.copy(true, seqset, dest)
 }
 
+func (c *Client) move(uid bool, seqset *imap.SeqSet, dest string) error {
+	if c.State() != imap.SelectedState {
+		return ErrNoMailboxSelected
+	}
+
+	if ok, err := c.Support("MOVE"); err != nil {
+		return err
+	} else if !ok {
+		return c.moveFallback(uid, seqset, dest)
+	}
+
+	var cmd imap.Commander = &commands.Move{
+		SeqSet:  seqset,
+		Mailbox: dest,
+	}
+	if uid {
+		cmd = &commands.Uid{Cmd: cmd}
+	}
+
+	if status, err := c.Execute(cmd, nil); err != nil {
+		return err
+	} else {
+		return status.Err()
+	}
+}
+
+// moveFallback uses COPY, STORE and EXPUNGE for servers which don't support
+// MOVE.
+func (c *Client) moveFallback(uid bool, seqset *imap.SeqSet, dest string) error {
+	item := imap.FormatFlagsOp(imap.AddFlags, true)
+	flags := []interface{}{imap.DeletedFlag}
+	if uid {
+		if err := c.UidCopy(seqset, dest); err != nil {
+			return err
+		}
+
+		if err := c.UidStore(seqset, item, flags, nil); err != nil {
+			return err
+		}
+	} else {
+		if err := c.Copy(seqset, dest); err != nil {
+			return err
+		}
+
+		if err := c.Store(seqset, item, flags, nil); err != nil {
+			return err
+		}
+	}
+
+	return c.Expunge(nil)
+}
+
+// Move moves the specified message(s) to the end of the specified destination
+// mailbox.
+//
+// If the server doesn't support the MOVE extension defined in RFC 6851,
+// go-imap will fallback to copy, store and expunge.
+func (c *Client) Move(seqset *imap.SeqSet, dest string) error {
+	return c.move(false, seqset, dest)
+}
+
+// UidMove is identical to Move, but seqset is interpreted as containing unique
+// identifiers instead of message sequence numbers.
+func (c *Client) UidMove(seqset *imap.SeqSet, dest string) error {
+	return c.move(true, seqset, dest)
+}
+
 // Unselect frees server's resources associated with the selected mailbox and
 // returns the server to the authenticated state. This command performs the same
 // actions as Close, except that no messages are permanently removed from the

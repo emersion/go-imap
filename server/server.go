@@ -174,8 +174,9 @@ func New(bkd backend.Backend) *Server {
 			hdlr.Subscribed = true
 			return hdlr
 		},
-		"STATUS": func() Handler { return &Status{} },
-		"APPEND": func() Handler { return &Append{} },
+		"STATUS":   func() Handler { return &Status{} },
+		"APPEND":   func() Handler { return &Append{} },
+		"UNSELECT": func() Handler { return &Unselect{} },
 
 		"CHECK":   func() Handler { return &Check{} },
 		"CLOSE":   func() Handler { return &Close{} },
@@ -184,9 +185,8 @@ func New(bkd backend.Backend) *Server {
 		"FETCH":   func() Handler { return &Fetch{} },
 		"STORE":   func() Handler { return &Store{} },
 		"COPY":    func() Handler { return &Copy{} },
+		"MOVE":    func() Handler { return &Move{} },
 		"UID":     func() Handler { return &Uid{} },
-
-		"UNSELECT": func() Handler { return &Unselect{} },
 	}
 
 	return s
@@ -404,7 +404,7 @@ func (s *Server) Close() error {
 func (s *Server) Enable(extensions ...Extension) {
 	for _, ext := range extensions {
 		// Ignore built-in extensions
-		if ext.Command("UNSELECT") != nil {
+		if ext.Command("UNSELECT") != nil || ext.Command("MOVE") != nil {
 			continue
 		}
 		s.extensions = append(s.extensions, ext)

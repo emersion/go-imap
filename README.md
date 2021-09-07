@@ -136,6 +136,7 @@ includes:
 * [UNSELECT](https://tools.ietf.org/html/rfc3691)
 * [APPENDLIMIT](https://tools.ietf.org/html/rfc7889)
 * [ENABLE](https://tools.ietf.org/html/rfc5161)
+* [MOVE](https://tools.ietf.org/html/rfc6851)
 
 Support for other extensions is provided via separate packages. See below.
 
@@ -151,7 +152,6 @@ to learn how to use them.
 * [ID](https://github.com/ProtonMail/go-imap-id)
 * [IDLE](https://github.com/emersion/go-imap-idle)
 * [METADATA](https://github.com/emersion/go-imap-metadata)
-* [MOVE](https://github.com/emersion/go-imap-move)
 * [NAMESPACE](https://github.com/foxcpp/go-imap-namespace)
 * [QUOTA](https://github.com/emersion/go-imap-quota)
 * [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
