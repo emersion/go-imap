@@ -163,6 +163,7 @@ to learn how to use them.
 * [Multi](https://github.com/emersion/go-imap-multi)
 * [PGP](https://github.com/emersion/go-imap-pgp)
 * [Proxy](https://github.com/emersion/go-imap-proxy)
+* [Notmuch](https://github.com/stbenjam/go-imap-notmuch) - Experimental gateway for [Notmuch](https://notmuchmail.org/)
 
 ### Related projects
 
