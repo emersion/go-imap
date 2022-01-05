@@ -56,4 +56,10 @@ type Mailbox interface {
 	// If the Backend implements Updater, it must notify the client immediately
 	// via an expunge update.
 	Expunge() error
+
+	// Idle allows backend to send updates without explicit Poll calls or any other
+	// commands running.
+	// When called - it should block indefinitely and return immediately when
+	// done channel is written to.
+	Idle(done <-chan struct{})
 }

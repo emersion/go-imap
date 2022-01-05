@@ -208,6 +208,10 @@ func (mbox *SelectedMailbox) Expunge() error {
 	return nil
 }
 
+func (mbox *Mailbox) Idle(done <-chan struct{}) {
+	<-done
+}
+
 func (mbox *Mailbox) Close() error {
 	return nil
 }

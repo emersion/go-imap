@@ -266,10 +266,21 @@ type Idle struct {
 }
 
 func (cmd *Idle) Handle(conn Conn) error {
+	ctx := conn.Context()
+	if ctx.Mailbox == nil {
+		return ErrNoMailboxSelected
+	}
+
 	cont := &imap.ContinuationReq{Info: "idling"}
 	if err := conn.WriteResp(cont); err != nil {
 		return err
 	}
+
+	done := make(chan struct{})
+	go ctx.Mailbox.Idle(done)
+	defer func() {
+		done <- struct{}{}
+	}()
 
 	// Wait for DONE
 	scanner := bufio.NewScanner(conn)
