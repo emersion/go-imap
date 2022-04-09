@@ -61,13 +61,12 @@ const (
 // If the flag is defined in RFC 3501, it returns the flag with the case of the
 // RFC. Otherwise, it returns the lowercase version of the flag.
 func CanonicalFlag(flag string) string {
-	flag = strings.ToLower(flag)
 	for _, f := range flags {
-		if strings.ToLower(f) == flag {
+		if strings.EqualFold(f, flag) {
 			return f
 		}
 	}
-	return flag
+	return strings.ToLower(flag)
 }
 
 func ParseParamList(fields []interface{}) (map[string]string, error) {
