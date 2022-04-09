@@ -16,7 +16,7 @@ const InboxName = "INBOX"
 // case-sensitive or case-insensitive depending on the backend implementation.
 // The special INBOX mailbox is case-insensitive.
 func CanonicalMailboxName(name string) string {
-	if strings.ToUpper(name) == InboxName {
+	if strings.EqualFold(name, InboxName) {
 		return InboxName
 	}
 	return name
