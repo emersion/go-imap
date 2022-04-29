@@ -14,14 +14,22 @@ type Fetch struct {
 }
 
 func (cmd *Fetch) Command() *imap.Command {
-	items := make([]interface{}, len(cmd.Items))
-	for i, item := range cmd.Items {
-		items[i] = imap.RawString(item)
-	}
+	// Handle FETCH macros separately as they should not be serialized within parentheses
+	if len(cmd.Items) == 1 && (cmd.Items[0] == imap.FetchAll || cmd.Items[0] == imap.FetchFast || cmd.Items[0] == imap.FetchFull) {
+		return &imap.Command{
+			Name:      "FETCH",
+			Arguments: []interface{}{cmd.SeqSet, imap.RawString(cmd.Items[0])},
+		}
+	} else {
+		items := make([]interface{}, len(cmd.Items))
+		for i, item := range cmd.Items {
+			items[i] = imap.RawString(item)
+		}
 
-	return &imap.Command{
-		Name:      "FETCH",
-		Arguments: []interface{}{cmd.SeqSet, items},
+		return &imap.Command{
+			Name:      "FETCH",
+			Arguments: []interface{}{cmd.SeqSet, items},
+		}
 	}
 }
 
