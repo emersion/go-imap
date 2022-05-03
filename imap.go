@@ -24,7 +24,10 @@ const (
 // A FetchItem is a message data item that can be fetched.
 type FetchItem string
 
-// List of items that can be fetched.
+// List of items that can be fetched. See RFC 3501 section 6.4.5.
+//
+// Warning: FetchBody will not return the raw message body, instead it will
+// return a subset of FetchBodyStructure.
 const (
 	// Macros
 	FetchAll  FetchItem = "ALL"
