@@ -83,6 +83,12 @@ type Client struct {
 	// access.
 	locker sync.Mutex
 
+	// This flag is set when the first search query fails with a BADCHARSET
+	// error. Subsequent queries will be performed with the US-ASCII
+	// charset. According to RFC 3501, SEARCH must only support US-ASCII;
+	// other charsets are optional.
+	utf8SearchUnsupported bool
+
 	// A channel to which unilateral updates from the server will be sent. An
 	// update can be one of: *StatusUpdate, *MailboxUpdate, *MessageUpdate,
 	// *ExpungeUpdate. Note that blocking this channel blocks the whole client,

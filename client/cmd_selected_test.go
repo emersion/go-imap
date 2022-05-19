@@ -144,6 +144,86 @@ func TestClient_Search(t *testing.T) {
 	}
 }
 
+func TestClient_Search_Badcharset(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	date, _ := time.Parse(imap.DateLayout, "1-Feb-1994")
+	criteria := &imap.SearchCriteria{
+		WithFlags: []string{imap.DeletedFlag},
+		Header:    textproto.MIMEHeader{"From": {"Smith"}},
+		Since:     date,
+		Not: []*imap.SearchCriteria{{
+			Header: textproto.MIMEHeader{"To": {"Pauline"}},
+		}},
+	}
+
+	done := make(chan error, 1)
+	var results []uint32
+	go func() {
+		var err error
+		results, err = c.Search(criteria)
+		done <- err
+	}()
+
+	// first search call with default UTF-8 charset (assume server does not support UTF-8)
+	wantCmd := `SEARCH CHARSET UTF-8 SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
+	tag, cmd := s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString(tag + " NO [BADCHARSET (US-ASCII)]\r\n")
+
+	// internal fall-back to US-ASCII which sets utf8SearchUnsupported = true
+	wantCmd = `SEARCH CHARSET US-ASCII SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
+	tag, cmd = s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString("* SEARCH 2 84 882\r\n")
+	s.WriteString(tag + " OK SEARCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	want := []uint32{2, 84, 882}
+	if !reflect.DeepEqual(results, want) {
+		t.Errorf("c.Search() = %v, want %v", results, want)
+	}
+
+	if !c.utf8SearchUnsupported {
+		t.Fatal("client should have utf8SearchUnsupported set to true")
+	}
+
+	// second call to search (with utf8SearchUnsupported=true)
+	go func() {
+		var err error
+		results, err = c.Search(criteria)
+		done <- err
+	}()
+
+	tag, cmd = s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString("* SEARCH 2 84 882\r\n")
+	s.WriteString(tag + " OK SEARCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.Search() = %v", err)
+	}
+
+	if !reflect.DeepEqual(results, want) {
+		t.Errorf("c.Search() = %v, want %v", results, want)
+	}
+}
+
 func TestClient_Search_Uid(t *testing.T) {
 	c, s := newTestClient(t)
 	defer s.Close()
@@ -179,6 +259,81 @@ func TestClient_Search_Uid(t *testing.T) {
 	if !reflect.DeepEqual(results, want) {
 		t.Errorf("c.Search() = %v, want %v", results, want)
 	}
+}
+
+func TestClient_Search_Uid_Badcharset(t *testing.T) {
+	c, s := newTestClient(t)
+	defer s.Close()
+
+	setClientState(c, imap.SelectedState, nil)
+
+	criteria := &imap.SearchCriteria{
+		WithoutFlags: []string{imap.DeletedFlag},
+	}
+
+	done := make(chan error, 1)
+	var results []uint32
+	go func() {
+		var err error
+		results, err = c.UidSearch(criteria)
+		done <- err
+	}()
+
+	// first search call with default UTF-8 charset (assume server does not support UTF-8)
+	wantCmd := "UID SEARCH CHARSET UTF-8 UNDELETED"
+	tag, cmd := s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString(tag + " NO [BADCHARSET (US-ASCII)]\r\n")
+
+	// internal fall-back to US-ASCII which sets utf8SearchUnsupported = true
+	wantCmd = "UID SEARCH CHARSET US-ASCII UNDELETED"
+	tag, cmd = s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString("* SEARCH 1 78 2010\r\n")
+	s.WriteString(tag + " OK UID SEARCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.UidSearch() = %v", err)
+	}
+
+	want := []uint32{1, 78, 2010}
+	if !reflect.DeepEqual(results, want) {
+		t.Errorf("c.UidSearch() = %v, want %v", results, want)
+	}
+
+	if !c.utf8SearchUnsupported {
+		t.Fatal("client should have utf8SearchUnsupported set to true")
+	}
+
+	// second call to search (with utf8SearchUnsupported=true)
+	go func() {
+		var err error
+		results, err = c.UidSearch(criteria)
+		done <- err
+	}()
+
+	tag, cmd = s.ScanCmd()
+	if cmd != wantCmd {
+		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
+	}
+
+	s.WriteString("* SEARCH 1 78 2010\r\n")
+	s.WriteString(tag + " OK UID SEARCH completed\r\n")
+
+	if err := <-done; err != nil {
+		t.Fatalf("c.UidSearch() = %v", err)
+	}
+
+	if !reflect.DeepEqual(results, want) {
+		t.Errorf("c.UidSearch() = %v, want %v", results, want)
+	}
+
 }
 
 func TestClient_Fetch(t *testing.T) {
