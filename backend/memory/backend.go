@@ -3,6 +3,7 @@ package memory
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -20,6 +21,18 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 	}
 
 	return nil, errors.New("Bad username or password")
+}
+
+func (be *Backend) Users() map[string]*User {
+	return be.users
+}
+
+func (be *Backend) AddUser(user *User) (err error) {
+	if val, ok := be.users[user.username]; ok {
+		return fmt.Errorf("user %s already exists", val.username)
+	}
+	be.users[user.username] = user
+	return nil
 }
 
 func New() *Backend {
