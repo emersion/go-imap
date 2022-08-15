@@ -67,6 +67,7 @@ type SearchCriteria struct {
 	Before     time.Time // Internal date is before this date
 	SentSince  time.Time // Date header field is since this date
 	SentBefore time.Time // Date header field is before this date
+	On         time.Time // Date header field is on this date
 
 	Header textproto.MIMEHeader // Each header field value is present
 	Body   []string             // Each string is in the body
@@ -176,8 +177,7 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 		} else if t, err := time.Parse(DateLayout, maybeString(f)); err != nil {
 			return nil, err
 		} else {
-			c.Since = t
-			c.Before = t.Add(24 * time.Hour)
+			c.On = t
 		}
 	case "OR":
 		c1, c2 := new(SearchCriteria), new(SearchCriteria)
