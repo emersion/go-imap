@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 func TestParseNumber(t *testing.T) {

@@ -3,8 +3,8 @@ package commands
 import (
 	"errors"
 
-	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/utf7"
+	"github.com/huangshaokun/go-imap"
+	"github.com/huangshaokun/go-imap/utf7"
 )
 
 // Copy is a COPY command, as defined in RFC 3501 section 6.4.7.

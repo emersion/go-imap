@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 // Check is a CHECK command, as defined in RFC 3501 section 6.4.1.

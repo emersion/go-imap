@@ -3,7 +3,7 @@ package responses
 import (
 	"fmt"
 
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 // A SELECT response.

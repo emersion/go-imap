@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 // Fetch is a FETCH command, as defined in RFC 3501 section 6.4.5.

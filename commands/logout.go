@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 // Logout is a LOGOUT command, as defined in RFC 3501 section 6.1.3.

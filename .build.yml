@@ -2,7 +2,7 @@ image: alpine/edge
 packages:
   - go
 sources:
-  - https://github.com/emersion/go-imap
+  - https://github.com/huangshaokun/go-imap
 artifacts:
   - coverage.html
 tasks:

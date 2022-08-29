@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/emersion/go-imap"
+	"github.com/huangshaokun/go-imap"
 )
 
 // An UNSELECT command.
