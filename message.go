@@ -770,6 +770,18 @@ type Envelope struct {
 // Parse an envelope from fields.
 func (e *Envelope) Parse(fields []interface{}) error {
 	if len(fields) < 10 {
+		size := len(fields)
+		msgId := fields[size-1]
+		fields = fields[:size-1]
+
+		for i := size; i <= 9; i++ {
+			fields = append(fields, nil)
+		}
+
+		fields = append(fields, msgId)
+	}
+
+	if len(fields) < 10 {
 		return errors.New("ENVELOPE doesn't contain 10 fields")
 	}
 
