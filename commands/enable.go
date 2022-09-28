@@ -10,9 +10,14 @@ type Enable struct {
 }
 
 func (cmd *Enable) Command() *imap.Command {
+	args := make([]interface{}, len(cmd.Caps))
+	for i, c := range cmd.Caps {
+		args[i] = imap.RawString(c)
+	}
+
 	return &imap.Command{
 		Name:      "ENABLE",
-		Arguments: imap.FormatStringList(cmd.Caps),
+		Arguments: args,
 	}
 }
 
