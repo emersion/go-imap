@@ -1,4 +1,4 @@
-module github.com/sublime-security/go-imap
+module github.com/emersion/go-imap
 
 go 1.13
 
