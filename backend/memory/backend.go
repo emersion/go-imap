@@ -3,14 +3,15 @@ package memory
 
 import (
 	"errors"
-	"time"
-
+	"fmt"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
+	"sync"
 )
 
 type Backend struct {
-	users map[string]*User
+	users    map[string]*User
+	userLock sync.Mutex
 }
 
 func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.User, error) {
@@ -22,35 +23,36 @@ func (be *Backend) Login(_ *imap.ConnInfo, username, password string) (backend.U
 	return nil, errors.New("Bad username or password")
 }
 
-func New() *Backend {
-	user := &User{username: "username", password: "password"}
-
-	body := "From: contact@example.org\r\n" +
-		"To: contact@example.org\r\n" +
-		"Subject: A little message, just for you\r\n" +
-		"Date: Wed, 11 May 2016 14:31:59 +0000\r\n" +
-		"Message-ID: <0000000@localhost/>\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"\r\n" +
-		"Hi there :)"
-
-	user.mailboxes = map[string]*Mailbox{
-		"INBOX": {
-			name: "INBOX",
-			user: user,
-			Messages: []*Message{
-				{
-					Uid:   6,
-					Date:  time.Now(),
-					Flags: []string{"\\Seen"},
-					Size:  uint32(len(body)),
-					Body:  []byte(body),
-				},
-			},
-		},
+func (be *Backend) AddUser(username, password string) (*User, error) {
+	if _, ok := be.users[username]; ok {
+		return nil, fmt.Errorf("user %s already exists", username)
 	}
 
+	user := &User{
+		username: username,
+		password: password,
+	}
+
+	be.userLock.Lock()
+	defer be.userLock.Unlock()
+	be.users[username] = user
+	return user, nil
+}
+
+func (u *User) SetMailboxes(mailboxes map[string]*Mailbox) {
+	u.mailboxes = mailboxes
+}
+
+func (be *Backend) GetUser(username string) (*User, error) {
+	if user, ok := be.users[username]; ok {
+		return user, nil
+	}
+	return nil, fmt.Errorf("no user exists with username %s", username)
+}
+
+func New() *Backend {
 	return &Backend{
-		users: map[string]*User{user.username: user},
+		users:    map[string]*User{},
+		userLock: sync.Mutex{},
 	}
 }
