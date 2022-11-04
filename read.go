@@ -28,7 +28,7 @@ const (
 
 // TODO: add CTL to atomSpecials
 var (
-	quotedSpecials = string([]rune{dquote, '\\'})
+	quotedSpecials = string([]rune{dquote, '\\', listStart, listEnd})
 	respSpecials   = string([]rune{respCodeEnd})
 	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
 )
