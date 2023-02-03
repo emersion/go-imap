@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // Login is a LOGIN command, as defined in RFC 3501 section 6.2.2.

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // Uid is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another

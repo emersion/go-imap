@@ -3,8 +3,8 @@ package commands
 import (
 	"errors"
 
-	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/utf7"
+	"github.com/faziloub/go-imap"
+	"github.com/faziloub/go-imap/utf7"
 )
 
 // Select is a SELECT command, as defined in RFC 3501 section 6.3.1. If ReadOnly

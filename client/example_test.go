@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/mail"
 
-	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
+	"github.com/faziloub/go-imap"
+	"github.com/faziloub/go-imap/client"
 )
 
 func ExampleClient() {

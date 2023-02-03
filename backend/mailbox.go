@@ -3,7 +3,7 @@ package backend
 import (
 	"time"
 
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // Mailbox represents a mailbox belonging to a user in the mail storage system.

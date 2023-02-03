@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // Search is a SEARCH command, as defined in RFC 3501 section 6.4.4.

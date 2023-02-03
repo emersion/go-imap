@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // Expunge is an EXPUNGE command, as defined in RFC 3501 section 6.4.3.

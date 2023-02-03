@@ -4,7 +4,7 @@ package backend
 import (
 	"errors"
 
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap"
 )
 
 // ErrInvalidCredentials is returned by Backend.Login when a username or a

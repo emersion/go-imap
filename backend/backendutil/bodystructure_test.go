@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap"
 	"github.com/emersion/go-message/textproto"
+	"github.com/faziloub/go-imap"
 )
 
 var testBodyStructure = &imap.BodyStructure{

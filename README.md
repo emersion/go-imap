@@ -1,6 +1,6 @@
 # go-imap
 
-[![GoDoc](https://godoc.org/github.com/emersion/go-imap?status.svg)](https://godoc.org/github.com/emersion/go-imap)
+[![GoDoc](https://godoc.org/github.com/faziloub/go-imap?status.svg)](https://godoc.org/github.com/faziloub/go-imap)
 [![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap.svg)](https://builds.sr.ht/~emersion/go-imap?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
 [![Unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/emersion/stability-badges#unstable)
@@ -9,12 +9,12 @@ An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
 
 ```shell
-go get github.com/emersion/go-imap/...
+go get github.com/faziloub/go-imap/...
 ```
 
 ## Usage
 
-### Client [![GoDoc](https://godoc.org/github.com/emersion/go-imap/client?status.svg)](https://godoc.org/github.com/emersion/go-imap/client)
+### Client [![GoDoc](https://godoc.org/github.com/faziloub/go-imap/client?status.svg)](https://godoc.org/github.com/faziloub/go-imap/client)
 
 ```go
 package main
@@ -22,8 +22,8 @@ package main
 import (
 	"log"
 
-	"github.com/emersion/go-imap/client"
-	"github.com/emersion/go-imap"
+	"github.com/faziloub/go-imap/client"
+	"github.com/faziloub/go-imap"
 )
 
 func main() {
@@ -97,7 +97,7 @@ func main() {
 }
 ```
 
-### Server [![GoDoc](https://godoc.org/github.com/emersion/go-imap/server?status.svg)](https://godoc.org/github.com/emersion/go-imap/server)
+### Server [![GoDoc](https://godoc.org/github.com/faziloub/go-imap/server?status.svg)](https://godoc.org/github.com/faziloub/go-imap/server)
 
 ```go
 package main
@@ -105,8 +105,8 @@ package main
 import (
 	"log"
 
-	"github.com/emersion/go-imap/server"
-	"github.com/emersion/go-imap/backend/memory"
+	"github.com/faziloub/go-imap/server"
+	"github.com/faziloub/go-imap/backend/memory"
 )
 
 func main() {
@@ -134,27 +134,27 @@ You can now use `telnet localhost 1143` to manually connect to the server.
 ### Extensions
 
 Commands defined in IMAP extensions are available in other packages. See [the
-wiki](https://github.com/emersion/go-imap/wiki/Using-extensions#using-client-extensions)
+wiki](https://github.com/faziloub/go-imap/wiki/Using-extensions#using-client-extensions)
 to learn how to use them.
 
-* [APPENDLIMIT](https://github.com/emersion/go-imap-appendlimit)
-* [COMPRESS](https://github.com/emersion/go-imap-compress)
-* [ENABLE](https://github.com/emersion/go-imap-enable)
+* [APPENDLIMIT](https://github.com/faziloub/go-imap-appendlimit)
+* [COMPRESS](https://github.com/faziloub/go-imap-compress)
+* [ENABLE](https://github.com/faziloub/go-imap-enable)
 * [ID](https://github.com/ProtonMail/go-imap-id)
-* [IDLE](https://github.com/emersion/go-imap-idle)
-* [MOVE](https://github.com/emersion/go-imap-move)
-* [QUOTA](https://github.com/emersion/go-imap-quota)
-* [SORT and THREAD](https://github.com/emersion/go-imap-sortthread)
-* [SPECIAL-USE](https://github.com/emersion/go-imap-specialuse)
-* [UNSELECT](https://github.com/emersion/go-imap-unselect)
-* [UIDPLUS](https://github.com/emersion/go-imap-uidplus)
+* [IDLE](https://github.com/faziloub/go-imap-idle)
+* [MOVE](https://github.com/faziloub/go-imap-move)
+* [QUOTA](https://github.com/faziloub/go-imap-quota)
+* [SORT and THREAD](https://github.com/faziloub/go-imap-sortthread)
+* [SPECIAL-USE](https://github.com/faziloub/go-imap-specialuse)
+* [UNSELECT](https://github.com/faziloub/go-imap-unselect)
+* [UIDPLUS](https://github.com/faziloub/go-imap-uidplus)
 
 ### Server backends
 
-* [Memory](https://github.com/emersion/go-imap/tree/master/backend/memory) (for testing)
-* [Multi](https://github.com/emersion/go-imap-multi)
-* [PGP](https://github.com/emersion/go-imap-pgp)
-* [Proxy](https://github.com/emersion/go-imap-proxy)
+* [Memory](https://github.com/faziloub/go-imap/tree/master/backend/memory) (for testing)
+* [Multi](https://github.com/faziloub/go-imap-multi)
+* [PGP](https://github.com/faziloub/go-imap-pgp)
+* [Proxy](https://github.com/faziloub/go-imap-proxy)
 
 ### Related projects
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emersion/go-imap/internal"
+	"github.com/faziloub/go-imap/internal"
 )
 
 func TestStartTLS(t *testing.T) {

@@ -5,7 +5,7 @@ packages:
   - bash
   - findutils
 sources:
-  - https://github.com/emersion/go-imap
+  - https://github.com/faziloub/go-imap
 tasks:
   - build: |
       cd go-imap
