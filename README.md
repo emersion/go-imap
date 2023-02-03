@@ -3,7 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/faziloub/go-imap?status.svg)](https://godoc.org/github.com/faziloub/go-imap)
 [![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap.svg)](https://builds.sr.ht/~emersion/go-imap?)
 [![Codecov](https://codecov.io/gh/emersion/go-imap/branch/master/graph/badge.svg)](https://codecov.io/gh/emersion/go-imap)
-[![Unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/emersion/stability-badges#unstable)
+[![Unstable](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/faziloub/stability-badges#unstable)
 
 An [IMAP4rev1](https://tools.ietf.org/html/rfc3501) library written in Go. It
 can be used to build a client and/or a server.
@@ -158,11 +158,11 @@ to learn how to use them.
 
 ### Related projects
 
-* [go-message](https://github.com/emersion/go-message) - parsing and formatting MIME and mail messages
-* [go-msgauth](https://github.com/emersion/go-msgauth) - handle DKIM, DMARC and Authentication-Results
-* [go-pgpmail](https://github.com/emersion/go-pgpmail) - decrypting and encrypting mails with OpenPGP
-* [go-sasl](https://github.com/emersion/go-sasl) - sending and receiving SASL authentications
-* [go-smtp](https://github.com/emersion/go-smtp) - building SMTP clients and servers
+* [go-message](https://github.com/faziloub/go-message) - parsing and formatting MIME and mail messages
+* [go-msgauth](https://github.com/faziloub/go-msgauth) - handle DKIM, DMARC and Authentication-Results
+* [go-pgpmail](https://github.com/faziloub/go-pgpmail) - decrypting and encrypting mails with OpenPGP
+* [go-sasl](https://github.com/faziloub/go-sasl) - sending and receiving SASL authentications
+* [go-smtp](https://github.com/faziloub/go-smtp) - building SMTP clients and servers
 
 ## License
 

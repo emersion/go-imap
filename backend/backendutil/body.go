@@ -8,8 +8,8 @@ import (
 	nettextproto "net/textproto"
 	"strings"
 
-	"github.com/emersion/go-message/textproto"
 	"github.com/faziloub/go-imap"
+	"github.com/faziloub/go-message/textproto"
 )
 
 var errNoSuchPart = errors.New("backendutil: no such message body part")
