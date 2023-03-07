@@ -72,7 +72,12 @@ func (dec *Decoder) EOF() bool {
 
 func (dec *Decoder) Expect(ok bool, name string) bool {
 	if !ok {
-		return dec.returnErr(fmt.Errorf("expected %v", name))
+		err := fmt.Errorf("expected %v", name)
+		if dec.r.Buffered() > 0 {
+			b, _ := dec.r.Peek(1)
+			err = fmt.Errorf("%v, got '%v'", err, string(b))
+		}
+		return dec.returnErr(err)
 	}
 	return true
 }
