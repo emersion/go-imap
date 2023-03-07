@@ -31,6 +31,7 @@ type Client struct {
 	mutex       sync.Mutex
 	cmdTag      uint64
 	pendingCmds []command
+	contReqs    []chan<- struct{}
 }
 
 // New creates a new IMAP client.
@@ -139,7 +140,24 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
+func (c *Client) encodeLiteral(size int64) io.WriteCloser {
+	ch := make(chan struct{})
+
+	c.mutex.Lock()
+	c.contReqs = append(c.contReqs, ch)
+	c.mutex.Unlock()
+
+	return c.enc.Literal(size, ch)
+}
+
 func (c *Client) readResponse() error {
+	if c.dec.Special('+') {
+		if err := c.readContinueReq(); err != nil {
+			return fmt.Errorf("in continue-req: %v", err)
+		}
+		return nil
+	}
+
 	var tag, typ string
 	if !c.dec.Expect(c.dec.Special('*') || c.dec.Atom(&tag), "'*' or atom") {
 		return fmt.Errorf("in response: cannot read tag: %v", c.dec.Err())
@@ -176,6 +194,28 @@ func (c *Client) readResponse() error {
 		return fmt.Errorf("in response: %v", c.dec.Err())
 	}
 
+	return nil
+}
+
+func (c *Client) readContinueReq() error {
+	var text string
+	if !c.dec.ExpectSP() || !c.dec.ExpectText(&text) || !c.dec.ExpectCRLF() {
+		return c.dec.Err()
+	}
+
+	var ch chan<- struct{}
+	c.mutex.Lock()
+	if len(c.contReqs) > 0 {
+		ch = c.contReqs[0]
+		c.contReqs = append(c.contReqs[:0], c.contReqs[1:]...)
+	}
+	c.mutex.Unlock()
+
+	if ch == nil {
+		return fmt.Errorf("received unmatched continuation request")
+	}
+
+	close(ch)
 	return nil
 }
 
