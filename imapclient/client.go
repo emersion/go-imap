@@ -352,6 +352,21 @@ func (c *Client) Login(username, password string) *Command {
 	return cmd
 }
 
+// Append sends an APPEND command.
+//
+// The caller must call AppendCommand.Close.
+func (c *Client) Append(mailbox string, size int64) *AppendCommand {
+	// TODO: flag parenthesized list, date/time string
+	cmd := c.beginCommand("APPEND")
+	cmd.enc.SP().Mailbox(mailbox).SP()
+	wc := c.encodeLiteral(size)
+	return &AppendCommand{
+		cmd:    cmd,
+		client: c,
+		wc:     wc,
+	}
+}
+
 // command is an interface for IMAP commands.
 //
 // Commands are represented by the Command type, but can be extended by other
@@ -407,4 +422,30 @@ func (cmd *LogoutCommand) Wait() error {
 		return err
 	}
 	return cmd.closer.Close()
+}
+
+// AppendCommand is an APPEND command.
+//
+// Callers must write the message contents, then call Close.
+type AppendCommand struct {
+	*cmd
+	client *Client
+	wc     io.WriteCloser
+}
+
+func (cmd *AppendCommand) Write(b []byte) (int, error) {
+	return cmd.wc.Write(b)
+}
+
+func (cmd *AppendCommand) Close() error {
+	err := cmd.wc.Close()
+	if cmd.client != nil {
+		cmd.client.endCommand(cmd)
+		cmd.client = nil
+	}
+	return err
+}
+
+func (cmd *AppendCommand) Wait() error {
+	return cmd.cmd.Wait()
 }
