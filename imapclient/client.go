@@ -235,11 +235,7 @@ func (c *Client) readResponseTagged(tag, typ string) error {
 			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
-				// TODO: relax
-				var s string
-				if !c.dec.ExpectAtom(&s) {
-					return c.dec.Err()
-				}
+				c.dec.Skip(']')
 			}
 		}
 		if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
