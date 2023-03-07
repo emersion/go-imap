@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 
 	"github.com/emersion/go-imap/v2/internal/imapwire"
@@ -268,6 +269,20 @@ func (c *Client) readResponseTagged(tag, typ string) error {
 }
 
 func (c *Client) readResponseData(typ string) error {
+	// number SP "EXISTS" / number SP "RECENT"
+	var num uint32
+	if typ[0] >= '0' && typ[0] <= '9' {
+		v, err := strconv.ParseUint(typ, 10, 32)
+		if err != nil {
+			return err
+		}
+
+		num = uint32(v)
+		if !c.dec.ExpectSP() || !c.dec.ExpectAtom(&typ) {
+			return c.dec.Err()
+		}
+	}
+
 	switch typ {
 	case "OK", "NO", "BAD": // resp-cond-state
 		// TODO
@@ -283,6 +298,15 @@ func (c *Client) readResponseData(typ string) error {
 		if cmd := findPendingCmdByType[*CapabilityCommand](c); cmd != nil {
 			cmd.caps = caps
 		}
+	case "FLAGS":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		// TODO: handle flags
+		_, err := readFlagList(c.dec)
+		return err
+	case "EXISTS", "RECENT":
+		_ = num // TODO: handle
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
@@ -361,6 +385,14 @@ func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 		client: c,
 		wc:     wc,
 	}
+}
+
+// Select sends a SELECT command.
+func (c *Client) Select(mailbox string) *Command {
+	cmd := c.beginCommand("SELECT")
+	cmd.enc.SP().Mailbox(mailbox)
+	c.endCommand(cmd)
+	return cmd
 }
 
 // command is an interface for IMAP commands.
