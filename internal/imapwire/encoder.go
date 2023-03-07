@@ -64,6 +64,14 @@ func (enc *Encoder) String(s string) *Encoder {
 	return enc.writeString(sb.String())
 }
 
+func (enc *Encoder) Mailbox(name string) *Encoder {
+	if strings.EqualFold(name, "INBOX") {
+		return enc.Atom("INBOX")
+	} else {
+		return enc.String(name)
+	}
+}
+
 func (enc *Encoder) Literal(size int64, sync <-chan struct{}) io.WriteCloser {
 	// TODO: literal8
 	enc.writeString("{")
