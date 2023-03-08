@@ -8,12 +8,18 @@ import (
 	"strings"
 )
 
+// An Encoder writes IMAP data.
+//
+// Most methods don't return an error, instead they defer error handling until
+// CRLF is called. These methods return the Encoder so that calls can be
+// chained.
 type Encoder struct {
 	w       *bufio.Writer
 	err     error
 	literal bool
 }
 
+// NewEncoder creates a new encoder.
 func NewEncoder(w *bufio.Writer) *Encoder {
 	return &Encoder{w: w}
 }
@@ -32,6 +38,7 @@ func (enc *Encoder) writeString(s string) *Encoder {
 	return enc
 }
 
+// CRLF writes a "\r\n" sequence and flushes the buffered writer.
 func (enc *Encoder) CRLF() error {
 	enc.writeString("\r\n")
 	if enc.err != nil {
@@ -85,6 +92,13 @@ func (enc *Encoder) Number64(v int64) *Encoder {
 	return enc.writeString(strconv.FormatInt(v, 10))
 }
 
+// Literal writes a literal.
+//
+// The caller must write exactly size bytes to the returned writer.
+//
+// If sync is non-nil, the literal is synchronizing: the encoder will wait for
+// nil to be sent to the channel before writing the literal data. If an error
+// is sent to the channel, the literal will be cancelled.
 func (enc *Encoder) Literal(size int64, sync <-chan error) io.WriteCloser {
 	// TODO: literal8
 	enc.writeString("{")
