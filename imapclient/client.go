@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -25,6 +26,8 @@ var debug = true
 // server response, see e.g. Command.
 type Client struct {
 	conn     net.Conn
+	br       *bufio.Reader
+	bw       *bufio.Writer
 	dec      *imapwire.Decoder
 	enc      *imapwire.Encoder
 	encMutex sync.Mutex
@@ -48,10 +51,15 @@ func New(conn net.Conn) *Client {
 		w = io.MultiWriter(w, os.Stderr)
 	}
 
+	br := bufio.NewReader(r)
+	bw := bufio.NewWriter(w)
+
 	client := &Client{
 		conn: conn,
-		dec:  imapwire.NewDecoder(bufio.NewReader(r)),
-		enc:  imapwire.NewEncoder(bufio.NewWriter(w)),
+		br:   br,
+		bw:   bw,
+		dec:  imapwire.NewDecoder(br),
+		enc:  imapwire.NewEncoder(bw),
 	}
 	go client.read()
 	return client
@@ -113,15 +121,14 @@ func (c *Client) endCommand(cmd command) {
 	c.encMutex.Unlock()
 }
 
-func (c *Client) deletePendingCmdByTag(tag string) *Command {
+func (c *Client) deletePendingCmdByTag(tag string) command {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	for i, cmd := range c.pendingCmds {
-		cmdBase := cmd.base()
-		if cmdBase.tag == tag {
+		if cmd.base().tag == tag {
 			c.pendingCmds = append(c.pendingCmds[:i], c.pendingCmds[i+1:]...)
-			return cmdBase
+			return cmd
 		}
 	}
 	return nil
@@ -171,12 +178,13 @@ func (c *Client) readResponse() error {
 	}
 
 	var (
-		token string
-		err   error
+		token    string
+		err      error
+		startTLS *startTLSCommand
 	)
 	if tag != "" {
 		token = "response-tagged"
-		err = c.readResponseTagged(tag, typ)
+		startTLS, err = c.readResponseTagged(tag, typ)
 	} else if typ == "BYE" {
 		token = "resp-cond-bye"
 		var text string
@@ -193,6 +201,11 @@ func (c *Client) readResponse() error {
 
 	if !c.dec.ExpectCRLF() {
 		return fmt.Errorf("in response: %v", c.dec.Err())
+	}
+
+	if startTLS != nil {
+		c.upgradeStartTLS(startTLS.tlsConfig)
+		close(startTLS.upgradeDone)
 	}
 
 	return nil
@@ -220,19 +233,19 @@ func (c *Client) readContinueReq() error {
 	return nil
 }
 
-func (c *Client) readResponseTagged(tag, typ string) error {
+func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	if !c.dec.ExpectSP() {
-		return c.dec.Err()
+		return nil, c.dec.Err()
 	}
 	if c.dec.Special('[') { // resp-text-code
 		var code string
 		if !c.dec.ExpectAtom(&code) {
-			return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
+			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
 		switch code {
 		case "CAPABILITY": // capability-data
 			if _, err := readCapabilities(c.dec); err != nil {
-				return err
+				return nil, err
 			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
@@ -240,12 +253,12 @@ func (c *Client) readResponseTagged(tag, typ string) error {
 			}
 		}
 		if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
-			return fmt.Errorf("in resp-text: %v", c.dec.Err())
+			return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 	}
 	var text string
 	if !c.dec.ExpectText(&text) {
-		return fmt.Errorf("in resp-text: %v", c.dec.Err())
+		return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 	}
 
 	var cmdErr error
@@ -256,16 +269,24 @@ func (c *Client) readResponseTagged(tag, typ string) error {
 		// TODO: define a type for IMAP errors
 		cmdErr = fmt.Errorf("%v %v", typ, text)
 	default:
-		return fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
+		return nil, fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
 	}
 
 	cmd := c.deletePendingCmdByTag(tag)
 	if cmd == nil {
-		return fmt.Errorf("received tagged response with unknown tag %q", tag)
+		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
-	cmd.done <- cmdErr
-	close(cmd.done)
-	return nil
+
+	done := cmd.base().done
+	done <- cmdErr
+	close(done)
+
+	var startTLS *startTLSCommand
+	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
+		startTLS = cmd
+	}
+
+	return startTLS, nil
 }
 
 func (c *Client) readResponseData(typ string) error {
@@ -378,6 +399,68 @@ func (c *Client) Login(username, password string) *Command {
 	cmd.enc.SP().String(username).SP().String(password)
 	c.endCommand(cmd)
 	return cmd
+}
+
+// StartTLS sends a STARTTLS command.
+//
+// Unlike other commands, this method blocks until the command completes.
+func (c *Client) StartTLS(config *tls.Config) error {
+	upgradeDone := make(chan struct{})
+	cmd := &startTLSCommand{
+		cmd:         c.beginCommand("STARTTLS"),
+		tlsConfig:   config,
+		upgradeDone: upgradeDone,
+	}
+	c.endCommand(cmd)
+
+	// Once a client issues a STARTTLS command, it MUST NOT issue further
+	// commands until a server response is seen and the TLS negotiation is
+	// complete
+	// TODO: race if another goroutine sends a command between endCommand and
+	// encMutex.Lock
+	c.encMutex.Lock()
+	defer c.encMutex.Unlock()
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	// The decoder goroutine will invoke Client.upgradeStartTLS
+	<-upgradeDone
+	return nil
+}
+
+func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
+	// Drain buffered data from our bufio.Reader
+	var buf bytes.Buffer
+	if _, err := io.CopyN(&buf, c.br, int64(c.br.Buffered())); err != nil {
+		panic(err) // unreachable
+	}
+
+	var cleartextConn net.Conn
+	if buf.Len() > 0 {
+		r := io.MultiReader(&buf, c.conn)
+		cleartextConn = startTLSConn{c.conn, r}
+	} else {
+		cleartextConn = c.conn
+	}
+
+	tlsConn := tls.Client(cleartextConn, tlsConfig)
+
+	var (
+		r io.Reader = tlsConn
+		w io.Writer = tlsConn
+	)
+	if debug {
+		r = io.TeeReader(r, os.Stderr)
+		w = io.MultiWriter(w, os.Stderr)
+	}
+
+	c.br.Reset(r)
+	// Unfortunately we can't re-use the bufio.Writer here, it races with
+	// Client.StartTLS
+	c.bw = bufio.NewWriter(w)
+	c.enc = imapwire.NewEncoder(c.bw)
 }
 
 // Append sends an APPEND command.
@@ -501,6 +584,12 @@ func (cmd *AppendCommand) Wait() error {
 	return cmd.cmd.Wait()
 }
 
+type startTLSCommand struct {
+	*cmd
+	tlsConfig   *tls.Config
+	upgradeDone chan<- struct{}
+}
+
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
 	*cmd
@@ -586,4 +675,13 @@ func (item *FetchItemData) discard() {
 type LiteralReader interface {
 	io.Reader
 	Size() int64
+}
+
+type startTLSConn struct {
+	net.Conn
+	r io.Reader
+}
+
+func (conn startTLSConn) Read(b []byte) (int, error) {
+	return conn.r.Read(b)
 }
