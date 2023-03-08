@@ -156,6 +156,34 @@ func (c *Client) unregisterContReq(ch chan error) {
 	c.mutex.Unlock()
 }
 
+// read continuously reads data coming from the server.
+//
+// All the data is decoded in the read goroutine, then dispatched via channels
+// to pending commands.
+func (c *Client) read() {
+	defer func() {
+		c.mutex.Lock()
+		pendingCmds := c.pendingCmds
+		c.pendingCmds = nil
+		c.mutex.Unlock()
+
+		for _, cmd := range pendingCmds {
+			cmd.base().done <- io.ErrUnexpectedEOF
+		}
+	}()
+
+	for {
+		if c.dec.EOF() {
+			break
+		}
+		if err := c.readResponse(); err != nil {
+			// TODO: handle error
+			log.Println(err)
+			break
+		}
+	}
+}
+
 func (c *Client) readResponse() error {
 	if c.dec.Special('+') {
 		if err := c.readContinueReq(); err != nil {
@@ -355,34 +383,6 @@ func (c *Client) readResponseData(typ string) error {
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
 	return nil
-}
-
-// read continuously reads data coming from the server.
-//
-// All the data is decoded in the read goroutine, then dispatched via channels
-// to pending commands.
-func (c *Client) read() {
-	defer func() {
-		c.mutex.Lock()
-		pendingCmds := c.pendingCmds
-		c.pendingCmds = nil
-		c.mutex.Unlock()
-
-		for _, cmd := range pendingCmds {
-			cmd.base().done <- io.ErrUnexpectedEOF
-		}
-	}()
-
-	for {
-		if c.dec.EOF() {
-			break
-		}
-		if err := c.readResponse(); err != nil {
-			// TODO: handle error
-			log.Println(err)
-			break
-		}
-	}
 }
 
 // Noop sends a NOOP command.
