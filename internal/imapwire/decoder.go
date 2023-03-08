@@ -10,8 +10,9 @@ import (
 )
 
 type Decoder struct {
-	r   *bufio.Reader
-	err error
+	r       *bufio.Reader
+	err     error
+	literal bool
 }
 
 func NewDecoder(r *bufio.Reader) *Decoder {
@@ -39,6 +40,9 @@ func (dec *Decoder) returnErr(err error) bool {
 }
 
 func (dec *Decoder) readByte() (byte, bool) {
+	if dec.literal {
+		return 0, dec.returnErr(fmt.Errorf("imapwire: cannot decode while a literal is open"))
+	}
 	b, err := dec.r.ReadByte()
 	if err != nil {
 		if err == io.EOF {
@@ -201,4 +205,67 @@ func (dec *Decoder) ExpectNumber64() (v int64, ok bool) {
 	v, ok = dec.Number64()
 	dec.Expect(ok, "number64")
 	return v, ok
+}
+
+func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
+	// TODO: quoted
+	var s string
+	if dec.Atom(&s) {
+		if s == "NIL" {
+			return nil, true, true
+		}
+		return newLiteralReaderFromString(s), true, true
+	}
+	if lit, nonSync, ok = dec.Literal(); ok {
+		return lit, nonSync, true
+	} else {
+		return nil, false, dec.Expect(false, "nstring")
+	}
+}
+
+func (dec *Decoder) Literal() (lit *LiteralReader, nonSync, ok bool) {
+	if !dec.Special('{') {
+		return nil, false, false
+	}
+	size, ok := dec.ExpectNumber64()
+	if !ok {
+		return nil, false, false
+	}
+	nonSync = dec.acceptByte('+')
+	if !dec.ExpectSpecial('}') || !dec.ExpectCRLF() {
+		return nil, false, false
+	}
+	dec.literal = true
+	lit = &LiteralReader{
+		dec:  dec,
+		size: size,
+		r:    io.LimitReader(dec.r, size),
+	}
+	return lit, nonSync, true
+}
+
+type LiteralReader struct {
+	dec  *Decoder
+	size int64
+	r    io.Reader
+}
+
+func newLiteralReaderFromString(s string) *LiteralReader {
+	return &LiteralReader{
+		size: int64(len(s)),
+		r:    strings.NewReader(s),
+	}
+}
+
+func (lit *LiteralReader) Size() int64 {
+	return lit.size
+}
+
+func (lit *LiteralReader) Read(b []byte) (int, error) {
+	n, err := lit.r.Read(b)
+	if err == io.EOF && lit.dec != nil {
+		lit.dec.literal = false
+		lit.dec = nil
+	}
+	return n, err
 }
