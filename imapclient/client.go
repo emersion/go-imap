@@ -12,11 +12,26 @@ import (
 	"sync"
 
 	"github.com/emersion/go-imap/v2/internal/imapwire"
-
-	"os"
 )
 
-var debug = true
+// Options contains options for Client.
+type Options struct {
+	// Raw ingress and egress data will be written to this writer, if any
+	DebugWriter io.Writer
+}
+
+func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
+	if options.DebugWriter == nil {
+		return rw
+	}
+	return struct {
+		io.Reader
+		io.Writer
+	}{
+		Reader: io.TeeReader(rw, options.DebugWriter),
+		Writer: io.MultiWriter(rw, options.DebugWriter),
+	}
+}
 
 // Client is an IMAP client.
 //
@@ -26,6 +41,7 @@ var debug = true
 // server response, see e.g. Command.
 type Client struct {
 	conn     net.Conn
+	options  Options
 	br       *bufio.Reader
 	bw       *bufio.Writer
 	dec      *imapwire.Decoder
@@ -40,36 +56,35 @@ type Client struct {
 // New creates a new IMAP client.
 //
 // This function doesn't perform I/O.
-func New(conn net.Conn) *Client {
-	var (
-		r io.Reader = conn
-		w io.Writer = conn
-	)
-	if debug {
-		r = io.TeeReader(r, os.Stderr)
-		w = io.MultiWriter(w, os.Stderr)
+//
+// A nil options pointer is equivalent to a zero options value.
+func New(conn net.Conn, options *Options) *Client {
+	if options == nil {
+		options = &Options{}
 	}
 
-	br := bufio.NewReader(r)
-	bw := bufio.NewWriter(w)
+	rw := options.wrapReadWriter(conn)
+	br := bufio.NewReader(rw)
+	bw := bufio.NewWriter(rw)
 
 	client := &Client{
-		conn: conn,
-		br:   br,
-		bw:   bw,
-		dec:  imapwire.NewDecoder(br),
+		conn:    conn,
+		options: *options,
+		br:      br,
+		bw:      bw,
+		dec:     imapwire.NewDecoder(br),
 	}
 	go client.read()
 	return client
 }
 
 // DialTLS connects to an IMAP server with implicit TLS.
-func DialTLS(address string) (*Client, error) {
+func DialTLS(address string, options *Options) (*Client, error) {
 	conn, err := tls.Dial("tcp", address, nil)
 	if err != nil {
 		return nil, err
 	}
-	return New(conn), nil
+	return New(conn, options), nil
 }
 
 // Close immediately closes the connection.
@@ -471,20 +486,12 @@ func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
 	}
 
 	tlsConn := tls.Client(cleartextConn, tlsConfig)
+	rw := c.options.wrapReadWriter(tlsConn)
 
-	var (
-		r io.Reader = tlsConn
-		w io.Writer = tlsConn
-	)
-	if debug {
-		r = io.TeeReader(r, os.Stderr)
-		w = io.MultiWriter(w, os.Stderr)
-	}
-
-	c.br.Reset(r)
+	c.br.Reset(rw)
 	// Unfortunately we can't re-use the bufio.Writer here, it races with
 	// Client.StartTLS
-	c.bw = bufio.NewWriter(w)
+	c.bw = bufio.NewWriter(rw)
 }
 
 // Append sends an APPEND command.
