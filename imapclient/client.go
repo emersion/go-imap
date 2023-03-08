@@ -35,7 +35,7 @@ type Client struct {
 	mutex       sync.Mutex
 	cmdTag      uint64
 	pendingCmds []command
-	contReqs    []chan struct{}
+	contReqs    []continuationRequest
 }
 
 // New creates a new IMAP client.
@@ -134,30 +134,28 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
-func (c *Client) registerContReq() <-chan struct{} {
+func (c *Client) registerContReq(cmd command) chan struct{} {
 	ch := make(chan struct{})
 
 	c.mutex.Lock()
-	c.contReqs = append(c.contReqs, ch)
+	c.contReqs = append(c.contReqs, continuationRequest{
+		ch:  ch,
+		cmd: cmd.base(),
+	})
 	c.mutex.Unlock()
 
 	return ch
 }
 
-func (c *Client) unregisterContReq(ch <-chan struct{}) {
+func (c *Client) unregisterContReq(ch chan struct{}) {
 	c.mutex.Lock()
 	for i := range c.contReqs {
-		if (<-chan struct{})(c.contReqs[i]) == ch {
+		if c.contReqs[i].ch == ch {
 			c.contReqs = append(c.contReqs[:i], c.contReqs[i+1:]...)
 			break
 		}
 	}
 	c.mutex.Unlock()
-}
-
-func (c *Client) encodeLiteral(size int64) io.WriteCloser {
-	ch := c.registerContReq()
-	return c.enc.Literal(size, ch)
 }
 
 func (c *Client) readResponse() error {
@@ -222,7 +220,7 @@ func (c *Client) readContinueReq() error {
 	var ch chan<- struct{}
 	c.mutex.Lock()
 	if len(c.contReqs) > 0 {
-		ch = c.contReqs[0]
+		ch = c.contReqs[0].ch
 		c.contReqs = append(c.contReqs[:0], c.contReqs[1:]...)
 	}
 	c.mutex.Unlock()
@@ -282,6 +280,24 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	done := cmd.base().done
 	done <- cmdErr
 	close(done)
+
+	// Ensure the command is not blocked waiting on continuation requests
+	c.mutex.Lock()
+	var filtered []continuationRequest
+	for _, contReq := range c.contReqs {
+		if contReq.cmd != cmd.base() {
+			filtered = append(filtered, contReq)
+		} else {
+			select {
+			case <-contReq.ch:
+				// already closed
+			default:
+				close(contReq.ch)
+			}
+		}
+	}
+	c.contReqs = filtered
+	c.mutex.Unlock()
 
 	var startTLS *startTLSCommand
 	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
@@ -473,7 +489,7 @@ func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 	cmd := &AppendCommand{}
 	cmd.enc = c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
-	cmd.wc = c.encodeLiteral(size)
+	cmd.wc = cmd.enc.Literal(size)
 	return cmd
 }
 
@@ -508,8 +524,8 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 // The caller must invoke IdleCommand.Close to stop IDLE and unblock the
 // client.
 func (c *Client) Idle() (*IdleCommand, error) {
-	contReq := c.registerContReq()
 	cmd := &IdleCommand{client: c}
+	contReq := c.registerContReq(cmd)
 	c.beginCommand("IDLE", cmd).end()
 
 	// encMutex is unlocked by IdleCommand.Close
@@ -542,6 +558,18 @@ func (ce *commandEncoder) end() {
 	}
 	ce.client.encMutex.Unlock()
 	ce.Encoder = nil
+}
+
+// Literal encodes a literal.
+func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
+	contReq := ce.client.registerContReq(ce.cmd)
+	return ce.Encoder.Literal(size, contReq)
+}
+
+// continuationRequest is a pending continuation request.
+type continuationRequest struct {
+	ch  chan struct{}
+	cmd *Command
 }
 
 // command is an interface for IMAP commands.
