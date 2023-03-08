@@ -9,12 +9,21 @@ import (
 	"unicode"
 )
 
+// A Decoder reads IMAP data.
+//
+// There are multiple families of methods:
+//
+//   - Methods directly named after IMAP grammar elements attempt to decode
+//     said element, and return false if it's another element.
+//   - "Expect" methods do the same, but set the decoder error (see Err) on
+//     failure.
 type Decoder struct {
 	r       *bufio.Reader
 	err     error
 	literal bool
 }
 
+// NewDecoder creates a new decoder.
 func NewDecoder(r *bufio.Reader) *Decoder {
 	return &Decoder{r: r}
 }
@@ -25,6 +34,7 @@ func (dec *Decoder) mustUnreadByte() {
 	}
 }
 
+// Err returns the decoder error, if any.
 func (dec *Decoder) Err() error {
 	return dec.err
 }
@@ -64,6 +74,7 @@ func (dec *Decoder) acceptByte(want byte) bool {
 	return true
 }
 
+// EOF returns true if end-of-file is reached.
 func (dec *Decoder) EOF() bool {
 	_, err := dec.r.ReadByte()
 	if err == io.EOF {
@@ -75,6 +86,7 @@ func (dec *Decoder) EOF() bool {
 	return false
 }
 
+// Expect sets the decoder error if ok is false.
 func (dec *Decoder) Expect(ok bool, name string) bool {
 	if !ok {
 		err := fmt.Errorf("expected %v", name)
