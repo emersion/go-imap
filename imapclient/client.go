@@ -18,6 +18,8 @@ import (
 type Options struct {
 	// Raw ingress and egress data will be written to this writer, if any
 	DebugWriter io.Writer
+	// Unilateral data handler
+	UnilateralDataFunc UnilateralDataFunc
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -362,6 +364,7 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	}
 
+	var unilateralData UnilateralData
 	switch typ {
 	case "OK", "NO", "BAD": // resp-cond-state
 		// TODO
@@ -393,6 +396,8 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*SelectCommand](c)
 		if cmd != nil {
 			cmd.data.NumMessages = num
+		} else {
+			unilateralData = &UnilateralDataMailbox{NumMessages: &num}
 		}
 	case "RECENT":
 		// ignore
@@ -407,6 +412,11 @@ func (c *Client) readResponseData(typ string) error {
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
+
+	if unilateralData != nil && c.options.UnilateralDataFunc != nil {
+		c.options.UnilateralDataFunc(unilateralData)
+	}
+
 	return nil
 }
 
@@ -584,6 +594,37 @@ type continuationRequest struct {
 	ch  chan error
 	cmd *Command
 }
+
+// UnilateralData holds unilateral data.
+//
+// Unilateral data is data that the client didn't explicitly request.
+type UnilateralData interface {
+	unilateralData()
+}
+
+var (
+	_ UnilateralData = (*UnilateralDataMailbox)(nil)
+)
+
+// UnilateralDataMailbox describes a mailbox status update.
+//
+// If a field is nil, it hasn't changed.
+type UnilateralDataMailbox struct {
+	NumMessages *uint32
+}
+
+func (*UnilateralDataMailbox) unilateralData() {}
+
+// UnilateralDataFunc handles unilateral data.
+//
+// The handler will block the client while running. If the caller intends to
+// perform slow operations, a buffered channel and a separate goroutine should
+// be used.
+//
+// The handler will be invoked in an arbitrary goroutine.
+//
+// See Options.UnilateralDataFunc.
+type UnilateralDataFunc func(data UnilateralData)
 
 // command is an interface for IMAP commands.
 //
