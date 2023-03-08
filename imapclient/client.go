@@ -83,9 +83,9 @@ func (c *Client) Close() error {
 //
 // The command name and a space are written.
 //
-// The caller must call endCommand.
-func (c *Client) beginCommand(name string, cmd command) {
-	c.encMutex.Lock() // unlocked by endCommand
+// The caller must call commandEncoder.end.
+func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
+	c.encMutex.Lock() // unlocked by commandEncoder.end
 
 	c.mutex.Lock()
 	c.cmdTag++
@@ -97,25 +97,14 @@ func (c *Client) beginCommand(name string, cmd command) {
 	*baseCmd = Command{
 		tag:  tag,
 		done: make(chan error, 1),
-		enc:  c.enc,
 	}
-	baseCmd.enc.Atom(tag).SP().Atom(name)
-}
-
-// endCommand ends an outgoing command.
-//
-// A CRLF is written.
-//
-// The command is registered as a pending command until the server sends a
-// completion result response.
-func (c *Client) endCommand(cmd command) {
-	baseCmd := cmd.base()
-
-	if err := baseCmd.enc.CRLF(); err != nil {
-		baseCmd.err = err
+	enc := &commandEncoder{
+		Encoder: c.enc,
+		client:  c,
+		cmd:     baseCmd,
 	}
-	baseCmd.enc = nil
-	c.encMutex.Unlock()
+	enc.Atom(tag).SP().Atom(name)
+	return enc
 }
 
 func (c *Client) deletePendingCmdByTag(tag string) command {
@@ -386,8 +375,7 @@ func (c *Client) read() {
 // Noop sends a NOOP command.
 func (c *Client) Noop() *Command {
 	cmd := &Command{}
-	c.beginCommand("NOOP", cmd)
-	c.endCommand(cmd)
+	c.beginCommand("NOOP", cmd).end()
 	return cmd
 }
 
@@ -396,25 +384,23 @@ func (c *Client) Noop() *Command {
 // This command informs the server that the client is done with the connection.
 func (c *Client) Logout() *LogoutCommand {
 	cmd := &LogoutCommand{closer: c}
-	c.beginCommand("LOGOUT", cmd)
-	c.endCommand(cmd)
+	c.beginCommand("LOGOUT", cmd).end()
 	return cmd
 }
 
 // Capability sends a CAPABILITY command.
 func (c *Client) Capability() *CapabilityCommand {
 	cmd := &CapabilityCommand{}
-	c.beginCommand("CAPABILITY", cmd)
-	c.endCommand(cmd)
+	c.beginCommand("CAPABILITY", cmd).end()
 	return cmd
 }
 
 // Login sends a LOGIN command.
 func (c *Client) Login(username, password string) *Command {
 	cmd := &Command{}
-	c.beginCommand("LOGIN", cmd)
-	cmd.enc.SP().String(username).SP().String(password)
-	c.endCommand(cmd)
+	enc := c.beginCommand("LOGIN", cmd)
+	enc.SP().String(username).SP().String(password)
+	enc.end()
 	return cmd
 }
 
@@ -427,8 +413,7 @@ func (c *Client) StartTLS(config *tls.Config) error {
 		tlsConfig:   config,
 		upgradeDone: upgradeDone,
 	}
-	c.beginCommand("STARTTLS", cmd)
-	c.endCommand(cmd)
+	c.beginCommand("STARTTLS", cmd).end()
 
 	// Once a client issues a STARTTLS command, it MUST NOT issue further
 	// commands until a server response is seen and the TLS negotiation is
@@ -486,7 +471,7 @@ func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
 func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 	// TODO: flag parenthesized list, date/time string
 	cmd := &AppendCommand{}
-	c.beginCommand("APPEND", cmd)
+	cmd.enc = c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
 	cmd.wc = c.encodeLiteral(size)
 	return cmd
@@ -495,9 +480,9 @@ func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 // Select sends a SELECT command.
 func (c *Client) Select(mailbox string) *Command {
 	cmd := &Command{}
-	c.beginCommand("SELECT", cmd)
-	cmd.enc.SP().Mailbox(mailbox)
-	c.endCommand(cmd)
+	enc := c.beginCommand("SELECT", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
 	return cmd
 }
 
@@ -510,9 +495,9 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 	cmd := &FetchCommand{
 		msgs: make(chan *FetchMessageData, 128),
 	}
-	c.beginCommand("FETCH", cmd)
-	cmd.enc.SP().Number(seqNum).SP().Special('(').Atom("BODY[]").Special(')')
-	c.endCommand(cmd)
+	enc := c.beginCommand("FETCH", cmd)
+	enc.SP().Number(seqNum).SP().Special('(').Atom("BODY[]").Special(')')
+	enc.end()
 	return cmd
 }
 
@@ -525,8 +510,7 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 func (c *Client) Idle() (*IdleCommand, error) {
 	contReq := c.registerContReq()
 	cmd := &IdleCommand{client: c}
-	c.beginCommand("IDLE", cmd)
-	c.endCommand(cmd)
+	c.beginCommand("IDLE", cmd).end()
 
 	// encMutex is unlocked by IdleCommand.Close
 	// TODO: race if another goroutine sends a command between endCommand and
@@ -543,6 +527,23 @@ func (c *Client) Idle() (*IdleCommand, error) {
 	}
 }
 
+type commandEncoder struct {
+	*imapwire.Encoder
+	client *Client
+	cmd    *Command
+}
+
+// end ends an outgoing command.
+//
+// A CRLF is written and the encoder is flushed.
+func (ce *commandEncoder) end() {
+	if err := ce.Encoder.CRLF(); err != nil {
+		ce.cmd.err = err
+	}
+	ce.client.encMutex.Unlock()
+	ce.Encoder = nil
+}
+
 // command is an interface for IMAP commands.
 //
 // Commands are represented by the Command type, but can be extended by other
@@ -555,7 +556,6 @@ type command interface {
 type Command struct {
 	tag  string
 	done chan error
-	enc  *imapwire.Encoder
 	err  error
 }
 
@@ -565,9 +565,6 @@ func (cmd *Command) base() *Command {
 
 // Wait blocks until the command has completed.
 func (cmd *Command) Wait() error {
-	if cmd.enc != nil {
-		panic("command waited before being closed")
-	}
 	if cmd.err == nil {
 		cmd.err = <-cmd.done
 	}
@@ -605,8 +602,8 @@ func (cmd *LogoutCommand) Wait() error {
 // Callers must write the message contents, then call Close.
 type AppendCommand struct {
 	cmd
-	client *Client
-	wc     io.WriteCloser
+	enc *commandEncoder
+	wc  io.WriteCloser
 }
 
 func (cmd *AppendCommand) Write(b []byte) (int, error) {
@@ -615,9 +612,9 @@ func (cmd *AppendCommand) Write(b []byte) (int, error) {
 
 func (cmd *AppendCommand) Close() error {
 	err := cmd.wc.Close()
-	if cmd.client != nil {
-		cmd.client.endCommand(cmd)
-		cmd.client = nil
+	if cmd.enc != nil {
+		cmd.enc.end()
+		cmd.enc = nil
 	}
 	return err
 }
