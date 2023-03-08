@@ -35,7 +35,7 @@ type Client struct {
 	mutex       sync.Mutex
 	cmdTag      uint64
 	pendingCmds []command
-	contReqs    []chan<- struct{}
+	contReqs    []chan struct{}
 }
 
 // New creates a new IMAP client.
@@ -148,13 +148,29 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
-func (c *Client) encodeLiteral(size int64) io.WriteCloser {
+func (c *Client) registerContReq() <-chan struct{} {
 	ch := make(chan struct{})
 
 	c.mutex.Lock()
 	c.contReqs = append(c.contReqs, ch)
 	c.mutex.Unlock()
 
+	return ch
+}
+
+func (c *Client) unregisterContReq(ch <-chan struct{}) {
+	c.mutex.Lock()
+	for i := range c.contReqs {
+		if (<-chan struct{})(c.contReqs[i]) == ch {
+			c.contReqs = append(c.contReqs[:i], c.contReqs[i+1:]...)
+			break
+		}
+	}
+	c.mutex.Unlock()
+}
+
+func (c *Client) encodeLiteral(size int64) io.WriteCloser {
+	ch := c.registerContReq()
 	return c.enc.Literal(size, ch)
 }
 
@@ -501,6 +517,36 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 	return cmd
 }
 
+// Idle sends an IDLE command.
+//
+// Unlike other commands, this method blocks until the server acknowledges it.
+// On success, the IDLE command is running and other commands cannot be sent.
+// The caller must invoke IdleCommand.Close to stop IDLE and unblock the
+// client.
+func (c *Client) Idle() (*IdleCommand, error) {
+	contReq := c.registerContReq()
+
+	cmd := &IdleCommand{
+		cmd:    c.beginCommand("IDLE"),
+		client: c,
+	}
+	c.endCommand(cmd)
+
+	// encMutex is unlocked by IdleCommand.Close
+	// TODO: race if another goroutine sends a command between endCommand and
+	// encMutex.Lock
+	c.encMutex.Lock()
+
+	select {
+	case <-contReq:
+		return cmd, nil
+	case err := <-cmd.done:
+		c.unregisterContReq(contReq)
+		c.encMutex.Unlock()
+		return nil, err
+	}
+}
+
 // command is an interface for IMAP commands.
 //
 // Commands are represented by the Command type, but can be extended by other
@@ -684,4 +730,42 @@ type startTLSConn struct {
 
 func (conn startTLSConn) Read(b []byte) (int, error) {
 	return conn.r.Read(b)
+}
+
+// IdleCommand is an IDLE command.
+//
+// Initially, the IDLE command is running. The server may send unilateral
+// data. The client cannot send any command while IDLE is running.
+//
+// Close must be called to stop the IDLE command.
+type IdleCommand struct {
+	*cmd
+	client *Client
+}
+
+// Close stops the IDLE command.
+//
+// This method blocks until the command to stop IDLE is written, but doesn't
+// wait for the server to respond. Callers can use Wait for this purpose.
+func (cmd *IdleCommand) Close() error {
+	if cmd.err != nil {
+		return cmd.err
+	}
+	if cmd.client == nil {
+		return fmt.Errorf("imapclient: IDLE command closed twice")
+	}
+	err := cmd.client.enc.Atom("DONE").CRLF()
+	cmd.client.encMutex.Unlock()
+	cmd.client = nil
+	return err
+}
+
+// Wait blocks until the IDLE command has completed.
+//
+// Wait can only be called after Close.
+func (cmd *IdleCommand) Wait() error {
+	if cmd.client != nil {
+		return fmt.Errorf("imapclient: IdleCommand.Close must be called before Wait")
+	}
+	return cmd.cmd.Wait()
 }
