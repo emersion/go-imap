@@ -307,6 +307,14 @@ func (c *Client) readResponseData(typ string) error {
 		return err
 	case "EXISTS", "RECENT":
 		_ = num // TODO: handle
+	case "FETCH":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		cmd := findPendingCmdByType[*FetchCommand](c)
+		if err := readMsgAtt(c.dec, cmd); err != nil {
+			return fmt.Errorf("in msg-att: %v", err)
+		}
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
@@ -395,6 +403,21 @@ func (c *Client) Select(mailbox string) *Command {
 	return cmd
 }
 
+// Fetch sends a FETCH command.
+//
+// The caller must fully consume the FetchCommand. A simple way to do so is to
+// defer a call to FetchCommand.Close.
+func (c *Client) Fetch(seqNum uint32) *FetchCommand {
+	// TODO: sequence set, message data item names or macro
+	cmd := &FetchCommand{
+		cmd:  c.beginCommand("FETCH"),
+		msgs: make(chan *FetchMessageData, 128),
+	}
+	cmd.enc.SP().Number(seqNum).SP().Special('(').Atom("BODY[]").Special(')')
+	c.endCommand(cmd)
+	return cmd
+}
+
 // command is an interface for IMAP commands.
 //
 // Commands are represented by the Command type, but can be extended by other
@@ -476,4 +499,91 @@ func (cmd *AppendCommand) Close() error {
 
 func (cmd *AppendCommand) Wait() error {
 	return cmd.cmd.Wait()
+}
+
+// FetchCommand is a FETCH command.
+type FetchCommand struct {
+	*cmd
+	msgs chan *FetchMessageData
+	prev *FetchMessageData
+}
+
+// Next advances to the next message.
+//
+// On success, the message and a nil error is returned. If there are no more
+// messages, io.EOF is returned. Otherwise the error is returned.
+func (cmd *FetchCommand) Next() (*FetchMessageData, error) {
+	if cmd.prev != nil {
+		cmd.prev.discard()
+	}
+
+	select {
+	case msg := <-cmd.msgs:
+		cmd.prev = msg
+		return msg, nil
+	case err := <-cmd.done:
+		if err == nil {
+			return nil, io.EOF
+		}
+		return nil, err
+	}
+}
+
+// Close releases the command.
+//
+// Calling Close unblocks the IMAP client decoder and lets it read the next
+// responses. Next will always return an error after Close.
+func (cmd *FetchCommand) Close() error {
+	for {
+		_, err := cmd.Next()
+		if err == io.EOF {
+			return nil
+		} else if err != nil {
+			return err
+		}
+	}
+}
+
+// FetchMessageData contains a message's FETCH data.
+type FetchMessageData struct {
+	items chan *FetchItemData
+	prev  *FetchItemData
+}
+
+// Next advances to the next data item for this message.
+//
+// If there is one or more data items left, the next item is returned.
+// Otherwise nil is returned.
+func (data *FetchMessageData) Next() *FetchItemData {
+	if data.prev != nil {
+		data.prev.discard()
+	}
+
+	item := <-data.items
+	data.prev = item
+	return item
+}
+
+func (data *FetchMessageData) discard() {
+	for {
+		if item := data.Next(); item == nil {
+			break
+		}
+	}
+}
+
+// FetchItemData contains a message's FETCH item data.
+type FetchItemData struct {
+	Name    string
+	Literal LiteralReader
+}
+
+func (item *FetchItemData) discard() {
+	io.Copy(io.Discard, item.Literal)
+}
+
+// LiteralReader is a reader for IMAP literals.
+type LiteralReader interface {
+	io.Reader
+	Size() int64
 }
