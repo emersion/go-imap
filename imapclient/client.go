@@ -132,8 +132,8 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
-func (c *Client) registerContReq(cmd command) chan struct{} {
-	ch := make(chan struct{})
+func (c *Client) registerContReq(cmd command) chan error {
+	ch := make(chan error)
 
 	c.mutex.Lock()
 	c.contReqs = append(c.contReqs, continuationRequest{
@@ -145,7 +145,7 @@ func (c *Client) registerContReq(cmd command) chan struct{} {
 	return ch
 }
 
-func (c *Client) unregisterContReq(ch chan struct{}) {
+func (c *Client) unregisterContReq(ch chan error) {
 	c.mutex.Lock()
 	for i := range c.contReqs {
 		if c.contReqs[i].ch == ch {
@@ -215,7 +215,7 @@ func (c *Client) readContinueReq() error {
 		return c.dec.Err()
 	}
 
-	var ch chan<- struct{}
+	var ch chan<- error
 	c.mutex.Lock()
 	if len(c.contReqs) > 0 {
 		ch = c.contReqs[0].ch
@@ -227,6 +227,7 @@ func (c *Client) readContinueReq() error {
 		return fmt.Errorf("received unmatched continuation request")
 	}
 
+	ch <- nil
 	close(ch)
 	return nil
 }
@@ -286,12 +287,10 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		if contReq.cmd != cmd.base() {
 			filtered = append(filtered, contReq)
 		} else {
-			select {
-			case <-contReq.ch:
-				// already closed
-			default:
-				close(contReq.ch)
+			if cmdErr != nil {
+				contReq.ch <- cmdErr
 			}
+			close(contReq.ch)
 		}
 	}
 	c.contReqs = filtered
@@ -565,7 +564,7 @@ func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
 
 // continuationRequest is a pending continuation request.
 type continuationRequest struct {
-	ch  chan struct{}
+	ch  chan error
 	cmd *Command
 }
 

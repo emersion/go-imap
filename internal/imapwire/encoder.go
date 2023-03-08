@@ -85,7 +85,7 @@ func (enc *Encoder) Number64(v int64) *Encoder {
 	return enc.writeString(strconv.FormatInt(v, 10))
 }
 
-func (enc *Encoder) Literal(size int64, sync <-chan struct{}) io.WriteCloser {
+func (enc *Encoder) Literal(size int64, sync <-chan error) io.WriteCloser {
 	// TODO: literal8
 	enc.writeString("{")
 	enc.Number64(size)
@@ -100,7 +100,16 @@ func (enc *Encoder) Literal(size int64, sync <-chan struct{}) io.WriteCloser {
 		if err := enc.CRLF(); err != nil {
 			return errorWriter{err}
 		}
-		<-sync
+		err, ok := <-sync
+		if !ok {
+			err = fmt.Errorf("imapwire: literal cancelled")
+		}
+		if err != nil {
+			if enc.err == nil {
+				enc.err = err
+			}
+			return errorWriter{err}
+		}
 	}
 
 	enc.literal = true
