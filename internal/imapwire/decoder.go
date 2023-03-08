@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -172,4 +173,32 @@ func (dec *Decoder) Skip(untilCh byte) {
 			return
 		}
 	}
+}
+
+func (dec *Decoder) Number64() (v int64, ok bool) {
+	var sb strings.Builder
+	for {
+		ch, ok := dec.readByte()
+		if !ok {
+			return 0, false
+		} else if ch < '0' || ch > '9' {
+			dec.mustUnreadByte()
+			break
+		}
+		sb.WriteByte(ch)
+	}
+	if sb.Len() == 0 {
+		return 0, false
+	}
+	v, err := strconv.ParseInt(sb.String(), 10, 64)
+	if err != nil {
+		panic(err) // unreachable
+	}
+	return v, true
+}
+
+func (dec *Decoder) ExpectNumber64() (v int64, ok bool) {
+	v, ok = dec.Number64()
+	dec.Expect(ok, "number64")
+	return v, ok
 }
