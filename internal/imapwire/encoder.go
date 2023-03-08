@@ -48,6 +48,10 @@ func (enc *Encoder) SP() *Encoder {
 	return enc.writeString(" ")
 }
 
+func (enc *Encoder) Special(ch byte) *Encoder {
+	return enc.writeString(string(ch))
+}
+
 func (enc *Encoder) String(s string) *Encoder {
 	// TODO: if the string contains CR/LF, use a literal
 	var sb strings.Builder
@@ -72,10 +76,19 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	}
 }
 
+func (enc *Encoder) Number(v uint32) *Encoder {
+	return enc.writeString(strconv.FormatUint(uint64(v), 10))
+}
+
+func (enc *Encoder) Number64(v int64) *Encoder {
+	// TODO: disallow negative values
+	return enc.writeString(strconv.FormatInt(v, 10))
+}
+
 func (enc *Encoder) Literal(size int64, sync <-chan struct{}) io.WriteCloser {
 	// TODO: literal8
 	enc.writeString("{")
-	enc.writeString(strconv.FormatInt(size, 10))
+	enc.Number64(size)
 	if sync == nil {
 		enc.writeString("+")
 	}
