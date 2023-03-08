@@ -29,7 +29,6 @@ type Client struct {
 	br       *bufio.Reader
 	bw       *bufio.Writer
 	dec      *imapwire.Decoder
-	enc      *imapwire.Encoder
 	encMutex sync.Mutex
 
 	mutex       sync.Mutex
@@ -59,7 +58,6 @@ func New(conn net.Conn) *Client {
 		br:   br,
 		bw:   bw,
 		dec:  imapwire.NewDecoder(br),
-		enc:  imapwire.NewEncoder(bw),
 	}
 	go client.read()
 	return client
@@ -99,7 +97,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 		done: make(chan error, 1),
 	}
 	enc := &commandEncoder{
-		Encoder: c.enc,
+		Encoder: imapwire.NewEncoder(c.bw),
 		client:  c,
 		cmd:     baseCmd,
 	}
@@ -478,7 +476,6 @@ func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
 	// Unfortunately we can't re-use the bufio.Writer here, it races with
 	// Client.StartTLS
 	c.bw = bufio.NewWriter(w)
-	c.enc = imapwire.NewEncoder(c.bw)
 }
 
 // Append sends an APPEND command.
@@ -775,7 +772,10 @@ func (cmd *IdleCommand) Close() error {
 	if cmd.client == nil {
 		return fmt.Errorf("imapclient: IDLE command closed twice")
 	}
-	err := cmd.client.enc.Atom("DONE").CRLF()
+	_, err := cmd.client.bw.WriteString("DONE\r\n")
+	if err == nil {
+		err = cmd.client.bw.Flush()
+	}
 	cmd.client.encMutex.Unlock()
 	cmd.client = nil
 	return err
