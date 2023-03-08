@@ -366,11 +366,21 @@ func (c *Client) readResponseData(typ string) error {
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		// TODO: handle flags
-		_, err := readFlagList(c.dec)
-		return err
-	case "EXISTS", "RECENT":
-		_ = num // TODO: handle
+		flags, err := readFlagList(c.dec)
+		if err != nil {
+			return err
+		}
+		cmd := findPendingCmdByType[*SelectCommand](c)
+		if cmd != nil {
+			cmd.data.Flags = flags
+		}
+	case "EXISTS":
+		cmd := findPendingCmdByType[*SelectCommand](c)
+		if cmd != nil {
+			cmd.data.NumMessages = num
+		}
+	case "RECENT":
+		// ignore
 	case "FETCH":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
@@ -490,8 +500,8 @@ func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 }
 
 // Select sends a SELECT command.
-func (c *Client) Select(mailbox string) *Command {
-	cmd := &Command{}
+func (c *Client) Select(mailbox string) *SelectCommand {
+	cmd := &SelectCommand{}
 	enc := c.beginCommand("SELECT", cmd)
 	enc.SP().Mailbox(mailbox)
 	enc.end()
@@ -645,6 +655,26 @@ func (cmd *AppendCommand) Close() error {
 
 func (cmd *AppendCommand) Wait() error {
 	return cmd.cmd.Wait()
+}
+
+// SelectCommand is a SELECT command.
+type SelectCommand struct {
+	cmd
+	data SelectData
+}
+
+func (cmd *SelectCommand) Wait() (*SelectData, error) {
+	return &cmd.data, cmd.cmd.Wait()
+}
+
+// SelectData is the data returned by a SELECT command.
+type SelectData struct {
+	// Flags defined for this mailbox
+	Flags []string
+	// Number of messages in this mailbox (aka. "EXISTS")
+	NumMessages uint32
+
+	// TODO: LIST, PERMANENTFLAGS, UIDNEXT, UIDVALIDITY
 }
 
 type startTLSCommand struct {
