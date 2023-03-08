@@ -84,21 +84,22 @@ func (c *Client) Close() error {
 // The command name and a space are written.
 //
 // The caller must call endCommand.
-func (c *Client) beginCommand(name string) *Command {
+func (c *Client) beginCommand(name string, cmd command) {
 	c.encMutex.Lock() // unlocked by endCommand
 
 	c.mutex.Lock()
 	c.cmdTag++
 	tag := fmt.Sprintf("T%v", c.cmdTag)
+	c.pendingCmds = append(c.pendingCmds, cmd)
 	c.mutex.Unlock()
 
-	cmd := &Command{
+	baseCmd := cmd.base()
+	*baseCmd = Command{
 		tag:  tag,
 		done: make(chan error, 1),
 		enc:  c.enc,
 	}
-	cmd.enc.Atom(tag).SP().Atom(name)
-	return cmd
+	baseCmd.enc.Atom(tag).SP().Atom(name)
 }
 
 // endCommand ends an outgoing command.
@@ -109,10 +110,6 @@ func (c *Client) beginCommand(name string) *Command {
 // completion result response.
 func (c *Client) endCommand(cmd command) {
 	baseCmd := cmd.base()
-
-	c.mutex.Lock()
-	c.pendingCmds = append(c.pendingCmds, cmd)
-	c.mutex.Unlock()
 
 	if err := baseCmd.enc.CRLF(); err != nil {
 		baseCmd.err = err
@@ -388,7 +385,8 @@ func (c *Client) read() {
 
 // Noop sends a NOOP command.
 func (c *Client) Noop() *Command {
-	cmd := c.beginCommand("NOOP")
+	cmd := &Command{}
+	c.beginCommand("NOOP", cmd)
 	c.endCommand(cmd)
 	return cmd
 }
@@ -397,21 +395,24 @@ func (c *Client) Noop() *Command {
 //
 // This command informs the server that the client is done with the connection.
 func (c *Client) Logout() *LogoutCommand {
-	cmd := &LogoutCommand{c.beginCommand("LOGOUT"), c}
+	cmd := &LogoutCommand{closer: c}
+	c.beginCommand("LOGOUT", cmd)
 	c.endCommand(cmd)
 	return cmd
 }
 
 // Capability sends a CAPABILITY command.
 func (c *Client) Capability() *CapabilityCommand {
-	cmd := &CapabilityCommand{cmd: c.beginCommand("CAPABILITY")}
+	cmd := &CapabilityCommand{}
+	c.beginCommand("CAPABILITY", cmd)
 	c.endCommand(cmd)
 	return cmd
 }
 
 // Login sends a LOGIN command.
 func (c *Client) Login(username, password string) *Command {
-	cmd := c.beginCommand("LOGIN")
+	cmd := &Command{}
+	c.beginCommand("LOGIN", cmd)
 	cmd.enc.SP().String(username).SP().String(password)
 	c.endCommand(cmd)
 	return cmd
@@ -423,10 +424,10 @@ func (c *Client) Login(username, password string) *Command {
 func (c *Client) StartTLS(config *tls.Config) error {
 	upgradeDone := make(chan struct{})
 	cmd := &startTLSCommand{
-		cmd:         c.beginCommand("STARTTLS"),
 		tlsConfig:   config,
 		upgradeDone: upgradeDone,
 	}
+	c.beginCommand("STARTTLS", cmd)
 	c.endCommand(cmd)
 
 	// Once a client issues a STARTTLS command, it MUST NOT issue further
@@ -484,19 +485,17 @@ func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
 // The caller must call AppendCommand.Close.
 func (c *Client) Append(mailbox string, size int64) *AppendCommand {
 	// TODO: flag parenthesized list, date/time string
-	cmd := c.beginCommand("APPEND")
+	cmd := &AppendCommand{}
+	c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
-	wc := c.encodeLiteral(size)
-	return &AppendCommand{
-		cmd:    cmd,
-		client: c,
-		wc:     wc,
-	}
+	cmd.wc = c.encodeLiteral(size)
+	return cmd
 }
 
 // Select sends a SELECT command.
 func (c *Client) Select(mailbox string) *Command {
-	cmd := c.beginCommand("SELECT")
+	cmd := &Command{}
+	c.beginCommand("SELECT", cmd)
 	cmd.enc.SP().Mailbox(mailbox)
 	c.endCommand(cmd)
 	return cmd
@@ -509,9 +508,9 @@ func (c *Client) Select(mailbox string) *Command {
 func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 	// TODO: sequence set, message data item names or macro
 	cmd := &FetchCommand{
-		cmd:  c.beginCommand("FETCH"),
 		msgs: make(chan *FetchMessageData, 128),
 	}
+	c.beginCommand("FETCH", cmd)
 	cmd.enc.SP().Number(seqNum).SP().Special('(').Atom("BODY[]").Special(')')
 	c.endCommand(cmd)
 	return cmd
@@ -525,11 +524,8 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 // client.
 func (c *Client) Idle() (*IdleCommand, error) {
 	contReq := c.registerContReq()
-
-	cmd := &IdleCommand{
-		cmd:    c.beginCommand("IDLE"),
-		client: c,
-	}
+	cmd := &IdleCommand{client: c}
+	c.beginCommand("IDLE", cmd)
 	c.endCommand(cmd)
 
 	// encMutex is unlocked by IdleCommand.Close
@@ -582,7 +578,7 @@ type cmd = Command // type alias to avoid exporting anonymous struct fields
 
 // CapabilityCommand is a CAPABILITY command.
 type CapabilityCommand struct {
-	*cmd
+	cmd
 	caps map[string]struct{}
 }
 
@@ -593,7 +589,7 @@ func (cmd *CapabilityCommand) Wait() (map[string]struct{}, error) {
 
 // LogoutCommand is a LOGOUT command.
 type LogoutCommand struct {
-	*cmd
+	cmd
 	closer io.Closer
 }
 
@@ -608,7 +604,7 @@ func (cmd *LogoutCommand) Wait() error {
 //
 // Callers must write the message contents, then call Close.
 type AppendCommand struct {
-	*cmd
+	cmd
 	client *Client
 	wc     io.WriteCloser
 }
@@ -631,14 +627,14 @@ func (cmd *AppendCommand) Wait() error {
 }
 
 type startTLSCommand struct {
-	*cmd
+	cmd
 	tlsConfig   *tls.Config
 	upgradeDone chan<- struct{}
 }
 
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
-	*cmd
+	cmd
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
 }
@@ -739,7 +735,7 @@ func (conn startTLSConn) Read(b []byte) (int, error) {
 //
 // Close must be called to stop the IDLE command.
 type IdleCommand struct {
-	*cmd
+	cmd
 	client *Client
 }
 
