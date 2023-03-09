@@ -20,31 +20,16 @@ func readCapabilities(dec *imapwire.Decoder) (map[string]struct{}, error) {
 }
 
 func readFlagList(dec *imapwire.Decoder) ([]string, error) {
-	if !dec.ExpectSpecial('(') {
-		return nil, dec.Err()
-	}
-	if dec.Special(')') {
-		return nil, nil
-	}
-
-	flag, err := readFlag(dec)
-	if err != nil {
-		return nil, err
-	}
-
-	flags := []string{flag}
-	for dec.SP() {
+	var flags []string
+	err := dec.ExpectList(func() error {
 		flag, err := readFlag(dec)
 		if err != nil {
-			return flags, err
+			return err
 		}
 		flags = append(flags, flag)
-	}
-
-	if !dec.ExpectSpecial(')') {
-		return flags, dec.Err()
-	}
-	return flags, nil
+		return nil
+	})
+	return flags, err
 }
 
 func readFlag(dec *imapwire.Decoder) (string, error) {
@@ -60,21 +45,17 @@ func readFlag(dec *imapwire.Decoder) (string, error) {
 }
 
 func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
-	if !dec.ExpectSpecial('(') {
-		return dec.Err()
-	}
-
 	items := make(chan *FetchItemData, 32)
 	defer close(items)
-	msg := &FetchMessageData{items: items}
 
+	msg := &FetchMessageData{items: items}
 	if cmd != nil {
 		cmd.msgs <- msg
 	} else {
 		defer msg.discard()
 	}
 
-	for {
+	return dec.ExpectList(func() error {
 		var attName string
 		if !dec.ExpectAtom(&attName) {
 			return dec.Err()
@@ -114,17 +95,8 @@ func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
 		if done != nil {
 			<-done
 		}
-
-		if !dec.SP() {
-			break
-		}
-	}
-
-	if !dec.ExpectSpecial(')') {
-		return dec.Err()
-	}
-
-	return nil
+		return nil
+	})
 }
 
 type fetchLiteralReader struct {
@@ -149,24 +121,16 @@ func readStatus(dec *imapwire.Decoder, cmd *StatusCommand) error {
 		data = &StatusData{}
 	}
 
-	if !dec.ExpectAString(&data.Mailbox) || !dec.ExpectSP() || !dec.ExpectSpecial('(') {
+	if !dec.ExpectAString(&data.Mailbox) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 
-	for {
+	return dec.ExpectList(func() error {
 		if err := readStatusAttVal(dec, data); err != nil {
 			return fmt.Errorf("in status-att-val: %v", dec.Err())
 		}
-
-		if !dec.SP() {
-			break
-		}
-	}
-
-	if !dec.ExpectSpecial(')') {
-		return dec.Err()
-	}
-	return nil
+		return nil
+	})
 }
 
 func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
