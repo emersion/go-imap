@@ -347,6 +347,8 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		if cmdErr == nil {
 			startTLS = cmd
 		}
+	case *ListCommand:
+		close(cmd.mailboxes)
 	case *FetchCommand:
 		close(cmd.msgs)
 	}
@@ -406,6 +408,17 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	case "RECENT":
 		// ignore
+	case "LIST":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		data, err := readList(c.dec)
+		if err != nil {
+			return fmt.Errorf("in LIST: %v", err)
+		}
+		if cmd := findPendingCmdByType[*ListCommand](c); cmd != nil {
+			cmd.mailboxes <- data
+		}
 	case "STATUS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
@@ -532,6 +545,21 @@ func (c *Client) Select(mailbox string) *SelectCommand {
 	cmd := &SelectCommand{}
 	enc := c.beginCommand("SELECT", cmd)
 	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
+// List sends a LIST command.
+//
+// The caller must fully consume the ListCommand. A simple way to do so is to
+// defer a call to ListCommand.Close.
+func (c *Client) List(ref, pattern string) *ListCommand {
+	// TODO: multiple patterns
+	// TODO: extended variant
+	cmd := &ListCommand{mailboxes: make(chan *ListData, 64)}
+	enc := c.beginCommand("LIST", cmd)
+	// TODO: second arg is mbox-or-pat
+	enc.SP().Mailbox(ref).SP().Atom(pattern)
 	enc.end()
 	return cmd
 }
@@ -759,6 +787,63 @@ type startTLSCommand struct {
 	tlsConfig   *tls.Config
 	upgradeDone chan<- struct{}
 }
+
+// ListCommand is a LIST command.
+type ListCommand struct {
+	cmd
+	mailboxes chan *ListData
+}
+
+// Next advances to the next mailbox.
+//
+// On success, the mailbox LIST data is returned. On error or if there are no
+// more mailboxes, nil is returned.
+func (cmd *ListCommand) Next() *ListData {
+	return <-cmd.mailboxes
+}
+
+// Close releases the command.
+//
+// Calling Close unblocks the IMAP client decoder and lets it read the next
+// responses. Next will always return nil after Close.
+func (cmd *ListCommand) Close() error {
+	for cmd.Next() != nil {
+		// ignore
+	}
+	return cmd.cmd.Wait()
+}
+
+// ListData is the mailbox data returned by a LIST command.
+type ListData struct {
+	Attrs   []MailboxAttr
+	Delim   rune
+	Mailbox string
+}
+
+// MailboxAttr is a mailbox attribute.
+type MailboxAttr string
+
+const (
+	// Base attributes
+	MailboxAttrNonExistent   MailboxAttr = "\\NonExistent"
+	MailboxAttrNoInferiors   MailboxAttr = "\\Noinferiors"
+	MailboxAttrNoSelect      MailboxAttr = "\\Noselect"
+	MailboxAttrHasChildren   MailboxAttr = "\\HasChildren"
+	MailboxAttrHasNoChildren MailboxAttr = "\\HasNoChildren"
+	MailboxAttrMarked        MailboxAttr = "\\Marked"
+	MailboxAttrUnmarked      MailboxAttr = "\\Unmarked"
+	MailboxAttrSubscribed    MailboxAttr = "\\Subscribed"
+	MailboxAttrRemote        MailboxAttr = "\\Remote"
+
+	// Role (aka. "special-use") attributes
+	MailboxAttrAll     MailboxAttr = "\\All"
+	MailboxAttrArchive MailboxAttr = "\\Archive"
+	MailboxAttrDrafts  MailboxAttr = "\\Drafts"
+	MailboxAttrFlagged MailboxAttr = "\\Flagged"
+	MailboxAttrJunk    MailboxAttr = "\\Junk"
+	MailboxAttrSent    MailboxAttr = "\\Sent"
+	MailboxAttrTrash   MailboxAttr = "\\Trash"
+)
 
 // StatusCommand is a STATUS command.
 type StatusCommand struct {

@@ -148,6 +148,11 @@ func (dec *Decoder) ExpectAtom(ptr *string) bool {
 	return dec.Expect(dec.Atom(ptr), "atom")
 }
 
+func (dec *Decoder) ExpectNIL() bool {
+	var s string
+	return dec.ExpectAtom(&s) && dec.Expect(s == "NIL", "NIL")
+}
+
 func (dec *Decoder) Special(b byte) bool {
 	return dec.acceptByte(b)
 }
