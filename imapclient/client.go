@@ -357,7 +357,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 }
 
 func (c *Client) readResponseData(typ string) error {
-	// number SP "EXISTS" / number SP "RECENT"
+	// number SP "EXISTS" / number SP "RECENT" / number SP "FETCH"
 	var num uint32
 	if typ[0] >= '0' && typ[0] <= '9' {
 		v, err := strconv.ParseUint(typ, 10, 32)
@@ -432,7 +432,7 @@ func (c *Client) readResponseData(typ string) error {
 			return c.dec.Err()
 		}
 		cmd := findPendingCmdByType[*FetchCommand](c)
-		if err := readMsgAtt(c.dec, cmd); err != nil {
+		if err := readMsgAtt(c.dec, num, cmd); err != nil {
 			return fmt.Errorf("in msg-att: %v", err)
 		}
 	default:
@@ -974,6 +974,8 @@ func (cmd *FetchCommand) Collect() ([]*FetchMessageBuffer, error) {
 
 // FetchMessageData contains a message's FETCH data.
 type FetchMessageData struct {
+	SeqNum uint32
+
 	items chan FetchItemData
 	prev  FetchItemData
 }
@@ -1008,7 +1010,7 @@ func (data *FetchMessageData) discard() {
 func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
 	defer data.discard()
 
-	buf := &FetchMessageBuffer{}
+	buf := &FetchMessageBuffer{SeqNum: data.SeqNum}
 	for {
 		item := data.Next()
 		if item == nil {
@@ -1084,8 +1086,9 @@ type LiteralReader interface {
 
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
-// All fields are optional.
+// The SeqNum field is always populated. All remaining fields are optional.
 type FetchMessageBuffer struct {
+	SeqNum   uint32
 	Flags    []string
 	Contents map[FetchItem][]byte
 }

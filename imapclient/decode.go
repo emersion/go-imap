@@ -45,11 +45,11 @@ func readFlag(dec *imapwire.Decoder) (string, error) {
 	return name, nil
 }
 
-func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
+func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 	items := make(chan FetchItemData, 32)
 	defer close(items)
 
-	msg := &FetchMessageData{items: items}
+	msg := &FetchMessageData{SeqNum: seqNum, items: items}
 	if cmd != nil {
 		cmd.msgs <- msg
 	} else {
