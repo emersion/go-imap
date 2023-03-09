@@ -945,6 +945,33 @@ func (cmd *FetchCommand) Close() error {
 	return cmd.cmd.Wait()
 }
 
+// Collect accumulates message data into a list.
+//
+// This method will read and store message contents in memory. This is
+// acceptable when the message contents have a reasonable size, but may not be
+// suitable when fetching e.g. attachments.
+//
+// This is equivalent to calling Next repeatedly and then Close.
+func (cmd *FetchCommand) Collect() ([]*FetchMessageBuffer, error) {
+	defer cmd.Close()
+
+	var l []*FetchMessageBuffer
+	for {
+		msg := cmd.Next()
+		if msg == nil {
+			break
+		}
+
+		buf, err := msg.Collect()
+		if err != nil {
+			return l, err
+		}
+
+		l = append(l, buf)
+	}
+	return l, cmd.Close()
+}
+
 // FetchMessageData contains a message's FETCH data.
 type FetchMessageData struct {
 	items chan FetchItemData
@@ -971,6 +998,39 @@ func (data *FetchMessageData) discard() {
 			break
 		}
 	}
+}
+
+// Collect accumulates message data into a struct.
+//
+// This method will read and store message contents in memory. This is
+// acceptable when the message contents have a reasonable size, but may not be
+// suitable when fetching e.g. attachments.
+func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
+	defer data.discard()
+
+	buf := &FetchMessageBuffer{}
+	for {
+		item := data.Next()
+		if item == nil {
+			break
+		}
+		switch item := item.(type) {
+		case FetchItemDataContents:
+			b, err := io.ReadAll(item.Literal)
+			if err != nil {
+				return buf, err
+			}
+			if buf.Contents == nil {
+				buf.Contents = make(map[FetchItem][]byte)
+			}
+			buf.Contents[item.FetchItem()] = b
+		case FetchItemDataFlags:
+			buf.Flags = item.Flags
+		default:
+			panic(fmt.Errorf("unsupported fetch item data %T", item))
+		}
+	}
+	return buf, nil
 }
 
 // FetchItemData contains a message's FETCH item data.
@@ -1020,6 +1080,14 @@ func (FetchItemDataFlags) fetchItemData() {}
 type LiteralReader interface {
 	io.Reader
 	Size() int64
+}
+
+// FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
+//
+// All fields are optional.
+type FetchMessageBuffer struct {
+	Flags    []string
+	Contents map[FetchItem][]byte
 }
 
 type startTLSConn struct {
