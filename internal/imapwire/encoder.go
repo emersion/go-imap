@@ -92,6 +92,18 @@ func (enc *Encoder) Number64(v int64) *Encoder {
 	return enc.writeString(strconv.FormatInt(v, 10))
 }
 
+// List writes a parenthesized list.
+func (enc *Encoder) List(n int, f func(i int)) {
+	enc.Special('(')
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			enc.SP()
+		}
+		f(i)
+	}
+	enc.Special(')')
+}
+
 // Literal writes a literal.
 //
 // The caller must write exactly size bytes to the returned writer.
