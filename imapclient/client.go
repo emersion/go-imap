@@ -800,9 +800,9 @@ type FetchCommand struct {
 
 // Next advances to the next message.
 //
-// On success, the message and a nil error is returned. If there are no more
-// messages, io.EOF is returned. Otherwise the error is returned.
-func (cmd *FetchCommand) Next() (*FetchMessageData, error) {
+// On success, the message is returned. On error or if there are no more
+// messages, nil is returned. To check the error value, use Close.
+func (cmd *FetchCommand) Next() *FetchMessageData {
 	if cmd.prev != nil {
 		cmd.prev.discard()
 	}
@@ -810,28 +810,24 @@ func (cmd *FetchCommand) Next() (*FetchMessageData, error) {
 	select {
 	case msg := <-cmd.msgs:
 		cmd.prev = msg
-		return msg, nil
+		return msg
 	case err := <-cmd.done:
-		if err == nil {
-			return nil, io.EOF
+		if err != nil && cmd.err == nil {
+			cmd.err = err
 		}
-		return nil, err
+		return nil
 	}
 }
 
 // Close releases the command.
 //
 // Calling Close unblocks the IMAP client decoder and lets it read the next
-// responses. Next will always return an error after Close.
+// responses. Next will always return nil after Close.
 func (cmd *FetchCommand) Close() error {
-	for {
-		_, err := cmd.Next()
-		if err == io.EOF {
-			return nil
-		} else if err != nil {
-			return err
-		}
+	for cmd.Next() != nil {
+		// ignore
 	}
+	return cmd.cmd.Wait()
 }
 
 // FetchMessageData contains a message's FETCH data.
