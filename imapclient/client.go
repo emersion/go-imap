@@ -813,6 +813,21 @@ func (cmd *ListCommand) Close() error {
 	return cmd.cmd.Wait()
 }
 
+// Collect accumulates mailboxes into a list.
+//
+// This is equivalent to calling Next repeatedly and then Close.
+func (cmd *ListCommand) Collect() ([]*ListData, error) {
+	var l []*ListData
+	for {
+		data := cmd.Next()
+		if data == nil {
+			break
+		}
+		l = append(l, data)
+	}
+	return l, cmd.Close()
+}
+
 // ListData is the mailbox data returned by a LIST command.
 type ListData struct {
 	Attrs   []MailboxAttr
