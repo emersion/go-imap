@@ -580,13 +580,15 @@ func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 //
 // The caller must fully consume the FetchCommand. A simple way to do so is to
 // defer a call to FetchCommand.Close.
-func (c *Client) Fetch(seqNum uint32) *FetchCommand {
+func (c *Client) Fetch(seqNum uint32, items []FetchItem) *FetchCommand {
 	// TODO: sequence set, message data item names or macro
 	cmd := &FetchCommand{
 		msgs: make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand("FETCH", cmd)
-	enc.SP().Number(seqNum).SP().Special('(').Atom("BODY[]").Special(')')
+	enc.SP().Number(seqNum).SP().List(len(items), func(i int) {
+		enc.Atom(string(items[i]))
+	})
 	enc.end()
 	return cmd
 }
@@ -895,6 +897,24 @@ type StatusData struct {
 	NumDeleted  *uint32
 	Size        *int64
 }
+
+// FetchItem is a message data item which can be requested by a FETCH command.
+type FetchItem string
+
+const (
+	// Macros
+	FetchItemAll  FetchItem = "ALL"
+	FetchItemFast FetchItem = "FAST"
+	FetchItemFull FetchItem = "FULL"
+
+	FetchItemBody          FetchItem = "BODY"
+	FetchItemBodyStructure FetchItem = "BODYSTRUCTURE"
+	FetchItemEnvelope      FetchItem = "ENVELOPE"
+	FetchItemFlags         FetchItem = "FLAGS"
+	FetchItemInternalDate  FetchItem = "INTERNALDATE"
+	FetchItemRFC822Size    FetchItem = "RFC822.SIZE"
+	FetchItemUID           FetchItem = "UID"
+)
 
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
