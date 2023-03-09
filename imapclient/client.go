@@ -535,14 +535,10 @@ func (c *Client) Select(mailbox string) *SelectCommand {
 func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 	cmd := &StatusCommand{}
 	enc := c.beginCommand("STATUS", cmd)
-	enc.SP().Mailbox(mailbox).SP().Special('(')
-	for i, item := range items {
-		if i > 0 {
-			enc.SP()
-		}
-		enc.Atom(string(item))
-	}
-	enc.Special(')')
+	enc.SP().Mailbox(mailbox).SP()
+	enc.List(len(items), func(i int) {
+		enc.Atom(string(items[i]))
+	})
 	enc.end()
 	return cmd
 }
