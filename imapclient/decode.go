@@ -3,6 +3,7 @@ package imapclient
 import (
 	"fmt"
 	"io"
+	"unicode/utf8"
 
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -169,4 +170,43 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 		return dec.Err()
 	}
 	return nil
+}
+
+func readList(dec *imapwire.Decoder) (*ListData, error) {
+	var data ListData
+
+	err := dec.ExpectList(func() error {
+		attr, err := readFlag(dec)
+		if err != nil {
+			return err
+		}
+		data.Attrs = append(data.Attrs, MailboxAttr(attr))
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("in mbx-list-flags")
+	}
+
+	if !dec.ExpectSP() {
+		return nil, dec.Err()
+	}
+
+	var delimStr string
+	if dec.Quoted(&delimStr) {
+		delim, size := utf8.DecodeRuneInString(delimStr)
+		if delim == utf8.RuneError || size != len(delimStr) {
+			return nil, fmt.Errorf("mailbox delimiter must be a single rune")
+		}
+		data.Delim = delim
+	} else if !dec.ExpectNIL() {
+		return nil, dec.Err()
+	}
+
+	if !dec.ExpectSP() || !dec.ExpectAString(&data.Mailbox) {
+		return nil, dec.Err()
+	}
+
+	// TODO: [SP mbox-list-extended]
+
+	return &data, nil
 }
