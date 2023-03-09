@@ -947,17 +947,17 @@ func (cmd *FetchCommand) Close() error {
 
 // FetchMessageData contains a message's FETCH data.
 type FetchMessageData struct {
-	items chan *FetchItemData
-	prev  *FetchItemData
+	items chan FetchItemData
+	prev  FetchItemData
 }
 
 // Next advances to the next data item for this message.
 //
 // If there is one or more data items left, the next item is returned.
 // Otherwise nil is returned.
-func (data *FetchMessageData) Next() *FetchItemData {
-	if data.prev != nil {
-		data.prev.discard()
+func (data *FetchMessageData) Next() FetchItemData {
+	if d, ok := data.prev.(discarder); ok {
+		d.discard()
 	}
 
 	item := <-data.items
@@ -974,14 +974,47 @@ func (data *FetchMessageData) discard() {
 }
 
 // FetchItemData contains a message's FETCH item data.
-type FetchItemData struct {
-	Name    string
+type FetchItemData interface {
+	FetchItem() FetchItem
+	fetchItemData()
+}
+
+var (
+	_ FetchItemData = FetchItemDataContents{}
+	_ FetchItemData = FetchItemDataFlags{}
+)
+
+type discarder interface {
+	discard()
+}
+
+var _ discarder = FetchItemDataContents{}
+
+// FetchItemDataContents holds data returned by FETCH BODY[] and BINARY[].
+type FetchItemDataContents struct {
 	Literal LiteralReader
 }
 
-func (item *FetchItemData) discard() {
+func (FetchItemDataContents) FetchItem() FetchItem {
+	return "BODY[]" // TODO
+}
+
+func (FetchItemDataContents) fetchItemData() {}
+
+func (item FetchItemDataContents) discard() {
 	io.Copy(io.Discard, item.Literal)
 }
+
+// FetchItemDataFlags holds data returned by FETCH FLAGS.
+type FetchItemDataFlags struct {
+	Flags []string
+}
+
+func (FetchItemDataFlags) FetchItem() FetchItem {
+	return FetchItemFlags
+}
+
+func (FetchItemDataFlags) fetchItemData() {}
 
 // LiteralReader is a reader for IMAP literals.
 type LiteralReader interface {
