@@ -245,20 +245,52 @@ func (dec *Decoder) ExpectNumber64() (v int64, ok bool) {
 	return v, ok
 }
 
+func (dec *Decoder) Quoted(ptr *string) bool {
+	if !dec.Special('"') {
+		return false
+	}
+	var sb strings.Builder
+	for {
+		ch, ok := dec.readByte()
+		if !ok {
+			return false
+		}
+
+		if ch == '"' {
+			break
+		}
+
+		if ch == '\\' {
+			ch, ok = dec.readByte()
+			if !ok {
+				return false
+			}
+		}
+
+		sb.WriteByte(ch)
+	}
+	*ptr = sb.String()
+	return true
+}
+
 func (dec *Decoder) ExpectAString(ptr *string) bool {
-	// TODO: accept quoted
+	if dec.Quoted(ptr) {
+		return true
+	}
 	// TODO: accept literal
 	// TODO: accept unquoted resp-specials
 	return dec.ExpectAtom(ptr)
 }
 
 func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
-	// TODO: quoted
 	var s string
 	if dec.Atom(&s) {
 		if s == "NIL" {
 			return nil, true, true
 		}
+		return newLiteralReaderFromString(s), true, true
+	}
+	if dec.Quoted(&s) {
 		return newLiteralReaderFromString(s), true, true
 	}
 	if lit, nonSync, ok = dec.Literal(); ok {
