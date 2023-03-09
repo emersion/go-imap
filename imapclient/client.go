@@ -461,15 +461,13 @@ func (c *Client) StartTLS(config *tls.Config) error {
 		tlsConfig:   config,
 		upgradeDone: upgradeDone,
 	}
-	c.beginCommand("STARTTLS", cmd).end()
+	enc := c.beginCommand("STARTTLS", cmd)
+	enc.flush()
+	defer enc.end()
 
 	// Once a client issues a STARTTLS command, it MUST NOT issue further
 	// commands until a server response is seen and the TLS negotiation is
 	// complete
-	// TODO: race if another goroutine sends a command between endCommand and
-	// encMutex.Lock
-	c.encMutex.Lock()
-	defer c.encMutex.Unlock()
 
 	if err := cmd.Wait(); err != nil {
 		return err
@@ -547,21 +545,17 @@ func (c *Client) Fetch(seqNum uint32) *FetchCommand {
 // The caller must invoke IdleCommand.Close to stop IDLE and unblock the
 // client.
 func (c *Client) Idle() (*IdleCommand, error) {
-	cmd := &IdleCommand{client: c}
+	cmd := &IdleCommand{}
 	contReq := c.registerContReq(cmd)
-	c.beginCommand("IDLE", cmd).end()
-
-	// encMutex is unlocked by IdleCommand.Close
-	// TODO: race if another goroutine sends a command between endCommand and
-	// encMutex.Lock
-	c.encMutex.Lock()
+	cmd.enc = c.beginCommand("IDLE", cmd)
+	cmd.enc.flush()
 
 	select {
 	case <-contReq:
 		return cmd, nil
 	case err := <-cmd.done:
 		c.unregisterContReq(contReq)
-		c.encMutex.Unlock()
+		cmd.enc.end()
 		return nil, err
 	}
 }
@@ -574,12 +568,22 @@ type commandEncoder struct {
 
 // end ends an outgoing command.
 //
-// A CRLF is written and the encoder is flushed.
+// A CRLF is written, the encoder is flushed and its lock is released.
 func (ce *commandEncoder) end() {
+	if ce.Encoder != nil {
+		ce.flush()
+	}
+	ce.client.encMutex.Unlock()
+}
+
+// flush sends an outgoing command, but keeps the encoder lock.
+//
+// A CRLF is written and the encoder is flushed. Callers must call
+// commandEncoder.end to release the lock.
+func (ce *commandEncoder) flush() {
 	if err := ce.Encoder.CRLF(); err != nil {
 		ce.cmd.err = err
 	}
-	ce.client.encMutex.Unlock()
 	ce.Encoder = nil
 }
 
@@ -835,7 +839,7 @@ func (conn startTLSConn) Read(b []byte) (int, error) {
 // Close must be called to stop the IDLE command.
 type IdleCommand struct {
 	cmd
-	client *Client
+	enc *commandEncoder
 }
 
 // Close stops the IDLE command.
@@ -846,15 +850,15 @@ func (cmd *IdleCommand) Close() error {
 	if cmd.err != nil {
 		return cmd.err
 	}
-	if cmd.client == nil {
+	if cmd.enc == nil {
 		return fmt.Errorf("imapclient: IDLE command closed twice")
 	}
-	_, err := cmd.client.bw.WriteString("DONE\r\n")
+	_, err := cmd.enc.client.bw.WriteString("DONE\r\n")
 	if err == nil {
-		err = cmd.client.bw.Flush()
+		err = cmd.enc.client.bw.Flush()
 	}
-	cmd.client.encMutex.Unlock()
-	cmd.client = nil
+	cmd.enc.end()
+	cmd.enc = nil
 	return err
 }
 
@@ -862,7 +866,7 @@ func (cmd *IdleCommand) Close() error {
 //
 // Wait can only be called after Close.
 func (cmd *IdleCommand) Wait() error {
-	if cmd.client != nil {
+	if cmd.enc != nil {
 		return fmt.Errorf("imapclient: IdleCommand.Close must be called before Wait")
 	}
 	return cmd.cmd.Wait()
