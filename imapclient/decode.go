@@ -46,7 +46,7 @@ func readFlag(dec *imapwire.Decoder) (string, error) {
 }
 
 func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
-	items := make(chan *FetchItemData, 32)
+	items := make(chan FetchItemData, 32)
 	defer close(items)
 
 	msg := &FetchMessageData{items: items}
@@ -62,13 +62,24 @@ func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
 			return dec.Err()
 		}
 
-		// TODO: FLAGS, ENVELOPE, INTERNALDATE, RFC822.SIZE, BODY,
-		// BODYSTRUCTURE, BINARY section, BINARY.SIZE section, UID
+		// TODO: ENVELOPE, INTERNALDATE, RFC822.SIZE, BODY, BODYSTRUCTURE,
+		// BINARY section, BINARY.SIZE section, UID
 		var (
-			item *FetchItemData
+			item FetchItemData
 			done chan struct{}
 		)
-		switch attName {
+		switch FetchItem(attName) {
+		case FetchItemFlags:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			flags, err := readFlagList(dec)
+			if err != nil {
+				return err
+			}
+
+			item = FetchItemDataFlags{Flags: flags}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
@@ -81,8 +92,7 @@ func readMsgAtt(dec *imapwire.Decoder, cmd *FetchCommand) error {
 			}
 
 			done = make(chan struct{})
-			item = &FetchItemData{
-				Name: "BODY[]",
+			item = FetchItemDataContents{
 				Literal: &fetchLiteralReader{
 					LiteralReader: lit,
 					ch:            done,
