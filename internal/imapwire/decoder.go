@@ -191,12 +191,12 @@ func (dec *Decoder) Skip(untilCh byte) {
 	}
 }
 
-func (dec *Decoder) Number64() (v int64, ok bool) {
+func (dec *Decoder) numberStr() (s string, ok bool) {
 	var sb strings.Builder
 	for {
 		ch, ok := dec.readByte()
 		if !ok {
-			return 0, false
+			return "", false
 		} else if ch < '0' || ch > '9' {
 			dec.mustUnreadByte()
 			break
@@ -204,9 +204,35 @@ func (dec *Decoder) Number64() (v int64, ok bool) {
 		sb.WriteByte(ch)
 	}
 	if sb.Len() == 0 {
+		return "", false
+	}
+	return sb.String(), true
+}
+
+func (dec *Decoder) Number() (v uint32, ok bool) {
+	s, ok := dec.numberStr()
+	if !ok {
 		return 0, false
 	}
-	v, err := strconv.ParseInt(sb.String(), 10, 64)
+	v64, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, false // can happen on overflow
+	}
+	return uint32(v64), true
+}
+
+func (dec *Decoder) ExpectNumber() (v uint32, ok bool) {
+	v, ok = dec.Number()
+	dec.Expect(ok, "number")
+	return v, ok
+}
+
+func (dec *Decoder) Number64() (v int64, ok bool) {
+	s, ok := dec.numberStr()
+	if !ok {
+		return 0, false
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, false // can happen on overflow
 	}
