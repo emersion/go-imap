@@ -140,3 +140,69 @@ func (lit *fetchLiteralReader) Read(b []byte) (int, error) {
 	}
 	return n, err
 }
+
+func readStatus(dec *imapwire.Decoder, cmd *StatusCommand) error {
+	var data *StatusData
+	if cmd != nil {
+		data = &cmd.data
+	} else {
+		data = &StatusData{}
+	}
+
+	if !dec.ExpectAString(&data.Mailbox) || !dec.ExpectSP() || !dec.ExpectSpecial('(') {
+		return dec.Err()
+	}
+
+	for {
+		if err := readStatusAttVal(dec, data); err != nil {
+			return fmt.Errorf("in status-att-val: %v", dec.Err())
+		}
+
+		if !dec.SP() {
+			break
+		}
+	}
+
+	if !dec.ExpectSpecial(')') {
+		return dec.Err()
+	}
+	return nil
+}
+
+func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
+	var name string
+	if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+		return dec.Err()
+	}
+
+	var ok bool
+	switch StatusItem(name) {
+	case StatusItemNumMessages:
+		var num uint32
+		num, ok = dec.ExpectNumber()
+		data.NumMessages = &num
+	case StatusItemUIDNext:
+		data.UIDNext, ok = dec.ExpectNumber()
+	case StatusItemUIDValidity:
+		data.UIDValidity, ok = dec.ExpectNumber()
+	case StatusItemNumUnseen:
+		var num uint32
+		num, ok = dec.ExpectNumber()
+		data.NumUnseen = &num
+	case StatusItemNumDeleted:
+		var num uint32
+		num, ok = dec.ExpectNumber()
+		data.NumDeleted = &num
+	case StatusItemSize:
+		var size int64
+		size, ok = dec.ExpectNumber64()
+		data.Size = &size
+	default:
+		// TODO: skip tagged-ext
+		return fmt.Errorf("unsupported status-att-val %q", name)
+	}
+	if !ok {
+		return dec.Err()
+	}
+	return nil
+}

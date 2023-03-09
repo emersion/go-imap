@@ -40,7 +40,7 @@ func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
 // IMAP commands are exposed as methods. These methods will block until the
 // command has been sent to the server, but won't block until the server sends
 // a response. They return a command struct which can be used to wait for the
-// server response, see e.g. Command.
+// server response.
 type Client struct {
 	conn     net.Conn
 	options  Options
@@ -401,6 +401,14 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	case "RECENT":
 		// ignore
+	case "STATUS":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		cmd := findPendingCmdByType[*StatusCommand](c)
+		if err := readStatus(c.dec, cmd); err != nil {
+			return fmt.Errorf("in status: %v", err)
+		}
 	case "FETCH":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
@@ -519,6 +527,22 @@ func (c *Client) Select(mailbox string) *SelectCommand {
 	cmd := &SelectCommand{}
 	enc := c.beginCommand("SELECT", cmd)
 	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
+// Status sends a STATUS command.
+func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
+	cmd := &StatusCommand{}
+	enc := c.beginCommand("STATUS", cmd)
+	enc.SP().Mailbox(mailbox).SP().Special('(')
+	for i, item := range items {
+		if i > 0 {
+			enc.SP()
+		}
+		enc.Atom(string(item))
+	}
+	enc.Special(')')
 	enc.end()
 	return cmd
 }
@@ -733,6 +757,42 @@ type startTLSCommand struct {
 	cmd
 	tlsConfig   *tls.Config
 	upgradeDone chan<- struct{}
+}
+
+// StatusCommand is a STATUS command.
+type StatusCommand struct {
+	cmd
+	data StatusData
+}
+
+func (cmd *StatusCommand) Wait() (*StatusData, error) {
+	return &cmd.data, cmd.cmd.Wait()
+}
+
+// StatusItem is a data item which can be requested by a STATUS command.
+type StatusItem string
+
+const (
+	StatusItemNumMessages StatusItem = "MESSAGES"
+	StatusItemUIDNext     StatusItem = "UIDNEXT"
+	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
+	StatusItemNumUnseen   StatusItem = "UNSEEN"
+	StatusItemNumDeleted  StatusItem = "DELETED"
+	StatusItemSize        StatusItem = "SIZE"
+)
+
+// StatusData is the data returned by a STATUS command.
+//
+// The mailbox name is always populated. The remaining fields are optional.
+type StatusData struct {
+	Mailbox string
+
+	NumMessages *uint32
+	UIDNext     uint32
+	UIDValidity uint32
+	NumUnseen   *uint32
+	NumDeleted  *uint32
+	Size        *int64
 }
 
 // FetchCommand is a FETCH command.

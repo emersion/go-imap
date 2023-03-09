@@ -245,6 +245,13 @@ func (dec *Decoder) ExpectNumber64() (v int64, ok bool) {
 	return v, ok
 }
 
+func (dec *Decoder) ExpectAString(ptr *string) bool {
+	// TODO: accept quoted
+	// TODO: accept literal
+	// TODO: accept unquoted resp-specials
+	return dec.ExpectAtom(ptr)
+}
+
 func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
 	// TODO: quoted
 	var s string
