@@ -268,6 +268,27 @@ func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
 	}
 }
 
+func (dec *Decoder) ExpectList(f func() error) error {
+	if !dec.ExpectSpecial('(') {
+		return dec.Err()
+	}
+	if dec.Special(')') {
+		return nil
+	}
+
+	for {
+		if err := f(); err != nil {
+			return err
+		}
+
+		if dec.Special(')') {
+			return nil
+		} else if !dec.ExpectSP() {
+			return dec.Err()
+		}
+	}
+}
+
 func (dec *Decoder) Literal() (lit *LiteralReader, nonSync, ok bool) {
 	if !dec.Special('{') {
 		return nil, false, false
