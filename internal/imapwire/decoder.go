@@ -208,7 +208,7 @@ func (dec *Decoder) Number64() (v int64, ok bool) {
 	}
 	v, err := strconv.ParseInt(sb.String(), 10, 64)
 	if err != nil {
-		panic(err) // unreachable
+		return 0, false // can happen on overflow
 	}
 	return v, true
 }
