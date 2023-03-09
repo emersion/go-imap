@@ -342,8 +342,13 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	c.mutex.Unlock()
 
 	var startTLS *startTLSCommand
-	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
-		startTLS = cmd
+	switch cmd := cmd.(type) {
+	case *startTLSCommand:
+		if cmdErr == nil {
+			startTLS = cmd
+		}
+	case *FetchCommand:
+		close(cmd.msgs)
 	}
 
 	return startTLS, nil
@@ -806,17 +811,7 @@ func (cmd *FetchCommand) Next() *FetchMessageData {
 	if cmd.prev != nil {
 		cmd.prev.discard()
 	}
-
-	select {
-	case msg := <-cmd.msgs:
-		cmd.prev = msg
-		return msg
-	case err := <-cmd.done:
-		if err != nil && cmd.err == nil {
-			cmd.err = err
-		}
-		return nil
-	}
+	return <-cmd.msgs
 }
 
 // Close releases the command.
