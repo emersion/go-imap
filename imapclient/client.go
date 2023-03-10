@@ -1017,24 +1017,8 @@ func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
 		if item == nil {
 			break
 		}
-		switch item := item.(type) {
-		case FetchItemDataContents:
-			b, err := io.ReadAll(item.Literal)
-			if err != nil {
-				return buf, err
-			}
-			if buf.Contents == nil {
-				buf.Contents = make(map[FetchItem][]byte)
-			}
-			buf.Contents[item.FetchItem()] = b
-		case FetchItemDataFlags:
-			buf.Flags = item.Flags
-		case FetchItemDataEnvelope:
-			buf.Envelope = item.Envelope
-		case FetchItemDataInternalDate:
-			buf.InternalDate = item.Time
-		default:
-			panic(fmt.Errorf("unsupported fetch item data %T", item))
+		if err := buf.populateItemData(item); err != nil {
+			return buf, err
 		}
 	}
 	return buf, nil
@@ -1165,6 +1149,29 @@ type FetchMessageBuffer struct {
 	Envelope     *Envelope
 	InternalDate time.Time
 	Contents     map[FetchItem][]byte
+}
+
+func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
+	switch item := item.(type) {
+	case FetchItemDataContents:
+		b, err := io.ReadAll(item.Literal)
+		if err != nil {
+			return err
+		}
+		if buf.Contents == nil {
+			buf.Contents = make(map[FetchItem][]byte)
+		}
+		buf.Contents[item.FetchItem()] = b
+	case FetchItemDataFlags:
+		buf.Flags = item.Flags
+	case FetchItemDataEnvelope:
+		buf.Envelope = item.Envelope
+	case FetchItemDataInternalDate:
+		buf.InternalDate = item.Time
+	default:
+		panic(fmt.Errorf("unsupported fetch item data %T", item))
+	}
+	return nil
 }
 
 type startTLSConn struct {
