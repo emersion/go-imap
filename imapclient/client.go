@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -583,13 +584,13 @@ func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 //
 // The caller must fully consume the FetchCommand. A simple way to do so is to
 // defer a call to FetchCommand.Close.
-func (c *Client) Fetch(seqNum uint32, items []FetchItem) *FetchCommand {
+func (c *Client) Fetch(seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
 	// TODO: sequence set, message data item names or macro
 	cmd := &FetchCommand{
 		msgs: make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand("FETCH", cmd)
-	enc.SP().Number(seqNum).SP().List(len(items), func(i int) {
+	enc.SP().Atom(seqSet.String()).SP().List(len(items), func(i int) {
 		enc.Atom(string(items[i]))
 	})
 	enc.end()
