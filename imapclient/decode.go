@@ -86,7 +86,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 				return dec.Err()
 			}
 
-			lit, _, ok := dec.ExpectNString()
+			lit, _, ok := dec.ExpectNStringReader()
 			if !ok {
 				return dec.Err()
 			}

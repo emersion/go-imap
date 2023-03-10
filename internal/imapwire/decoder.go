@@ -282,12 +282,14 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	if dec.Quoted(ptr) {
 		return true
 	}
-	// TODO: accept literal
+	if dec.Literal(ptr) {
+		return true
+	}
 	// TODO: accept unquoted resp-specials
 	return dec.ExpectAtom(ptr)
 }
 
-func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
+func (dec *Decoder) ExpectNStringReader() (lit *LiteralReader, nonSync, ok bool) {
 	var s string
 	if dec.Atom(&s) {
 		if s == "NIL" {
@@ -298,7 +300,7 @@ func (dec *Decoder) ExpectNString() (lit *LiteralReader, nonSync, ok bool) {
 	if dec.Quoted(&s) {
 		return newLiteralReaderFromString(s), true, true
 	}
-	if lit, nonSync, ok = dec.Literal(); ok {
+	if lit, nonSync, ok = dec.LiteralReader(); ok {
 		return lit, nonSync, true
 	} else {
 		return nil, false, dec.Expect(false, "nstring")
@@ -326,7 +328,20 @@ func (dec *Decoder) ExpectList(f func() error) error {
 	}
 }
 
-func (dec *Decoder) Literal() (lit *LiteralReader, nonSync, ok bool) {
+func (dec *Decoder) Literal(ptr *string) bool {
+	lit, _, ok := dec.LiteralReader()
+	if !ok {
+		return false
+	}
+	var sb strings.Builder
+	_, err := io.Copy(&sb, lit)
+	if err == nil {
+		*ptr = sb.String()
+	}
+	return dec.returnErr(err)
+}
+
+func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	if !dec.Special('{') {
 		return nil, false, false
 	}
