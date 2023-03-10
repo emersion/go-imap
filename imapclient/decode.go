@@ -80,6 +80,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			}
 
 			item = FetchItemDataFlags{Flags: flags}
+		case FetchItemEnvelope:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			envelope, err := readEnvelope(dec)
+			if err != nil {
+				return fmt.Errorf("in envelope: %v", err)
+			}
+
+			item = FetchItemDataEnvelope{Envelope: envelope}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
@@ -111,6 +122,77 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 		}
 		return nil
 	})
+}
+
+func readEnvelope(dec *imapwire.Decoder) (*Envelope, error) {
+	var envelope Envelope
+
+	if !dec.ExpectSpecial('(') {
+		return nil, dec.Err()
+	}
+
+	if !dec.ExpectNString(&envelope.Date) || !dec.ExpectSP() || !dec.ExpectNString(&envelope.Subject) || !dec.ExpectSP() {
+		return nil, dec.Err()
+	}
+
+	addrLists := []struct {
+		name string
+		out  *[]Address
+	}{
+		{"env-from", &envelope.From},
+		{"env-sender", &envelope.Sender},
+		{"env-reply-to", &envelope.ReplyTo},
+		{"env-to", &envelope.To},
+		{"env-cc", &envelope.Cc},
+		{"env-bcc", &envelope.Bcc},
+	}
+	for _, addrList := range addrLists {
+		l, err := readAddressList(dec)
+		if err != nil {
+			return nil, fmt.Errorf("in %v: %v", addrList.name, err)
+		} else if !dec.ExpectSP() {
+			return nil, dec.Err()
+		}
+		*addrList.out = l
+	}
+
+	if !dec.ExpectNString(&envelope.InReplyTo) || !dec.ExpectSP() || !dec.ExpectNString(&envelope.MessageID) {
+		return nil, dec.Err()
+	}
+
+	if !dec.ExpectSpecial(')') {
+		return nil, dec.Err()
+	}
+	return &envelope, nil
+}
+
+func readAddressList(dec *imapwire.Decoder) ([]Address, error) {
+	var l []Address
+	err := dec.ExpectNList(func() error {
+		addr, err := readAddress(dec)
+		if err != nil {
+			return err
+		}
+		l = append(l, *addr)
+		return nil
+	})
+	return l, err
+}
+
+func readAddress(dec *imapwire.Decoder) (*Address, error) {
+	var (
+		addr     Address
+		obsRoute string
+	)
+	ok := dec.ExpectSpecial('(') &&
+		dec.ExpectNString(&addr.Name) && dec.ExpectSP() &&
+		dec.ExpectNString(&obsRoute) && dec.ExpectSP() &&
+		dec.ExpectNString(&addr.Mailbox) && dec.ExpectSP() &&
+		dec.ExpectNString(&addr.Host) && dec.ExpectSpecial(')')
+	if !ok {
+		return nil, fmt.Errorf("in address: %v", dec.Err())
+	}
+	return &addr, nil
 }
 
 type fetchLiteralReader struct {

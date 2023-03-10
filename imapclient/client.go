@@ -1028,6 +1028,8 @@ func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
 			buf.Contents[item.FetchItem()] = b
 		case FetchItemDataFlags:
 			buf.Flags = item.Flags
+		case FetchItemDataEnvelope:
+			buf.Envelope = item.Envelope
 		default:
 			panic(fmt.Errorf("unsupported fetch item data %T", item))
 		}
@@ -1044,6 +1046,7 @@ type FetchItemData interface {
 var (
 	_ FetchItemData = FetchItemDataContents{}
 	_ FetchItemData = FetchItemDataFlags{}
+	_ FetchItemData = FetchItemDataEnvelope{}
 )
 
 type discarder interface {
@@ -1078,6 +1081,60 @@ func (FetchItemDataFlags) FetchItem() FetchItem {
 
 func (FetchItemDataFlags) fetchItemData() {}
 
+// FetchItemDataEnvelope holds data returned by FETCH ENVELOPE.
+type FetchItemDataEnvelope struct {
+	Envelope *Envelope
+}
+
+func (FetchItemDataEnvelope) FetchItem() FetchItem {
+	return FetchItemEnvelope
+}
+
+func (FetchItemDataEnvelope) fetchItemData() {}
+
+// Envelope is the envelope structure of a message.
+type Envelope struct {
+	Date      string // see net/mail.ParseDate
+	Subject   string
+	From      []Address
+	Sender    []Address
+	ReplyTo   []Address
+	To        []Address
+	Cc        []Address
+	Bcc       []Address
+	InReplyTo string
+	MessageID string
+}
+
+// Address represents a sender or recipient of a message.
+type Address struct {
+	Name    string
+	Mailbox string
+	Host    string
+}
+
+// Addr returns the e-mail address in the form "foo@example.org".
+//
+// If the address is a start or end of group, the empty string is returned.
+func (addr *Address) Addr() string {
+	if addr.Mailbox == "" || addr.Host == "" {
+		return ""
+	}
+	return addr.Mailbox + "@" + addr.Host
+}
+
+// IsGroupStart returns true if this address is a start of group marker.
+//
+// In that case, Mailbox contains the group name phrase.
+func (addr *Address) IsGroupStart() bool {
+	return addr.Host == "" && addr.Mailbox != ""
+}
+
+// IsGroupEnd returns true if this address is a end of group marker.
+func (addr *Address) IsGroupEnd() bool {
+	return addr.Host == "" && addr.Mailbox == ""
+}
+
 // LiteralReader is a reader for IMAP literals.
 type LiteralReader interface {
 	io.Reader
@@ -1090,6 +1147,7 @@ type LiteralReader interface {
 type FetchMessageBuffer struct {
 	SeqNum   uint32
 	Flags    []string
+	Envelope *Envelope
 	Contents map[FetchItem][]byte
 }
 
