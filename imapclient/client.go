@@ -10,6 +10,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -1030,6 +1031,8 @@ func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
 			buf.Flags = item.Flags
 		case FetchItemDataEnvelope:
 			buf.Envelope = item.Envelope
+		case FetchItemDataInternalDate:
+			buf.InternalDate = item.Time
 		default:
 			panic(fmt.Errorf("unsupported fetch item data %T", item))
 		}
@@ -1047,6 +1050,7 @@ var (
 	_ FetchItemData = FetchItemDataContents{}
 	_ FetchItemData = FetchItemDataFlags{}
 	_ FetchItemData = FetchItemDataEnvelope{}
+	_ FetchItemData = FetchItemDataInternalDate{}
 )
 
 type discarder interface {
@@ -1091,6 +1095,17 @@ func (FetchItemDataEnvelope) FetchItem() FetchItem {
 }
 
 func (FetchItemDataEnvelope) fetchItemData() {}
+
+// FetchItemDataInternalDate holds data returned by FETCH INTERNALDATE.
+type FetchItemDataInternalDate struct {
+	Time time.Time
+}
+
+func (FetchItemDataInternalDate) FetchItem() FetchItem {
+	return FetchItemInternalDate
+}
+
+func (FetchItemDataInternalDate) fetchItemData() {}
 
 // Envelope is the envelope structure of a message.
 type Envelope struct {
@@ -1145,10 +1160,11 @@ type LiteralReader interface {
 //
 // The SeqNum field is always populated. All remaining fields are optional.
 type FetchMessageBuffer struct {
-	SeqNum   uint32
-	Flags    []string
-	Envelope *Envelope
-	Contents map[FetchItem][]byte
+	SeqNum       uint32
+	Flags        []string
+	Envelope     *Envelope
+	InternalDate time.Time
+	Contents     map[FetchItem][]byte
 }
 
 type startTLSConn struct {
