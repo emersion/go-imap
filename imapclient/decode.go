@@ -3,6 +3,7 @@ package imapclient
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -65,8 +66,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			return dec.Err()
 		}
 
-		// TODO: ENVELOPE, INTERNALDATE, RFC822.SIZE, BODY, BODYSTRUCTURE,
-		// BINARY section, BINARY.SIZE section, UID
+		// TODO: BINARY section, BINARY.SIZE section
 		var (
 			item FetchItemData
 			done chan struct{}
@@ -127,6 +127,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			}
 
 			item = FetchItemDataUID{UID: uid}
+		case FetchItemBodyStructure, FetchItemBody:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			bodyStruct, err := readBody(dec)
+			if err != nil {
+				return err
+			}
+
+			item = FetchItemDataBodyStructure{BodyStructure: bodyStruct}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
@@ -241,6 +252,297 @@ func readDateTime(dec *imapwire.Decoder) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("in date-time: %v", err)
 	}
 	return t, err
+}
+
+func readBody(dec *imapwire.Decoder) (BodyStructure, error) {
+	if !dec.ExpectSpecial('(') {
+		return nil, dec.Err()
+	}
+
+	var (
+		mediaType string
+		token     string
+		bs        BodyStructure
+		err       error
+	)
+	if dec.String(&mediaType) {
+		token = "body-type-1part"
+		bs, err = readBodyType1part(dec, mediaType)
+	} else {
+		token = "body-type-mpart"
+		bs, err = readBodyTypeMpart(dec)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("in %v: %v", token, err)
+	}
+
+	// TODO: skip all unread fields until ')'
+	if !dec.ExpectSpecial(')') {
+		return nil, dec.Err()
+	}
+
+	return bs, nil
+}
+
+func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSinglePart, error) {
+	bs := BodyStructureSinglePart{Type: typ}
+
+	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
+		return nil, dec.Err()
+	}
+
+	var err error
+	bs.Params, err = readBodyFldParam(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() {
+		return nil, dec.Err()
+	}
+
+	var ok bool
+	bs.Size, ok = dec.ExpectNumber()
+	if !ok {
+		return nil, dec.Err()
+	}
+
+	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
+		var msg BodyStructureMessageRFC822
+
+		if !dec.ExpectSP() {
+			return nil, dec.Err()
+		}
+
+		msg.Envelope, err = readEnvelope(dec)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dec.ExpectSP() {
+			return nil, dec.Err()
+		}
+
+		msg.BodyStructure, err = readBody(dec)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dec.ExpectSP() {
+			return nil, dec.Err()
+		}
+
+		msg.NumLines, ok = dec.ExpectNumber64()
+		if !ok {
+			return nil, dec.Err()
+		}
+
+		bs.MessageRFC822 = &msg
+	} else if strings.EqualFold(bs.Type, "text") {
+		var text BodyStructureText
+
+		if !dec.ExpectSP() {
+			return nil, dec.Err()
+		}
+
+		text.NumLines, ok = dec.ExpectNumber64()
+		if !ok {
+			return nil, dec.Err()
+		}
+
+		bs.Text = &text
+	}
+
+	if dec.SP() {
+		bs.Extended, err = readBodyExt1part(dec)
+		if err != nil {
+			return nil, fmt.Errorf("in body-ext-1part: %v", err)
+		}
+	}
+
+	return &bs, nil
+}
+
+func readBodyExt1part(dec *imapwire.Decoder) (*BodyStructureSinglePartExt, error) {
+	var ext BodyStructureSinglePartExt
+
+	if !dec.ExpectNString(&ext.MD5) {
+		return nil, dec.Err()
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	var err error
+	ext.Disposition, err = readBodyFldDsp(dec)
+	if err != nil {
+		return nil, fmt.Errorf("in body-fld-dsp: %v", err)
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	ext.Language, err = readBodyFldLang(dec)
+	if err != nil {
+		return nil, fmt.Errorf("in body-fld-lang: %v", err)
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	if !dec.ExpectNString(&ext.Location) {
+		return nil, dec.Err()
+	}
+
+	return &ext, nil
+}
+
+func readBodyTypeMpart(dec *imapwire.Decoder) (*BodyStructureMultiPart, error) {
+	var bs BodyStructureMultiPart
+
+	for {
+		child, err := readBody(dec)
+		if err != nil {
+			return nil, err
+		}
+		bs.Children = append(bs.Children, child)
+
+		if dec.SP() && dec.String(&bs.Subtype) {
+			break
+		}
+	}
+
+	if dec.SP() {
+		var err error
+		bs.Extended, err = readBodyExtMpart(dec)
+		if err != nil {
+			return nil, fmt.Errorf("in body-ext-mpart: %v", err)
+		}
+	}
+
+	return &bs, nil
+}
+
+func readBodyExtMpart(dec *imapwire.Decoder) (*BodyStructureMultiPartExt, error) {
+	var ext BodyStructureMultiPartExt
+
+	var err error
+	ext.Params, err = readBodyFldParam(dec)
+	if err != nil {
+		return nil, fmt.Errorf("in body-fld-param: %v", err)
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	ext.Disposition, err = readBodyFldDsp(dec)
+	if err != nil {
+		return nil, fmt.Errorf("in body-fld-dsp: %v", err)
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	ext.Language, err = readBodyFldLang(dec)
+	if err != nil {
+		return nil, fmt.Errorf("in body-fld-lang: %v", err)
+	}
+
+	if !dec.SP() {
+		return &ext, nil
+	}
+
+	if !dec.ExpectNString(&ext.Location) {
+		return nil, dec.Err()
+	}
+
+	return &ext, nil
+}
+
+func readBodyFldDsp(dec *imapwire.Decoder) (*BodyStructureDisposition, error) {
+	if !dec.Special('(') {
+		if !dec.ExpectNIL() {
+			return nil, dec.Err()
+		}
+		return nil, nil
+	}
+
+	var disp BodyStructureDisposition
+	if !dec.ExpectString(&disp.Value) || !dec.ExpectSP() {
+		return nil, dec.Err()
+	}
+
+	var err error
+	disp.Params, err = readBodyFldParam(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dec.ExpectSpecial(')') {
+		return nil, dec.Err()
+	}
+	return &disp, nil
+}
+
+func readBodyFldParam(dec *imapwire.Decoder) (map[string]string, error) {
+	var (
+		params map[string]string
+		k      string
+	)
+	err := dec.ExpectNList(func() error {
+		var s string
+		if !dec.ExpectString(&s) {
+			return dec.Err()
+		}
+
+		if k == "" {
+			k = s
+		} else {
+			if params == nil {
+				params = make(map[string]string)
+			}
+			params[k] = s
+			k = ""
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	} else if k != "" {
+		return nil, fmt.Errorf("in body-fld-param: key without value")
+	}
+	return params, nil
+}
+
+func readBodyFldLang(dec *imapwire.Decoder) ([]string, error) {
+	var l []string
+	isList, err := dec.List(func() error {
+		var s string
+		if !dec.ExpectString(&s) {
+			return dec.Err()
+		}
+		l = append(l, s)
+		return nil
+	})
+	if err != nil || isList {
+		return l, err
+	}
+
+	var s string
+	if !dec.ExpectNString(&s) {
+		return nil, dec.Err()
+	}
+	if s != "" {
+		return []string{s}, nil
+	} else {
+		return nil, nil
+	}
 }
 
 type fetchLiteralReader struct {

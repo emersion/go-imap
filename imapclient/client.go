@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1037,6 +1038,7 @@ var (
 	_ FetchItemData = FetchItemDataInternalDate{}
 	_ FetchItemData = FetchItemDataRFC822Size{}
 	_ FetchItemData = FetchItemDataUID{}
+	_ FetchItemData = FetchItemDataBodyStructure{}
 )
 
 type discarder interface {
@@ -1115,6 +1117,18 @@ func (FetchItemDataUID) FetchItem() FetchItem {
 
 func (FetchItemDataUID) fetchItemData() {}
 
+// FetchItemDataBodyStructure holds data returned by FETCH BODYSTRUCTURE or
+// FETCH BODY.
+type FetchItemDataBodyStructure struct {
+	BodyStructure BodyStructure
+}
+
+func (FetchItemDataBodyStructure) FetchItem() FetchItem {
+	return FetchItemBodyStructure // TODO: BODY
+}
+
+func (FetchItemDataBodyStructure) fetchItemData() {}
+
 // Envelope is the envelope structure of a message.
 type Envelope struct {
 	Date      string // see net/mail.ParseDate
@@ -1158,6 +1172,85 @@ func (addr *Address) IsGroupEnd() bool {
 	return addr.Host == "" && addr.Mailbox == ""
 }
 
+// BodyStructure describes the body structure of a message.
+//
+// A BodyStructure value is either a *BodyStructureSinglePart or a
+// *BodyStructureMultiPart.
+type BodyStructure interface {
+	// MediaType returns the MIME type of this body structure, e.g. "text/plain".
+	MediaType() string
+
+	bodyStructure()
+}
+
+var (
+	_ BodyStructure = (*BodyStructureSinglePart)(nil)
+	_ BodyStructure = (*BodyStructureMultiPart)(nil)
+)
+
+// BodyStructureSinglePart is a body structure with a single part.
+type BodyStructureSinglePart struct {
+	Type, Subtype string
+	Params        map[string]string
+	ID            string
+	Description   string
+	Encoding      string
+	Size          uint32
+
+	MessageRFC822 *BodyStructureMessageRFC822 // only for "message/rfc822"
+	Text          *BodyStructureText          // only for "text/*"
+	Extended      *BodyStructureSinglePartExt
+}
+
+func (bs *BodyStructureSinglePart) MediaType() string {
+	return strings.ToLower(bs.Type) + "/" + strings.ToLower(bs.Subtype)
+}
+
+func (*BodyStructureSinglePart) bodyStructure() {}
+
+type BodyStructureMessageRFC822 struct {
+	Envelope      *Envelope
+	BodyStructure BodyStructure
+	NumLines      int64
+}
+
+type BodyStructureText struct {
+	NumLines int64
+}
+
+type BodyStructureSinglePartExt struct {
+	MD5         string
+	Disposition *BodyStructureDisposition
+	Language    []string
+	Location    string
+}
+
+// BodyStructureMultiPart is a body structure with multiple parts.
+type BodyStructureMultiPart struct {
+	Children []BodyStructure
+	Subtype  string
+
+	Extended *BodyStructureMultiPartExt
+}
+
+func (bs *BodyStructureMultiPart) MediaType() string {
+	return "multipart/" + strings.ToLower(bs.Subtype)
+}
+
+func (*BodyStructureMultiPart) bodyStructure() {}
+
+type BodyStructureMultiPartExt struct {
+	Params      map[string]string
+	Disposition *BodyStructureDisposition
+	Language    []string
+	Location    string
+}
+
+type BodyStructureDisposition struct {
+	Value  string
+	Params map[string]string
+}
+
 // LiteralReader is a reader for IMAP literals.
 type LiteralReader interface {
 	io.Reader
@@ -1168,13 +1261,14 @@ type LiteralReader interface {
 //
 // The SeqNum field is always populated. All remaining fields are optional.
 type FetchMessageBuffer struct {
-	SeqNum       uint32
-	Flags        []string
-	Envelope     *Envelope
-	InternalDate time.Time
-	RFC822Size   int64
-	UID          uint32
-	Contents     map[FetchItem][]byte
+	SeqNum        uint32
+	Flags         []string
+	Envelope      *Envelope
+	InternalDate  time.Time
+	RFC822Size    int64
+	UID           uint32
+	BodyStructure BodyStructure
+	Contents      map[FetchItem][]byte
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -1198,6 +1292,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.RFC822Size = item.Size
 	case FetchItemDataUID:
 		buf.UID = item.UID
+	case FetchItemDataBodyStructure:
+		buf.BodyStructure = item.BodyStructure
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
