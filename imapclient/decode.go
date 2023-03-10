@@ -91,13 +91,16 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 				return dec.Err()
 			}
 
-			done = make(chan struct{})
-			item = FetchItemDataContents{
-				Literal: &fetchLiteralReader{
+			var fetchLit LiteralReader
+			if lit != nil {
+				done = make(chan struct{})
+				fetchLit = &fetchLiteralReader{
 					LiteralReader: lit,
 					ch:            done,
-				},
+				}
 			}
+
+			item = FetchItemDataContents{Literal: fetchLit}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
