@@ -1180,6 +1180,9 @@ func (addr *Address) IsGroupEnd() bool {
 type BodyStructure interface {
 	// MediaType returns the MIME type of this body structure, e.g. "text/plain".
 	MediaType() string
+	// Walk walks the body structure tree, calling f for each part in the tree,
+	// including bs itself. The parts are visited in DFS pre-order.
+	Walk(f BodyStructureWalkFunc)
 
 	bodyStructure()
 }
@@ -1205,6 +1208,10 @@ type BodyStructureSinglePart struct {
 
 func (bs *BodyStructureSinglePart) MediaType() string {
 	return strings.ToLower(bs.Type) + "/" + strings.ToLower(bs.Subtype)
+}
+
+func (bs *BodyStructureSinglePart) Walk(f BodyStructureWalkFunc) {
+	f([]int{1}, bs)
 }
 
 // Filename decodes the body structure's filename, if any.
@@ -1258,6 +1265,32 @@ func (bs *BodyStructureMultiPart) MediaType() string {
 	return "multipart/" + strings.ToLower(bs.Subtype)
 }
 
+func (bs *BodyStructureMultiPart) Walk(f BodyStructureWalkFunc) {
+	bs.walk(f, nil)
+}
+
+func (bs *BodyStructureMultiPart) walk(f BodyStructureWalkFunc, path []int) {
+	if !f(path, bs) {
+		return
+	}
+
+	pathBuf := make([]int, len(path))
+	copy(pathBuf, path)
+	for i, part := range bs.Children {
+		num := i + 1
+		partPath := append(pathBuf, num)
+
+		switch part := part.(type) {
+		case *BodyStructureSinglePart:
+			f(partPath, part)
+		case *BodyStructureMultiPart:
+			part.walk(f, partPath)
+		default:
+			panic(fmt.Errorf("unsupported body structure type %T", part))
+		}
+	}
+}
+
 func (*BodyStructureMultiPart) bodyStructure() {}
 
 type BodyStructureMultiPartExt struct {
@@ -1271,6 +1304,15 @@ type BodyStructureDisposition struct {
 	Value  string
 	Params map[string]string
 }
+
+// BodyStructureWalkFunc is a function called for each body structure visited
+// by BodyStructure.Walk.
+//
+// The path argument contains the IMAP part path.
+//
+// The function should return true to visit all of the part's children or false
+// to skip them.
+type BodyStructureWalkFunc func(path []int, part BodyStructure) (walkChildren bool)
 
 // LiteralReader is a reader for IMAP literals.
 type LiteralReader interface {
