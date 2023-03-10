@@ -289,6 +289,26 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	return dec.ExpectAtom(ptr)
 }
 
+func (dec *Decoder) String(ptr *string) bool {
+	return dec.Quoted(ptr) || dec.Literal(ptr)
+}
+
+func (dec *Decoder) ExpectString(ptr *string) bool {
+	return dec.Expect(dec.String(ptr), "string")
+}
+
+func (dec *Decoder) ExpectNString(ptr *string) bool {
+	var s string
+	if dec.Atom(&s) {
+		if !dec.Expect(s == "NIL", "nstring") {
+			return false
+		}
+		*ptr = ""
+		return true
+	}
+	return dec.ExpectString(ptr)
+}
+
 func (dec *Decoder) ExpectNStringReader() (lit *LiteralReader, nonSync, ok bool) {
 	var s string
 	if dec.Atom(&s) {
@@ -297,6 +317,7 @@ func (dec *Decoder) ExpectNStringReader() (lit *LiteralReader, nonSync, ok bool)
 		}
 		return newLiteralReaderFromString(s), true, true
 	}
+	// TODO: read quoted string as a string instead of buffering
 	if dec.Quoted(&s) {
 		return newLiteralReaderFromString(s), true, true
 	}
@@ -326,6 +347,17 @@ func (dec *Decoder) ExpectList(f func() error) error {
 			return dec.Err()
 		}
 	}
+}
+
+func (dec *Decoder) ExpectNList(f func() error) error {
+	var s string
+	if dec.Atom(&s) {
+		if !dec.Expect(s == "NIL", "NIL") {
+			return dec.Err()
+		}
+		return nil
+	}
+	return dec.ExpectList(f)
 }
 
 func (dec *Decoder) Literal(ptr *string) bool {
