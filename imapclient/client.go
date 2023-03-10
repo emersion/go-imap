@@ -1035,6 +1035,7 @@ var (
 	_ FetchItemData = FetchItemDataFlags{}
 	_ FetchItemData = FetchItemDataEnvelope{}
 	_ FetchItemData = FetchItemDataInternalDate{}
+	_ FetchItemData = FetchItemDataRFC822Size{}
 )
 
 type discarder interface {
@@ -1090,6 +1091,17 @@ func (FetchItemDataInternalDate) FetchItem() FetchItem {
 }
 
 func (FetchItemDataInternalDate) fetchItemData() {}
+
+// FetchItemDataRFC822Size holds data returned by FETCH RFC822.SIZE.
+type FetchItemDataRFC822Size struct {
+	Size int64
+}
+
+func (FetchItemDataRFC822Size) FetchItem() FetchItem {
+	return FetchItemRFC822Size
+}
+
+func (FetchItemDataRFC822Size) fetchItemData() {}
 
 // Envelope is the envelope structure of a message.
 type Envelope struct {
@@ -1148,6 +1160,7 @@ type FetchMessageBuffer struct {
 	Flags        []string
 	Envelope     *Envelope
 	InternalDate time.Time
+	RFC822Size   int64
 	Contents     map[FetchItem][]byte
 }
 
@@ -1168,6 +1181,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.Envelope = item.Envelope
 	case FetchItemDataInternalDate:
 		buf.InternalDate = item.Time
+	case FetchItemDataRFC822Size:
+		buf.RFC822Size = item.Size
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}

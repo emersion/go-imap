@@ -105,6 +105,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			}
 
 			item = FetchItemDataInternalDate{Time: t}
+		case FetchItemRFC822Size:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			size, ok := dec.ExpectNumber64()
+			if !ok {
+				return dec.Err()
+			}
+
+			item = FetchItemDataRFC822Size{Size: size}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
