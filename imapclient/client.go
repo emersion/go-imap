@@ -1036,6 +1036,7 @@ var (
 	_ FetchItemData = FetchItemDataEnvelope{}
 	_ FetchItemData = FetchItemDataInternalDate{}
 	_ FetchItemData = FetchItemDataRFC822Size{}
+	_ FetchItemData = FetchItemDataUID{}
 )
 
 type discarder interface {
@@ -1103,6 +1104,17 @@ func (FetchItemDataRFC822Size) FetchItem() FetchItem {
 
 func (FetchItemDataRFC822Size) fetchItemData() {}
 
+// FetchItemDataUID holds data returned by FETCH UID.
+type FetchItemDataUID struct {
+	UID uint32
+}
+
+func (FetchItemDataUID) FetchItem() FetchItem {
+	return FetchItemUID
+}
+
+func (FetchItemDataUID) fetchItemData() {}
+
 // Envelope is the envelope structure of a message.
 type Envelope struct {
 	Date      string // see net/mail.ParseDate
@@ -1161,6 +1173,7 @@ type FetchMessageBuffer struct {
 	Envelope     *Envelope
 	InternalDate time.Time
 	RFC822Size   int64
+	UID          uint32
 	Contents     map[FetchItem][]byte
 }
 
@@ -1183,6 +1196,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.InternalDate = item.Time
 	case FetchItemDataRFC822Size:
 		buf.RFC822Size = item.Size
+	case FetchItemDataUID:
+		buf.UID = item.UID
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
