@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"strconv"
 	"strings"
@@ -1204,6 +1205,26 @@ type BodyStructureSinglePart struct {
 
 func (bs *BodyStructureSinglePart) MediaType() string {
 	return strings.ToLower(bs.Type) + "/" + strings.ToLower(bs.Subtype)
+}
+
+// Filename decodes the body structure's filename, if any.
+//
+// If there is no filename, an empty string is returned.
+//
+// If wordDecoder is specified, it's used to decode the filename.
+func (bs *BodyStructureSinglePart) Filename(wordDecoder *mime.WordDecoder) (string, error) {
+	var raw string
+	if bs.Extended != nil && bs.Extended.Disposition != nil {
+		raw = bs.Extended.Disposition.Params["filename"]
+	}
+	if raw == "" {
+		// Note: using "name" in Content-Type is discouraged
+		raw = bs.Params["name"]
+	}
+	if wordDecoder == nil {
+		wordDecoder = &mime.WordDecoder{}
+	}
+	return wordDecoder.DecodeHeader(raw)
 }
 
 func (*BodyStructureSinglePart) bodyStructure() {}
