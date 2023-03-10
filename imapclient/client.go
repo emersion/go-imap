@@ -1183,6 +1183,8 @@ type BodyStructure interface {
 	// Walk walks the body structure tree, calling f for each part in the tree,
 	// including bs itself. The parts are visited in DFS pre-order.
 	Walk(f BodyStructureWalkFunc)
+	// Disposition returns the body structure disposition, if available.
+	Disposition() *BodyStructureDisposition
 
 	bodyStructure()
 }
@@ -1212,6 +1214,13 @@ func (bs *BodyStructureSinglePart) MediaType() string {
 
 func (bs *BodyStructureSinglePart) Walk(f BodyStructureWalkFunc) {
 	f([]int{1}, bs)
+}
+
+func (bs *BodyStructureSinglePart) Disposition() *BodyStructureDisposition {
+	if bs.Extended == nil {
+		return nil
+	}
+	return bs.Extended.Disposition
 }
 
 // Filename decodes the body structure's filename, if any.
@@ -1289,6 +1298,13 @@ func (bs *BodyStructureMultiPart) walk(f BodyStructureWalkFunc, path []int) {
 			panic(fmt.Errorf("unsupported body structure type %T", part))
 		}
 	}
+}
+
+func (bs *BodyStructureMultiPart) Disposition() *BodyStructureDisposition {
+	if bs.Extended == nil {
+		return nil
+	}
+	return bs.Extended.Disposition
 }
 
 func (*BodyStructureMultiPart) bodyStructure() {}
