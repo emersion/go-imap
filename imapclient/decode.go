@@ -3,10 +3,13 @@ package imapclient
 import (
 	"fmt"
 	"io"
+	"time"
 	"unicode/utf8"
 
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
+
+const dateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
 
 func readCapabilities(dec *imapwire.Decoder) (map[string]struct{}, error) {
 	caps := make(map[string]struct{})
@@ -91,6 +94,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			}
 
 			item = FetchItemDataEnvelope{Envelope: envelope}
+		case FetchItemInternalDate:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			t, err := readDateTime(dec)
+			if err != nil {
+				return err
+			}
+
+			item = FetchItemDataInternalDate{Time: t}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
@@ -193,6 +207,18 @@ func readAddress(dec *imapwire.Decoder) (*Address, error) {
 		return nil, fmt.Errorf("in address: %v", dec.Err())
 	}
 	return &addr, nil
+}
+
+func readDateTime(dec *imapwire.Decoder) (time.Time, error) {
+	var s string
+	if !dec.Expect(dec.Quoted(&s), "date-time") {
+		return time.Time{}, dec.Err()
+	}
+	t, err := time.Parse(dateTimeLayout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("in date-time: %v", err)
+	}
+	return t, err
 }
 
 type fetchLiteralReader struct {
