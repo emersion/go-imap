@@ -116,6 +116,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			}
 
 			item = FetchItemDataRFC822Size{Size: size}
+		case FetchItemUID:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			uid, ok := dec.ExpectNumber()
+			if !ok {
+				return dec.Err()
+			}
+
+			item = FetchItemDataUID{UID: uid}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
