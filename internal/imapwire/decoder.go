@@ -100,7 +100,17 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 }
 
 func (dec *Decoder) SP() bool {
-	return dec.acceptByte(' ')
+	if dec.acceptByte(' ') {
+		return true
+	}
+
+	// Special case: SP is optional if the next field is a parenthesized list
+	b, ok := dec.readByte()
+	if !ok {
+		return false
+	}
+	dec.mustUnreadByte()
+	return b == '('
 }
 
 func (dec *Decoder) ExpectSP() bool {
