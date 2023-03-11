@@ -71,7 +71,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 			item FetchItemData
 			done chan struct{}
 		)
-		switch FetchItem(attName) {
+		switch attName := FetchItem(attName); attName {
 		case FetchItemFlags:
 			if !dec.ExpectSP() {
 				return dec.Err()
@@ -137,7 +137,10 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 				return err
 			}
 
-			item = FetchItemDataBodyStructure{BodyStructure: bodyStruct}
+			item = FetchItemDataBodyStructure{
+				BodyStructure: bodyStruct,
+				IsExtended:    attName == FetchItemBodyStructure,
+			}
 		case "BODY[":
 			// TODO: section ["<" number ">"]
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
