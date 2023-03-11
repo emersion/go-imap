@@ -6,6 +6,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
 // An Encoder writes IMAP data.
@@ -79,6 +81,7 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
 	} else {
+		name, _ = utf7.Encoding.NewEncoder().String(name)
 		return enc.String(name)
 	}
 }

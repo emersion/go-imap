@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
 // A Decoder reads IMAP data.
@@ -378,6 +380,14 @@ func (dec *Decoder) ExpectNList(f func() error) error {
 		return nil
 	}
 	return dec.ExpectList(f)
+}
+
+func (dec *Decoder) ExpectMailbox() (string, error) {
+	var name string
+	if !dec.ExpectAString(&name) {
+		return "", dec.Err()
+	}
+	return utf7.Encoding.NewDecoder().String(name)
 }
 
 func (dec *Decoder) Literal(ptr *string) bool {
