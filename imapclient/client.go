@@ -605,7 +605,7 @@ func (c *Client) Fetch(seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
 	}
 	enc := c.beginCommand("FETCH", cmd)
 	enc.SP().Atom(seqSet.String()).SP().List(len(items), func(i int) {
-		enc.Atom(string(items[i]))
+		writeFetchItem(enc.Encoder, items[i])
 	})
 	enc.end()
 	return cmd
@@ -892,22 +892,149 @@ type StatusData struct {
 }
 
 // FetchItem is a message data item which can be requested by a FETCH command.
-type FetchItem string
+type FetchItem interface {
+	fetchItem()
+}
+
+var (
+	_ FetchItem = FetchItemKeyword("")
+	_ FetchItem = (*FetchItemBodySection)(nil)
+	_ FetchItem = (*FetchItemBinarySection)(nil)
+	_ FetchItem = (*FetchItemBinarySectionSize)(nil)
+)
+
+// FetchItemKeyword is a FETCH item described by a single keyword.
+type FetchItemKeyword string
+
+func (FetchItemKeyword) fetchItem() {}
+
+var (
+	// Macros
+	FetchItemAll  FetchItem = FetchItemKeyword("ALL")
+	FetchItemFast FetchItem = FetchItemKeyword("FAST")
+	FetchItemFull FetchItem = FetchItemKeyword("FULL")
+
+	FetchItemBody          FetchItem = FetchItemKeyword("BODY")
+	FetchItemBodyStructure FetchItem = FetchItemKeyword("BODYSTRUCTURE")
+	FetchItemEnvelope      FetchItem = FetchItemKeyword("ENVELOPE")
+	FetchItemFlags         FetchItem = FetchItemKeyword("FLAGS")
+	FetchItemInternalDate  FetchItem = FetchItemKeyword("INTERNALDATE")
+	FetchItemRFC822Size    FetchItem = FetchItemKeyword("RFC822.SIZE")
+	FetchItemUID           FetchItem = FetchItemKeyword("UID")
+)
+
+type PartSpecifier string
 
 const (
-	// Macros
-	FetchItemAll  FetchItem = "ALL"
-	FetchItemFast FetchItem = "FAST"
-	FetchItemFull FetchItem = "FULL"
-
-	FetchItemBody          FetchItem = "BODY"
-	FetchItemBodyStructure FetchItem = "BODYSTRUCTURE"
-	FetchItemEnvelope      FetchItem = "ENVELOPE"
-	FetchItemFlags         FetchItem = "FLAGS"
-	FetchItemInternalDate  FetchItem = "INTERNALDATE"
-	FetchItemRFC822Size    FetchItem = "RFC822.SIZE"
-	FetchItemUID           FetchItem = "UID"
+	PartSpecifierNone   PartSpecifier = ""
+	PartSpecifierHeader PartSpecifier = "HEADER"
+	PartSpecifierMIME   PartSpecifier = "MIME"
+	PartSpecifierText   PartSpecifier = "TEXT"
 )
+
+type SectionPartial struct {
+	Offset, Size int64
+}
+
+// FetchItemBodySection is a FETCH BODY[] data item.
+type FetchItemBodySection struct {
+	Specifier       PartSpecifier
+	Part            []int
+	HeaderFields    []string
+	HeaderFieldsNot []string
+	Partial         *SectionPartial
+	Peek            bool
+}
+
+func (*FetchItemBodySection) fetchItem() {}
+
+// FetchItemBinarySection is a FETCH BINARY[] data item.
+type FetchItemBinarySection struct {
+	Part    []int
+	Partial *SectionPartial
+	Peek    bool
+}
+
+func (*FetchItemBinarySection) fetchItem() {}
+
+// FetchItemBinarySectionSize is a FETCH BINARY.SIZE[] data item.
+type FetchItemBinarySectionSize struct {
+	Part []int
+}
+
+func (*FetchItemBinarySectionSize) fetchItem() {}
+
+func writeFetchItem(enc *imapwire.Encoder, item FetchItem) {
+	switch item := item.(type) {
+	case FetchItemKeyword:
+		enc.Atom(string(item))
+	case *FetchItemBodySection:
+		enc.Atom("BODY")
+		if item.Peek {
+			enc.Atom(".PEEK")
+		}
+		enc.Special('[')
+		writeSectionPart(enc, item.Part)
+		if len(item.Part) > 0 && item.Specifier != PartSpecifierNone {
+			enc.Special('.')
+		}
+		if item.Specifier != PartSpecifierNone {
+			enc.Atom(string(item.Specifier))
+
+			var headerList []string
+			if len(item.HeaderFields) > 0 {
+				headerList = item.HeaderFields
+				enc.Atom(".FIELDS")
+			} else if len(item.HeaderFieldsNot) > 0 {
+				headerList = item.HeaderFieldsNot
+				enc.Atom(".FIELDS.NOT")
+			}
+
+			if len(headerList) > 0 {
+				enc.SP().List(len(headerList), func(i int) {
+					enc.String(headerList[i])
+				})
+			}
+		}
+		enc.Special(']')
+		writeSectionPartial(enc, item.Partial)
+	case *FetchItemBinarySection:
+		enc.Atom("BINARY")
+		if item.Peek {
+			enc.Atom(".PEEK")
+		}
+		enc.Special('[')
+		writeSectionPart(enc, item.Part)
+		enc.Special(']')
+		writeSectionPartial(enc, item.Partial)
+	case *FetchItemBinarySectionSize:
+		enc.Atom("BINARY.SIZE")
+		enc.Special('[')
+		writeSectionPart(enc, item.Part)
+		enc.Special(']')
+	default:
+		panic(fmt.Errorf("imapclient: unknown fetch item type %T", item))
+	}
+}
+
+func writeSectionPart(enc *imapwire.Encoder, part []int) {
+	if len(part) == 0 {
+		return
+	}
+
+	var l []string
+	for _, num := range part {
+		l = append(l, fmt.Sprintf("%v", num))
+	}
+	enc.Atom(strings.Join(l, "."))
+}
+
+func writeSectionPartial(enc *imapwire.Encoder, partial *SectionPartial) {
+	if partial == nil {
+		return
+	}
+	enc.Special('<').Number64(partial.Offset).Special('.').Number64(partial.Size).Special('>')
+}
 
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
@@ -1023,7 +1150,7 @@ type FetchItemData interface {
 }
 
 var (
-	_ FetchItemData = FetchItemDataContents{}
+	_ FetchItemData = FetchItemDataSection{}
 	_ FetchItemData = FetchItemDataFlags{}
 	_ FetchItemData = FetchItemDataEnvelope{}
 	_ FetchItemData = FetchItemDataInternalDate{}
@@ -1036,20 +1163,21 @@ type discarder interface {
 	discard()
 }
 
-var _ discarder = FetchItemDataContents{}
+var _ discarder = FetchItemDataSection{}
 
-// FetchItemDataContents holds data returned by FETCH BODY[] and BINARY[].
-type FetchItemDataContents struct {
+// FetchItemDataSection holds data returned by FETCH BODY[] and BINARY[].
+type FetchItemDataSection struct {
+	Section FetchItem // either *FetchItemBodySection or *FetchItemBinarySection
 	Literal LiteralReader
 }
 
-func (FetchItemDataContents) FetchItem() FetchItem {
-	return "BODY[]" // TODO
+func (item FetchItemDataSection) FetchItem() FetchItem {
+	return item.Section
 }
 
-func (FetchItemDataContents) fetchItemData() {}
+func (FetchItemDataSection) fetchItemData() {}
 
-func (item FetchItemDataContents) discard() {
+func (item FetchItemDataSection) discard() {
 	io.Copy(io.Discard, item.Literal)
 }
 
@@ -1335,20 +1463,20 @@ type FetchMessageBuffer struct {
 	RFC822Size    int64
 	UID           uint32
 	BodyStructure BodyStructure
-	Contents      map[FetchItem][]byte
+	Section       map[FetchItem][]byte
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	switch item := item.(type) {
-	case FetchItemDataContents:
+	case FetchItemDataSection:
 		b, err := io.ReadAll(item.Literal)
 		if err != nil {
 			return err
 		}
-		if buf.Contents == nil {
-			buf.Contents = make(map[FetchItem][]byte)
+		if buf.Section == nil {
+			buf.Section = make(map[FetchItem][]byte)
 		}
-		buf.Contents[item.FetchItem()] = b
+		buf.Section[item.FetchItem()] = b
 	case FetchItemDataFlags:
 		buf.Flags = item.Flags
 	case FetchItemDataEnvelope:

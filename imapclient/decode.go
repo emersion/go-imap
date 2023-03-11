@@ -72,7 +72,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 			item FetchItemData
 			done chan struct{}
 		)
-		switch attName := FetchItem(attName); attName {
+		switch attName := FetchItemKeyword(attName); attName {
 		case FetchItemFlags:
 			if !dec.ExpectSP() {
 				return dec.Err()
@@ -162,7 +162,10 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				}
 			}
 
-			item = FetchItemDataContents{Literal: fetchLit}
+			item = FetchItemDataSection{
+				Section: nil, // TODO
+				Literal: fetchLit,
+			}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
