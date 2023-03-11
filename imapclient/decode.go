@@ -25,14 +25,14 @@ func readCapabilities(dec *imapwire.Decoder) (map[string]struct{}, error) {
 	return caps, nil
 }
 
-func readFlagList(dec *imapwire.Decoder) ([]string, error) {
-	var flags []string
+func readFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
+	var flags []imap.Flag
 	err := dec.ExpectList(func() error {
 		flag, err := readFlag(dec)
 		if err != nil {
 			return err
 		}
-		flags = append(flags, flag)
+		flags = append(flags, imap.Flag(flag))
 		return nil
 	})
 	return flags, err

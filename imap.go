@@ -29,3 +29,25 @@ const (
 	MailboxAttrSent    MailboxAttr = "\\Sent"
 	MailboxAttrTrash   MailboxAttr = "\\Trash"
 )
+
+// Flag is a message flag.
+//
+// Message flags are defined in RFC 9051 section 2.3.2.
+type Flag string
+
+const (
+	// System flags
+	FlagSeen     Flag = "\\Seen"
+	FlagAnswered Flag = "\\Answered"
+	FlagFlagged  Flag = "\\Flagged"
+	FlagDeleted  Flag = "\\Deleted"
+	FlagDraft    Flag = "\\Draft"
+
+	// Widely used flags
+	FlagForwarded Flag = "$Forwarded"
+	FlagMDNSent   Flag = "$MDNSent" // Message Disposition Notification sent
+	FlagJunk      Flag = "$Junk"
+	FlagNotJunk   Flag = "$NotJunk"
+	FlagPhishing  Flag = "$Phishing"
+	FlagImportant Flag = "$Important" // RFC 8457
+)

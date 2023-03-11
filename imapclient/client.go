@@ -781,7 +781,7 @@ func (cmd *SelectCommand) Wait() (*SelectData, error) {
 // SelectData is the data returned by a SELECT command.
 type SelectData struct {
 	// Flags defined for this mailbox
-	Flags []string
+	Flags []imap.Flag
 	// Number of messages in this mailbox (aka. "EXISTS")
 	NumMessages uint32
 
@@ -1041,7 +1041,7 @@ func (item FetchItemDataContents) discard() {
 
 // FetchItemDataFlags holds data returned by FETCH FLAGS.
 type FetchItemDataFlags struct {
-	Flags []string
+	Flags []imap.Flag
 }
 
 func (FetchItemDataFlags) FetchItem() FetchItem {
@@ -1322,7 +1322,7 @@ type LiteralReader interface {
 // The SeqNum field is always populated. All remaining fields are optional.
 type FetchMessageBuffer struct {
 	SeqNum        uint32
-	Flags         []string
+	Flags         []imap.Flag
 	Envelope      *Envelope
 	InternalDate  time.Time
 	RFC822Size    int64
