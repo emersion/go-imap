@@ -588,7 +588,12 @@ func readStatus(dec *imapwire.Decoder, cmd *StatusCommand) error {
 		data = &StatusData{}
 	}
 
-	if !dec.ExpectAString(&data.Mailbox) || !dec.ExpectSP() {
+	var err error
+	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
+		return err
+	}
+
+	if !dec.ExpectSP() {
 		return dec.Err()
 	}
 
@@ -668,8 +673,12 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 		return nil, dec.Err()
 	}
 
-	if !dec.ExpectSP() || !dec.ExpectAString(&data.Mailbox) {
+	if !dec.ExpectSP() {
 		return nil, dec.Err()
+	}
+
+	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
+		return nil, err
 	}
 
 	// TODO: [SP mbox-list-extended]
