@@ -24,6 +24,8 @@ type Options struct {
 	DebugWriter io.Writer
 	// Unilateral data handler
 	UnilateralDataFunc UnilateralDataFunc
+	// Decoder for RFC 2047 words
+	WordDecoder *mime.WordDecoder
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -37,6 +39,18 @@ func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
 		Reader: io.TeeReader(rw, options.DebugWriter),
 		Writer: io.MultiWriter(rw, options.DebugWriter),
 	}
+}
+
+func (options *Options) decodeText(s string) (string, error) {
+	wordDecoder := options.WordDecoder
+	if wordDecoder == nil {
+		wordDecoder = &mime.WordDecoder{}
+	}
+	out, err := wordDecoder.DecodeHeader(s)
+	if err != nil {
+		return s, err
+	}
+	return out, nil
 }
 
 // Client is an IMAP client.
@@ -436,7 +450,7 @@ func (c *Client) readResponseData(typ string) error {
 			return c.dec.Err()
 		}
 		cmd := findPendingCmdByType[*FetchCommand](c)
-		if err := readMsgAtt(c.dec, num, cmd); err != nil {
+		if err := readMsgAtt(c.dec, num, cmd, &c.options); err != nil {
 			return fmt.Errorf("in msg-att: %v", err)
 		}
 	default:
@@ -1205,23 +1219,16 @@ func (bs *BodyStructureSinglePart) Disposition() *BodyStructureDisposition {
 }
 
 // Filename decodes the body structure's filename, if any.
-//
-// If there is no filename, an empty string is returned.
-//
-// If wordDecoder is specified, it's used to decode the filename.
-func (bs *BodyStructureSinglePart) Filename(wordDecoder *mime.WordDecoder) (string, error) {
-	var raw string
+func (bs *BodyStructureSinglePart) Filename() string {
+	var filename string
 	if bs.Extended != nil && bs.Extended.Disposition != nil {
-		raw = bs.Extended.Disposition.Params["filename"]
+		filename = bs.Extended.Disposition.Params["filename"]
 	}
-	if raw == "" {
+	if filename == "" {
 		// Note: using "name" in Content-Type is discouraged
-		raw = bs.Params["name"]
+		filename = bs.Params["name"]
 	}
-	if wordDecoder == nil {
-		wordDecoder = &mime.WordDecoder{}
-	}
-	return wordDecoder.DecodeHeader(raw)
+	return filename
 }
 
 func (*BodyStructureSinglePart) bodyStructure() {}
