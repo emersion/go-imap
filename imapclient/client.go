@@ -836,35 +836,10 @@ func (cmd *ListCommand) Collect() ([]*ListData, error) {
 
 // ListData is the mailbox data returned by a LIST command.
 type ListData struct {
-	Attrs   []MailboxAttr
+	Attrs   []imap.MailboxAttr
 	Delim   rune
 	Mailbox string
 }
-
-// MailboxAttr is a mailbox attribute.
-type MailboxAttr string
-
-const (
-	// Base attributes
-	MailboxAttrNonExistent   MailboxAttr = "\\NonExistent"
-	MailboxAttrNoInferiors   MailboxAttr = "\\Noinferiors"
-	MailboxAttrNoSelect      MailboxAttr = "\\Noselect"
-	MailboxAttrHasChildren   MailboxAttr = "\\HasChildren"
-	MailboxAttrHasNoChildren MailboxAttr = "\\HasNoChildren"
-	MailboxAttrMarked        MailboxAttr = "\\Marked"
-	MailboxAttrUnmarked      MailboxAttr = "\\Unmarked"
-	MailboxAttrSubscribed    MailboxAttr = "\\Subscribed"
-	MailboxAttrRemote        MailboxAttr = "\\Remote"
-
-	// Role (aka. "special-use") attributes
-	MailboxAttrAll     MailboxAttr = "\\All"
-	MailboxAttrArchive MailboxAttr = "\\Archive"
-	MailboxAttrDrafts  MailboxAttr = "\\Drafts"
-	MailboxAttrFlagged MailboxAttr = "\\Flagged"
-	MailboxAttrJunk    MailboxAttr = "\\Junk"
-	MailboxAttrSent    MailboxAttr = "\\Sent"
-	MailboxAttrTrash   MailboxAttr = "\\Trash"
-)
 
 // StatusCommand is a STATUS command.
 type StatusCommand struct {

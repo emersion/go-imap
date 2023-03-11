@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -628,7 +629,7 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 		if err != nil {
 			return err
 		}
-		data.Attrs = append(data.Attrs, MailboxAttr(attr))
+		data.Attrs = append(data.Attrs, imap.MailboxAttr(attr))
 		return nil
 	})
 	if err != nil {
