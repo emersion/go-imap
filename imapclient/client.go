@@ -1123,10 +1123,15 @@ func (FetchItemDataUID) fetchItemData() {}
 // FETCH BODY.
 type FetchItemDataBodyStructure struct {
 	BodyStructure BodyStructure
+	IsExtended    bool // True if BODYSTRUCTURE, false if BODY
 }
 
-func (FetchItemDataBodyStructure) FetchItem() FetchItem {
-	return FetchItemBodyStructure // TODO: BODY
+func (item FetchItemDataBodyStructure) FetchItem() FetchItem {
+	if item.IsExtended {
+		return FetchItemBodyStructure
+	} else {
+		return FetchItemBody
+	}
 }
 
 func (FetchItemDataBodyStructure) fetchItemData() {}
