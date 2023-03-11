@@ -50,7 +50,7 @@ func readFlag(dec *imapwire.Decoder) (string, error) {
 	return name, nil
 }
 
-func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
+func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options *Options) error {
 	items := make(chan FetchItemData, 32)
 	defer close(items)
 
@@ -89,7 +89,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 				return dec.Err()
 			}
 
-			envelope, err := readEnvelope(dec)
+			envelope, err := readEnvelope(dec, options)
 			if err != nil {
 				return fmt.Errorf("in envelope: %v", err)
 			}
@@ -133,7 +133,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 				return dec.Err()
 			}
 
-			bodyStruct, err := readBody(dec)
+			bodyStruct, err := readBody(dec, options)
 			if err != nil {
 				return err
 			}
@@ -175,16 +175,19 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand) error {
 	})
 }
 
-func readEnvelope(dec *imapwire.Decoder) (*Envelope, error) {
+func readEnvelope(dec *imapwire.Decoder, options *Options) (*Envelope, error) {
 	var envelope Envelope
 
 	if !dec.ExpectSpecial('(') {
 		return nil, dec.Err()
 	}
 
-	if !dec.ExpectNString(&envelope.Date) || !dec.ExpectSP() || !dec.ExpectNString(&envelope.Subject) || !dec.ExpectSP() {
+	var subject string
+	if !dec.ExpectNString(&envelope.Date) || !dec.ExpectSP() || !dec.ExpectNString(&subject) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
+	// TODO: handle error
+	envelope.Subject, _ = options.decodeText(subject)
 
 	addrLists := []struct {
 		name string
@@ -198,7 +201,7 @@ func readEnvelope(dec *imapwire.Decoder) (*Envelope, error) {
 		{"env-bcc", &envelope.Bcc},
 	}
 	for _, addrList := range addrLists {
-		l, err := readAddressList(dec)
+		l, err := readAddressList(dec, options)
 		if err != nil {
 			return nil, fmt.Errorf("in %v: %v", addrList.name, err)
 		} else if !dec.ExpectSP() {
@@ -217,10 +220,10 @@ func readEnvelope(dec *imapwire.Decoder) (*Envelope, error) {
 	return &envelope, nil
 }
 
-func readAddressList(dec *imapwire.Decoder) ([]Address, error) {
+func readAddressList(dec *imapwire.Decoder, options *Options) ([]Address, error) {
 	var l []Address
 	err := dec.ExpectNList(func() error {
-		addr, err := readAddress(dec)
+		addr, err := readAddress(dec, options)
 		if err != nil {
 			return err
 		}
@@ -230,19 +233,22 @@ func readAddressList(dec *imapwire.Decoder) ([]Address, error) {
 	return l, err
 }
 
-func readAddress(dec *imapwire.Decoder) (*Address, error) {
+func readAddress(dec *imapwire.Decoder, options *Options) (*Address, error) {
 	var (
 		addr     Address
+		name     string
 		obsRoute string
 	)
 	ok := dec.ExpectSpecial('(') &&
-		dec.ExpectNString(&addr.Name) && dec.ExpectSP() &&
+		dec.ExpectNString(&name) && dec.ExpectSP() &&
 		dec.ExpectNString(&obsRoute) && dec.ExpectSP() &&
 		dec.ExpectNString(&addr.Mailbox) && dec.ExpectSP() &&
 		dec.ExpectNString(&addr.Host) && dec.ExpectSpecial(')')
 	if !ok {
 		return nil, fmt.Errorf("in address: %v", dec.Err())
 	}
+	// TODO: handle error
+	addr.Name, _ = options.decodeText(name)
 	return &addr, nil
 }
 
@@ -258,7 +264,7 @@ func readDateTime(dec *imapwire.Decoder) (time.Time, error) {
 	return t, err
 }
 
-func readBody(dec *imapwire.Decoder) (BodyStructure, error) {
+func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
 	if !dec.ExpectSpecial('(') {
 		return nil, dec.Err()
 	}
@@ -271,10 +277,10 @@ func readBody(dec *imapwire.Decoder) (BodyStructure, error) {
 	)
 	if dec.String(&mediaType) {
 		token = "body-type-1part"
-		bs, err = readBodyType1part(dec, mediaType)
+		bs, err = readBodyType1part(dec, mediaType, options)
 	} else {
 		token = "body-type-mpart"
-		bs, err = readBodyTypeMpart(dec)
+		bs, err = readBodyTypeMpart(dec, options)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("in %v: %v", token, err)
@@ -288,7 +294,7 @@ func readBody(dec *imapwire.Decoder) (BodyStructure, error) {
 	return bs, nil
 }
 
-func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSinglePart, error) {
+func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*BodyStructureSinglePart, error) {
 	bs := BodyStructureSinglePart{Type: typ}
 
 	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
@@ -300,10 +306,17 @@ func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSingleP
 	if err != nil {
 		return nil, err
 	}
+	if name, ok := bs.Params["name"]; ok {
+		// TODO: handle error
+		bs.Params["name"], _ = options.decodeText(name)
+	}
 
-	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() {
+	var description string
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
+	// TODO: handle errors
+	bs.Description, _ = options.decodeText(description)
 
 	var ok bool
 	bs.Size, ok = dec.ExpectNumber()
@@ -318,7 +331,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSingleP
 			return nil, dec.Err()
 		}
 
-		msg.Envelope, err = readEnvelope(dec)
+		msg.Envelope, err = readEnvelope(dec, options)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +340,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSingleP
 			return nil, dec.Err()
 		}
 
-		msg.BodyStructure, err = readBody(dec)
+		msg.BodyStructure, err = readBody(dec, options)
 		if err != nil {
 			return nil, err
 		}
@@ -358,7 +371,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSingleP
 	}
 
 	if dec.SP() {
-		bs.Extended, err = readBodyExt1part(dec)
+		bs.Extended, err = readBodyExt1part(dec, options)
 		if err != nil {
 			return nil, fmt.Errorf("in body-ext-1part: %v", err)
 		}
@@ -367,7 +380,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string) (*BodyStructureSingleP
 	return &bs, nil
 }
 
-func readBodyExt1part(dec *imapwire.Decoder) (*BodyStructureSinglePartExt, error) {
+func readBodyExt1part(dec *imapwire.Decoder, options *Options) (*BodyStructureSinglePartExt, error) {
 	var ext BodyStructureSinglePartExt
 
 	if !dec.ExpectNString(&ext.MD5) {
@@ -379,7 +392,7 @@ func readBodyExt1part(dec *imapwire.Decoder) (*BodyStructureSinglePartExt, error
 	}
 
 	var err error
-	ext.Disposition, err = readBodyFldDsp(dec)
+	ext.Disposition, err = readBodyFldDsp(dec, options)
 	if err != nil {
 		return nil, fmt.Errorf("in body-fld-dsp: %v", err)
 	}
@@ -404,11 +417,11 @@ func readBodyExt1part(dec *imapwire.Decoder) (*BodyStructureSinglePartExt, error
 	return &ext, nil
 }
 
-func readBodyTypeMpart(dec *imapwire.Decoder) (*BodyStructureMultiPart, error) {
+func readBodyTypeMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureMultiPart, error) {
 	var bs BodyStructureMultiPart
 
 	for {
-		child, err := readBody(dec)
+		child, err := readBody(dec, options)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +434,7 @@ func readBodyTypeMpart(dec *imapwire.Decoder) (*BodyStructureMultiPart, error) {
 
 	if dec.SP() {
 		var err error
-		bs.Extended, err = readBodyExtMpart(dec)
+		bs.Extended, err = readBodyExtMpart(dec, options)
 		if err != nil {
 			return nil, fmt.Errorf("in body-ext-mpart: %v", err)
 		}
@@ -430,7 +443,7 @@ func readBodyTypeMpart(dec *imapwire.Decoder) (*BodyStructureMultiPart, error) {
 	return &bs, nil
 }
 
-func readBodyExtMpart(dec *imapwire.Decoder) (*BodyStructureMultiPartExt, error) {
+func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureMultiPartExt, error) {
 	var ext BodyStructureMultiPartExt
 
 	var err error
@@ -443,7 +456,7 @@ func readBodyExtMpart(dec *imapwire.Decoder) (*BodyStructureMultiPartExt, error)
 		return &ext, nil
 	}
 
-	ext.Disposition, err = readBodyFldDsp(dec)
+	ext.Disposition, err = readBodyFldDsp(dec, options)
 	if err != nil {
 		return nil, fmt.Errorf("in body-fld-dsp: %v", err)
 	}
@@ -468,7 +481,7 @@ func readBodyExtMpart(dec *imapwire.Decoder) (*BodyStructureMultiPartExt, error)
 	return &ext, nil
 }
 
-func readBodyFldDsp(dec *imapwire.Decoder) (*BodyStructureDisposition, error) {
+func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*BodyStructureDisposition, error) {
 	if !dec.Special('(') {
 		if !dec.ExpectNIL() {
 			return nil, dec.Err()
@@ -485,6 +498,10 @@ func readBodyFldDsp(dec *imapwire.Decoder) (*BodyStructureDisposition, error) {
 	disp.Params, err = readBodyFldParam(dec)
 	if err != nil {
 		return nil, err
+	}
+	if filename, ok := disp.Params["filename"]; ok {
+		// TODO: handle error
+		disp.Params["filename"], _ = options.decodeText(filename)
 	}
 
 	if !dec.ExpectSpecial(')') {
