@@ -107,6 +107,27 @@ func DialTLS(address string, options *Options) (*Client, error) {
 	return New(conn, options), nil
 }
 
+// DialStartTLS connects to an IMAP server with STARTTLS.
+func DialStartTLS(address string, options *Options) (*Client, error) {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	client := New(conn, options)
+	if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return client, err
+}
+
 // Close immediately closes the connection.
 func (c *Client) Close() error {
 	return c.conn.Close()
