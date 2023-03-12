@@ -11,6 +11,16 @@ import (
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
+// IsAtomChar returns true if ch is an ATOM-CHAR.
+func IsAtomChar(ch byte) bool {
+	switch ch {
+	case '(', ')', '{', ' ', '%', '*', '"', '\\', ']':
+		return false
+	default:
+		return !unicode.IsControl(rune(ch))
+	}
+}
+
 // A Decoder reads IMAP data.
 //
 // There are multiple families of methods:
@@ -127,7 +137,7 @@ func (dec *Decoder) ExpectCRLF() bool {
 	return dec.Expect(dec.CRLF(), "CRLF")
 }
 
-func (dec *Decoder) Atom(ptr *string) bool {
+func (dec *Decoder) Func(ptr *string, valid func(ch byte) bool) bool {
 	var sb strings.Builder
 	for {
 		b, ok := dec.readByte()
@@ -135,14 +145,7 @@ func (dec *Decoder) Atom(ptr *string) bool {
 			return false
 		}
 
-		var valid bool
-		switch b {
-		case '(', ')', '{', ' ', '%', '*', '"', '\\', ']':
-			valid = false
-		default:
-			valid = !unicode.IsControl(rune(b))
-		}
-		if !valid {
+		if !valid(b) {
 			dec.mustUnreadByte()
 			break
 		}
@@ -154,6 +157,10 @@ func (dec *Decoder) Atom(ptr *string) bool {
 	}
 	*ptr = sb.String()
 	return true
+}
+
+func (dec *Decoder) Atom(ptr *string) bool {
+	return dec.Func(ptr, IsAtomChar)
 }
 
 func (dec *Decoder) ExpectAtom(ptr *string) bool {

@@ -63,11 +63,10 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 
 	return dec.ExpectList(func() error {
 		var attName string
-		if !dec.ExpectAtom(&attName) {
+		if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
 			return dec.Err()
 		}
 
-		// TODO: BINARY section, BINARY.SIZE section
 		var (
 			item FetchItemData
 			done chan struct{}
@@ -128,7 +127,56 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 			}
 
 			item = FetchItemDataUID{UID: uid}
-		case FetchItemBodyStructure, FetchItemBody:
+		case "BODY", "BINARY":
+			if dec.Special('[') {
+				var section FetchItem
+				switch attName {
+				case "BODY":
+					var err error
+					section, err = readSectionSpec(dec)
+					if err != nil {
+						return fmt.Errorf("in section-spec: %v", err)
+					}
+				case "BINARY":
+					part, dot := readSectionPart(dec)
+					if dot {
+						return fmt.Errorf("in section-binary: expected number after dot")
+					}
+					if !dec.ExpectSpecial(']') {
+						return dec.Err()
+					}
+					section = &FetchItemBinarySection{Part: part}
+				}
+
+				if !dec.ExpectSP() {
+					return dec.Err()
+				}
+
+				lit, _, ok := dec.ExpectNStringReader()
+				if !ok {
+					return dec.Err()
+				}
+
+				var fetchLit LiteralReader
+				if lit != nil {
+					done = make(chan struct{})
+					fetchLit = &fetchLiteralReader{
+						LiteralReader: lit,
+						ch:            done,
+					}
+				}
+
+				item = FetchItemDataSection{
+					Section: section,
+					Literal: fetchLit,
+				}
+				break
+			}
+			if !dec.Expect(attName == "BODY", "'['") {
+				return dec.Err()
+			}
+			fallthrough
+		case FetchItemBodyStructure:
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -142,34 +190,10 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				BodyStructure: bodyStruct,
 				IsExtended:    attName == FetchItemBodyStructure,
 			}
-		case "BODY[":
-			// TODO: section ["<" number ">"]
-			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
-				return dec.Err()
-			}
-
-			lit, _, ok := dec.ExpectNStringReader()
-			if !ok {
-				return dec.Err()
-			}
-
-			var fetchLit LiteralReader
-			if lit != nil {
-				done = make(chan struct{})
-				fetchLit = &fetchLiteralReader{
-					LiteralReader: lit,
-					ch:            done,
-				}
-			}
-
-			item = FetchItemDataSection{
-				Section: nil, // TODO
-				Literal: fetchLit,
-			}
-		case "BINARY.SIZE[":
+		case "BINARY.SIZE":
 			part, dot := readSectionPart(dec)
 			if dot {
-				return fmt.Errorf("expected number after dot")
+				return fmt.Errorf("in section-binary: expected number after dot")
 			}
 
 			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
@@ -195,6 +219,10 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 		}
 		return nil
 	})
+}
+
+func isMsgAttNameChar(ch byte) bool {
+	return ch != '[' && imapwire.IsAtomChar(ch)
 }
 
 func readEnvelope(dec *imapwire.Decoder, options *Options) (*Envelope, error) {
@@ -586,6 +614,77 @@ func readBodyFldLang(dec *imapwire.Decoder) ([]string, error) {
 	} else {
 		return nil, nil
 	}
+}
+
+func readSectionSpec(dec *imapwire.Decoder) (*FetchItemBodySection, error) {
+	var section FetchItemBodySection
+
+	var dot bool
+	section.Part, dot = readSectionPart(dec)
+	if dot {
+		var specifier string
+		if !dec.ExpectAtom(&specifier) {
+			return nil, dec.Err()
+		}
+		section.Specifier = PartSpecifier(specifier)
+
+		if specifier == "HEADER.FIELDS" || specifier == "HEADER.FIELDS.NOT" {
+			if !dec.ExpectSP() {
+				return nil, dec.Err()
+			}
+			var err error
+			headerList, err := readHeaderList(dec)
+			if err != nil {
+				return nil, err
+			}
+			if specifier == "HEADER.FIELDS" {
+				section.HeaderFields = headerList
+			} else {
+				section.HeaderFieldsNot = headerList
+			}
+		}
+	}
+
+	if !dec.ExpectSpecial(']') {
+		return nil, dec.Err()
+	}
+
+	offset, err := readPartialOffset(dec)
+	if err != nil {
+		return nil, err
+	}
+	if offset != nil {
+		section.Partial = &SectionPartial{Offset: int64(*offset)}
+	}
+
+	return &section, nil
+}
+
+func readPartialOffset(dec *imapwire.Decoder) (*uint32, error) {
+	if !dec.Special('<') {
+		return nil, nil
+	}
+	offset, ok := dec.ExpectNumber()
+	if !ok {
+		return nil, dec.Err()
+	}
+	if !dec.ExpectSpecial('>') {
+		return nil, dec.Err()
+	}
+	return &offset, nil
+}
+
+func readHeaderList(dec *imapwire.Decoder) ([]string, error) {
+	var l []string
+	err := dec.ExpectList(func() error {
+		var s string
+		if !dec.ExpectAString(&s) {
+			return dec.Err()
+		}
+		l = append(l, s)
+		return nil
+	})
+	return l, err
 }
 
 func readSectionPart(dec *imapwire.Decoder) (part []int, dot bool) {
