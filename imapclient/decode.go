@@ -166,6 +166,25 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				Section: nil, // TODO
 				Literal: fetchLit,
 			}
+		case "BINARY.SIZE[":
+			part, dot := readSectionPart(dec)
+			if dot {
+				return fmt.Errorf("expected number after dot")
+			}
+
+			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
+				return dec.Err()
+			}
+
+			size, ok := dec.ExpectNumber()
+			if !ok {
+				return dec.Err()
+			}
+
+			item = FetchItemDataBinarySectionSize{
+				Part: part,
+				Size: size,
+			}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
@@ -566,6 +585,20 @@ func readBodyFldLang(dec *imapwire.Decoder) ([]string, error) {
 		return []string{s}, nil
 	} else {
 		return nil, nil
+	}
+}
+
+func readSectionPart(dec *imapwire.Decoder) (part []int, dot bool) {
+	for {
+		if len(part) > 0 && !dec.Special('.') {
+			return part, false
+		}
+
+		num, ok := dec.Number()
+		if !ok {
+			return part, true
+		}
+		part = append(part, int(num))
 	}
 }
 
