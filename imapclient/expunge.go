@@ -1,0 +1,51 @@
+package imapclient
+
+// Expunge sends an EXPUNGE command.
+func (c *Client) Expunge() *ExpungeCommand {
+	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
+	c.beginCommand("EXPUNGE", cmd).end()
+	return cmd
+}
+
+// ExpungeCommand is an EXPUNGE command.
+//
+// The caller must fully consume the ExpungeCommand. A simple way to do so is
+// to defer a call to FetchCommand.Close.
+type ExpungeCommand struct {
+	cmd
+	seqNums chan uint32
+}
+
+// Next advances to the next expunged message sequence number.
+//
+// On success, the message sequence number is returned. On error or if there
+// are no more messages, 0 is returned. To check the error value, use Close.
+func (cmd *ExpungeCommand) Next() uint32 {
+	return <-cmd.seqNums
+}
+
+// Close releases the command.
+//
+// Calling Close unblocks the IMAP client decoder and lets it read the next
+// responses. Next will always return nil after Close.
+func (cmd *ExpungeCommand) Close() error {
+	for cmd.Next() != 0 {
+		// ignore
+	}
+	return cmd.cmd.Wait()
+}
+
+// Collect accumulates expunged sequence numbers into a list.
+//
+// This is equivalent to calling Next repeatedly and then Close.
+func (cmd *ExpungeCommand) Collect() ([]uint32, error) {
+	var l []uint32
+	for {
+		seqNum := cmd.Next()
+		if seqNum == 0 {
+			break
+		}
+		l = append(l, seqNum)
+	}
+	return l, cmd.Close()
+}

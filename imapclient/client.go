@@ -391,13 +391,15 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		close(cmd.mailboxes)
 	case *FetchCommand:
 		close(cmd.msgs)
+	case *ExpungeCommand:
+		close(cmd.seqNums)
 	}
 
 	return startTLS, nil
 }
 
 func (c *Client) readResponseData(typ string) error {
-	// number SP "EXISTS" / number SP "RECENT" / number SP "FETCH"
+	// number SP "EXISTS" / number SP "RECENT" / number SP "FETCH" / number SP "EXPUNGE"
 	var num uint32
 	if typ[0] >= '0' && typ[0] <= '9' {
 		v, err := strconv.ParseUint(typ, 10, 32)
@@ -474,6 +476,13 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*FetchCommand](c)
 		if err := readMsgAtt(c.dec, num, cmd, &c.options); err != nil {
 			return fmt.Errorf("in msg-att: %v", err)
+		}
+	case "EXPUNGE":
+		cmd := findPendingCmdByType[*ExpungeCommand](c)
+		if cmd != nil {
+			cmd.seqNums <- num
+		} else {
+			unilateralData = &UnilateralDataExpunge{SeqNum: num}
 		}
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
@@ -567,6 +576,7 @@ type UnilateralData interface {
 
 var (
 	_ UnilateralData = (*UnilateralDataMailbox)(nil)
+	_ UnilateralData = (*UnilateralDataExpunge)(nil)
 )
 
 // UnilateralDataMailbox describes a mailbox status update.
@@ -577,6 +587,13 @@ type UnilateralDataMailbox struct {
 }
 
 func (*UnilateralDataMailbox) unilateralData() {}
+
+// UnilateralDataExpunge indicates that a message has been deleted.
+type UnilateralDataExpunge struct {
+	SeqNum uint32
+}
+
+func (*UnilateralDataExpunge) unilateralData() {}
 
 // UnilateralDataFunc handles unilateral data.
 //
