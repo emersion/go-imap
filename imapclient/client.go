@@ -594,21 +594,31 @@ func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 	return cmd
 }
 
-// Fetch sends a FETCH command.
-//
-// The caller must fully consume the FetchCommand. A simple way to do so is to
-// defer a call to FetchCommand.Close.
-func (c *Client) Fetch(seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
-	// TODO: sequence set, message data item names or macro
+func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
 	cmd := &FetchCommand{
 		msgs: make(chan *FetchMessageData, 128),
 	}
-	enc := c.beginCommand("FETCH", cmd)
+	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
 	enc.SP().Atom(seqSet.String()).SP().List(len(items), func(i int) {
 		writeFetchItem(enc.Encoder, items[i])
 	})
 	enc.end()
 	return cmd
+}
+
+// Fetch sends a FETCH command.
+//
+// The caller must fully consume the FetchCommand. A simple way to do so is to
+// defer a call to FetchCommand.Close.
+func (c *Client) Fetch(seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
+	return c.fetch(false, seqSet, items)
+}
+
+// UIDFetch sends a UID FETCH command.
+//
+// See Fetch.
+func (c *Client) UIDFetch(seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
+	return c.fetch(true, seqSet, items)
 }
 
 // Idle sends an IDLE command.
@@ -630,6 +640,14 @@ func (c *Client) Idle() (*IdleCommand, error) {
 		c.unregisterContReq(contReq)
 		cmd.enc.end()
 		return nil, err
+	}
+}
+
+func uidCmdName(name string, uid bool) string {
+	if uid {
+		return "UID " + name
+	} else {
+		return name
 	}
 }
 
