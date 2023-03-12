@@ -1253,6 +1253,18 @@ func (item FetchItemDataBodyStructure) FetchItem() FetchItem {
 
 func (FetchItemDataBodyStructure) fetchItemData() {}
 
+// FetchItemDataBinarySectionSize holds data returned by FETCH BINARY.SIZE[].
+type FetchItemDataBinarySectionSize struct {
+	Part []int
+	Size uint32
+}
+
+func (item FetchItemDataBinarySectionSize) FetchItem() FetchItem {
+	return &FetchItemBinarySectionSize{Part: item.Part}
+}
+
+func (FetchItemDataBinarySectionSize) fetchItemData() {}
+
 // Envelope is the envelope structure of a message.
 type Envelope struct {
 	Date      string // see net/mail.ParseDate
