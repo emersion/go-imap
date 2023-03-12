@@ -1468,14 +1468,15 @@ type LiteralReader interface {
 //
 // The SeqNum field is always populated. All remaining fields are optional.
 type FetchMessageBuffer struct {
-	SeqNum        uint32
-	Flags         []imap.Flag
-	Envelope      *Envelope
-	InternalDate  time.Time
-	RFC822Size    int64
-	UID           uint32
-	BodyStructure BodyStructure
-	Section       map[FetchItem][]byte
+	SeqNum            uint32
+	Flags             []imap.Flag
+	Envelope          *Envelope
+	InternalDate      time.Time
+	RFC822Size        int64
+	UID               uint32
+	BodyStructure     BodyStructure
+	Section           map[FetchItem][]byte
+	BinarySectionSize []FetchItemDataBinarySectionSize
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -1501,6 +1502,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.UID = item.UID
 	case FetchItemDataBodyStructure:
 		buf.BodyStructure = item.BodyStructure
+	case FetchItemDataBinarySectionSize:
+		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
