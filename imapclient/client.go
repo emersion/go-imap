@@ -100,7 +100,9 @@ func New(conn net.Conn, options *Options) *Client {
 
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
-	conn, err := tls.Dial("tcp", address, nil)
+	conn, err := tls.Dial("tcp", address, &tls.Config{
+		NextProtos: []string{"imap"},
+	})
 	if err != nil {
 		return nil, err
 	}
