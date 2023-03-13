@@ -1,9 +1,22 @@
 package imapclient
 
+import (
+	"github.com/emersion/go-imap/v2"
+)
+
 // Expunge sends an EXPUNGE command.
 func (c *Client) Expunge() *ExpungeCommand {
 	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
 	c.beginCommand("EXPUNGE", cmd).end()
+	return cmd
+}
+
+// UIDExpunge sends a UID EXPUNGE command.
+func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
+	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
+	enc := c.beginCommand("UID EXPUNGE", cmd)
+	enc.SP().Atom(uids.String())
+	enc.end()
 	return cmd
 }
 
