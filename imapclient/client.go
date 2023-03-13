@@ -247,6 +247,13 @@ func (c *Client) unregisterContReq(contReq *imapwire.ContinuationRequest) {
 // to pending commands.
 func (c *Client) read() {
 	defer func() {
+		if v := recover(); v != nil {
+			// TODO: handle error
+			log.Println(v)
+		}
+
+		c.Close()
+
 		c.mutex.Lock()
 		pendingCmds := c.pendingCmds
 		c.pendingCmds = nil
