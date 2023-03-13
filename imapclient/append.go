@@ -2,16 +2,34 @@ package imapclient
 
 import (
 	"io"
+	"time"
+
+	"github.com/emersion/go-imap/v2"
 )
+
+// AppendOptions contains options for the APPEND command.
+type AppendOptions struct {
+	Flags []imap.Flag
+	Time  time.Time
+}
 
 // Append sends an APPEND command.
 //
 // The caller must call AppendCommand.Close.
-func (c *Client) Append(mailbox string, size int64) *AppendCommand {
-	// TODO: flag parenthesized list, date/time string
+//
+// The options are optional.
+func (c *Client) Append(mailbox string, size int64, options *AppendOptions) *AppendCommand {
 	cmd := &AppendCommand{}
 	cmd.enc = c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
+	if options != nil && len(options.Flags) > 0 {
+		cmd.enc.List(len(options.Flags), func(i int) {
+			cmd.enc.Atom(string(options.Flags[i]))
+		}).SP()
+	}
+	if options != nil && !options.Time.IsZero() {
+		cmd.enc.String(options.Time.Format(dateTimeLayout)).SP()
+	}
 	cmd.wc = cmd.enc.Literal(size)
 	return cmd
 }
