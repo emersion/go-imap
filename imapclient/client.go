@@ -437,7 +437,59 @@ func (c *Client) readResponseData(typ string) error {
 	var unilateralData UnilateralData
 	switch typ {
 	case "OK", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye
-		// TODO: decode response code
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+
+		var code string
+		if c.dec.Special('[') { // resp-text-code
+			if !c.dec.ExpectAtom(&code) {
+				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
+			}
+			switch code {
+			case "PERMANENTFLAGS":
+				if !c.dec.ExpectSP() {
+					return c.dec.Err()
+				}
+				flags, err := readFlagList(c.dec)
+				if err != nil {
+					return err
+				}
+				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
+					cmd.data.PermanentFlags = flags
+				}
+			case "UIDNEXT":
+				if !c.dec.ExpectSP() {
+					return c.dec.Err()
+				}
+				uidNext, ok := c.dec.ExpectNumber()
+				if !ok {
+					return c.dec.Err()
+				}
+				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
+					cmd.data.UIDNext = uidNext
+				}
+			case "UIDVALIDITY":
+				if !c.dec.ExpectSP() {
+					return c.dec.Err()
+				}
+				uidValidity, ok := c.dec.ExpectNumber()
+				if !ok {
+					return c.dec.Err()
+				}
+				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
+					cmd.data.UIDValidity = uidValidity
+				}
+			default: // [SP 1*<any TEXT-CHAR except "]">]
+				if c.dec.SP() {
+					c.dec.Skip(']')
+				}
+			}
+			if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
+				return fmt.Errorf("in resp-text: %v", c.dec.Err())
+			}
+		}
+
 		var text string
 		if !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
@@ -447,6 +499,7 @@ func (c *Client) readResponseData(typ string) error {
 			if typ != "OK" {
 				c.greetingErr = &imap.Error{
 					Type: imap.StatusResponseType(typ),
+					Code: imap.ResponseCode(code),
 					Text: text,
 				}
 			}
@@ -758,6 +811,9 @@ func readFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 
 func readFlag(dec *imapwire.Decoder) (string, error) {
 	isSystem := dec.Special('\\')
+	if isSystem && dec.Special('*') {
+		return "\\*", nil // flag-perm
+	}
 	var name string
 	if !dec.ExpectAtom(&name) {
 		return "", fmt.Errorf("in flag: %v", dec.Err())
