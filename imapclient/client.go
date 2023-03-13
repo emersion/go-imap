@@ -570,6 +570,24 @@ func (c *Client) Login(username, password string) *Command {
 	return cmd
 }
 
+// Create sends a CREATE command.
+func (c *Client) Create(mailbox string) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("CREATE", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
+// Delete sends a DELETE command.
+func (c *Client) Delete(mailbox string) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("DELETE", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
 func uidCmdName(name string, uid bool) string {
 	if uid {
 		return "UID " + name
