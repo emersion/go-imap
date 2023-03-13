@@ -62,8 +62,10 @@ func (options *ListOptions) returnOpts() []string {
 //
 // A nil options pointer is equivalent to a zero options value.
 func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
-	// TODO: add a way to retrieve STATUS responses from ListCommand
-	cmd := &ListCommand{mailboxes: make(chan *ListData, 64)}
+	cmd := &ListCommand{
+		mailboxes:    make(chan *ListData, 64),
+		returnStatus: options != nil && len(options.ReturnStatus) > 0,
+	}
 	enc := c.beginCommand("LIST", cmd)
 	if selectOpts := options.selectOpts(); len(selectOpts) > 0 {
 		enc.SP().List(len(selectOpts), func(i int) {
@@ -90,6 +92,9 @@ func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
 type ListCommand struct {
 	cmd
 	mailboxes chan *ListData
+
+	returnStatus bool
+	pendingData  *ListData
 }
 
 // Next advances to the next mailbox.
@@ -135,6 +140,7 @@ type ListData struct {
 	// Extended data
 	ChildInfo *ListDataChildInfo
 	OldName   string
+	Status    *StatusData
 }
 
 type ListDataChildInfo struct {

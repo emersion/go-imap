@@ -54,29 +54,25 @@ type StatusData struct {
 	Size        *int64
 }
 
-func readStatus(dec *imapwire.Decoder, cmd *StatusCommand) error {
-	var data *StatusData
-	if cmd != nil {
-		data = &cmd.data
-	} else {
-		data = &StatusData{}
-	}
+func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
+	var data StatusData
 
 	var err error
 	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if !dec.ExpectSP() {
-		return dec.Err()
+		return nil, dec.Err()
 	}
 
-	return dec.ExpectList(func() error {
-		if err := readStatusAttVal(dec, data); err != nil {
+	err = dec.ExpectList(func() error {
+		if err := readStatusAttVal(dec, &data); err != nil {
 			return fmt.Errorf("in status-att-val: %v", dec.Err())
 		}
 		return nil
 	})
+	return &data, err
 }
 
 func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
