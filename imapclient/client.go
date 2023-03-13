@@ -760,6 +760,17 @@ func (c *Client) Unsubscribe(mailbox string) *Command {
 	return cmd
 }
 
+// Enable sends an ENABLE command.
+func (c *Client) Enable(caps ...imap.Cap) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("ENABLE", cmd)
+	for _, c := range caps {
+		enc.SP().Atom(string(c))
+	}
+	enc.end()
+	return cmd
+}
+
 func uidCmdName(name string, uid bool) string {
 	if uid {
 		return "UID " + name
