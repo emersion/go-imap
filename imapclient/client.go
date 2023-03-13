@@ -66,6 +66,10 @@ type Client struct {
 	dec      *imapwire.Decoder
 	encMutex sync.Mutex
 
+	greetingCh   chan struct{}
+	greetingRecv bool
+	greetingErr  error
+
 	mutex       sync.Mutex
 	cmdTag      uint64
 	pendingCmds []command
@@ -87,11 +91,12 @@ func New(conn net.Conn, options *Options) *Client {
 	bw := bufio.NewWriter(rw)
 
 	client := &Client{
-		conn:    conn,
-		options: *options,
-		br:      br,
-		bw:      bw,
-		dec:     imapwire.NewDecoder(br),
+		conn:       conn,
+		options:    *options,
+		br:         br,
+		bw:         bw,
+		dec:        imapwire.NewDecoder(br),
+		greetingCh: make(chan struct{}),
 	}
 	go client.read()
 	return client
@@ -273,6 +278,9 @@ func (c *Client) read() {
 			log.Println(err)
 			break
 		}
+		if c.greetingErr != nil {
+			break
+		}
 	}
 }
 
@@ -409,7 +417,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 }
 
 func (c *Client) readResponseData(typ string) error {
-	// number SP "EXISTS" / number SP "RECENT" / number SP "FETCH" / number SP "EXPUNGE"
+	// number SP ("EXISTS" / "RECENT" / "FETCH" / "EXPUNGE")
 	var num uint32
 	if typ[0] >= '0' && typ[0] <= '9' {
 		v, err := strconv.ParseUint(typ, 10, 32)
@@ -425,11 +433,20 @@ func (c *Client) readResponseData(typ string) error {
 
 	var unilateralData UnilateralData
 	switch typ {
-	case "OK", "NO", "BAD": // resp-cond-state
+	case "OK", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye
 		// TODO
 		var text string
 		if !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
+		}
+
+		if !c.greetingRecv {
+			if typ != "OK" {
+				// TODO: define a type for IMAP errors
+				c.greetingErr = fmt.Errorf("%v %v", typ, text)
+			}
+			c.greetingRecv = true
+			close(c.greetingCh)
 		}
 	case "CAPABILITY": // capability-data
 		caps, err := readCapabilities(c.dec)
@@ -503,6 +520,12 @@ func (c *Client) readResponseData(typ string) error {
 	}
 
 	return nil
+}
+
+// WaitGreeting waits for the server's initial greeting.
+func (c *Client) WaitGreeting() error {
+	<-c.greetingCh
+	return c.greetingErr
 }
 
 // Noop sends a NOOP command.
