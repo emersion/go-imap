@@ -16,7 +16,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 		return err
 	}
 
-	cmd := &Command{}
+	cmd := &authenticateCommand{}
 	contReq := c.registerContReq(cmd)
 	enc := c.beginCommand("AUTHENTICATE", cmd)
 	enc.SP().Atom(mech)
@@ -60,6 +60,10 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 			return err
 		}
 	}
+}
+
+type authenticateCommand struct {
+	cmd
 }
 
 func (c *Client) writeSASLResp(resp []byte) error {
