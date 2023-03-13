@@ -366,8 +366,8 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	if !c.dec.ExpectSP() {
 		return nil, c.dec.Err()
 	}
+	var code string
 	if c.dec.Special('[') { // resp-text-code
-		var code string
 		if !c.dec.ExpectAtom(&code) {
 			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
@@ -395,8 +395,11 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	case "OK":
 		// nothing to do
 	case "NO", "BAD":
-		// TODO: define a type for IMAP errors
-		cmdErr = fmt.Errorf("%v %v", typ, text)
+		cmdErr = &imap.Error{
+			Type: imap.StatusResponseType(typ),
+			Code: imap.ResponseCode(code),
+			Text: text,
+		}
 	default:
 		return nil, fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
 	}
@@ -434,7 +437,7 @@ func (c *Client) readResponseData(typ string) error {
 	var unilateralData UnilateralData
 	switch typ {
 	case "OK", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye
-		// TODO
+		// TODO: decode response code
 		var text string
 		if !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
@@ -442,8 +445,10 @@ func (c *Client) readResponseData(typ string) error {
 
 		if !c.greetingRecv {
 			if typ != "OK" {
-				// TODO: define a type for IMAP errors
-				c.greetingErr = fmt.Errorf("%v %v", typ, text)
+				c.greetingErr = &imap.Error{
+					Type: imap.StatusResponseType(typ),
+					Text: text,
+				}
 			}
 			c.greetingRecv = true
 			close(c.greetingCh)
