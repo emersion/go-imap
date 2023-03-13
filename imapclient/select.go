@@ -13,6 +13,17 @@ func (c *Client) Select(mailbox string) *SelectCommand {
 	return cmd
 }
 
+// Examine sends an EXAMINE command.
+//
+// See Select.
+func (c *Client) Examine(mailbox string) *SelectCommand {
+	cmd := &SelectCommand{}
+	enc := c.beginCommand("EXAMINE", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
 // SelectCommand is a SELECT command.
 type SelectCommand struct {
 	cmd
