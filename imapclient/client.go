@@ -103,6 +103,7 @@ type Client struct {
 
 	mutex       sync.Mutex
 	state       State
+	caps        imap.CapSet
 	cmdTag      uint64
 	pendingCmds []command
 	contReqs    []continuationRequest
@@ -177,6 +178,34 @@ func (c *Client) State() State {
 func (c *Client) setState(state State) {
 	c.mutex.Lock()
 	c.state = state
+	c.mutex.Unlock()
+}
+
+// Caps returns the capabilities advertised by the server.
+//
+// When the server hasn't sent the capability list, this method will request it
+// and block until it's received. If the capabilities cannot be fetched, nil is
+// returned.
+func (c *Client) Caps() imap.CapSet {
+	if err := c.WaitGreeting(); err != nil {
+		return nil
+	}
+
+	c.mutex.Lock()
+	caps := c.caps
+	c.mutex.Unlock()
+
+	if caps != nil {
+		return caps
+	}
+
+	caps, _ = c.Capability().Wait()
+	return caps
+}
+
+func (c *Client) setCaps(caps imap.CapSet) {
+	c.mutex.Lock()
+	c.caps = caps
 	c.mutex.Unlock()
 }
 
@@ -439,9 +468,11 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		}
 		switch code {
 		case "CAPABILITY": // capability-data
-			if _, err := readCapabilities(c.dec); err != nil {
-				return nil, err
+			caps, err := readCapabilities(c.dec)
+			if err != nil {
+				return nil, fmt.Errorf("in capability-data: %v", err)
 			}
+			c.setCaps(caps)
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
 				c.dec.Skip(']')
@@ -482,6 +513,13 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		startTLS = cmd
 	}
 
+	if cmdErr == nil && code != "CAPABILITY" {
+		switch cmd.(type) {
+		case *startTLSCommand, *loginCommand, *authenticateCommand:
+			c.setCaps(nil)
+		}
+	}
+
 	return startTLS, nil
 }
 
@@ -513,6 +551,12 @@ func (c *Client) readResponseData(typ string) error {
 				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 			}
 			switch code {
+			case "CAPABILITY": // capability-data
+				caps, err := readCapabilities(c.dec)
+				if err != nil {
+					return fmt.Errorf("in capability-data: %v", err)
+				}
+				c.setCaps(caps)
 			case "PERMANENTFLAGS":
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
@@ -587,6 +631,7 @@ func (c *Client) readResponseData(typ string) error {
 		if err != nil {
 			return err
 		}
+		c.setCaps(caps)
 		if cmd := findPendingCmdByType[*CapabilityCommand](c); cmd != nil {
 			cmd.caps = caps
 		}
