@@ -271,7 +271,7 @@ func (c *Client) completeCommand(cmd command, err error) {
 		if err == nil {
 			c.setState(StateAuthenticated)
 		}
-	case *LogoutCommand:
+	case *logoutCommand:
 		if err == nil {
 			c.setState(StateLogout)
 		}
@@ -681,10 +681,10 @@ func (c *Client) Noop() *Command {
 // Logout sends a LOGOUT command.
 //
 // This command informs the server that the client is done with the connection.
-func (c *Client) Logout() *LogoutCommand {
-	cmd := &LogoutCommand{closer: c}
+func (c *Client) Logout() *Command {
+	cmd := &logoutCommand{}
 	c.beginCommand("LOGOUT", cmd).end()
-	return cmd
+	return &cmd.cmd
 }
 
 // Login sends a LOGIN command.
@@ -860,17 +860,9 @@ type loginCommand struct {
 	cmd
 }
 
-// LogoutCommand is a LOGOUT command.
-type LogoutCommand struct {
+// logoutCommand is a LOGOUT command.
+type logoutCommand struct {
 	cmd
-	closer io.Closer
-}
-
-func (cmd *LogoutCommand) Wait() error {
-	if err := cmd.cmd.Wait(); err != nil {
-		return err
-	}
-	return cmd.closer.Close()
 }
 
 func readFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
