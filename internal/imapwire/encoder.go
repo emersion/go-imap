@@ -96,7 +96,7 @@ func (enc *Encoder) Number64(v int64) *Encoder {
 }
 
 // List writes a parenthesized list.
-func (enc *Encoder) List(n int, f func(i int)) {
+func (enc *Encoder) List(n int, f func(i int)) *Encoder {
 	enc.Special('(')
 	for i := 0; i < n; i++ {
 		if i > 0 {
@@ -105,6 +105,7 @@ func (enc *Encoder) List(n int, f func(i int)) {
 		f(i)
 	}
 	enc.Special(')')
+	return enc
 }
 
 // Literal writes a literal.
