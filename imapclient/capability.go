@@ -3,6 +3,7 @@ package imapclient
 import (
 	"fmt"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -16,22 +17,22 @@ func (c *Client) Capability() *CapabilityCommand {
 // CapabilityCommand is a CAPABILITY command.
 type CapabilityCommand struct {
 	cmd
-	caps map[string]struct{}
+	caps imap.CapSet
 }
 
-func (cmd *CapabilityCommand) Wait() (map[string]struct{}, error) {
+func (cmd *CapabilityCommand) Wait() (imap.CapSet, error) {
 	err := cmd.cmd.Wait()
 	return cmd.caps, err
 }
 
-func readCapabilities(dec *imapwire.Decoder) (map[string]struct{}, error) {
-	caps := make(map[string]struct{})
+func readCapabilities(dec *imapwire.Decoder) (imap.CapSet, error) {
+	caps := make(imap.CapSet)
 	for dec.SP() {
 		var name string
 		if !dec.ExpectAtom(&name) {
 			return caps, fmt.Errorf("in capability-data: %v", dec.Err())
 		}
-		caps[name] = struct{}{}
+		caps[imap.Cap(name)] = struct{}{}
 	}
 	return caps, nil
 }
