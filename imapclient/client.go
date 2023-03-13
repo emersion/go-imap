@@ -597,6 +597,24 @@ func (c *Client) Rename(mailbox, newName string) *Command {
 	return cmd
 }
 
+// Subscribe sends a SUBSCRIBE command.
+func (c *Client) Subscribe(mailbox string) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("SUBSCRIBE", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
+// Subscribe sends an UNSUBSCRIBE command.
+func (c *Client) Unsubscribe(mailbox string) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("UNSUBSCRIBE", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
 func uidCmdName(name string, uid bool) string {
 	if uid {
 		return "UID " + name
