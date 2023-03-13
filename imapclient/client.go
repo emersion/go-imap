@@ -17,6 +17,37 @@ import (
 
 const dateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
 
+// State describes the client state.
+//
+// See RFC 9051 section 3.
+type State int
+
+const (
+	StateNone State = iota
+	StateNotAuthenticated
+	StateAuthenticated
+	StateSelected
+	StateLogout
+)
+
+// String implements fmt.Stringer.
+func (state State) String() string {
+	switch state {
+	case StateNone:
+		return "none"
+	case StateNotAuthenticated:
+		return "not authenticated"
+	case StateAuthenticated:
+		return "authenticated"
+	case StateSelected:
+		return "selected"
+	case StateLogout:
+		return "logout"
+	default:
+		panic(fmt.Errorf("imapclient: unknown state %v", int(state)))
+	}
+}
+
 // Options contains options for Client.
 type Options struct {
 	// Raw ingress and egress data will be written to this writer, if any
@@ -71,6 +102,7 @@ type Client struct {
 	greetingErr  error
 
 	mutex       sync.Mutex
+	state       State
 	cmdTag      uint64
 	pendingCmds []command
 	contReqs    []continuationRequest
@@ -97,6 +129,7 @@ func New(conn net.Conn, options *Options) *Client {
 		bw:         bw,
 		dec:        imapwire.NewDecoder(br),
 		greetingCh: make(chan struct{}),
+		state:      StateNone,
 	}
 	go client.read()
 	return client
@@ -132,6 +165,19 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 	}
 
 	return client, err
+}
+
+// State returns the current state of the client.
+func (c *Client) State() State {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.state
+}
+
+func (c *Client) setState(state State) {
+	c.mutex.Lock()
+	c.state = state
+	c.mutex.Unlock()
 }
 
 // Close immediately closes the connection.
@@ -213,6 +259,22 @@ func (c *Client) completeCommand(cmd command, err error) {
 	c.mutex.Unlock()
 
 	switch cmd := cmd.(type) {
+	case *authenticateCommand, *loginCommand:
+		if err == nil {
+			c.setState(StateAuthenticated)
+		}
+	case *SelectCommand:
+		if err == nil {
+			c.setState(StateSelected)
+		}
+	case *unselectCommand:
+		if err == nil {
+			c.setState(StateAuthenticated)
+		}
+	case *LogoutCommand:
+		if err == nil {
+			c.setState(StateLogout)
+		}
 	case *ListCommand:
 		close(cmd.mailboxes)
 	case *FetchCommand:
@@ -260,6 +322,7 @@ func (c *Client) read() {
 		c.Close()
 
 		c.mutex.Lock()
+		c.state = StateLogout
 		pendingCmds := c.pendingCmds
 		c.pendingCmds = nil
 		c.mutex.Unlock()
@@ -436,7 +499,7 @@ func (c *Client) readResponseData(typ string) error {
 
 	var unilateralData UnilateralData
 	switch typ {
-	case "OK", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye
+	case "OK", "PREAUTH", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye / resp-cond-auth
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
@@ -495,8 +558,18 @@ func (c *Client) readResponseData(typ string) error {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 
+		if code == "CLOSED" {
+			c.setState(StateAuthenticated)
+		}
+
 		if !c.greetingRecv {
-			if typ != "OK" {
+			switch typ {
+			case "OK":
+				c.setState(StateNotAuthenticated)
+			case "PREAUTH":
+				c.setState(StateAuthenticated)
+			default:
+				c.setState(StateLogout)
 				c.greetingErr = &imap.Error{
 					Type: imap.StatusResponseType(typ),
 					Code: imap.ResponseCode(code),
@@ -616,11 +689,11 @@ func (c *Client) Logout() *LogoutCommand {
 
 // Login sends a LOGIN command.
 func (c *Client) Login(username, password string) *Command {
-	cmd := &Command{}
+	cmd := &loginCommand{}
 	enc := c.beginCommand("LOGIN", cmd)
 	enc.SP().String(username).SP().String(password)
 	enc.end()
-	return cmd
+	return &cmd.cmd
 }
 
 // Create sends a CREATE command.
@@ -782,6 +855,10 @@ func (cmd *Command) Wait() error {
 }
 
 type cmd = Command // type alias to avoid exporting anonymous struct fields
+
+type loginCommand struct {
+	cmd
+}
 
 // LogoutCommand is a LOGOUT command.
 type LogoutCommand struct {

@@ -26,18 +26,18 @@ func (c *Client) Examine(mailbox string) *SelectCommand {
 
 // Unselect sends an UNSELECT command.
 func (c *Client) Unselect() *Command {
-	cmd := &Command{}
+	cmd := &unselectCommand{}
 	c.beginCommand("UNSELECT", cmd).end()
-	return cmd
+	return &cmd.cmd
 }
 
 // UnselectAndExpunge sends a CLOSE command.
 //
 // CLOSE implicitly performs a silent EXPUNGE command.
 func (c *Client) UnselectAndExpunge() *Command {
-	cmd := &Command{}
+	cmd := &unselectCommand{}
 	c.beginCommand("CLOSE", cmd).end()
-	return cmd
+	return &cmd.cmd
 }
 
 // SelectCommand is a SELECT command.
@@ -48,6 +48,10 @@ type SelectCommand struct {
 
 func (cmd *SelectCommand) Wait() (*SelectData, error) {
 	return &cmd.data, cmd.cmd.Wait()
+}
+
+type unselectCommand struct {
+	cmd
 }
 
 // SelectData is the data returned by a SELECT command.
