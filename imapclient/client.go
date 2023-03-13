@@ -588,6 +588,15 @@ func (c *Client) Delete(mailbox string) *Command {
 	return cmd
 }
 
+// Rename sends a RENAME command.
+func (c *Client) Rename(mailbox, newName string) *Command {
+	cmd := &Command{}
+	enc := c.beginCommand("RENAME", cmd)
+	enc.SP().Mailbox(mailbox).SP().Mailbox(newName)
+	enc.end()
+	return cmd
+}
+
 func uidCmdName(name string, uid bool) string {
 	if uid {
 		return "UID " + name
