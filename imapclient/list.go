@@ -13,12 +13,10 @@ import (
 // The caller must fully consume the ListCommand. A simple way to do so is to
 // defer a call to ListCommand.Close.
 func (c *Client) List(ref, pattern string) *ListCommand {
-	// TODO: multiple patterns
 	// TODO: extended variant
 	cmd := &ListCommand{mailboxes: make(chan *ListData, 64)}
 	enc := c.beginCommand("LIST", cmd)
-	// TODO: second arg is mbox-or-pat
-	enc.SP().Mailbox(ref).SP().Atom(pattern)
+	enc.SP().Mailbox(ref).SP().String(pattern)
 	enc.end()
 	return cmd
 }
