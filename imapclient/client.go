@@ -189,23 +189,23 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
-func (c *Client) registerContReq(cmd command) chan error {
-	ch := make(chan error)
+func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
+	contReq := imapwire.NewContinuationRequest()
 
 	c.mutex.Lock()
 	c.contReqs = append(c.contReqs, continuationRequest{
-		ch:  ch,
-		cmd: cmd.base(),
+		ContinuationRequest: contReq,
+		cmd:                 cmd.base(),
 	})
 	c.mutex.Unlock()
 
-	return ch
+	return contReq
 }
 
-func (c *Client) unregisterContReq(ch chan error) {
+func (c *Client) unregisterContReq(contReq *imapwire.ContinuationRequest) {
 	c.mutex.Lock()
 	for i := range c.contReqs {
-		if c.contReqs[i].ch == ch {
+		if c.contReqs[i].ContinuationRequest == contReq {
 			c.contReqs = append(c.contReqs[:i], c.contReqs[i+1:]...)
 			break
 		}
@@ -303,20 +303,19 @@ func (c *Client) readContinueReq() error {
 		return c.dec.Err()
 	}
 
-	var ch chan<- error
+	var contReq *imapwire.ContinuationRequest
 	c.mutex.Lock()
 	if len(c.contReqs) > 0 {
-		ch = c.contReqs[0].ch
+		contReq = c.contReqs[0].ContinuationRequest
 		c.contReqs = append(c.contReqs[:0], c.contReqs[1:]...)
 	}
 	c.mutex.Unlock()
 
-	if ch == nil {
+	if contReq == nil {
 		return fmt.Errorf("received unmatched continuation request")
 	}
 
-	ch <- nil
-	close(ch)
+	contReq.Done(text)
 	return nil
 }
 
@@ -375,10 +374,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		if contReq.cmd != cmd.base() {
 			filtered = append(filtered, contReq)
 		} else {
-			if cmdErr != nil {
-				contReq.ch <- cmdErr
-			}
-			close(contReq.ch)
+			contReq.Cancel(cmdErr)
 		}
 	}
 	c.contReqs = filtered
@@ -566,7 +562,7 @@ func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
 
 // continuationRequest is a pending continuation request.
 type continuationRequest struct {
-	ch  chan error
+	*imapwire.ContinuationRequest
 	cmd *Command
 }
 
