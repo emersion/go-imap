@@ -296,7 +296,10 @@ func (c *Client) readResponse() error {
 
 func (c *Client) readContinueReq() error {
 	var text string
-	if !c.dec.ExpectSP() || !c.dec.ExpectText(&text) || !c.dec.ExpectCRLF() {
+	if c.dec.SP() {
+		c.dec.Text(&text)
+	}
+	if !c.dec.ExpectCRLF() {
 		return c.dec.Err()
 	}
 
