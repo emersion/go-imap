@@ -54,8 +54,12 @@ func (cmd *SelectCommand) Wait() (*SelectData, error) {
 type SelectData struct {
 	// Flags defined for this mailbox
 	Flags []imap.Flag
+	// Flags that the client can change permanently
+	PermanentFlags []imap.Flag
 	// Number of messages in this mailbox (aka. "EXISTS")
 	NumMessages uint32
+	UIDNext     uint32
+	UIDValidity uint32
 
-	// TODO: LIST, PERMANENTFLAGS, UIDNEXT, UIDVALIDITY
+	// TODO: LIST
 }
