@@ -16,14 +16,13 @@ func (c *Client) Idle() (*IdleCommand, error) {
 	cmd.enc = c.beginCommand("IDLE", cmd)
 	cmd.enc.flush()
 
-	select {
-	case <-contReq:
-		return cmd, nil
-	case err := <-cmd.done:
-		c.unregisterContReq(contReq)
+	_, err := contReq.Wait()
+	if err != nil {
 		cmd.enc.end()
 		return nil, err
 	}
+
+	return cmd, nil
 }
 
 // IdleCommand is an IDLE command.

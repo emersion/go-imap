@@ -114,7 +114,7 @@ func (enc *Encoder) List(n int, f func(i int)) {
 // If sync is non-nil, the literal is synchronizing: the encoder will wait for
 // nil to be sent to the channel before writing the literal data. If an error
 // is sent to the channel, the literal will be cancelled.
-func (enc *Encoder) Literal(size int64, sync <-chan error) io.WriteCloser {
+func (enc *Encoder) Literal(size int64, sync *ContinuationRequest) io.WriteCloser {
 	// TODO: literal8
 	enc.writeString("{")
 	enc.Number64(size)
@@ -129,11 +129,7 @@ func (enc *Encoder) Literal(size int64, sync <-chan error) io.WriteCloser {
 		if err := enc.CRLF(); err != nil {
 			return errorWriter{err}
 		}
-		err, ok := <-sync
-		if !ok {
-			err = fmt.Errorf("imapwire: literal cancelled")
-		}
-		if err != nil {
+		if _, err := sync.Wait(); err != nil {
 			if enc.err == nil {
 				enc.err = err
 			}
