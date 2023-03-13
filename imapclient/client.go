@@ -516,6 +516,18 @@ func (c *Client) readResponseData(typ string) error {
 		} else {
 			unilateralData = &UnilateralDataExpunge{SeqNum: num}
 		}
+	case "SEARCH":
+		// TODO: handle ESEARCH
+		cmd := findPendingCmdByType[*SearchCommand](c)
+		for c.dec.SP() {
+			num, ok := c.dec.ExpectNumber()
+			if !ok {
+				return c.dec.Err()
+			}
+			if cmd != nil {
+				cmd.data.All.AddNum(num)
+			}
+		}
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
