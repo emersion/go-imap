@@ -276,6 +276,9 @@ func (c *Client) completeCommand(cmd command, err error) {
 			c.setState(StateLogout)
 		}
 	case *ListCommand:
+		if cmd.pendingData != nil {
+			cmd.mailboxes <- cmd.pendingData
+		}
 		close(cmd.mailboxes)
 	case *FetchCommand:
 		close(cmd.msgs)
@@ -617,15 +620,31 @@ func (c *Client) readResponseData(typ string) error {
 			return fmt.Errorf("in LIST: %v", err)
 		}
 		if cmd := findPendingCmdByType[*ListCommand](c); cmd != nil {
-			cmd.mailboxes <- data
+			if cmd.returnStatus {
+				if cmd.pendingData != nil {
+					cmd.mailboxes <- cmd.pendingData
+				}
+				cmd.pendingData = data
+			} else {
+				cmd.mailboxes <- data
+			}
 		}
 	case "STATUS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		cmd := findPendingCmdByType[*StatusCommand](c)
-		if err := readStatus(c.dec, cmd); err != nil {
+		data, err := readStatus(c.dec)
+		if err != nil {
 			return fmt.Errorf("in status: %v", err)
+		}
+		// TODO: pick the first of STATUS or LIST RETURN STATUS
+		statusCmd := findPendingCmdByType[*StatusCommand](c)
+		if statusCmd != nil {
+			statusCmd.data = *data
+		} else if listCmd := findPendingCmdByType[*ListCommand](c); listCmd != nil && listCmd.returnStatus && listCmd.pendingData != nil && listCmd.pendingData.Mailbox == data.Mailbox {
+			listCmd.pendingData.Status = data
+			listCmd.mailboxes <- listCmd.pendingData
+			listCmd.pendingData = nil
 		}
 	case "FETCH":
 		if !c.dec.ExpectSP() {
