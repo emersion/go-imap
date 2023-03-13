@@ -120,6 +120,16 @@ func (s Seq) String() string {
 	return string(strconv.AppendUint(append(b, ':'), uint64(s.Stop), 10))
 }
 
+func (s Seq) append(nums []uint32) (out []uint32, ok bool) {
+	if s.Start == 0 || s.Stop == 0 {
+		return nil, false
+	}
+	for n := s.Start; n <= s.Stop; n++ {
+		nums = append(nums, n)
+	}
+	return nums, true
+}
+
 // SeqSet is used to represent a set of message sequence numbers or UIDs (see
 // sequence-set ABNF rule). The zero value is an empty set.
 type SeqSet []Seq
@@ -189,6 +199,17 @@ func (s SeqSet) Contains(q uint32) bool {
 		return q != 0
 	}
 	return false
+}
+
+// Nums returns a slice of all numbers contained in the sequence set.
+func (s SeqSet) Nums() (nums []uint32, ok bool) {
+	for _, v := range s {
+		nums, ok = v.append(nums)
+		if !ok {
+			return nil, false
+		}
+	}
+	return nums, true
 }
 
 // String returns a sorted representation of all contained sequence values.
