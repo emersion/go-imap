@@ -50,4 +50,7 @@ const (
 	FlagNotJunk   Flag = "$NotJunk"
 	FlagPhishing  Flag = "$Phishing"
 	FlagImportant Flag = "$Important" // RFC 8457
+
+	// Permanent flags
+	FlagWildcard Flag = "\\*"
 )
