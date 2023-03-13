@@ -31,6 +31,15 @@ func (c *Client) Unselect() *Command {
 	return cmd
 }
 
+// UnselectAndExpunge sends a CLOSE command.
+//
+// CLOSE implicitly performs a silent EXPUNGE command.
+func (c *Client) UnselectAndExpunge() *Command {
+	cmd := &Command{}
+	c.beginCommand("CLOSE", cmd).end()
+	return cmd
+}
+
 // SelectCommand is a SELECT command.
 type SelectCommand struct {
 	cmd
