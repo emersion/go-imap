@@ -8,15 +8,80 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
+// ListOptions contains options for the LIST command.
+type ListOptions struct {
+	SelectSubscribed     bool
+	SelectRemote         bool
+	SelectRecursiveMatch bool // requires SelectSubscribed to be set
+
+	ReturnSubscribed bool
+	ReturnChildren   bool
+	ReturnStatus     []StatusItem
+}
+
+func (options *ListOptions) selectOpts() []string {
+	if options == nil {
+		return nil
+	}
+
+	var l []string
+	if options.SelectSubscribed {
+		l = append(l, "SUBSCRIBED")
+	}
+	if options.SelectRemote {
+		l = append(l, "REMOTE")
+	}
+	if options.SelectRecursiveMatch {
+		l = append(l, "RECURSIVEMATCH")
+	}
+	return l
+}
+
+func (options *ListOptions) returnOpts() []string {
+	if options == nil {
+		return nil
+	}
+
+	var l []string
+	if options.ReturnSubscribed {
+		l = append(l, "SUBSCRIBED")
+	}
+	if options.ReturnChildren {
+		l = append(l, "CHILDREN")
+	}
+	if len(options.ReturnStatus) > 0 {
+		l = append(l, "STATUS")
+	}
+	return l
+}
+
 // List sends a LIST command.
 //
 // The caller must fully consume the ListCommand. A simple way to do so is to
 // defer a call to ListCommand.Close.
-func (c *Client) List(ref, pattern string) *ListCommand {
-	// TODO: extended variant
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
+	// TODO: add a way to retrieve STATUS responses from ListCommand
 	cmd := &ListCommand{mailboxes: make(chan *ListData, 64)}
 	enc := c.beginCommand("LIST", cmd)
+	if selectOpts := options.selectOpts(); len(selectOpts) > 0 {
+		enc.SP().List(len(selectOpts), func(i int) {
+			enc.Atom(selectOpts[i])
+		})
+	}
 	enc.SP().Mailbox(ref).SP().String(pattern)
+	if returnOpts := options.returnOpts(); len(returnOpts) > 0 {
+		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
+			opt := returnOpts[i]
+			enc.Atom(opt)
+			if opt == "STATUS" {
+				enc.SP().List(len(options.ReturnStatus), func(j int) {
+					enc.Atom(string(options.ReturnStatus[j]))
+				})
+			}
+		})
+	}
 	enc.end()
 	return cmd
 }
@@ -66,6 +131,14 @@ type ListData struct {
 	Attrs   []imap.MailboxAttr
 	Delim   rune
 	Mailbox string
+
+	// Extended data
+	ChildInfo *ListDataChildInfo
+	OldName   string
+}
+
+type ListDataChildInfo struct {
+	Subscribed bool
 }
 
 func readList(dec *imapwire.Decoder) (*ListData, error) {
@@ -106,7 +179,62 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 		return nil, err
 	}
 
-	// TODO: [SP mbox-list-extended]
+	if dec.SP() {
+		err := dec.ExpectList(func() error {
+			var tag string
+			if !dec.ExpectAString(&tag) || !dec.ExpectSP() {
+				return dec.Err()
+			}
+			var err error
+			switch tag {
+			case "CHILDINFO":
+				data.ChildInfo, err = readChildInfoExtendedItem(dec)
+				if err != nil {
+					return fmt.Errorf("in childinfo-extended-item: %v", err)
+				}
+			case "OLDNAME":
+				data.OldName, err = readOldNameExtendedItem(dec)
+				if err != nil {
+					return fmt.Errorf("in oldname-extended-item: %v", err)
+				}
+			default:
+				return fmt.Errorf("unsupported mbox-list-extended-item-tag %q", tag)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("in mbox-list-extended: %v", err)
+		}
+	}
 
 	return &data, nil
+}
+
+func readChildInfoExtendedItem(dec *imapwire.Decoder) (*ListDataChildInfo, error) {
+	var childInfo ListDataChildInfo
+	err := dec.ExpectList(func() error {
+		var opt string
+		if !dec.ExpectAString(&opt) {
+			return dec.Err()
+		}
+		if opt == "SUBSCRIBED" {
+			childInfo.Subscribed = true
+		}
+		return nil
+	})
+	return &childInfo, err
+}
+
+func readOldNameExtendedItem(dec *imapwire.Decoder) (string, error) {
+	if !dec.ExpectSpecial('(') {
+		return "", dec.Err()
+	}
+	name, err := dec.ExpectMailbox()
+	if err != nil {
+		return "", err
+	}
+	if !dec.ExpectSpecial(')') {
+		return "", dec.Err()
+	}
+	return name, nil
 }
