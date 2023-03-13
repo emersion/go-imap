@@ -189,6 +189,34 @@ func findPendingCmdByType[T interface{}](c *Client) T {
 	return cmd
 }
 
+func (c *Client) completeCommand(cmd command, err error) {
+	done := cmd.base().done
+	done <- err
+	close(done)
+
+	// Ensure the command is not blocked waiting on continuation requests
+	c.mutex.Lock()
+	var filtered []continuationRequest
+	for _, contReq := range c.contReqs {
+		if contReq.cmd != cmd.base() {
+			filtered = append(filtered, contReq)
+		} else {
+			contReq.Cancel(err)
+		}
+	}
+	c.contReqs = filtered
+	c.mutex.Unlock()
+
+	switch cmd := cmd.(type) {
+	case *ListCommand:
+		close(cmd.mailboxes)
+	case *FetchCommand:
+		close(cmd.msgs)
+	case *ExpungeCommand:
+		close(cmd.seqNums)
+	}
+}
+
 func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
 	contReq := imapwire.NewContinuationRequest()
 
@@ -225,7 +253,7 @@ func (c *Client) read() {
 		c.mutex.Unlock()
 
 		for _, cmd := range pendingCmds {
-			cmd.base().done <- io.ErrUnexpectedEOF
+			c.completeCommand(cmd, io.ErrUnexpectedEOF)
 		}
 	}()
 
@@ -363,35 +391,11 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
 
-	done := cmd.base().done
-	done <- cmdErr
-	close(done)
-
-	// Ensure the command is not blocked waiting on continuation requests
-	c.mutex.Lock()
-	var filtered []continuationRequest
-	for _, contReq := range c.contReqs {
-		if contReq.cmd != cmd.base() {
-			filtered = append(filtered, contReq)
-		} else {
-			contReq.Cancel(cmdErr)
-		}
-	}
-	c.contReqs = filtered
-	c.mutex.Unlock()
+	c.completeCommand(cmd, cmdErr)
 
 	var startTLS *startTLSCommand
-	switch cmd := cmd.(type) {
-	case *startTLSCommand:
-		if cmdErr == nil {
-			startTLS = cmd
-		}
-	case *ListCommand:
-		close(cmd.mailboxes)
-	case *FetchCommand:
-		close(cmd.msgs)
-	case *ExpungeCommand:
-		close(cmd.seqNums)
+	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
+		startTLS = cmd
 	}
 
 	return startTLS, nil
