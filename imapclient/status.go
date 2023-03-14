@@ -85,23 +85,23 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 	switch StatusItem(name) {
 	case StatusItemNumMessages:
 		var num uint32
-		num, ok = dec.ExpectNumber()
+		ok = dec.ExpectNumber(&num)
 		data.NumMessages = &num
 	case StatusItemUIDNext:
-		data.UIDNext, ok = dec.ExpectNumber()
+		ok = dec.ExpectNumber(&data.UIDNext)
 	case StatusItemUIDValidity:
-		data.UIDValidity, ok = dec.ExpectNumber()
+		ok = dec.ExpectNumber(&data.UIDValidity)
 	case StatusItemNumUnseen:
 		var num uint32
-		num, ok = dec.ExpectNumber()
+		ok = dec.ExpectNumber(&num)
 		data.NumUnseen = &num
 	case StatusItemNumDeleted:
 		var num uint32
-		num, ok = dec.ExpectNumber()
+		ok = dec.ExpectNumber(&num)
 		data.NumDeleted = &num
 	case StatusItemSize:
 		var size int64
-		size, ok = dec.ExpectNumber64()
+		ok = dec.ExpectNumber64(&size)
 		data.Size = &size
 	default:
 		// TODO: skip tagged-ext

@@ -572,8 +572,8 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				uidNext, ok := c.dec.ExpectNumber()
-				if !ok {
+				var uidNext uint32
+				if !c.dec.ExpectNumber(&uidNext) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
@@ -583,8 +583,8 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				uidValidity, ok := c.dec.ExpectNumber()
-				if !ok {
+				var uidValidity uint32
+				if !c.dec.ExpectNumber(&uidValidity) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
@@ -710,8 +710,8 @@ func (c *Client) readResponseData(typ string) error {
 		// TODO: handle ESEARCH
 		cmd := findPendingCmdByType[*SearchCommand](c)
 		for c.dec.SP() {
-			num, ok := c.dec.ExpectNumber()
-			if !ok {
+			var num uint32
+			if !c.dec.ExpectNumber(&num) {
 				return c.dec.Err()
 			}
 			if cmd != nil {

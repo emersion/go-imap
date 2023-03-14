@@ -701,23 +701,15 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 
 			item = FetchItemDataInternalDate{Time: t}
 		case FetchItemRFC822Size:
-			if !dec.ExpectSP() {
-				return dec.Err()
-			}
-
-			size, ok := dec.ExpectNumber64()
-			if !ok {
+			var size int64
+			if !dec.ExpectSP() || !dec.ExpectNumber64(&size) {
 				return dec.Err()
 			}
 
 			item = FetchItemDataRFC822Size{Size: size}
 		case FetchItemUID:
-			if !dec.ExpectSP() {
-				return dec.Err()
-			}
-
-			uid, ok := dec.ExpectNumber()
-			if !ok {
+			var uid uint32
+			if !dec.ExpectSP() || !dec.ExpectNumber(&uid) {
 				return dec.Err()
 			}
 
@@ -799,12 +791,8 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				return fmt.Errorf("in section-binary: expected number after dot")
 			}
 
-			if !dec.ExpectSpecial(']') || !dec.ExpectSP() {
-				return dec.Err()
-			}
-
-			size, ok := dec.ExpectNumber()
-			if !ok {
+			var size uint32
+			if !dec.ExpectSpecial(']') || !dec.ExpectSP() || !dec.ExpectNumber(&size) {
 				return dec.Err()
 			}
 
@@ -965,17 +953,11 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 	}
 
 	var description string
-	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectNumber(&bs.Size) {
 		return nil, dec.Err()
 	}
 	// TODO: handle errors
 	bs.Description, _ = options.decodeText(description)
-
-	var ok bool
-	bs.Size, ok = dec.ExpectNumber()
-	if !ok {
-		return nil, dec.Err()
-	}
 
 	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
 		var msg BodyStructureMessageRFC822
@@ -998,12 +980,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 			return nil, err
 		}
 
-		if !dec.ExpectSP() {
-			return nil, dec.Err()
-		}
-
-		msg.NumLines, ok = dec.ExpectNumber64()
-		if !ok {
+		if !dec.ExpectSP() || !dec.ExpectNumber64(&msg.NumLines) {
 			return nil, dec.Err()
 		}
 
@@ -1011,12 +988,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 	} else if strings.EqualFold(bs.Type, "text") {
 		var text BodyStructureText
 
-		if !dec.ExpectSP() {
-			return nil, dec.Err()
-		}
-
-		text.NumLines, ok = dec.ExpectNumber64()
-		if !ok {
+		if !dec.ExpectSP() || !dec.ExpectNumber64(&text.NumLines) {
 			return nil, dec.Err()
 		}
 
@@ -1267,11 +1239,8 @@ func readPartialOffset(dec *imapwire.Decoder) (*uint32, error) {
 	if !dec.Special('<') {
 		return nil, nil
 	}
-	offset, ok := dec.ExpectNumber()
-	if !ok {
-		return nil, dec.Err()
-	}
-	if !dec.ExpectSpecial('>') {
+	var offset uint32
+	if !dec.ExpectNumber(&offset) || !dec.ExpectSpecial('>') {
 		return nil, dec.Err()
 	}
 	return &offset, nil
@@ -1296,8 +1265,8 @@ func readSectionPart(dec *imapwire.Decoder) (part []int, dot bool) {
 			return part, false
 		}
 
-		num, ok := dec.Number()
-		if !ok {
+		var num uint32
+		if !dec.Number(&num) {
 			return part, true
 		}
 		part = append(part, int(num))
