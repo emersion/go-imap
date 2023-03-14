@@ -487,6 +487,19 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 				cmd.data.UID = uid
 				cmd.data.UIDValidity = uidValidity
 			}
+		case "COPYUID":
+			if !c.dec.ExpectSP() {
+				return nil, c.dec.Err()
+			}
+			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+			if err != nil {
+				return nil, fmt.Errorf("in resp-code-copy: %v", err)
+			}
+			if cmd, ok := cmd.(*CopyCommand); ok {
+				cmd.data.UIDValidity = uidValidity
+				cmd.data.SourceUIDs = srcUIDs
+				cmd.data.DestUIDs = dstUIDs
+			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
 				c.dec.Skip(']')
