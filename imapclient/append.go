@@ -39,8 +39,9 @@ func (c *Client) Append(mailbox string, size int64, options *AppendOptions) *App
 // Callers must write the message contents, then call Close.
 type AppendCommand struct {
 	cmd
-	enc *commandEncoder
-	wc  io.WriteCloser
+	enc  *commandEncoder
+	wc   io.WriteCloser
+	data AppendData
 }
 
 func (cmd *AppendCommand) Write(b []byte) (int, error) {
@@ -56,6 +57,11 @@ func (cmd *AppendCommand) Close() error {
 	return err
 }
 
-func (cmd *AppendCommand) Wait() error {
-	return cmd.cmd.Wait()
+func (cmd *AppendCommand) Wait() (*AppendData, error) {
+	return &cmd.data, cmd.cmd.Wait()
+}
+
+// AppendData is the data returned by an APPEND command.
+type AppendData struct {
+	UID, UIDValidity uint32 // requires UIDPLUS or IMAP4rev2
 }
