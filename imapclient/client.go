@@ -458,6 +458,11 @@ func (c *Client) readContinueReq() error {
 }
 
 func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
+	cmd := c.deletePendingCmdByTag(tag)
+	if cmd == nil {
+		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
+	}
+
 	if !c.dec.ExpectSP() {
 		return nil, c.dec.Err()
 	}
@@ -473,6 +478,15 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 				return nil, fmt.Errorf("in capability-data: %v", err)
 			}
 			c.setCaps(caps)
+		case "APPENDUID":
+			var uidValidity, uid uint32
+			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uid) {
+				return nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
+			}
+			if cmd, ok := cmd.(*AppendCommand); ok {
+				cmd.data.UID = uid
+				cmd.data.UIDValidity = uidValidity
+			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
 				c.dec.Skip(']')
@@ -499,11 +513,6 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		}
 	default:
 		return nil, fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
-	}
-
-	cmd := c.deletePendingCmdByTag(tag)
-	if cmd == nil {
-		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
 
 	c.completeCommand(cmd, cmdErr)
