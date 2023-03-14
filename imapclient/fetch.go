@@ -296,7 +296,8 @@ type FetchItemData interface {
 }
 
 var (
-	_ FetchItemData = FetchItemDataSection{}
+	_ FetchItemData = FetchItemDataBodySection{}
+	_ FetchItemData = FetchItemDataBinarySection{}
 	_ FetchItemData = FetchItemDataFlags{}
 	_ FetchItemData = FetchItemDataEnvelope{}
 	_ FetchItemData = FetchItemDataInternalDate{}
@@ -309,21 +310,40 @@ type discarder interface {
 	discard()
 }
 
-var _ discarder = FetchItemDataSection{}
+var (
+	_ discarder = FetchItemDataBodySection{}
+	_ discarder = FetchItemDataBinarySection{}
+)
 
-// FetchItemDataSection holds data returned by FETCH BODY[] and BINARY[].
-type FetchItemDataSection struct {
-	Section FetchItem // either *FetchItemBodySection or *FetchItemBinarySection
+// FetchItemDataBodySection holds data returned by FETCH BODY[].
+type FetchItemDataBodySection struct {
+	Section *FetchItemBodySection
 	Literal LiteralReader
 }
 
-func (item FetchItemDataSection) FetchItem() FetchItem {
+func (item FetchItemDataBodySection) FetchItem() FetchItem {
 	return item.Section
 }
 
-func (FetchItemDataSection) fetchItemData() {}
+func (FetchItemDataBodySection) fetchItemData() {}
 
-func (item FetchItemDataSection) discard() {
+func (item FetchItemDataBodySection) discard() {
+	io.Copy(io.Discard, item.Literal)
+}
+
+// FetchItemDataBinarySection holds data returned by FETCH BINARY[].
+type FetchItemDataBinarySection struct {
+	Section *FetchItemBinarySection
+	Literal LiteralReader
+}
+
+func (item FetchItemDataBinarySection) FetchItem() FetchItem {
+	return item.Section
+}
+
+func (FetchItemDataBinarySection) fetchItemData() {}
+
+func (item FetchItemDataBinarySection) discard() {
 	io.Copy(io.Discard, item.Literal)
 }
 
@@ -621,21 +641,31 @@ type FetchMessageBuffer struct {
 	RFC822Size        int64
 	UID               uint32
 	BodyStructure     BodyStructure
-	Section           map[FetchItem][]byte
+	BodySection       map[*FetchItemBodySection][]byte
+	BinarySection     map[*FetchItemBinarySection][]byte
 	BinarySectionSize []FetchItemDataBinarySectionSize
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	switch item := item.(type) {
-	case FetchItemDataSection:
+	case FetchItemDataBodySection:
 		b, err := io.ReadAll(item.Literal)
 		if err != nil {
 			return err
 		}
-		if buf.Section == nil {
-			buf.Section = make(map[FetchItem][]byte)
+		if buf.BodySection == nil {
+			buf.BodySection = make(map[*FetchItemBodySection][]byte)
 		}
-		buf.Section[item.FetchItem()] = b
+		buf.BodySection[item.Section] = b
+	case FetchItemDataBinarySection:
+		b, err := io.ReadAll(item.Literal)
+		if err != nil {
+			return err
+		}
+		if buf.BinarySection == nil {
+			buf.BinarySection = make(map[*FetchItemBinarySection][]byte)
+		}
+		buf.BinarySection[item.Section] = b
 	case FetchItemDataFlags:
 		buf.Flags = item.Flags
 	case FetchItemDataEnvelope:
@@ -772,9 +802,17 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 					}
 				}
 
-				item = FetchItemDataSection{
-					Section: section,
-					Literal: fetchLit,
+				switch section := section.(type) {
+				case *FetchItemBodySection:
+					item = FetchItemDataBodySection{
+						Section: section,
+						Literal: fetchLit,
+					}
+				case *FetchItemBinarySection:
+					item = FetchItemDataBinarySection{
+						Section: section,
+						Literal: fetchLit,
+					}
 				}
 				break
 			}
