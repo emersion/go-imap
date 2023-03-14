@@ -233,40 +233,38 @@ func (dec *Decoder) numberStr() (s string, ok bool) {
 	return sb.String(), true
 }
 
-func (dec *Decoder) Number() (v uint32, ok bool) {
+func (dec *Decoder) Number(ptr *uint32) bool {
 	s, ok := dec.numberStr()
 	if !ok {
-		return 0, false
+		return false
 	}
 	v64, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
-		return 0, false // can happen on overflow
+		return false // can happen on overflow
 	}
-	return uint32(v64), true
+	*ptr = uint32(v64)
+	return true
 }
 
-func (dec *Decoder) ExpectNumber() (v uint32, ok bool) {
-	v, ok = dec.Number()
-	dec.Expect(ok, "number")
-	return v, ok
+func (dec *Decoder) ExpectNumber(ptr *uint32) bool {
+	return dec.Expect(dec.Number(ptr), "number")
 }
 
-func (dec *Decoder) Number64() (v int64, ok bool) {
+func (dec *Decoder) Number64(ptr *int64) bool {
 	s, ok := dec.numberStr()
 	if !ok {
-		return 0, false
+		return false
 	}
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return 0, false // can happen on overflow
+		return false // can happen on overflow
 	}
-	return v, true
+	*ptr = v
+	return true
 }
 
-func (dec *Decoder) ExpectNumber64() (v int64, ok bool) {
-	v, ok = dec.Number64()
-	dec.Expect(ok, "number64")
-	return v, ok
+func (dec *Decoder) ExpectNumber64(ptr *int64) bool {
+	return dec.Expect(dec.Number64(ptr), "number64")
 }
 
 func (dec *Decoder) Quoted(ptr *string) bool {
@@ -414,8 +412,8 @@ func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	if !dec.Special('{') {
 		return nil, false, false
 	}
-	size, ok := dec.ExpectNumber64()
-	if !ok {
+	var size int64
+	if !dec.ExpectNumber64(&size) {
 		return nil, false, false
 	}
 	nonSync = dec.acceptByte('+')
