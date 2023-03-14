@@ -291,7 +291,6 @@ func (data *FetchMessageData) Collect() (*FetchMessageBuffer, error) {
 
 // FetchItemData contains a message's FETCH item data.
 type FetchItemData interface {
-	FetchItem() FetchItem
 	fetchItemData()
 }
 
@@ -321,10 +320,6 @@ type FetchItemDataBodySection struct {
 	Literal LiteralReader
 }
 
-func (item FetchItemDataBodySection) FetchItem() FetchItem {
-	return item.Section
-}
-
 func (FetchItemDataBodySection) fetchItemData() {}
 
 func (item FetchItemDataBodySection) discard() {
@@ -335,10 +330,6 @@ func (item FetchItemDataBodySection) discard() {
 type FetchItemDataBinarySection struct {
 	Section *FetchItemBinarySection
 	Literal LiteralReader
-}
-
-func (item FetchItemDataBinarySection) FetchItem() FetchItem {
-	return item.Section
 }
 
 func (FetchItemDataBinarySection) fetchItemData() {}
@@ -352,19 +343,11 @@ type FetchItemDataFlags struct {
 	Flags []imap.Flag
 }
 
-func (FetchItemDataFlags) FetchItem() FetchItem {
-	return FetchItemFlags
-}
-
 func (FetchItemDataFlags) fetchItemData() {}
 
 // FetchItemDataEnvelope holds data returned by FETCH ENVELOPE.
 type FetchItemDataEnvelope struct {
 	Envelope *Envelope
-}
-
-func (FetchItemDataEnvelope) FetchItem() FetchItem {
-	return FetchItemEnvelope
 }
 
 func (FetchItemDataEnvelope) fetchItemData() {}
@@ -374,10 +357,6 @@ type FetchItemDataInternalDate struct {
 	Time time.Time
 }
 
-func (FetchItemDataInternalDate) FetchItem() FetchItem {
-	return FetchItemInternalDate
-}
-
 func (FetchItemDataInternalDate) fetchItemData() {}
 
 // FetchItemDataRFC822Size holds data returned by FETCH RFC822.SIZE.
@@ -385,19 +364,11 @@ type FetchItemDataRFC822Size struct {
 	Size int64
 }
 
-func (FetchItemDataRFC822Size) FetchItem() FetchItem {
-	return FetchItemRFC822Size
-}
-
 func (FetchItemDataRFC822Size) fetchItemData() {}
 
 // FetchItemDataUID holds data returned by FETCH UID.
 type FetchItemDataUID struct {
 	UID uint32
-}
-
-func (FetchItemDataUID) FetchItem() FetchItem {
-	return FetchItemUID
 }
 
 func (FetchItemDataUID) fetchItemData() {}
@@ -409,24 +380,12 @@ type FetchItemDataBodyStructure struct {
 	IsExtended    bool // True if BODYSTRUCTURE, false if BODY
 }
 
-func (item FetchItemDataBodyStructure) FetchItem() FetchItem {
-	if item.IsExtended {
-		return FetchItemBodyStructure
-	} else {
-		return FetchItemBody
-	}
-}
-
 func (FetchItemDataBodyStructure) fetchItemData() {}
 
 // FetchItemDataBinarySectionSize holds data returned by FETCH BINARY.SIZE[].
 type FetchItemDataBinarySectionSize struct {
 	Part []int
 	Size uint32
-}
-
-func (item FetchItemDataBinarySectionSize) FetchItem() FetchItem {
-	return &FetchItemBinarySectionSize{Part: item.Part}
 }
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
