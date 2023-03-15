@@ -657,6 +657,14 @@ func (c *Client) readResponseData(typ string) error {
 		if cmd := findPendingCmdByType[*CapabilityCommand](c); cmd != nil {
 			cmd.caps = caps
 		}
+	case "ENABLED":
+		caps, err := readCapabilities(c.dec)
+		if err != nil {
+			return err
+		}
+		if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
+			cmd.data.Caps = caps
+		}
 	case "FLAGS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
@@ -823,17 +831,6 @@ func (c *Client) Unsubscribe(mailbox string) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("UNSUBSCRIBE", cmd)
 	enc.SP().Mailbox(mailbox)
-	enc.end()
-	return cmd
-}
-
-// Enable sends an ENABLE command.
-func (c *Client) Enable(caps ...imap.Cap) *Command {
-	cmd := &Command{}
-	enc := c.beginCommand("ENABLE", cmd)
-	for _, c := range caps {
-		enc.SP().Atom(string(c))
-	}
 	enc.end()
 	return cmd
 }
