@@ -25,7 +25,7 @@ func (c *Client) store(uid bool, seqSet imap.SeqSet, store *StoreFlags) *FetchCo
 		enc.Atom(".SILENT")
 	}
 	enc.SP().List(len(store.Flags), func(i int) {
-		enc.Atom(string(store.Flags[i]))
+		enc.Flag(store.Flags[i])
 	})
 	enc.end()
 	return cmd

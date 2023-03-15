@@ -138,14 +138,14 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *SearchCriteria) {
 		if k := flagSearchKey(flag); k != "" {
 			enc.SP().Atom(k)
 		} else {
-			enc.SP().Atom("KEYWORD").SP().Atom(string(flag))
+			enc.SP().Atom("KEYWORD").SP().Flag(flag)
 		}
 	}
 	for _, flag := range criteria.NotFlag {
 		if k := flagSearchKey(flag); k != "" {
 			enc.SP().Atom("UN" + k)
 		} else {
-			enc.SP().Atom("UNKEYWORD").SP().Atom(string(flag))
+			enc.SP().Atom("UNKEYWORD").SP().Flag(flag)
 		}
 	}
 
