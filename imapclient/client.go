@@ -53,7 +53,7 @@ type Options struct {
 	// Raw ingress and egress data will be written to this writer, if any
 	DebugWriter io.Writer
 	// Unilateral data handler
-	UnilateralDataFunc UnilateralDataFunc
+	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words
 	WordDecoder *mime.WordDecoder
 }
@@ -560,7 +560,6 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	}
 
-	var unilateralData UnilateralData
 	switch typ {
 	case "OK", "PREAUTH", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye / resp-cond-auth
 		if !c.dec.ExpectSP() {
@@ -694,8 +693,8 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*SelectCommand](c)
 		if cmd != nil {
 			cmd.data.NumMessages = num
-		} else {
-			unilateralData = &UnilateralDataMailbox{NumMessages: &num}
+		} else if handler := c.options.UnilateralDataHandler.Mailbox; handler != nil {
+			handler(&UnilateralDataMailbox{NumMessages: &num})
 		}
 	case "RECENT":
 		// ignore
@@ -748,8 +747,8 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*ExpungeCommand](c)
 		if cmd != nil {
 			cmd.seqNums <- num
-		} else {
-			unilateralData = &UnilateralDataExpunge{SeqNum: num}
+		} else if handler := c.options.UnilateralDataHandler.Expunge; handler != nil {
+			handler(num)
 		}
 	case "SEARCH":
 		// TODO: handle ESEARCH
@@ -765,10 +764,6 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
-	}
-
-	if unilateralData != nil && c.options.UnilateralDataFunc != nil {
-		c.options.UnilateralDataFunc(unilateralData)
 	}
 
 	return nil
@@ -897,18 +892,6 @@ type continuationRequest struct {
 	cmd *Command
 }
 
-// UnilateralData holds unilateral data.
-//
-// Unilateral data is data that the client didn't explicitly request.
-type UnilateralData interface {
-	unilateralData()
-}
-
-var (
-	_ UnilateralData = (*UnilateralDataMailbox)(nil)
-	_ UnilateralData = (*UnilateralDataExpunge)(nil)
-)
-
 // UnilateralDataMailbox describes a mailbox status update.
 //
 // If a field is nil, it hasn't changed.
@@ -916,16 +899,7 @@ type UnilateralDataMailbox struct {
 	NumMessages *uint32
 }
 
-func (*UnilateralDataMailbox) unilateralData() {}
-
-// UnilateralDataExpunge indicates that a message has been deleted.
-type UnilateralDataExpunge struct {
-	SeqNum uint32
-}
-
-func (*UnilateralDataExpunge) unilateralData() {}
-
-// UnilateralDataFunc handles unilateral data.
+// UnilateralDataHandler handles unilateral data.
 //
 // The handler will block the client while running. If the caller intends to
 // perform slow operations, a buffered channel and a separate goroutine should
@@ -933,8 +907,11 @@ func (*UnilateralDataExpunge) unilateralData() {}
 //
 // The handler will be invoked in an arbitrary goroutine.
 //
-// See Options.UnilateralDataFunc.
-type UnilateralDataFunc func(data UnilateralData)
+// See Options.UnilateralDataHandler.
+type UnilateralDataHandler struct {
+	Expunge func(seqNum uint32)
+	Mailbox func(data *UnilateralDataMailbox)
+}
 
 // command is an interface for IMAP commands.
 //
