@@ -5,6 +5,8 @@ import (
 )
 
 // Enable sends an ENABLE command.
+//
+// This command requires support for IMAP4rev2 or the ENABLE extension.
 func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
 	cmd := &EnableCommand{}
 	enc := c.beginCommand("ENABLE", cmd)

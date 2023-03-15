@@ -10,6 +10,8 @@ import (
 // On success, the IDLE command is running and other commands cannot be sent.
 // The caller must invoke IdleCommand.Close to stop IDLE and unblock the
 // client.
+//
+// This command requires support for IMAP4rev2 or the IDLE extension.
 func (c *Client) Idle() (*IdleCommand, error) {
 	cmd := &IdleCommand{}
 	contReq := c.registerContReq(cmd)

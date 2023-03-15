@@ -25,6 +25,8 @@ func (c *Client) Examine(mailbox string) *SelectCommand {
 }
 
 // Unselect sends an UNSELECT command.
+//
+// This command requires support for IMAP4rev2 or the UNSELECT extension.
 func (c *Client) Unselect() *Command {
 	cmd := &unselectCommand{}
 	c.beginCommand("UNSELECT", cmd).end()
