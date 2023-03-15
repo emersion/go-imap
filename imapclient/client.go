@@ -104,6 +104,8 @@ type Client struct {
 	mutex       sync.Mutex
 	state       State
 	caps        imap.CapSet
+	mailbox     string
+	numMessages uint32
 	cmdTag      uint64
 	pendingCmds []command
 	contReqs    []continuationRequest
@@ -178,6 +180,10 @@ func (c *Client) State() State {
 func (c *Client) setState(state State) {
 	c.mutex.Lock()
 	c.state = state
+	if c.state != StateSelected {
+		c.mailbox = ""
+		c.numMessages = 0
+	}
 	c.mutex.Unlock()
 }
 
@@ -207,6 +213,24 @@ func (c *Client) setCaps(caps imap.CapSet) {
 	c.mutex.Lock()
 	c.caps = caps
 	c.mutex.Unlock()
+}
+
+// Mailbox returns the name of the currently selected mailbox.
+//
+// If there is no currently selected mailbox, the empty string is returned.
+func (c *Client) Mailbox() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.mailbox
+}
+
+// NumMessages returns the number of messages in the currently selected mailbox.
+//
+// If there is no currently selected mailbox, 0 is returned.
+func (c *Client) NumMessages() uint32 {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.numMessages
 }
 
 // Close immediately closes the connection.
@@ -294,7 +318,11 @@ func (c *Client) completeCommand(cmd command, err error) {
 		}
 	case *SelectCommand:
 		if err == nil {
-			c.setState(StateSelected)
+			c.mutex.Lock()
+			c.state = StateSelected
+			c.mailbox = cmd.mailbox
+			c.numMessages = cmd.data.NumMessages
+			c.mutex.Unlock()
 		}
 	case *unselectCommand:
 		if err == nil {
@@ -693,8 +721,16 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*SelectCommand](c)
 		if cmd != nil {
 			cmd.data.NumMessages = num
-		} else if handler := c.options.UnilateralDataHandler.Mailbox; handler != nil {
-			handler(&UnilateralDataMailbox{NumMessages: &num})
+		} else {
+			c.mutex.Lock()
+			if c.state == StateSelected {
+				c.numMessages = num
+			}
+			c.mutex.Unlock()
+
+			if handler := c.options.UnilateralDataHandler.Mailbox; handler != nil {
+				handler(&UnilateralDataMailbox{NumMessages: &num})
+			}
 		}
 	case "RECENT":
 		// ignore
@@ -744,6 +780,12 @@ func (c *Client) readResponseData(typ string) error {
 			return fmt.Errorf("in msg-att: %v", err)
 		}
 	case "EXPUNGE":
+		c.mutex.Lock()
+		if c.state == StateSelected && c.numMessages > 0 {
+			c.numMessages--
+		}
+		c.mutex.Unlock()
+
 		cmd := findPendingCmdByType[*ExpungeCommand](c)
 		if cmd != nil {
 			cmd.seqNums <- num
