@@ -24,7 +24,7 @@ func (c *Client) Append(mailbox string, size int64, options *AppendOptions) *App
 	cmd.enc.SP().Mailbox(mailbox).SP()
 	if options != nil && len(options.Flags) > 0 {
 		cmd.enc.List(len(options.Flags), func(i int) {
-			cmd.enc.Atom(string(options.Flags[i]))
+			cmd.enc.Flag(options.Flags[i])
 		}).SP()
 	}
 	if options != nil && !options.Time.IsZero() {

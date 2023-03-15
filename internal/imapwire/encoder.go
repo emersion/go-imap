@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
@@ -84,6 +85,28 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 		name, _ = utf7.Encoding.NewEncoder().String(name)
 		return enc.String(name)
 	}
+}
+
+func (enc *Encoder) Flag(flag imap.Flag) *Encoder {
+	if flag != "\\*" {
+		for i := 0; i < len(flag); i++ {
+			ch := flag[i]
+			valid := false
+			switch ch {
+			case '\\':
+				valid = i == 0
+			default:
+				valid = IsAtomChar(ch)
+			}
+			if !valid {
+				if enc.err == nil {
+					enc.err = fmt.Errorf("imapwire: character '%v' not allowed in flag", string(ch))
+				}
+				return enc
+			}
+		}
+	}
+	return enc.Atom(string(flag))
 }
 
 func (enc *Encoder) Number(v uint32) *Encoder {
