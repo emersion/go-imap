@@ -83,6 +83,13 @@ func (options *Options) decodeText(s string) (string, error) {
 	return out, nil
 }
 
+func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
+	if options.UnilateralDataHandler == nil {
+		return &UnilateralDataHandler{}
+	}
+	return options.UnilateralDataHandler
+}
+
 // Client is an IMAP client.
 //
 // IMAP commands are exposed as methods. These methods will block until the
@@ -728,7 +735,7 @@ func (c *Client) readResponseData(typ string) error {
 			}
 			c.mutex.Unlock()
 
-			if handler := c.options.UnilateralDataHandler.Mailbox; handler != nil {
+			if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
 				handler(&UnilateralDataMailbox{NumMessages: &num})
 			}
 		}
@@ -789,7 +796,7 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*ExpungeCommand](c)
 		if cmd != nil {
 			cmd.seqNums <- num
-		} else if handler := c.options.UnilateralDataHandler.Expunge; handler != nil {
+		} else if handler := c.options.unilateralDataHandler().Expunge; handler != nil {
 			handler(num)
 		}
 	case "SEARCH":
