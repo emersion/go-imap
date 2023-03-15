@@ -13,6 +13,8 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 }
 
 // Move sends a MOVE command.
+//
+// This command requires support for IMAP4rev2 or the MOVE extension.
 func (c *Client) Move(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 	return c.move(false, seqSet, mailbox)
 }
@@ -20,6 +22,8 @@ func (c *Client) Move(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 // UIDMove sends a UID MOVE command.
 //
 // See Move.
+//
+// This command requires support for IMAP4rev2 or the MOVE extension.
 func (c *Client) UIDMove(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 	return c.move(true, seqSet, mailbox)
 }

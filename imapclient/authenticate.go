@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-sasl"
+
+	"github.com/emersion/go-imap/v2"
 )
 
 // Authenticate sends an AUTHENTICATE command.
@@ -20,8 +22,9 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 	contReq := c.registerContReq(cmd)
 	enc := c.beginCommand("AUTHENTICATE", cmd)
 	enc.SP().Atom(mech)
-	if initialResp != nil {
+	if initialResp != nil && c.Caps().Has(imap.CapSASLIR) {
 		enc.SP().Atom(encodeSASL(initialResp))
+		initialResp = nil
 	}
 	enc.flush()
 	defer enc.end()

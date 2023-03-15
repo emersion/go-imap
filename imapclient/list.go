@@ -16,7 +16,7 @@ type ListOptions struct {
 
 	ReturnSubscribed bool
 	ReturnChildren   bool
-	ReturnStatus     []StatusItem
+	ReturnStatus     []StatusItem // requires IMAP4rev2 or LIST-STATUS
 }
 
 func (options *ListOptions) selectOpts() []string {
@@ -61,6 +61,9 @@ func (options *ListOptions) returnOpts() []string {
 // defer a call to ListCommand.Close.
 //
 // A nil options pointer is equivalent to a zero options value.
+//
+// A non-zero options value requires support for IMAP4rev2 or the LIST-EXTENDED
+// extension.
 func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
 	cmd := &ListCommand{
 		mailboxes:    make(chan *ListData, 64),
