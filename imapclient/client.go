@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime"
 	"net"
+	"runtime/debug"
 	"strconv"
 	"sync"
 
@@ -384,6 +385,7 @@ func (c *Client) read() {
 		if v := recover(); v != nil {
 			// TODO: handle error
 			log.Println(v)
+			log.Println(string(debug.Stack()))
 		}
 
 		c.Close()
