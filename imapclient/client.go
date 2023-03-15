@@ -716,6 +716,8 @@ func (c *Client) readResponseData(typ string) error {
 			} else {
 				cmd.mailboxes <- data
 			}
+		} else if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil && cmd.mailbox == data.Mailbox {
+			cmd.data.List = data
 		}
 	case "STATUS":
 		if !c.dec.ExpectSP() {
