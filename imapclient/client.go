@@ -612,6 +612,19 @@ func (c *Client) readResponseData(typ string) error {
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
 					cmd.data.UIDValidity = uidValidity
 				}
+			case "COPYUID":
+				if !c.dec.ExpectSP() {
+					return c.dec.Err()
+				}
+				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+				if err != nil {
+					return fmt.Errorf("in resp-code-copy: %v", err)
+				}
+				if cmd := findPendingCmdByType[*MoveCommand](c); cmd != nil {
+					cmd.data.UIDValidity = uidValidity
+					cmd.data.SourceUIDs = srcUIDs
+					cmd.data.DestUIDs = dstUIDs
+				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
 					c.dec.Skip(']')
