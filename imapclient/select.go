@@ -6,7 +6,7 @@ import (
 
 // Select sends a SELECT command.
 func (c *Client) Select(mailbox string) *SelectCommand {
-	cmd := &SelectCommand{}
+	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand("SELECT", cmd)
 	enc.SP().Mailbox(mailbox)
 	enc.end()
@@ -17,7 +17,7 @@ func (c *Client) Select(mailbox string) *SelectCommand {
 //
 // See Select.
 func (c *Client) Examine(mailbox string) *SelectCommand {
-	cmd := &SelectCommand{}
+	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand("EXAMINE", cmd)
 	enc.SP().Mailbox(mailbox)
 	enc.end()
@@ -43,7 +43,8 @@ func (c *Client) UnselectAndExpunge() *Command {
 // SelectCommand is a SELECT command.
 type SelectCommand struct {
 	cmd
-	data SelectData
+	mailbox string
+	data    SelectData
 }
 
 func (cmd *SelectCommand) Wait() (*SelectData, error) {
@@ -65,5 +66,5 @@ type SelectData struct {
 	UIDNext     uint32
 	UIDValidity uint32
 
-	// TODO: LIST
+	List *ListData // requires IMAP4rev2
 }
