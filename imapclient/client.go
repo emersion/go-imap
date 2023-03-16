@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"mime"
 	"net"
 	"runtime/debug"
@@ -122,6 +121,9 @@ type Client struct {
 	greetingRecv bool
 	greetingErr  error
 
+	decCh  chan struct{}
+	decErr error
+
 	mutex       sync.Mutex
 	state       State
 	caps        imap.CapSet
@@ -129,6 +131,7 @@ type Client struct {
 	cmdTag      uint64
 	pendingCmds []command
 	contReqs    []continuationRequest
+	closed      bool
 }
 
 // New creates a new IMAP client.
@@ -152,6 +155,7 @@ func New(conn net.Conn, options *Options) *Client {
 		bw:         bw,
 		dec:        imapwire.NewDecoder(br),
 		greetingCh: make(chan struct{}),
+		decCh:      make(chan struct{}),
 		state:      StateNone,
 	}
 	go client.read()
@@ -247,7 +251,25 @@ func (c *Client) Mailbox() *SelectedMailbox {
 
 // Close immediately closes the connection.
 func (c *Client) Close() error {
-	return c.conn.Close()
+	c.mutex.Lock()
+	alreadyClosed := c.closed
+	c.closed = true
+	c.mutex.Unlock()
+
+	// Ignore net.ErrClosed here, because we also call conn.Close in c.read
+	if err := c.conn.Close(); err != nil && err != net.ErrClosed {
+		return err
+	}
+
+	<-c.decCh
+	if err := c.decErr; err != nil {
+		return err
+	}
+
+	if alreadyClosed {
+		return net.ErrClosed
+	}
+	return nil
 }
 
 // beginCommand starts sending a command to the server.
@@ -389,14 +411,13 @@ func (c *Client) unregisterContReq(contReq *imapwire.ContinuationRequest) {
 // All the data is decoded in the read goroutine, then dispatched via channels
 // to pending commands.
 func (c *Client) read() {
+	defer close(c.decCh)
 	defer func() {
 		if v := recover(); v != nil {
-			// TODO: handle error
-			log.Println(v)
-			log.Println(string(debug.Stack()))
+			c.decErr = fmt.Errorf("imapclient: panic reading response: %v\n%s", v, debug.Stack())
 		}
 
-		c.Close()
+		c.conn.Close()
 
 		c.mutex.Lock()
 		c.state = StateLogout
@@ -404,8 +425,12 @@ func (c *Client) read() {
 		c.pendingCmds = nil
 		c.mutex.Unlock()
 
+		cmdErr := c.decErr
+		if cmdErr == nil {
+			cmdErr = io.ErrUnexpectedEOF
+		}
 		for _, cmd := range pendingCmds {
-			c.completeCommand(cmd, io.ErrUnexpectedEOF)
+			c.completeCommand(cmd, cmdErr)
 		}
 	}()
 
@@ -414,8 +439,7 @@ func (c *Client) read() {
 			break
 		}
 		if err := c.readResponse(); err != nil {
-			// TODO: handle error
-			log.Println(err)
+			c.decErr = err
 			break
 		}
 		if c.greetingErr != nil {
