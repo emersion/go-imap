@@ -645,15 +645,18 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	return nil
 }
 
-func readMsgAtt(c *Client, seqNum uint32, cmd *FetchCommand) error {
+func readMsgAtt(c *Client, seqNum uint32) error {
 	dec := c.dec
 
 	items := make(chan FetchItemData, 32)
 	defer close(items)
 
 	msg := &FetchMessageData{SeqNum: seqNum, items: items}
-	if cmd != nil {
+
+	if cmd := findPendingCmdByType[*FetchCommand](c); cmd != nil {
 		cmd.msgs <- msg
+	} else if handler := c.options.unilateralDataHandler().Fetch; handler != nil {
+		go handler(msg)
 	} else {
 		go msg.discard()
 	}

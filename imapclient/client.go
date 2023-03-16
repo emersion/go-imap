@@ -869,8 +869,7 @@ func (c *Client) readResponseData(typ string) error {
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		cmd := findPendingCmdByType[*FetchCommand](c)
-		if err := readMsgAtt(c, num, cmd); err != nil {
+		if err := readMsgAtt(c, num); err != nil {
 			return fmt.Errorf("in msg-att: %v", err)
 		}
 	case "EXPUNGE":
@@ -1068,6 +1067,7 @@ type UnilateralDataMailbox struct {
 type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
+	Fetch   func(msg *FetchMessageData)
 }
 
 // command is an interface for IMAP commands.
