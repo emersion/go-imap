@@ -49,6 +49,19 @@ func (state State) String() string {
 	}
 }
 
+// SelectedMailbox contains metadata for the currently selected mailbox.
+type SelectedMailbox struct {
+	Name           string
+	NumMessages    uint32
+	Flags          []imap.Flag
+	PermanentFlags []imap.Flag
+}
+
+func (mbox *SelectedMailbox) copy() *SelectedMailbox {
+	copy := *mbox
+	return &copy
+}
+
 // Options contains options for Client.
 type Options struct {
 	// Raw ingress and egress data will be written to this writer, if any
@@ -112,8 +125,7 @@ type Client struct {
 	mutex       sync.Mutex
 	state       State
 	caps        imap.CapSet
-	mailbox     string
-	numMessages uint32
+	mailbox     *SelectedMailbox
 	cmdTag      uint64
 	pendingCmds []command
 	contReqs    []continuationRequest
@@ -189,8 +201,7 @@ func (c *Client) setState(state State) {
 	c.mutex.Lock()
 	c.state = state
 	if c.state != StateSelected {
-		c.mailbox = ""
-		c.numMessages = 0
+		c.mailbox = nil
 	}
 	c.mutex.Unlock()
 }
@@ -223,22 +234,15 @@ func (c *Client) setCaps(caps imap.CapSet) {
 	c.mutex.Unlock()
 }
 
-// Mailbox returns the name of the currently selected mailbox.
+// Mailbox returns the state of the currently selected mailbox.
 //
-// If there is no currently selected mailbox, the empty string is returned.
-func (c *Client) Mailbox() string {
+// If there is no currently selected mailbox, nil is returned.
+//
+// The returned struct must not be mutated.
+func (c *Client) Mailbox() *SelectedMailbox {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.mailbox
-}
-
-// NumMessages returns the number of messages in the currently selected mailbox.
-//
-// If there is no currently selected mailbox, 0 is returned.
-func (c *Client) NumMessages() uint32 {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.numMessages
 }
 
 // Close immediately closes the connection.
@@ -328,8 +332,12 @@ func (c *Client) completeCommand(cmd command, err error) {
 		if err == nil {
 			c.mutex.Lock()
 			c.state = StateSelected
-			c.mailbox = cmd.mailbox
-			c.numMessages = cmd.data.NumMessages
+			c.mailbox = &SelectedMailbox{
+				Name:           cmd.mailbox,
+				NumMessages:    cmd.data.NumMessages,
+				Flags:          cmd.data.Flags,
+				PermanentFlags: cmd.data.PermanentFlags,
+			}
 			c.mutex.Unlock()
 		}
 	case *unselectCommand:
@@ -623,6 +631,14 @@ func (c *Client) readResponseData(typ string) error {
 				if err != nil {
 					return err
 				}
+
+				c.mutex.Lock()
+				if c.state == StateSelected {
+					c.mailbox = c.mailbox.copy()
+					c.mailbox.PermanentFlags = flags
+				}
+				c.mutex.Unlock()
+
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
 					cmd.data.PermanentFlags = flags
 				}
@@ -722,6 +738,14 @@ func (c *Client) readResponseData(typ string) error {
 		if err != nil {
 			return err
 		}
+
+		c.mutex.Lock()
+		if c.state == StateSelected {
+			c.mailbox = c.mailbox.copy()
+			c.mailbox.PermanentFlags = flags
+		}
+		c.mutex.Unlock()
+
 		cmd := findPendingCmdByType[*SelectCommand](c)
 		if cmd != nil {
 			cmd.data.Flags = flags
@@ -733,7 +757,8 @@ func (c *Client) readResponseData(typ string) error {
 		} else {
 			c.mutex.Lock()
 			if c.state == StateSelected {
-				c.numMessages = num
+				c.mailbox = c.mailbox.copy()
+				c.mailbox.NumMessages = num
 			}
 			c.mutex.Unlock()
 
@@ -790,8 +815,9 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	case "EXPUNGE":
 		c.mutex.Lock()
-		if c.state == StateSelected && c.numMessages > 0 {
-			c.numMessages--
+		if c.state == StateSelected && c.mailbox.NumMessages > 0 {
+			c.mailbox = c.mailbox.copy()
+			c.mailbox.NumMessages--
 		}
 		c.mutex.Unlock()
 
