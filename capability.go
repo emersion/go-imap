@@ -28,6 +28,7 @@ const (
 	CapListStatus   Cap = "LIST-STATUS"   // RFC 5819
 	CapMove         Cap = "MOVE"          // RFC 6851
 	CapLiteralMinus Cap = "LITERAL-"      // RFC 7888
+	CapStatusSize   Cap = "STATUS=SIZE"   // RFC 8438
 
 	CapACL              Cap = "ACL"                // RFC 4314
 	CapAppendLimit      Cap = "APPENDLIMIT"        // RFC 7889
@@ -61,7 +62,6 @@ const (
 	CapSort             Cap = "SORT"               // RFC 5256
 	CapSortDisplay      Cap = "SORT=DISPLAY"       // RFC 5957
 	CapSpecialUse       Cap = "SPECIAL-USE"        // RFC 6154
-	CapStatusSize       Cap = "STATUS=SIZE"        // RFC 8438
 	CapThread           Cap = "THREAD"             // RFC 5256
 	CapUnauthenticate   Cap = "UNAUTHENTICATE"     // RFC 8437
 	CapURLPartial       Cap = "URL-PARTIAL"        // RFC 5550
@@ -82,6 +82,7 @@ var imap4rev2Caps = CapSet{
 	CapListStatus:   {},
 	CapMove:         {},
 	CapLiteralMinus: {},
+	CapStatusSize:   {},
 }
 
 // CapSet is a set of capabilities.

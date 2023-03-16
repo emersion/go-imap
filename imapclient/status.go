@@ -36,8 +36,8 @@ const (
 	StatusItemUIDNext     StatusItem = "UIDNEXT"
 	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
 	StatusItemNumUnseen   StatusItem = "UNSEEN"
-	StatusItemNumDeleted  StatusItem = "DELETED"
-	StatusItemSize        StatusItem = "SIZE"
+	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2
+	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
 )
 
 // StatusData is the data returned by a STATUS command.
