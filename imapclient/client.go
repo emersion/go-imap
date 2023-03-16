@@ -1016,7 +1016,10 @@ func (ce *commandEncoder) flush() {
 
 // Literal encodes a literal.
 func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
-	contReq := ce.client.registerContReq(ce.cmd)
+	var contReq *imapwire.ContinuationRequest
+	if size > 4096 || !ce.client.Caps().Has(imap.CapLiteralMinus) {
+		contReq = ce.client.registerContReq(ce.cmd)
+	}
 	ce.client.setWriteTimeout(literalWriteTimeout)
 	return literalWriter{
 		WriteCloser: ce.Encoder.Literal(size, contReq),
