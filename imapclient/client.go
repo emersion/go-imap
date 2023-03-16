@@ -10,12 +10,19 @@ import (
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 const dateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
+
+const (
+	idleReadTimeout    = time.Duration(0)
+	respReadTimeout    = 30 * time.Second
+	literalReadTimeout = 5 * time.Minute
+)
 
 // State describes the client state.
 //
@@ -192,6 +199,14 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 	}
 
 	return client, err
+}
+
+func (c *Client) setReadTimeout(dur time.Duration) {
+	if dur > 0 {
+		c.conn.SetReadDeadline(time.Now().Add(dur))
+	} else {
+		c.conn.SetReadDeadline(time.Time{})
+	}
 }
 
 // State returns the current state of the client.
@@ -434,6 +449,7 @@ func (c *Client) read() {
 		}
 	}()
 
+	c.setReadTimeout(idleReadTimeout)
 	for {
 		if c.dec.EOF() {
 			break
@@ -449,6 +465,9 @@ func (c *Client) read() {
 }
 
 func (c *Client) readResponse() error {
+	c.setReadTimeout(respReadTimeout)
+	defer c.setReadTimeout(idleReadTimeout)
+
 	if c.dec.Special('+') {
 		if err := c.readContinueReq(); err != nil {
 			return fmt.Errorf("in continue-req: %v", err)
@@ -834,7 +853,7 @@ func (c *Client) readResponseData(typ string) error {
 			return c.dec.Err()
 		}
 		cmd := findPendingCmdByType[*FetchCommand](c)
-		if err := readMsgAtt(c.dec, num, cmd, &c.options); err != nil {
+		if err := readMsgAtt(c, num, cmd); err != nil {
 			return fmt.Errorf("in msg-att: %v", err)
 		}
 	case "EXPUNGE":

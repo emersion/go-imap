@@ -645,7 +645,9 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	return nil
 }
 
-func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options *Options) error {
+func readMsgAtt(c *Client, seqNum uint32, cmd *FetchCommand) error {
+	dec := c.dec
+
 	items := make(chan FetchItemData, 32)
 	defer close(items)
 
@@ -683,7 +685,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				return dec.Err()
 			}
 
-			envelope, err := readEnvelope(dec, options)
+			envelope, err := readEnvelope(dec, &c.options)
 			if err != nil {
 				return fmt.Errorf("in envelope: %v", err)
 			}
@@ -776,7 +778,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 				return dec.Err()
 			}
 
-			bodyStruct, err := readBody(dec, options)
+			bodyStruct, err := readBody(dec, &c.options)
 			if err != nil {
 				return err
 			}
@@ -804,9 +806,13 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
 
+		if done != nil {
+			c.setReadTimeout(literalReadTimeout)
+		}
 		items <- item
 		if done != nil {
 			<-done
+			c.setReadTimeout(respReadTimeout)
 		}
 		return nil
 	})
