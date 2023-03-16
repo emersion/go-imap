@@ -1,5 +1,10 @@
 package imap
 
+import (
+	"strconv"
+	"strings"
+)
+
 // Cap represents an IMAP capability.
 type Cap string
 
@@ -109,6 +114,37 @@ func (set CapSet) Has(c Cap) bool {
 	if c == CapLiteralMinus && set.has(CapLiteralPlus) {
 		return true
 	}
+	if c == CapAppendLimit {
+		_, ok := set.AppendLimit()
+		return ok
+	}
 
 	return false
+}
+
+// AppendLimit checks the APPENDLIMIT capability.
+//
+// If the server supports APPENDLIMIT, ok is true. If the server doesn't have
+// the same upload limit for all mailboxes, limit is nil and per-mailbox
+// limits must be queried via STATUS.
+func (set CapSet) AppendLimit() (limit *uint32, ok bool) {
+	if set.has(CapAppendLimit) {
+		return nil, true
+	}
+
+	for c := range set {
+		if !strings.HasPrefix(string(c), "APPENDLIMIT=") {
+			continue
+		}
+
+		limitStr := strings.TrimPrefix(string(c), "APPENDLIMIT=")
+		limit64, err := strconv.ParseUint(limitStr, 10, 32)
+		if err == nil && limit64 > 0 {
+			limit32 := uint32(limit64)
+			return &limit32, true
+		}
+	}
+
+	limit32 := ^uint32(0)
+	return &limit32, false
 }
