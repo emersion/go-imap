@@ -697,6 +697,8 @@ func (c *Client) readResponseData(typ string) error {
 
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
 					cmd.data.PermanentFlags = flags
+				} else if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
+					handler(&UnilateralDataMailbox{PermanentFlags: flags})
 				}
 			case "UIDNEXT":
 				if !c.dec.ExpectSP() {
@@ -805,6 +807,8 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := findPendingCmdByType[*SelectCommand](c)
 		if cmd != nil {
 			cmd.data.Flags = flags
+		} else if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
+			handler(&UnilateralDataMailbox{Flags: flags})
 		}
 	case "EXISTS":
 		cmd := findPendingCmdByType[*SelectCommand](c)
@@ -1047,7 +1051,9 @@ type continuationRequest struct {
 //
 // If a field is nil, it hasn't changed.
 type UnilateralDataMailbox struct {
-	NumMessages *uint32
+	NumMessages    *uint32
+	Flags          []imap.Flag
+	PermanentFlags []imap.Flag
 }
 
 // UnilateralDataHandler handles unilateral data.
