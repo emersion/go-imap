@@ -38,6 +38,8 @@ const (
 	StatusItemNumUnseen   StatusItem = "UNSEEN"
 	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2
 	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
+
+	StatusItemAppendLimit StatusItem = "APPENDLIMIT" // requires APPENDLIMIT
 )
 
 // StatusData is the data returned by a STATUS command.
@@ -52,6 +54,8 @@ type StatusData struct {
 	NumUnseen   *uint32
 	NumDeleted  *uint32
 	Size        *int64
+
+	AppendLimit *uint32
 }
 
 func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
@@ -103,6 +107,15 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 		var size int64
 		ok = dec.ExpectNumber64(&size)
 		data.Size = &size
+	case StatusItemAppendLimit:
+		var num uint32
+		if dec.Number(&num) {
+			ok = true
+		} else {
+			ok = dec.ExpectNIL()
+			num = ^uint32(0)
+		}
+		data.AppendLimit = &num
 	default:
 		// TODO: skip tagged-ext
 		return fmt.Errorf("unsupported status-att-val %q", name)
