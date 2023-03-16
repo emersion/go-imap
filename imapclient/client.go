@@ -22,6 +22,9 @@ const (
 	idleReadTimeout    = time.Duration(0)
 	respReadTimeout    = 30 * time.Second
 	literalReadTimeout = 5 * time.Minute
+
+	respWriteTimeout    = 30 * time.Second
+	literalWriteTimeout = 5 * time.Minute
 )
 
 // State describes the client state.
@@ -209,6 +212,14 @@ func (c *Client) setReadTimeout(dur time.Duration) {
 	}
 }
 
+func (c *Client) setWriteTimeout(dur time.Duration) {
+	if dur > 0 {
+		c.conn.SetWriteDeadline(time.Now().Add(dur))
+	} else {
+		c.conn.SetWriteDeadline(time.Time{})
+	}
+}
+
 // State returns the current state of the client.
 func (c *Client) State() State {
 	c.mutex.Lock()
@@ -300,6 +311,8 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	tag := fmt.Sprintf("T%v", c.cmdTag)
 	c.pendingCmds = append(c.pendingCmds, cmd)
 	c.mutex.Unlock()
+
+	c.setWriteTimeout(respWriteTimeout)
 
 	baseCmd := cmd.base()
 	*baseCmd = Command{
@@ -986,6 +999,7 @@ func (ce *commandEncoder) end() {
 	if ce.Encoder != nil {
 		ce.flush()
 	}
+	ce.client.setWriteTimeout(0)
 	ce.client.encMutex.Unlock()
 }
 
@@ -1003,7 +1017,21 @@ func (ce *commandEncoder) flush() {
 // Literal encodes a literal.
 func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
 	contReq := ce.client.registerContReq(ce.cmd)
-	return ce.Encoder.Literal(size, contReq)
+	ce.client.setWriteTimeout(literalWriteTimeout)
+	return literalWriter{
+		WriteCloser: ce.Encoder.Literal(size, contReq),
+		client:      ce.client,
+	}
+}
+
+type literalWriter struct {
+	io.WriteCloser
+	client *Client
+}
+
+func (lw literalWriter) Close() error {
+	lw.client.setWriteTimeout(respWriteTimeout)
+	return lw.WriteCloser.Close()
 }
 
 // continuationRequest is a pending continuation request.
