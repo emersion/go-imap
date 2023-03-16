@@ -653,7 +653,7 @@ func readMsgAtt(dec *imapwire.Decoder, seqNum uint32, cmd *FetchCommand, options
 	if cmd != nil {
 		cmd.msgs <- msg
 	} else {
-		defer msg.discard()
+		go msg.discard()
 	}
 
 	return dec.ExpectList(func() error {
