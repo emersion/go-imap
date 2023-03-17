@@ -5,16 +5,38 @@ import (
 )
 
 func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand {
+	// If the server doesn't support MOVE, fallback to [UID] COPY,
+	// [UID] STORE +FLAGS.SILENT \Deleted and [UID] EXPUNGE
+	cmdName := "MOVE"
+	if !c.Caps().Has(imap.CapMove) {
+		cmdName = "COPY"
+	}
+
 	cmd := &MoveCommand{}
-	enc := c.beginCommand(uidCmdName("MOVE", uid), cmd)
+	enc := c.beginCommand(uidCmdName(cmdName, uid), cmd)
 	enc.SP().Atom(seqSet.String()).SP().Mailbox(mailbox)
 	enc.end()
+
+	if cmdName == "COPY" {
+		cmd.store = c.store(uid, seqSet, &StoreFlags{
+			Op:     StoreFlagsAdd,
+			Silent: true,
+			Flags:  []imap.Flag{imap.FlagDeleted},
+		})
+		if uid && c.Caps().Has(imap.CapUIDPlus) {
+			cmd.expunge = c.UIDExpunge(seqSet)
+		} else {
+			cmd.expunge = c.Expunge()
+		}
+	}
+
 	return cmd
 }
 
 // Move sends a MOVE command.
 //
-// This command requires support for IMAP4rev2 or the MOVE extension.
+// If the server doesn't support IMAP4rev2 nor the MOVE extension, a fallback
+// with COPY + STORE + EXPUNGE commands is used.
 func (c *Client) Move(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 	return c.move(false, seqSet, mailbox)
 }
@@ -22,8 +44,6 @@ func (c *Client) Move(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 // UIDMove sends a UID MOVE command.
 //
 // See Move.
-//
-// This command requires support for IMAP4rev2 or the MOVE extension.
 func (c *Client) UIDMove(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 	return c.move(true, seqSet, mailbox)
 }
@@ -32,10 +52,27 @@ func (c *Client) UIDMove(seqSet imap.SeqSet, mailbox string) *MoveCommand {
 type MoveCommand struct {
 	cmd
 	data MoveData
+
+	// Fallback
+	store   *FetchCommand
+	expunge *ExpungeCommand
 }
 
 func (cmd *MoveCommand) Wait() (*MoveData, error) {
-	return &cmd.data, cmd.cmd.Wait()
+	if err := cmd.cmd.Wait(); err != nil {
+		return nil, err
+	}
+	if cmd.store != nil {
+		if err := cmd.store.Close(); err != nil {
+			return nil, err
+		}
+	}
+	if cmd.expunge != nil {
+		if err := cmd.expunge.Close(); err != nil {
+			return nil, err
+		}
+	}
+	return &cmd.data, nil
 }
 
 // MoveData contains the data returned by a MOVE command.
