@@ -119,7 +119,8 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 // IMAP commands are exposed as methods. These methods will block until the
 // command has been sent to the server, but won't block until the server sends
 // a response. They return a command struct which can be used to wait for the
-// server response.
+// server response. This can be used to execute multiple commands concurrently,
+// however care must be taken to avoid ambiguities. See RFC 9051 section 5.5.
 type Client struct {
 	conn     net.Conn
 	options  Options
