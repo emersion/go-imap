@@ -615,7 +615,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
-				c.dec.Skip(']')
+				c.dec.DiscardUntilByte(']')
 			}
 		}
 		if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
@@ -749,7 +749,7 @@ func (c *Client) readResponseData(typ string) error {
 				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
-					c.dec.Skip(']')
+					c.dec.DiscardUntilByte(']')
 				}
 			}
 			if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {

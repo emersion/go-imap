@@ -203,7 +203,7 @@ func (dec *Decoder) ExpectText(ptr *string) bool {
 	return dec.Expect(dec.Text(ptr), "text")
 }
 
-func (dec *Decoder) Skip(untilCh byte) {
+func (dec *Decoder) DiscardUntilByte(untilCh byte) {
 	for {
 		ch, ok := dec.readByte()
 		if !ok {
