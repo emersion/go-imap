@@ -1,5 +1,7 @@
 # go-imap
 
+[![builds.sr.ht status](https://builds.sr.ht/~emersion/go-imap/commits/v2.svg)](https://builds.sr.ht/~emersion/go-imap/commits/v2?)
+
 An [IMAP4rev2] library for Go.
 
 ## License
