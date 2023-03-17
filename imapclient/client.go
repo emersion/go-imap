@@ -341,6 +341,18 @@ func (c *Client) deletePendingCmdByTag(tag string) command {
 	return nil
 }
 
+func (c *Client) findPendingCmdFunc(f func(cmd command) bool) command {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, cmd := range c.pendingCmds {
+		if f(cmd) {
+			return cmd
+		}
+	}
+	return nil
+}
+
 func findPendingCmdByType[T interface{}](c *Client) T {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -856,14 +868,24 @@ func (c *Client) readResponseData(typ string) error {
 		if err != nil {
 			return fmt.Errorf("in status: %v", err)
 		}
-		// TODO: pick the first of STATUS or LIST RETURN STATUS
-		statusCmd := findPendingCmdByType[*StatusCommand](c)
-		if statusCmd != nil {
-			statusCmd.data = *data
-		} else if listCmd := findPendingCmdByType[*ListCommand](c); listCmd != nil && listCmd.returnStatus && listCmd.pendingData != nil && listCmd.pendingData.Mailbox == data.Mailbox {
-			listCmd.pendingData.Status = data
-			listCmd.mailboxes <- listCmd.pendingData
-			listCmd.pendingData = nil
+
+		cmd := c.findPendingCmdFunc(func(cmd command) bool {
+			switch cmd := cmd.(type) {
+			case *StatusCommand:
+				return true
+			case *ListCommand:
+				return cmd.returnStatus && cmd.pendingData != nil && cmd.pendingData.Mailbox == data.Mailbox
+			default:
+				return false
+			}
+		})
+		switch cmd := cmd.(type) {
+		case *StatusCommand:
+			cmd.data = *data
+		case *ListCommand:
+			cmd.pendingData.Status = data
+			cmd.mailboxes <- cmd.pendingData
+			cmd.pendingData = nil
 		}
 	case "FETCH":
 		if !c.dec.ExpectSP() {
