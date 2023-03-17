@@ -800,6 +800,17 @@ func (c *Client) readResponseData(typ string) error {
 		if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
 			cmd.data.Caps = caps
 		}
+	case "NAMESPACE":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		data, err := readNamespaceResponse(c.dec)
+		if err != nil {
+			return fmt.Errorf("in namespace-response: %v", err)
+		}
+		if cmd := findPendingCmdByType[*NamespaceCommand](c); cmd != nil {
+			cmd.data = *data
+		}
 	case "FLAGS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()

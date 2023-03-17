@@ -169,15 +169,9 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 		return nil, dec.Err()
 	}
 
-	var delimStr string
-	if dec.Quoted(&delimStr) {
-		delim, size := utf8.DecodeRuneInString(delimStr)
-		if delim == utf8.RuneError || size != len(delimStr) {
-			return nil, fmt.Errorf("mailbox delimiter must be a single rune")
-		}
-		data.Delim = delim
-	} else if !dec.ExpectNIL() {
-		return nil, dec.Err()
+	data.Delim, err = readDelim(dec)
+	if err != nil {
+		return nil, err
 	}
 
 	if !dec.ExpectSP() {
@@ -246,4 +240,19 @@ func readOldNameExtendedItem(dec *imapwire.Decoder) (string, error) {
 		return "", dec.Err()
 	}
 	return name, nil
+}
+
+func readDelim(dec *imapwire.Decoder) (rune, error) {
+	var delimStr string
+	if dec.Quoted(&delimStr) {
+		delim, size := utf8.DecodeRuneInString(delimStr)
+		if delim == utf8.RuneError || size != len(delimStr) {
+			return 0, fmt.Errorf("mailbox delimiter must be a single rune")
+		}
+		return delim, nil
+	} else if !dec.ExpectNIL() {
+		return 0, dec.Err()
+	} else {
+		return 0, nil
+	}
 }
