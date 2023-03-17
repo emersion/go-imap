@@ -1,3 +1,4 @@
+// Package imapclient implements an IMAP client.
 package imapclient
 
 import (

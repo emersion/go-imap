@@ -1,6 +1,9 @@
-// Package IMAP implements IMAP4rev2.
+// Package imap implements IMAP4rev2.
 //
 // IMAP4rev2 is defined in RFC 9051.
+//
+// This package contains types and functions common to both the client and
+// server. See the imapclient and imapserver sub-packages.
 package imap
 
 // MailboxAttr is a mailbox attribute.
