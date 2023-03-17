@@ -201,7 +201,9 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 					return fmt.Errorf("in oldname-extended-item: %v", err)
 				}
 			default:
-				return fmt.Errorf("unsupported mbox-list-extended-item-tag %q", tag)
+				if !dec.DiscardValue() {
+					return fmt.Errorf("in tagged-ext-val: %v", err)
+				}
 			}
 			return nil
 		})

@@ -96,7 +96,12 @@ func readNamespaceDescr(dec *imapwire.Decoder) (*NamespaceDescriptor, error) {
 		return nil, err
 	}
 
-	// TODO: namespace-response-extensions
+	// Skip namespace-response-extensions
+	for dec.SP() {
+		if !dec.DiscardValue() {
+			return nil, dec.Err()
+		}
+	}
 
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()

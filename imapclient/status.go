@@ -118,8 +118,9 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 		}
 		data.AppendLimit = &num
 	default:
-		// TODO: skip tagged-ext
-		return fmt.Errorf("unsupported status-att-val %q", name)
+		if !dec.DiscardValue() {
+			return dec.Err()
+		}
 	}
 	if !ok {
 		return dec.Err()

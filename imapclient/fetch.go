@@ -999,7 +999,12 @@ func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
 		return nil, fmt.Errorf("in %v: %v", token, err)
 	}
 
-	// TODO: skip all unread fields until ')'
+	for dec.SP() {
+		if !dec.DiscardValue() {
+			return nil, dec.Err()
+		}
+	}
+
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()
 	}

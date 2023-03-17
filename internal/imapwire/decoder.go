@@ -215,6 +215,32 @@ func (dec *Decoder) DiscardUntilByte(untilCh byte) {
 	}
 }
 
+func (dec *Decoder) DiscardValue() bool {
+	var s string
+	if dec.String(&s) {
+		return true
+	}
+
+	isList, err := dec.List(func() error {
+		if !dec.DiscardValue() {
+			return dec.Err()
+		}
+		return nil
+	})
+	if err != nil {
+		return false
+	} else if isList {
+		return true
+	}
+
+	if dec.Atom(&s) {
+		return true
+	}
+
+	dec.Expect(false, "value")
+	return false
+}
+
 func (dec *Decoder) numberStr() (s string, ok bool) {
 	var sb strings.Builder
 	for {
