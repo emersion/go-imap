@@ -41,6 +41,10 @@ const (
 	ResponseCodeTryCreate            ResponseCode = "TRYCREATE"
 	ResponseCodeUnavailable          ResponseCode = "UNAVAILABLE"
 	ResponseCodeUnknownCTE           ResponseCode = "UNKNOWN-CTE"
+
+	// METADATA
+	ResponseCodeTooMany   ResponseCode = "TOOMANY"
+	ResponseCodeNoPrivate ResponseCode = "NOPRIVATE"
 )
 
 // StatusResponse is a generic status response.

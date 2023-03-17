@@ -584,6 +584,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 		if !c.dec.ExpectAtom(&code) {
 			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
+		// TODO: LONGENTRIES and MAXSIZE from METADATA
 		switch code {
 		case "CAPABILITY": // capability-data
 			caps, err := readCapabilities(c.dec)
@@ -942,6 +943,24 @@ func (c *Client) readResponseData(typ string) error {
 			if cmd != nil {
 				cmd.data.All.AddNum(num)
 			}
+		}
+	case "METADATA":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+
+		data, err := readMetadataResp(c.dec)
+		if err != nil {
+			return fmt.Errorf("in metadata-resp: %v", err)
+		}
+
+		cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
+			cmd, ok := anyCmd.(*GetMetadataCommand)
+			return ok && cmd.mailbox == data.Mailbox
+		})
+		if cmd != nil {
+			cmd := cmd.(*GetMetadataCommand)
+			cmd.data = *data
 		}
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)

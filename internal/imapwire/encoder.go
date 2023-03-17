@@ -131,6 +131,10 @@ func (enc *Encoder) List(n int, f func(i int)) *Encoder {
 	return enc
 }
 
+func (enc *Encoder) NIL() *Encoder {
+	return enc.Atom("NIL")
+}
+
 // Literal writes a literal.
 //
 // The caller must write exactly size bytes to the returned writer.
