@@ -17,6 +17,17 @@ func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
 	return cmd
 }
 
+func (c *Client) handleEnabled() error {
+	caps, err := readCapabilities(c.dec)
+	if err != nil {
+		return err
+	}
+	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
+		cmd.data.Caps = caps
+	}
+	return nil
+}
+
 // EnableCommand is an ENABLE command.
 type EnableCommand struct {
 	cmd

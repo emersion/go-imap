@@ -42,6 +42,48 @@ func (c *Client) UnselectAndExpunge() *Command {
 	return &cmd.cmd
 }
 
+func (c *Client) handleFlags() error {
+	flags, err := readFlagList(c.dec)
+	if err != nil {
+		return err
+	}
+
+	c.mutex.Lock()
+	if c.state == StateSelected {
+		c.mailbox = c.mailbox.copy()
+		c.mailbox.PermanentFlags = flags
+	}
+	c.mutex.Unlock()
+
+	cmd := findPendingCmdByType[*SelectCommand](c)
+	if cmd != nil {
+		cmd.data.Flags = flags
+	} else if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
+		handler(&UnilateralDataMailbox{Flags: flags})
+	}
+
+	return nil
+}
+
+func (c *Client) handleExists(num uint32) error {
+	cmd := findPendingCmdByType[*SelectCommand](c)
+	if cmd != nil {
+		cmd.data.NumMessages = num
+	} else {
+		c.mutex.Lock()
+		if c.state == StateSelected {
+			c.mailbox = c.mailbox.copy()
+			c.mailbox.NumMessages = num
+		}
+		c.mutex.Unlock()
+
+		if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
+			handler(&UnilateralDataMailbox{NumMessages: &num})
+		}
+	}
+	return nil
+}
+
 // SelectCommand is a SELECT command.
 type SelectCommand struct {
 	cmd

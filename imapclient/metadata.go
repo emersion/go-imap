@@ -102,6 +102,24 @@ func (c *Client) SetMetadata(mailbox string, entries map[string]*[]byte) *Comman
 	return cmd
 }
 
+func (c *Client) handleMetadata() error {
+	data, err := readMetadataResp(c.dec)
+	if err != nil {
+		return fmt.Errorf("in metadata-resp: %v", err)
+	}
+
+	cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
+		cmd, ok := anyCmd.(*GetMetadataCommand)
+		return ok && cmd.mailbox == data.Mailbox
+	})
+	if cmd != nil {
+		cmd := cmd.(*GetMetadataCommand)
+		cmd.data = *data
+	}
+
+	return nil
+}
+
 // GetMetadataCommand is a GETMETADATA command.
 type GetMetadataCommand struct {
 	cmd

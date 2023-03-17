@@ -14,6 +14,18 @@ func (c *Client) Capability() *CapabilityCommand {
 	return cmd
 }
 
+func (c *Client) handleCapability() error {
+	caps, err := readCapabilities(c.dec)
+	if err != nil {
+		return err
+	}
+	c.setCaps(caps)
+	if cmd := findPendingCmdByType[*CapabilityCommand](c); cmd != nil {
+		cmd.caps = caps
+	}
+	return nil
+}
+
 // CapabilityCommand is a CAPABILITY command.
 type CapabilityCommand struct {
 	cmd

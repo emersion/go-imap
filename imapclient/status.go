@@ -18,6 +18,34 @@ func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 	return cmd
 }
 
+func (c *Client) handleStatus() error {
+	data, err := readStatus(c.dec)
+	if err != nil {
+		return fmt.Errorf("in status: %v", err)
+	}
+
+	cmd := c.findPendingCmdFunc(func(cmd command) bool {
+		switch cmd := cmd.(type) {
+		case *StatusCommand:
+			return cmd.mailbox == data.Mailbox
+		case *ListCommand:
+			return cmd.returnStatus && cmd.pendingData != nil && cmd.pendingData.Mailbox == data.Mailbox
+		default:
+			return false
+		}
+	})
+	switch cmd := cmd.(type) {
+	case *StatusCommand:
+		cmd.data = *data
+	case *ListCommand:
+		cmd.pendingData.Status = data
+		cmd.mailboxes <- cmd.pendingData
+		cmd.pendingData = nil
+	}
+
+	return nil
+}
+
 // StatusCommand is a STATUS command.
 type StatusCommand struct {
 	cmd

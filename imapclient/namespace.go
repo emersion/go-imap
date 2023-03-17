@@ -15,6 +15,17 @@ func (c *Client) Namespace() *NamespaceCommand {
 	return cmd
 }
 
+func (c *Client) handleNamespace() error {
+	data, err := readNamespaceResponse(c.dec)
+	if err != nil {
+		return fmt.Errorf("in namespace-response: %v", err)
+	}
+	if cmd := findPendingCmdByType[*NamespaceCommand](c); cmd != nil {
+		cmd.data = *data
+	}
+	return nil
+}
+
 // NamespaceCommand is a NAMESPACE command.
 type NamespaceCommand struct {
 	cmd

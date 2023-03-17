@@ -785,184 +785,49 @@ func (c *Client) readResponseData(typ string) error {
 			c.greetingRecv = true
 			close(c.greetingCh)
 		}
-	case "CAPABILITY": // capability-data
-		caps, err := readCapabilities(c.dec)
-		if err != nil {
-			return err
-		}
-		c.setCaps(caps)
-		if cmd := findPendingCmdByType[*CapabilityCommand](c); cmd != nil {
-			cmd.caps = caps
-		}
+	case "CAPABILITY":
+		return c.handleCapability()
 	case "ENABLED":
-		caps, err := readCapabilities(c.dec)
-		if err != nil {
-			return err
-		}
-		if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
-			cmd.data.Caps = caps
-		}
+		return c.handleEnabled()
 	case "NAMESPACE":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		data, err := readNamespaceResponse(c.dec)
-		if err != nil {
-			return fmt.Errorf("in namespace-response: %v", err)
-		}
-		if cmd := findPendingCmdByType[*NamespaceCommand](c); cmd != nil {
-			cmd.data = *data
-		}
+		return c.handleNamespace()
 	case "FLAGS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		flags, err := readFlagList(c.dec)
-		if err != nil {
-			return err
-		}
-
-		c.mutex.Lock()
-		if c.state == StateSelected {
-			c.mailbox = c.mailbox.copy()
-			c.mailbox.PermanentFlags = flags
-		}
-		c.mutex.Unlock()
-
-		cmd := findPendingCmdByType[*SelectCommand](c)
-		if cmd != nil {
-			cmd.data.Flags = flags
-		} else if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
-			handler(&UnilateralDataMailbox{Flags: flags})
-		}
+		return c.handleFlags()
 	case "EXISTS":
-		cmd := findPendingCmdByType[*SelectCommand](c)
-		if cmd != nil {
-			cmd.data.NumMessages = num
-		} else {
-			c.mutex.Lock()
-			if c.state == StateSelected {
-				c.mailbox = c.mailbox.copy()
-				c.mailbox.NumMessages = num
-			}
-			c.mutex.Unlock()
-
-			if handler := c.options.unilateralDataHandler().Mailbox; handler != nil {
-				handler(&UnilateralDataMailbox{NumMessages: &num})
-			}
-		}
+		return c.handleExists(num)
 	case "RECENT":
 		// ignore
 	case "LIST":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		data, err := readList(c.dec)
-		if err != nil {
-			return fmt.Errorf("in LIST: %v", err)
-		}
-
-		cmd := c.findPendingCmdFunc(func(cmd command) bool {
-			switch cmd := cmd.(type) {
-			case *ListCommand:
-				return true // TODO: match pattern, check if already handled
-			case *SelectCommand:
-				return cmd.mailbox == data.Mailbox && cmd.data.List == nil
-			default:
-				return false
-			}
-		})
-		switch cmd := cmd.(type) {
-		case *ListCommand:
-			if cmd.returnStatus {
-				if cmd.pendingData != nil {
-					cmd.mailboxes <- cmd.pendingData
-				}
-				cmd.pendingData = data
-			} else {
-				cmd.mailboxes <- data
-			}
-		case *SelectCommand:
-			cmd.data.List = data
-		}
+		return c.handleList()
 	case "STATUS":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		data, err := readStatus(c.dec)
-		if err != nil {
-			return fmt.Errorf("in status: %v", err)
-		}
-
-		cmd := c.findPendingCmdFunc(func(cmd command) bool {
-			switch cmd := cmd.(type) {
-			case *StatusCommand:
-				return cmd.mailbox == data.Mailbox
-			case *ListCommand:
-				return cmd.returnStatus && cmd.pendingData != nil && cmd.pendingData.Mailbox == data.Mailbox
-			default:
-				return false
-			}
-		})
-		switch cmd := cmd.(type) {
-		case *StatusCommand:
-			cmd.data = *data
-		case *ListCommand:
-			cmd.pendingData.Status = data
-			cmd.mailboxes <- cmd.pendingData
-			cmd.pendingData = nil
-		}
+		return c.handleStatus()
 	case "FETCH":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		if err := readMsgAtt(c, num); err != nil {
-			return fmt.Errorf("in msg-att: %v", err)
-		}
+		return c.handleFetch(num)
 	case "EXPUNGE":
-		c.mutex.Lock()
-		if c.state == StateSelected && c.mailbox.NumMessages > 0 {
-			c.mailbox = c.mailbox.copy()
-			c.mailbox.NumMessages--
-		}
-		c.mutex.Unlock()
-
-		cmd := findPendingCmdByType[*ExpungeCommand](c)
-		if cmd != nil {
-			cmd.seqNums <- num
-		} else if handler := c.options.unilateralDataHandler().Expunge; handler != nil {
-			handler(num)
-		}
+		return c.handleExpunge(num)
 	case "SEARCH":
 		// TODO: handle ESEARCH
-		cmd := findPendingCmdByType[*SearchCommand](c)
-		for c.dec.SP() {
-			var num uint32
-			if !c.dec.ExpectNumber(&num) {
-				return c.dec.Err()
-			}
-			if cmd != nil {
-				cmd.data.All.AddNum(num)
-			}
-		}
+		return c.handleSearch()
 	case "METADATA":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-
-		data, err := readMetadataResp(c.dec)
-		if err != nil {
-			return fmt.Errorf("in metadata-resp: %v", err)
-		}
-
-		cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
-			cmd, ok := anyCmd.(*GetMetadataCommand)
-			return ok && cmd.mailbox == data.Mailbox
-		})
-		if cmd != nil {
-			cmd := cmd.(*GetMetadataCommand)
-			cmd.data = *data
-		}
+		return c.handleMetadata()
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}

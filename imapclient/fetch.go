@@ -664,7 +664,7 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	return nil
 }
 
-func readMsgAtt(c *Client, seqNum uint32) error {
+func (c *Client) handleFetch(seqNum uint32) error {
 	dec := c.dec
 
 	items := make(chan FetchItemData, 32)

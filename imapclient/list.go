@@ -91,6 +91,39 @@ func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
 	return cmd
 }
 
+func (c *Client) handleList() error {
+	data, err := readList(c.dec)
+	if err != nil {
+		return fmt.Errorf("in LIST: %v", err)
+	}
+
+	cmd := c.findPendingCmdFunc(func(cmd command) bool {
+		switch cmd := cmd.(type) {
+		case *ListCommand:
+			return true // TODO: match pattern, check if already handled
+		case *SelectCommand:
+			return cmd.mailbox == data.Mailbox && cmd.data.List == nil
+		default:
+			return false
+		}
+	})
+	switch cmd := cmd.(type) {
+	case *ListCommand:
+		if cmd.returnStatus {
+			if cmd.pendingData != nil {
+				cmd.mailboxes <- cmd.pendingData
+			}
+			cmd.pendingData = data
+		} else {
+			cmd.mailboxes <- data
+		}
+	case *SelectCommand:
+		cmd.data.List = data
+	}
+
+	return nil
+}
+
 // ListCommand is a LIST command.
 type ListCommand struct {
 	cmd

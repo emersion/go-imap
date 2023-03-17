@@ -22,6 +22,24 @@ func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
 	return cmd
 }
 
+func (c *Client) handleExpunge(seqNum uint32) error {
+	c.mutex.Lock()
+	if c.state == StateSelected && c.mailbox.NumMessages > 0 {
+		c.mailbox = c.mailbox.copy()
+		c.mailbox.NumMessages--
+	}
+	c.mutex.Unlock()
+
+	cmd := findPendingCmdByType[*ExpungeCommand](c)
+	if cmd != nil {
+		cmd.seqNums <- seqNum
+	} else if handler := c.options.unilateralDataHandler().Expunge; handler != nil {
+		handler(seqNum)
+	}
+
+	return nil
+}
+
 // ExpungeCommand is an EXPUNGE command.
 //
 // The caller must fully consume the ExpungeCommand. A simple way to do so is

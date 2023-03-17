@@ -30,6 +30,20 @@ func (c *Client) UIDSearch(criteria *SearchCriteria) *SearchCommand {
 	return c.search(true, criteria)
 }
 
+func (c *Client) handleSearch() error {
+	cmd := findPendingCmdByType[*SearchCommand](c)
+	for c.dec.SP() {
+		var num uint32
+		if !c.dec.ExpectNumber(&num) {
+			return c.dec.Err()
+		}
+		if cmd != nil {
+			cmd.data.All.AddNum(num)
+		}
+	}
+	return nil
+}
+
 // SearchCommand is a SEARCH command.
 type SearchCommand struct {
 	cmd
