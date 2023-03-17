@@ -8,7 +8,7 @@ import (
 
 // Status sends a STATUS command.
 func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
-	cmd := &StatusCommand{}
+	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
 	enc.SP().Mailbox(mailbox).SP()
 	enc.List(len(items), func(i int) {
@@ -21,7 +21,8 @@ func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
 // StatusCommand is a STATUS command.
 type StatusCommand struct {
 	cmd
-	data StatusData
+	mailbox string
+	data    StatusData
 }
 
 func (cmd *StatusCommand) Wait() (*StatusData, error) {
