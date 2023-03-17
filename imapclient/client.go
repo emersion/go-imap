@@ -872,7 +872,7 @@ func (c *Client) readResponseData(typ string) error {
 		cmd := c.findPendingCmdFunc(func(cmd command) bool {
 			switch cmd := cmd.(type) {
 			case *StatusCommand:
-				return true
+				return cmd.mailbox == data.Mailbox
 			case *ListCommand:
 				return cmd.returnStatus && cmd.pendingData != nil && cmd.pendingData.Mailbox == data.Mailbox
 			default:
