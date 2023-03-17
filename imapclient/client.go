@@ -848,7 +848,19 @@ func (c *Client) readResponseData(typ string) error {
 		if err != nil {
 			return fmt.Errorf("in LIST: %v", err)
 		}
-		if cmd := findPendingCmdByType[*ListCommand](c); cmd != nil {
+
+		cmd := c.findPendingCmdFunc(func(cmd command) bool {
+			switch cmd := cmd.(type) {
+			case *ListCommand:
+				return true // TODO: match pattern, check if already handled
+			case *SelectCommand:
+				return cmd.mailbox == data.Mailbox && cmd.data.List == nil
+			default:
+				return false
+			}
+		})
+		switch cmd := cmd.(type) {
+		case *ListCommand:
 			if cmd.returnStatus {
 				if cmd.pendingData != nil {
 					cmd.mailboxes <- cmd.pendingData
@@ -857,7 +869,7 @@ func (c *Client) readResponseData(typ string) error {
 			} else {
 				cmd.mailboxes <- data
 			}
-		} else if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil && cmd.mailbox == data.Mailbox {
+		case *SelectCommand:
 			cmd.data.List = data
 		}
 	case "STATUS":
