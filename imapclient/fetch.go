@@ -11,8 +11,22 @@ import (
 )
 
 func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []FetchItem) *FetchCommand {
+	// Ensure we request UID as the first data item for UID FETCH, to be safer.
+	// We want to get it before any literal.
+	if uid {
+		itemsWithUID := []FetchItem{FetchItemUID}
+		for _, item := range items {
+			if item != FetchItemUID {
+				itemsWithUID = append(itemsWithUID, item)
+			}
+		}
+		items = itemsWithUID
+	}
+
 	cmd := &FetchCommand{
-		msgs: make(chan *FetchMessageData, 128),
+		uid:    uid,
+		seqSet: seqSet,
+		msgs:   make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
 	enc.SP().Atom(seqSet.String()).SP().List(len(items), func(i int) {
@@ -185,6 +199,11 @@ func writeSectionPartial(enc *imapwire.Encoder, partial *SectionPartial) {
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
 	cmd
+
+	uid        bool
+	seqSet     imap.SeqSet
+	recvSeqSet imap.SeqSet
+
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
 }
@@ -653,14 +672,52 @@ func readMsgAtt(c *Client, seqNum uint32) error {
 
 	msg := &FetchMessageData{SeqNum: seqNum, items: items}
 
-	if cmd := findPendingCmdByType[*FetchCommand](c); cmd != nil {
-		cmd.msgs <- msg
-	} else if handler := c.options.unilateralDataHandler().Fetch; handler != nil {
-		go handler(msg)
-	} else {
-		go msg.discard()
-	}
+	// We're in a tricky situation: to know whether this FETCH response needs
+	// to be handled by a pending command, we may need to look at the UID in
+	// the response data. But the response data comes in in a streaming
+	// fashion: it can contain literals. Assume that the UID will be returned
+	// before any literal.
+	var uid uint32
+	handled := false
+	handleMsg := func() {
+		if handled {
+			return
+		}
 
+		cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
+			cmd, ok := anyCmd.(*FetchCommand)
+			if !ok {
+				return false
+			}
+
+			// Skip if we haven't requested or already handled this message
+			var num uint32
+			if cmd.uid {
+				num = uid
+			} else {
+				num = seqNum
+			}
+			if num == 0 || !cmd.seqSet.Contains(num) || cmd.recvSeqSet.Contains(num) {
+				return false
+			}
+			cmd.recvSeqSet.AddNum(num)
+
+			return true
+		})
+		if cmd != nil {
+			cmd := cmd.(*FetchCommand)
+			cmd.msgs <- msg
+		} else if handler := c.options.unilateralDataHandler().Fetch; handler != nil {
+			go handler(msg)
+		} else {
+			go msg.discard()
+		}
+
+		handled = true
+	}
+	defer handleMsg()
+
+	numAtts := 0
 	return dec.ExpectList(func() error {
 		var attName string
 		if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
@@ -713,7 +770,6 @@ func readMsgAtt(c *Client, seqNum uint32) error {
 
 			item = FetchItemDataRFC822Size{Size: size}
 		case FetchItemUID:
-			var uid uint32
 			if !dec.ExpectSP() || !dec.ExpectNumber(&uid) {
 				return dec.Err()
 			}
@@ -807,6 +863,13 @@ func readMsgAtt(c *Client, seqNum uint32) error {
 			}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
+		}
+
+		numAtts++
+		if numAtts > cap(items) || done != nil {
+			// To avoid deadlocking we need to ask the message handler to
+			// consume the data
+			handleMsg()
 		}
 
 		if done != nil {
