@@ -87,84 +87,96 @@ type SearchCriteriaHeaderField struct {
 
 func writeSearchKey(enc *imapwire.Encoder, criteria *SearchCriteria) {
 	enc.Special('(')
-	enc.Atom("ALL") // TODO: remove
+
+	firstItem := true
+	encodeItem := func(s string) *imapwire.Encoder {
+		if !firstItem {
+			enc.SP()
+		}
+		firstItem = false
+		return enc.Atom(s)
+	}
 
 	if len(criteria.SeqNum) > 0 {
-		enc.SP().Atom(criteria.SeqNum.String())
+		encodeItem(criteria.SeqNum.String())
 	}
 	if len(criteria.UID) > 0 {
-		enc.SP().Atom("UID").SP().Atom(criteria.UID.String())
+		encodeItem("UID").SP().Atom(criteria.UID.String())
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
-		enc.SP().Atom("ON").SP().String(criteria.Since.Format(searchDateLayout))
+		encodeItem("ON").SP().String(criteria.Since.Format(searchDateLayout))
 	} else {
 		if !criteria.Since.IsZero() {
-			enc.SP().Atom("SINCE").SP().String(criteria.Since.Format(searchDateLayout))
+			encodeItem("SINCE").SP().String(criteria.Since.Format(searchDateLayout))
 		}
 		if !criteria.Before.IsZero() {
-			enc.SP().Atom("BEFORE").SP().String(criteria.Before.Format(searchDateLayout))
+			encodeItem("BEFORE").SP().String(criteria.Before.Format(searchDateLayout))
 		}
 	}
 	if !criteria.SentSince.IsZero() && !criteria.SentBefore.IsZero() && criteria.SentBefore.Sub(criteria.SentSince) == 24*time.Hour {
-		enc.SP().Atom("SENTON").SP().String(criteria.SentSince.Format(searchDateLayout))
+		encodeItem("SENTON").SP().String(criteria.SentSince.Format(searchDateLayout))
 	} else {
 		if !criteria.SentSince.IsZero() {
-			enc.SP().Atom("SENTSINCE").SP().String(criteria.SentSince.Format(searchDateLayout))
+			encodeItem("SENTSINCE").SP().String(criteria.SentSince.Format(searchDateLayout))
 		}
 		if !criteria.SentBefore.IsZero() {
-			enc.SP().Atom("SENTBEFORE").SP().String(criteria.SentBefore.Format(searchDateLayout))
+			encodeItem("SENTBEFORE").SP().String(criteria.SentBefore.Format(searchDateLayout))
 		}
 	}
 
 	for _, kv := range criteria.Header {
 		switch k := strings.ToUpper(kv.Key); k {
 		case "BCC", "CC", "FROM", "SUBJECT", "TO":
-			enc.SP().Atom(k)
+			encodeItem(k)
 		default:
-			enc.SP().Atom("HEADER").SP().String(kv.Key)
+			encodeItem("HEADER").SP().String(kv.Key)
 		}
 		enc.SP().String(kv.Value)
 	}
 
 	for _, s := range criteria.Body {
-		enc.SP().Atom("BODY").SP().String(s)
+		encodeItem("BODY").SP().String(s)
 	}
 	for _, s := range criteria.Text {
-		enc.SP().Atom("TEXT").SP().String(s)
+		encodeItem("TEXT").SP().String(s)
 	}
 
 	for _, flag := range criteria.Flag {
 		if k := flagSearchKey(flag); k != "" {
-			enc.SP().Atom(k)
+			encodeItem(k)
 		} else {
-			enc.SP().Atom("KEYWORD").SP().Flag(flag)
+			encodeItem("KEYWORD").SP().Flag(flag)
 		}
 	}
 	for _, flag := range criteria.NotFlag {
 		if k := flagSearchKey(flag); k != "" {
-			enc.SP().Atom("UN" + k)
+			encodeItem("UN" + k)
 		} else {
-			enc.SP().Atom("UNKEYWORD").SP().Flag(flag)
+			encodeItem("UNKEYWORD").SP().Flag(flag)
 		}
 	}
 
 	if criteria.Larger > 0 {
-		enc.SP().Atom("LARGER").SP().Number64(criteria.Larger)
+		encodeItem("LARGER").SP().Number64(criteria.Larger)
 	}
 	if criteria.Smaller > 0 {
-		enc.SP().Atom("SMALLER").SP().Number64(criteria.Smaller)
+		encodeItem("SMALLER").SP().Number64(criteria.Smaller)
 	}
 
 	for _, not := range criteria.Not {
-		enc.SP().Atom("NOT").SP()
+		encodeItem("NOT").SP()
 		writeSearchKey(enc, &not)
 	}
 	for _, or := range criteria.Or {
-		enc.SP().Atom("OR").SP()
+		encodeItem("OR").SP()
 		writeSearchKey(enc, &or[0])
 		enc.SP()
 		writeSearchKey(enc, &or[1])
+	}
+
+	if firstItem {
+		enc.Atom("ALL")
 	}
 
 	enc.Special(')')
