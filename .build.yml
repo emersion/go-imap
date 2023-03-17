@@ -1,0 +1,12 @@
+image: alpine/latest
+packages:
+  - go
+sources:
+  - https://github.com/emersion/go-imap#v2
+tasks:
+  - build: |
+      cd go-imap
+      go build -race -v ./...
+  - test: |
+      cd go-imap
+      go test -race ./...
