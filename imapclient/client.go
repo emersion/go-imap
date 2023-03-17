@@ -121,6 +121,11 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 // a response. They return a command struct which can be used to wait for the
 // server response. This can be used to execute multiple commands concurrently,
 // however care must be taken to avoid ambiguities. See RFC 9051 section 5.5.
+//
+// A client can be safely used from multiple goroutines, however this doesn't
+// guarantee any command ordering and is subject to the same caveats as command
+// pipelining (see above). Additionally, some commands (e.g. StartTLS,
+// Authenticate, Idle) block the client during their execution.
 type Client struct {
 	conn     net.Conn
 	options  Options
