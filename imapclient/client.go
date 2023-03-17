@@ -353,7 +353,7 @@ func (c *Client) findPendingCmdFunc(f func(cmd command) bool) command {
 	return nil
 }
 
-func findPendingCmdByType[T interface{}](c *Client) T {
+func findPendingCmdByType[T command](c *Client) T {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
