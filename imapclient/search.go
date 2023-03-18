@@ -1,6 +1,7 @@
 package imapclient
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -10,10 +11,32 @@ import (
 
 const searchDateLayout = "2-Jan-2006"
 
-func (c *Client) search(uid bool, criteria *SearchCriteria) *SearchCommand {
-	// TODO: result specifier, charset
+// SearchReturnOption indicates what kind of results to return from a SEARCH
+// command.
+type SearchReturnOption string
+
+const (
+	SearchReturnMin   SearchReturnOption = "MIN"
+	SearchReturnMax   SearchReturnOption = "MAX"
+	SearchReturnAll   SearchReturnOption = "ALL"
+	SearchReturnCount SearchReturnOption = "COUNT"
+)
+
+// SearchOptions contains options for the SEARCH command.
+type SearchOptions struct {
+	Return []SearchReturnOption // requires IMAP4rev2 or ESEARCH
+}
+
+func (c *Client) search(uid bool, criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+	// TODO: use CHARSET UTF-8 with an US-ASCII fallback for IMAP4rev1 servers
+	// TODO: add support for SEARCHRES
 	cmd := &SearchCommand{}
 	enc := c.beginCommand(uidCmdName("SEARCH", uid), cmd)
+	if options != nil && len(options.Return) > 0 {
+		enc.SP().Atom("RETURN").SP().List(len(options.Return), func(i int) {
+			enc.Atom(string(options.Return[i]))
+		})
+	}
 	enc.SP()
 	writeSearchKey(enc.Encoder, criteria)
 	enc.end()
@@ -21,13 +44,13 @@ func (c *Client) search(uid bool, criteria *SearchCriteria) *SearchCommand {
 }
 
 // Search sends a SEARCH command.
-func (c *Client) Search(criteria *SearchCriteria) *SearchCommand {
-	return c.search(false, criteria)
+func (c *Client) Search(criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+	return c.search(false, criteria, options)
 }
 
 // UIDSearch sends a UID SEARCH command.
-func (c *Client) UIDSearch(criteria *SearchCriteria) *SearchCommand {
-	return c.search(true, criteria)
+func (c *Client) UIDSearch(criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+	return c.search(true, criteria, options)
 }
 
 func (c *Client) handleSearch() error {
@@ -40,6 +63,32 @@ func (c *Client) handleSearch() error {
 		if cmd != nil {
 			cmd.data.All.AddNum(num)
 		}
+	}
+	return nil
+}
+
+func (c *Client) handleESearch() error {
+	if !c.dec.ExpectSP() {
+		return c.dec.Err()
+	}
+	tag, data, err := readESearchResponse(c.dec)
+	if err != nil {
+		return err
+	}
+	cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
+		cmd, ok := anyCmd.(*SearchCommand)
+		if !ok {
+			return false
+		}
+		if tag != "" {
+			return cmd.tag == tag
+		} else {
+			return true
+		}
+	})
+	if cmd != nil {
+		cmd := cmd.(*SearchCommand)
+		cmd.data = *data
 	}
 	return nil
 }
@@ -57,7 +106,12 @@ func (cmd *SearchCommand) Wait() (*SearchData, error) {
 // SearchData is the data returned by a SEARCH command.
 type SearchData struct {
 	All imap.SeqSet
-	// TODO: MIN, MAX, COUNT
+
+	// requires IMAP4rev2 or ESEARCH
+	UID   bool
+	Min   uint32
+	Max   uint32
+	Count uint32
 }
 
 // AllNums returns All as a slice of numbers.
@@ -203,4 +257,74 @@ func flagSearchKey(flag imap.Flag) string {
 	default:
 		return ""
 	}
+}
+
+func readESearchResponse(dec *imapwire.Decoder) (tag string, data *SearchData, err error) {
+	data = &SearchData{}
+
+	if dec.Special('(') { // search-correlator
+		var correlator string
+		if !dec.ExpectAtom(&correlator) || !dec.ExpectSP() || !dec.ExpectAString(&tag) || !dec.ExpectSpecial(')') || !dec.ExpectSP() {
+			return "", nil, dec.Err()
+		}
+		if correlator != "TAG" {
+			return "", nil, fmt.Errorf("in search-correlator: name must be TAG, but got %q", correlator)
+		}
+	}
+
+	var name string
+	if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+		return "", nil, dec.Err()
+	}
+	data.UID = name == "UID"
+	if data.UID {
+		if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+			return "", nil, dec.Err()
+		}
+	}
+	for {
+		switch returnOpt := SearchReturnOption(name); returnOpt {
+		case SearchReturnMin:
+			var num uint32
+			if !dec.ExpectNumber(&num) {
+				return "", nil, dec.Err()
+			}
+			data.Min = num
+		case SearchReturnMax:
+			var num uint32
+			if !dec.ExpectNumber(&num) {
+				return "", nil, dec.Err()
+			}
+			data.Max = num
+		case SearchReturnAll:
+			var s string
+			if !dec.ExpectAtom(&s) {
+				return "", nil, dec.Err()
+			}
+			data.All, err = imap.ParseSeqSet(s)
+			if err != nil {
+				return "", nil, err
+			}
+		case SearchReturnCount:
+			var num uint32
+			if !dec.ExpectNumber(&num) {
+				return "", nil, dec.Err()
+			}
+			data.Count = num
+		default:
+			if !dec.DiscardValue() {
+				return "", nil, dec.Err()
+			}
+		}
+
+		if !dec.SP() {
+			break
+		}
+
+		if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+			return "", nil, dec.Err()
+		}
+	}
+
+	return tag, data, nil
 }

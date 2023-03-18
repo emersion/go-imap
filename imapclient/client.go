@@ -827,8 +827,9 @@ func (c *Client) readResponseData(typ string) error {
 	case "EXPUNGE":
 		return c.handleExpunge(num)
 	case "SEARCH":
-		// TODO: handle ESEARCH
 		return c.handleSearch()
+	case "ESEARCH":
+		return c.handleESearch()
 	case "METADATA":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
