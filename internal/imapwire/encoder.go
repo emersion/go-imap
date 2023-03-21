@@ -135,6 +135,10 @@ func (enc *Encoder) NIL() *Encoder {
 	return enc.Atom("NIL")
 }
 
+func (enc *Encoder) Text(s string) *Encoder {
+	return enc.writeString(s)
+}
+
 // Literal writes a literal.
 //
 // The caller must write exactly size bytes to the returned writer.
