@@ -148,3 +148,16 @@ func (set CapSet) AppendLimit() (limit *uint32, ok bool) {
 	limit32 := ^uint32(0)
 	return &limit32, false
 }
+
+// QuotaResourceTypes returns the list of supported QUOTA resource types.
+func (set CapSet) QuotaResourceTypes() []QuotaResourceType {
+	var l []QuotaResourceType
+	for c := range set {
+		if !strings.HasPrefix(string(c), "QUOTA=RES-") {
+			continue
+		}
+		t := strings.TrimPrefix(string(c), "QUOTA=RES-")
+		l = append(l, QuotaResourceType(t))
+	}
+	return l
+}
