@@ -65,10 +65,11 @@ const (
 	StatusItemUIDNext     StatusItem = "UIDNEXT"
 	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
 	StatusItemNumUnseen   StatusItem = "UNSEEN"
-	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2
+	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2 or QUOTA
 	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
 
-	StatusItemAppendLimit StatusItem = "APPENDLIMIT" // requires APPENDLIMIT
+	StatusItemAppendLimit    StatusItem = "APPENDLIMIT"     // requires APPENDLIMIT
+	StatusItemDeletedStorage StatusItem = "DELETED-STORAGE" // requires QUOTA=RES-STORAGE
 )
 
 // StatusData is the data returned by a STATUS command.
@@ -84,7 +85,8 @@ type StatusData struct {
 	NumDeleted  *uint32
 	Size        *int64
 
-	AppendLimit *uint32
+	AppendLimit    *uint32
+	DeletedStorage *int64
 }
 
 func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
@@ -145,6 +147,10 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 			num = ^uint32(0)
 		}
 		data.AppendLimit = &num
+	case StatusItemDeletedStorage:
+		var storage int64
+		ok = dec.ExpectNumber64(&storage)
+		data.DeletedStorage = &storage
 	default:
 		if !dec.DiscardValue() {
 			return dec.Err()
