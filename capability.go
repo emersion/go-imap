@@ -122,6 +122,20 @@ func (set CapSet) Has(c Cap) bool {
 	return false
 }
 
+// AuthMechanisms returns the list of supported SASL mechanisms for
+// authentication.
+func (set CapSet) AuthMechanisms() []string {
+	var l []string
+	for c := range set {
+		if !strings.HasPrefix(string(c), "AUTH=") {
+			continue
+		}
+		mech := strings.TrimPrefix(string(c), "AUTH=")
+		l = append(l, mech)
+	}
+	return l
+}
+
 // AppendLimit checks the APPENDLIMIT capability.
 //
 // If the server supports APPENDLIMIT, ok is true. If the server doesn't have
