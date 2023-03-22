@@ -67,7 +67,6 @@ const (
 	CapSort             Cap = "SORT"               // RFC 5256
 	CapSortDisplay      Cap = "SORT=DISPLAY"       // RFC 5957
 	CapSpecialUse       Cap = "SPECIAL-USE"        // RFC 6154
-	CapThread           Cap = "THREAD"             // RFC 5256
 	CapUnauthenticate   Cap = "UNAUTHENTICATE"     // RFC 8437
 	CapURLPartial       Cap = "URL-PARTIAL"        // RFC 5550
 	CapURLAuth          Cap = "URLAUTH"            // RFC 4467
@@ -172,6 +171,19 @@ func (set CapSet) QuotaResourceTypes() []QuotaResourceType {
 		}
 		t := strings.TrimPrefix(string(c), "QUOTA=RES-")
 		l = append(l, QuotaResourceType(t))
+	}
+	return l
+}
+
+// ThreadAlgorithms returns the list of supported threading algorithms.
+func (set CapSet) ThreadAlgorithms() []ThreadAlgorithm {
+	var l []ThreadAlgorithm
+	for c := range set {
+		if !strings.HasPrefix(string(c), "THREAD=") {
+			continue
+		}
+		alg := strings.TrimPrefix(string(c), "THREAD=")
+		l = append(l, ThreadAlgorithm(alg))
 	}
 	return l
 }
