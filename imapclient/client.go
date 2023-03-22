@@ -830,6 +830,8 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleSearch()
 	case "ESEARCH":
 		return c.handleESearch()
+	case "SORT":
+		return c.handleSort()
 	case "METADATA":
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
