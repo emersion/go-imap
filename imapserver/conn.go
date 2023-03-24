@@ -13,6 +13,12 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
+var internalServerErrorResp = &imap.StatusResponse{
+	Type: imap.StatusResponseTypeNo,
+	Code: imap.ResponseCodeServerBug,
+	Text: "Internal server error",
+}
+
 type conn struct {
 	conn     net.Conn
 	server   *Server
@@ -20,7 +26,8 @@ type conn struct {
 	bw       *bufio.Writer
 	encMutex sync.Mutex
 
-	state imap.ConnState
+	state   imap.ConnState
+	session Session
 }
 
 func newConn(c net.Conn, server *Server) *conn {
@@ -43,8 +50,35 @@ func (c *conn) serve() {
 		c.conn.Close()
 	}()
 
+	var err error
+	c.session, err = c.server.NewSession()
+	if err != nil {
+		var (
+			resp    *imap.StatusResponse
+			imapErr *imap.Error
+		)
+		if errors.As(err, &imapErr) {
+			resp = (*imap.StatusResponse)(imapErr)
+		} else {
+			c.server.Logger.Printf("failed to create session: %v", err)
+			resp = internalServerErrorResp
+		}
+		if err := c.writeStatusResp("", resp); err != nil {
+			c.server.Logger.Printf("failed to write greeting: %v", err)
+		}
+		return
+	}
+
+	defer func() {
+		if c.session != nil {
+			if err := c.session.Close(); err != nil {
+				c.server.Logger.Printf("failed to close session: %v", err)
+			}
+		}
+	}()
+
 	c.state = imap.ConnStateNotAuthenticated
-	err := c.writeStatusResp("", &imap.StatusResponse{
+	err = c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeOK,
 		Text: "IMAP4rev2 server ready",
 	})
@@ -107,11 +141,7 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		}
 	} else if err != nil {
 		c.server.Logger.Printf("handling %v command: %v", name, err)
-		resp = &imap.StatusResponse{
-			Type: imap.StatusResponseTypeNo,
-			Code: imap.ResponseCodeServerBug,
-			Text: "Internal server error",
-		}
+		resp = internalServerErrorResp
 	} else {
 		resp = &imap.StatusResponse{
 			Type: imap.StatusResponseTypeOK,
