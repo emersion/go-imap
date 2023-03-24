@@ -200,7 +200,11 @@ func (c *conn) handleIdle(dec *imapwire.Decoder) error {
 	if err != nil {
 		return err
 	} else if isPrefix || string(line) != "DONE" {
-		return fmt.Errorf("imapserver: expected DONE to end IDLE command")
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Code: imap.ResponseCodeClientBug,
+			Text: "Syntax error: expected DONE to end IDLE command",
+		}
 	}
 
 	return nil
