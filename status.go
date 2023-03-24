@@ -1,67 +1,33 @@
 package imap
 
-import (
-	"fmt"
-)
-
-// StatusResponseType is a generic status response type.
-type StatusResponseType string
+// StatusItem is a data item which can be requested by a STATUS command.
+type StatusItem string
 
 const (
-	StatusResponseTypeOK      StatusResponseType = "OK"
-	StatusResponseTypeNo      StatusResponseType = "NO"
-	StatusResponseTypeBad     StatusResponseType = "BAD"
-	StatusResponseTypePreAuth StatusResponseType = "PREAUTH"
-	StatusResponseTypeBye     StatusResponseType = "BYE"
+	StatusItemNumMessages StatusItem = "MESSAGES"
+	StatusItemUIDNext     StatusItem = "UIDNEXT"
+	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
+	StatusItemNumUnseen   StatusItem = "UNSEEN"
+	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2 or QUOTA
+	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
+
+	StatusItemAppendLimit    StatusItem = "APPENDLIMIT"     // requires APPENDLIMIT
+	StatusItemDeletedStorage StatusItem = "DELETED-STORAGE" // requires QUOTA=RES-STORAGE
 )
 
-// ResponseCode is a response code.
-type ResponseCode string
-
-const (
-	ResponseCodeAlert                ResponseCode = "ALERT"
-	ResponseCodeAlreadyExists        ResponseCode = "ALREADYEXISTS"
-	ResponseCodeAuthenticationFailed ResponseCode = "AUTHENTICATIONFAILED"
-	ResponseCodeAuthorizationFailed  ResponseCode = "AUTHORIZATIONFAILED"
-	ResponseCodeBadCharset           ResponseCode = "BADCHARSET"
-	ResponseCodeCannot               ResponseCode = "CANNOT"
-	ResponseCodeClientBug            ResponseCode = "CLIENTBUG"
-	ResponseCodeContactAdmin         ResponseCode = "CONTACTADMIN"
-	ResponseCodeCorruption           ResponseCode = "CORRUPTION"
-	ResponseCodeExpired              ResponseCode = "EXPIRED"
-	ResponseCodeHasChildren          ResponseCode = "HASCHILDREN"
-	ResponseCodeInUse                ResponseCode = "INUSE"
-	ResponseCodeLimit                ResponseCode = "LIMIT"
-	ResponseCodeNonExistent          ResponseCode = "NONEXISTENT"
-	ResponseCodeNoPerm               ResponseCode = "NOPERM"
-	ResponseCodeOverQuota            ResponseCode = "OVERQUOTA"
-	ResponseCodeParse                ResponseCode = "PARSE"
-	ResponseCodePrivacyRequired      ResponseCode = "PRIVACYREQUIRED"
-	ResponseCodeServerBug            ResponseCode = "SERVERBUG"
-	ResponseCodeTryCreate            ResponseCode = "TRYCREATE"
-	ResponseCodeUnavailable          ResponseCode = "UNAVAILABLE"
-	ResponseCodeUnknownCTE           ResponseCode = "UNKNOWN-CTE"
-
-	// METADATA
-	ResponseCodeTooMany   ResponseCode = "TOOMANY"
-	ResponseCodeNoPrivate ResponseCode = "NOPRIVATE"
-)
-
-// StatusResponse is a generic status response.
+// StatusData is the data returned by a STATUS command.
 //
-// See RFC 9051 section 7.1.
-type StatusResponse struct {
-	Type StatusResponseType
-	Code ResponseCode
-	Text string
-}
+// The mailbox name is always populated. The remaining fields are optional.
+type StatusData struct {
+	Mailbox string
 
-// Error is an IMAP error caused by a status response.
-type Error StatusResponse
+	NumMessages *uint32
+	UIDNext     uint32
+	UIDValidity uint32
+	NumUnseen   *uint32
+	NumDeleted  *uint32
+	Size        *int64
 
-var _ error = (*Error)(nil)
-
-// Error implements the error interface.
-func (err *Error) Error() string {
-	return fmt.Sprintf("imap: %v %v", err.Type, err.Text)
+	AppendLimit    *uint32
+	DeletedStorage *int64
 }
