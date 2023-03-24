@@ -162,9 +162,8 @@ func readQuotaResponse(dec *imapwire.Decoder) (*QuotaData, error) {
 }
 
 func readQuotaRoot(dec *imapwire.Decoder) (mailbox string, roots []string, err error) {
-	mailbox, err = dec.ExpectMailbox()
-	if err != nil {
-		return "", nil, err
+	if !dec.ExpectMailbox(&mailbox) {
+		return "", nil, dec.Err()
 	}
 	for dec.SP() {
 		var root string

@@ -141,12 +141,7 @@ type GetMetadataData struct {
 func readMetadataResp(dec *imapwire.Decoder) (*GetMetadataData, error) {
 	var data GetMetadataData
 
-	var err error
-	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
-		return nil, err
-	}
-
-	if !dec.ExpectSP() {
+	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
 

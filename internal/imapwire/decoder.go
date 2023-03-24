@@ -423,12 +423,16 @@ func (dec *Decoder) ExpectNList(f func() error) error {
 	return dec.ExpectList(f)
 }
 
-func (dec *Decoder) ExpectMailbox() (string, error) {
+func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 	var name string
 	if !dec.ExpectAString(&name) {
-		return "", dec.Err()
+		return false
 	}
-	return utf7.Encoding.NewDecoder().String(name)
+	name, err := utf7.Encoding.NewDecoder().String(name)
+	if err == nil {
+		*ptr = name
+	}
+	return dec.returnErr(err)
 }
 
 func (dec *Decoder) Literal(ptr *string) bool {
