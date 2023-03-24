@@ -79,6 +79,8 @@ func (c *conn) readCommand() error {
 		// do nothing
 	case "LOGOUT":
 		err = c.handleLogout()
+	case "CAPABILITY":
+		err = c.handleCapability()
 	default:
 		var text string
 		c.dec.Text(&text)
@@ -117,6 +119,12 @@ func (c *conn) handleLogout() error {
 		Type: imap.StatusResponseTypeBye,
 		Text: "Logging out",
 	})
+}
+
+func (c *conn) handleCapability() error {
+	enc := newResponseEncoder(c)
+	enc.Atom("*").SP().Atom("CAPABILITY").SP().Atom(string(imap.CapIMAP4rev2))
+	return enc.close()
 }
 
 func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
