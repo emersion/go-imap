@@ -92,16 +92,11 @@ type StatusData struct {
 func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
 	var data StatusData
 
-	var err error
-	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
-		return nil, err
-	}
-
-	if !dec.ExpectSP() {
+	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
 
-	err = dec.ExpectList(func() error {
+	err := dec.ExpectList(func() error {
 		if err := readStatusAttVal(dec, &data); err != nil {
 			return fmt.Errorf("in status-att-val: %v", dec.Err())
 		}

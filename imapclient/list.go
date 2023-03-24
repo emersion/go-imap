@@ -207,12 +207,8 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 		return nil, err
 	}
 
-	if !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&data.Mailbox) {
 		return nil, dec.Err()
-	}
-
-	if data.Mailbox, err = dec.ExpectMailbox(); err != nil {
-		return nil, err
 	}
 
 	if dec.SP() {
@@ -264,14 +260,8 @@ func readChildInfoExtendedItem(dec *imapwire.Decoder) (*ListDataChildInfo, error
 }
 
 func readOldNameExtendedItem(dec *imapwire.Decoder) (string, error) {
-	if !dec.ExpectSpecial('(') {
-		return "", dec.Err()
-	}
-	name, err := dec.ExpectMailbox()
-	if err != nil {
-		return "", err
-	}
-	if !dec.ExpectSpecial(')') {
+	var name string
+	if !dec.ExpectSpecial('(') || !dec.ExpectMailbox(&name) || !dec.ExpectSpecial(')') {
 		return "", dec.Err()
 	}
 	return name, nil
