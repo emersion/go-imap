@@ -16,7 +16,7 @@ type ListOptions struct {
 
 	ReturnSubscribed bool
 	ReturnChildren   bool
-	ReturnStatus     []StatusItem // requires IMAP4rev2 or LIST-STATUS
+	ReturnStatus     []imap.StatusItem // requires IMAP4rev2 or LIST-STATUS
 }
 
 func (options *ListOptions) selectOpts() []string {
@@ -176,7 +176,7 @@ type ListData struct {
 	// Extended data
 	ChildInfo *ListDataChildInfo
 	OldName   string
-	Status    *StatusData
+	Status    *imap.StatusData
 }
 
 type ListDataChildInfo struct {

@@ -3,11 +3,12 @@ package imapclient
 import (
 	"fmt"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 // Status sends a STATUS command.
-func (c *Client) Status(mailbox string, items []StatusItem) *StatusCommand {
+func (c *Client) Status(mailbox string, items []imap.StatusItem) *StatusCommand {
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
 	enc.SP().Mailbox(mailbox).SP()
@@ -50,47 +51,15 @@ func (c *Client) handleStatus() error {
 type StatusCommand struct {
 	cmd
 	mailbox string
-	data    StatusData
+	data    imap.StatusData
 }
 
-func (cmd *StatusCommand) Wait() (*StatusData, error) {
+func (cmd *StatusCommand) Wait() (*imap.StatusData, error) {
 	return &cmd.data, cmd.cmd.Wait()
 }
 
-// StatusItem is a data item which can be requested by a STATUS command.
-type StatusItem string
-
-const (
-	StatusItemNumMessages StatusItem = "MESSAGES"
-	StatusItemUIDNext     StatusItem = "UIDNEXT"
-	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
-	StatusItemNumUnseen   StatusItem = "UNSEEN"
-	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2 or QUOTA
-	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
-
-	StatusItemAppendLimit    StatusItem = "APPENDLIMIT"     // requires APPENDLIMIT
-	StatusItemDeletedStorage StatusItem = "DELETED-STORAGE" // requires QUOTA=RES-STORAGE
-)
-
-// StatusData is the data returned by a STATUS command.
-//
-// The mailbox name is always populated. The remaining fields are optional.
-type StatusData struct {
-	Mailbox string
-
-	NumMessages *uint32
-	UIDNext     uint32
-	UIDValidity uint32
-	NumUnseen   *uint32
-	NumDeleted  *uint32
-	Size        *int64
-
-	AppendLimit    *uint32
-	DeletedStorage *int64
-}
-
-func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
-	var data StatusData
+func readStatus(dec *imapwire.Decoder) (*imap.StatusData, error) {
+	var data imap.StatusData
 
 	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() {
 		return nil, dec.Err()
@@ -105,35 +74,35 @@ func readStatus(dec *imapwire.Decoder) (*StatusData, error) {
 	return &data, err
 }
 
-func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
+func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 	var name string
 	if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 
 	var ok bool
-	switch StatusItem(name) {
-	case StatusItemNumMessages:
+	switch imap.StatusItem(name) {
+	case imap.StatusItemNumMessages:
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumMessages = &num
-	case StatusItemUIDNext:
+	case imap.StatusItemUIDNext:
 		ok = dec.ExpectNumber(&data.UIDNext)
-	case StatusItemUIDValidity:
+	case imap.StatusItemUIDValidity:
 		ok = dec.ExpectNumber(&data.UIDValidity)
-	case StatusItemNumUnseen:
+	case imap.StatusItemNumUnseen:
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumUnseen = &num
-	case StatusItemNumDeleted:
+	case imap.StatusItemNumDeleted:
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumDeleted = &num
-	case StatusItemSize:
+	case imap.StatusItemSize:
 		var size int64
 		ok = dec.ExpectNumber64(&size)
 		data.Size = &size
-	case StatusItemAppendLimit:
+	case imap.StatusItemAppendLimit:
 		var num uint32
 		if dec.Number(&num) {
 			ok = true
@@ -142,7 +111,7 @@ func readStatusAttVal(dec *imapwire.Decoder, data *StatusData) error {
 			num = ^uint32(0)
 		}
 		data.AppendLimit = &num
-	case StatusItemDeletedStorage:
+	case imap.StatusItemDeletedStorage:
 		var storage int64
 		ok = dec.ExpectNumber64(&storage)
 		data.DeletedStorage = &storage
