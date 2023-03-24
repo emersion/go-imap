@@ -17,4 +17,5 @@ var ErrAuthFailed = errAuthFailed
 type Session interface {
 	Close() error
 	Login(username, password string) error
+	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 }
