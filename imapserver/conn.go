@@ -206,7 +206,9 @@ func (c *conn) handleIdle(dec *imapwire.Decoder) error {
 		return dec.Err()
 	}
 
-	// TODO: check connection state
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
 
 	enc := newResponseEncoder(c)
 	defer enc.end()
