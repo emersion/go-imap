@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -35,7 +36,13 @@ func newConn(c net.Conn, server *Server) *conn {
 }
 
 func (c *conn) serve() {
-	defer c.conn.Close()
+	defer func() {
+		if v := recover(); v != nil {
+			c.server.Logger.Printf("panic handling command: %v\n%s", v, debug.Stack())
+		}
+
+		c.conn.Close()
+	}()
 
 	err := c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeOK,
