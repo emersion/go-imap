@@ -130,7 +130,8 @@ func (dec *Decoder) ExpectSP() bool {
 }
 
 func (dec *Decoder) CRLF() bool {
-	return dec.acceptByte('\r') && dec.acceptByte('\n')
+	dec.acceptByte('\r') // be liberal in what we receive and accept lone LF
+	return dec.acceptByte('\n')
 }
 
 func (dec *Decoder) ExpectCRLF() bool {
