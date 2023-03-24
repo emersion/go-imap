@@ -13,7 +13,8 @@ type Logger interface {
 }
 
 type Server struct {
-	Logger Logger
+	NewSession func() (Session, error)
+	Logger     Logger
 }
 
 func (s *Server) Serve(ln net.Listener) error {
