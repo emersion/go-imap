@@ -77,22 +77,24 @@ func (c *conn) readCommand() error {
 	var err error
 	switch name {
 	case "NOOP":
-		// do nothing
+		err = c.handleNoop()
 	case "LOGOUT":
 		err = c.handleLogout()
 	case "CAPABILITY":
 		err = c.handleCapability()
+	case "IDLE":
+		err = c.handleIdle()
 	default:
 		var text string
 		c.dec.Text(&text)
+		if !c.dec.ExpectCRLF() {
+			return c.dec.Err()
+		}
 
 		err = &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown command",
 		}
-	}
-	if !c.dec.CRLF() {
-		return c.dec.Err()
 	}
 
 	var resp *imap.StatusResponse
@@ -114,8 +116,20 @@ func (c *conn) readCommand() error {
 	return c.writeStatusResp(tag, resp)
 }
 
+func (c *conn) handleNoop() error {
+	if !c.dec.ExpectCRLF() {
+		return c.dec.Err()
+	}
+	return nil
+}
+
 func (c *conn) handleLogout() error {
+	if !c.dec.ExpectCRLF() {
+		return c.dec.Err()
+	}
+
 	c.state = imap.ConnStateLogout
+
 	return c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeBye,
 		Text: "Logging out",
@@ -123,13 +137,43 @@ func (c *conn) handleLogout() error {
 }
 
 func (c *conn) handleCapability() error {
+	if !c.dec.ExpectCRLF() {
+		return c.dec.Err()
+	}
+
 	enc := newResponseEncoder(c)
+	defer enc.end()
 	enc.Atom("*").SP().Atom("CAPABILITY").SP().Atom(string(imap.CapIMAP4rev2))
-	return enc.close()
+	return enc.CRLF()
+}
+
+func (c *conn) handleIdle() error {
+	if !c.dec.ExpectCRLF() {
+		return c.dec.Err()
+	}
+
+	// TODO: check connection state
+
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	if err := writeContReq(enc.Encoder, "idling"); err != nil {
+		return err
+	}
+
+	line, isPrefix, err := c.br.ReadLine()
+	if err != nil {
+		return err
+	} else if isPrefix || string(line) != "DONE" {
+		return fmt.Errorf("imapserver: expected DONE to end IDLE command")
+	}
+
+	return nil
 }
 
 func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
 	enc := newResponseEncoder(c)
+	defer enc.end()
 
 	if tag == "" {
 		tag = "*"
@@ -139,8 +183,7 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 		enc.Atom(fmt.Sprintf("[%v]", statusResp.Code)).SP()
 	}
 	enc.Text(statusResp.Text)
-
-	return enc.close()
+	return enc.CRLF()
 }
 
 type responseEncoder struct {
@@ -149,16 +192,21 @@ type responseEncoder struct {
 }
 
 func newResponseEncoder(conn *conn) *responseEncoder {
-	conn.encMutex.Lock() // released by responseEncoder.close
+	conn.encMutex.Lock() // released by responseEncoder.end
 	return &responseEncoder{
 		Encoder: imapwire.NewEncoder(conn.bw),
 		conn:    conn,
 	}
 }
 
-func (enc *responseEncoder) close() error {
-	err := enc.CRLF()
+func (enc *responseEncoder) end() {
+	if enc.Encoder == nil {
+		panic("imapserver: responseEncoder.end called twice")
+	}
 	enc.Encoder = nil
 	enc.conn.encMutex.Unlock()
-	return err
+}
+
+func writeContReq(enc *imapwire.Encoder, text string) error {
+	return enc.Atom("+").SP().Text(text).CRLF()
 }
