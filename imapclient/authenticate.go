@@ -1,12 +1,12 @@
 package imapclient
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	"github.com/emersion/go-sasl"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 )
 
 // Authenticate sends an AUTHENTICATE command.
@@ -23,7 +23,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 	enc := c.beginCommand("AUTHENTICATE", cmd)
 	enc.SP().Atom(mech)
 	if initialResp != nil && c.Caps().Has(imap.CapSASLIR) {
-		enc.SP().Atom(encodeSASL(initialResp))
+		enc.SP().Atom(internal.EncodeSASL(initialResp))
 		initialResp = nil
 	}
 	enc.flush()
@@ -48,7 +48,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 			continue
 		}
 
-		challenge, err := decodeSASL(challengeStr)
+		challenge, err := internal.DecodeSASL(challengeStr)
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ type authenticateCommand struct {
 }
 
 func (c *Client) writeSASLResp(resp []byte) error {
-	respStr := encodeSASL(resp)
+	respStr := internal.EncodeSASL(resp)
 	if _, err := c.bw.WriteString(respStr + "\r\n"); err != nil {
 		return err
 	}
@@ -78,20 +78,4 @@ func (c *Client) writeSASLResp(resp []byte) error {
 		return err
 	}
 	return nil
-}
-
-func encodeSASL(b []byte) string {
-	if len(b) == 0 {
-		return "="
-	} else {
-		return base64.StdEncoding.EncodeToString(b)
-	}
-}
-
-func decodeSASL(s string) ([]byte, error) {
-	if s == "=" {
-		return []byte{}, nil
-	} else {
-		return base64.StdEncoding.DecodeString(s)
-	}
 }
