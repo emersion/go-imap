@@ -116,6 +116,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogout(dec)
 	case "CAPABILITY":
 		err = c.handleCapability(dec)
+	case "LOGIN":
+		err = c.handleLogin(dec)
 	case "IDLE":
 		err = c.handleIdle(dec)
 	default:
@@ -182,6 +184,21 @@ func (c *conn) handleCapability(dec *imapwire.Decoder) error {
 	return enc.CRLF()
 }
 
+func (c *conn) handleLogin(dec *imapwire.Decoder) error {
+	var username, password string
+	if !dec.ExpectSP() || !dec.ExpectAString(&username) || !dec.ExpectSP() || !dec.ExpectAString(&password) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateNotAuthenticated); err != nil {
+		return err
+	}
+	if err := c.session.Login(username, password); err != nil {
+		return err
+	}
+	c.state = imap.ConnStateAuthenticated
+	return nil
+}
+
 func (c *conn) handleIdle(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
@@ -223,6 +240,17 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 	}
 	enc.Text(statusResp.Text)
 	return enc.CRLF()
+}
+
+func (c *conn) checkState(state imap.ConnState) error {
+	if c.state != state {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Code: imap.ResponseCodeClientBug,
+			Text: fmt.Sprintf("This command is only valid in the %s state", state),
+		}
+	}
+	return nil
 }
 
 type responseEncoder struct {
