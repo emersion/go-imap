@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"runtime/debug"
@@ -68,7 +69,7 @@ func (c *conn) serve() {
 func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
-		return fmt.Errorf("in command: %v", dec.Err())
+		return fmt.Errorf("in command: %w", dec.Err())
 	}
 	name = strings.ToUpper(name)
 
@@ -84,21 +85,26 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	case "IDLE":
 		err = c.handleIdle(dec)
 	default:
-		var text string
-		dec.Text(&text)
-		if !dec.ExpectCRLF() {
-			return dec.Err()
-		}
-
+		discardLine(dec)
 		err = &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown command",
 		}
 	}
 
-	var resp *imap.StatusResponse
+	var (
+		resp   *imap.StatusResponse
+		decErr *imapwire.DecoderExpectError
+	)
 	if imapErr, ok := err.(*imap.Error); ok {
 		resp = (*imap.StatusResponse)(imapErr)
+	} else if errors.As(err, &decErr) {
+		discardLine(dec)
+		resp = &imap.StatusResponse{
+			Type: imap.StatusResponseTypeBad,
+			Code: imap.ResponseCodeClientBug,
+			Text: "Syntax error: " + decErr.Message,
+		}
 	} else if err != nil {
 		c.server.Logger.Printf("handling %v command: %v", name, err)
 		resp = &imap.StatusResponse{
@@ -204,6 +210,12 @@ func (enc *responseEncoder) end() {
 	}
 	enc.Encoder = nil
 	enc.conn.encMutex.Unlock()
+}
+
+func discardLine(dec *imapwire.Decoder) {
+	var text string
+	dec.Text(&text)
+	dec.CRLF()
 }
 
 func writeContReq(enc *imapwire.Encoder, text string) error {
