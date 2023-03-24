@@ -17,7 +17,6 @@ type conn struct {
 	server   *Server
 	br       *bufio.Reader
 	bw       *bufio.Writer
-	dec      *imapwire.Decoder
 	encMutex sync.Mutex
 
 	state imap.ConnState
@@ -31,7 +30,6 @@ func newConn(c net.Conn, server *Server) *conn {
 		server: server,
 		br:     br,
 		bw:     bw,
-		dec:    imapwire.NewDecoder(br),
 	}
 }
 
@@ -55,21 +53,22 @@ func (c *conn) serve() {
 	}
 
 	for {
-		if c.state == imap.ConnStateLogout || c.dec.EOF() {
+		dec := imapwire.NewDecoder(c.br)
+		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break
 		}
 
-		if err := c.readCommand(); err != nil {
+		if err := c.readCommand(dec); err != nil {
 			c.server.Logger.Printf("failed to read command: %v", err)
 			break
 		}
 	}
 }
 
-func (c *conn) readCommand() error {
+func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	var tag, name string
-	if !c.dec.ExpectAtom(&tag) || !c.dec.ExpectSP() || !c.dec.ExpectAtom(&name) {
-		return fmt.Errorf("in command: %v", c.dec.Err())
+	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
+		return fmt.Errorf("in command: %v", dec.Err())
 	}
 	name = strings.ToUpper(name)
 
@@ -77,18 +76,18 @@ func (c *conn) readCommand() error {
 	var err error
 	switch name {
 	case "NOOP":
-		err = c.handleNoop()
+		err = c.handleNoop(dec)
 	case "LOGOUT":
-		err = c.handleLogout()
+		err = c.handleLogout(dec)
 	case "CAPABILITY":
-		err = c.handleCapability()
+		err = c.handleCapability(dec)
 	case "IDLE":
-		err = c.handleIdle()
+		err = c.handleIdle(dec)
 	default:
 		var text string
-		c.dec.Text(&text)
-		if !c.dec.ExpectCRLF() {
-			return c.dec.Err()
+		dec.Text(&text)
+		if !dec.ExpectCRLF() {
+			return dec.Err()
 		}
 
 		err = &imap.Error{
@@ -116,16 +115,16 @@ func (c *conn) readCommand() error {
 	return c.writeStatusResp(tag, resp)
 }
 
-func (c *conn) handleNoop() error {
-	if !c.dec.ExpectCRLF() {
-		return c.dec.Err()
+func (c *conn) handleNoop(dec *imapwire.Decoder) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
 	}
 	return nil
 }
 
-func (c *conn) handleLogout() error {
-	if !c.dec.ExpectCRLF() {
-		return c.dec.Err()
+func (c *conn) handleLogout(dec *imapwire.Decoder) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
 	}
 
 	c.state = imap.ConnStateLogout
@@ -136,9 +135,9 @@ func (c *conn) handleLogout() error {
 	})
 }
 
-func (c *conn) handleCapability() error {
-	if !c.dec.ExpectCRLF() {
-		return c.dec.Err()
+func (c *conn) handleCapability(dec *imapwire.Decoder) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
 	}
 
 	enc := newResponseEncoder(c)
@@ -147,9 +146,9 @@ func (c *conn) handleCapability() error {
 	return enc.CRLF()
 }
 
-func (c *conn) handleIdle() error {
-	if !c.dec.ExpectCRLF() {
-		return c.dec.Err()
+func (c *conn) handleIdle(dec *imapwire.Decoder) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
 	}
 
 	// TODO: check connection state
