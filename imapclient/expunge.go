@@ -24,7 +24,7 @@ func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
 
 func (c *Client) handleExpunge(seqNum uint32) error {
 	c.mutex.Lock()
-	if c.state == StateSelected && c.mailbox.NumMessages > 0 {
+	if c.state == imap.ConnStateSelected && c.mailbox.NumMessages > 0 {
 		c.mailbox = c.mailbox.copy()
 		c.mailbox.NumMessages--
 	}
