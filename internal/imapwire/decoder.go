@@ -21,6 +21,15 @@ func IsAtomChar(ch byte) bool {
 	}
 }
 
+// DecoderExpectError is an error due to the Decoder.Expect family of methods.
+type DecoderExpectError struct {
+	Message string
+}
+
+func (err *DecoderExpectError) Error() string {
+	return fmt.Sprintf("imapwire: %v", err.Message)
+}
+
 // A Decoder reads IMAP data.
 //
 // There are multiple families of methods:
@@ -101,12 +110,12 @@ func (dec *Decoder) EOF() bool {
 // Expect sets the decoder error if ok is false.
 func (dec *Decoder) Expect(ok bool, name string) bool {
 	if !ok {
-		err := fmt.Errorf("expected %v", name)
+		msg := fmt.Sprintf("expected %v", name)
 		if dec.r.Buffered() > 0 {
 			b, _ := dec.r.Peek(1)
-			err = fmt.Errorf("%v, got '%v'", err, string(b))
+			msg += fmt.Sprintf(", got '%v'", string(b))
 		}
-		return dec.returnErr(err)
+		return dec.returnErr(&DecoderExpectError{Message: msg})
 	}
 	return true
 }
