@@ -28,37 +28,6 @@ const (
 	literalWriteTimeout = 5 * time.Minute
 )
 
-// State describes the client state.
-//
-// See RFC 9051 section 3.
-type State int
-
-const (
-	StateNone State = iota
-	StateNotAuthenticated
-	StateAuthenticated
-	StateSelected
-	StateLogout
-)
-
-// String implements fmt.Stringer.
-func (state State) String() string {
-	switch state {
-	case StateNone:
-		return "none"
-	case StateNotAuthenticated:
-		return "not authenticated"
-	case StateAuthenticated:
-		return "authenticated"
-	case StateSelected:
-		return "selected"
-	case StateLogout:
-		return "logout"
-	default:
-		panic(fmt.Errorf("imapclient: unknown state %v", int(state)))
-	}
-}
-
 // SelectedMailbox contains metadata for the currently selected mailbox.
 type SelectedMailbox struct {
 	Name           string
@@ -142,7 +111,7 @@ type Client struct {
 	decErr error
 
 	mutex       sync.Mutex
-	state       State
+	state       imap.ConnState
 	caps        imap.CapSet
 	mailbox     *SelectedMailbox
 	cmdTag      uint64
@@ -173,7 +142,7 @@ func New(conn net.Conn, options *Options) *Client {
 		dec:        imapwire.NewDecoder(br),
 		greetingCh: make(chan struct{}),
 		decCh:      make(chan struct{}),
-		state:      StateNone,
+		state:      imap.ConnStateNone,
 	}
 	go client.read()
 	return client
@@ -227,17 +196,17 @@ func (c *Client) setWriteTimeout(dur time.Duration) {
 	}
 }
 
-// State returns the current state of the client.
-func (c *Client) State() State {
+// State returns the current connection state of the client.
+func (c *Client) State() imap.ConnState {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.state
 }
 
-func (c *Client) setState(state State) {
+func (c *Client) setState(state imap.ConnState) {
 	c.mutex.Lock()
 	c.state = state
-	if c.state != StateSelected {
+	if c.state != imap.ConnStateSelected {
 		c.mailbox = nil
 	}
 	c.mutex.Unlock()
@@ -395,12 +364,12 @@ func (c *Client) completeCommand(cmd command, err error) {
 	switch cmd := cmd.(type) {
 	case *authenticateCommand, *loginCommand:
 		if err == nil {
-			c.setState(StateAuthenticated)
+			c.setState(imap.ConnStateAuthenticated)
 		}
 	case *SelectCommand:
 		if err == nil {
 			c.mutex.Lock()
-			c.state = StateSelected
+			c.state = imap.ConnStateSelected
 			c.mailbox = &SelectedMailbox{
 				Name:           cmd.mailbox,
 				NumMessages:    cmd.data.NumMessages,
@@ -411,11 +380,11 @@ func (c *Client) completeCommand(cmd command, err error) {
 		}
 	case *unselectCommand:
 		if err == nil {
-			c.setState(StateAuthenticated)
+			c.setState(imap.ConnStateAuthenticated)
 		}
 	case *logoutCommand:
 		if err == nil {
-			c.setState(StateLogout)
+			c.setState(imap.ConnStateLogout)
 		}
 	case *ListCommand:
 		if cmd.pendingData != nil {
@@ -467,7 +436,7 @@ func (c *Client) read() {
 		c.conn.Close()
 
 		c.mutex.Lock()
-		c.state = StateLogout
+		c.state = imap.ConnStateLogout
 		pendingCmds := c.pendingCmds
 		c.pendingCmds = nil
 		c.mutex.Unlock()
@@ -709,7 +678,7 @@ func (c *Client) readResponseData(typ string) error {
 				}
 
 				c.mutex.Lock()
-				if c.state == StateSelected {
+				if c.state == imap.ConnStateSelected {
 					c.mailbox = c.mailbox.copy()
 					c.mailbox.PermanentFlags = flags
 				}
@@ -771,17 +740,17 @@ func (c *Client) readResponseData(typ string) error {
 		}
 
 		if code == "CLOSED" {
-			c.setState(StateAuthenticated)
+			c.setState(imap.ConnStateAuthenticated)
 		}
 
 		if !c.greetingRecv {
 			switch typ {
 			case "OK":
-				c.setState(StateNotAuthenticated)
+				c.setState(imap.ConnStateNotAuthenticated)
 			case "PREAUTH":
-				c.setState(StateAuthenticated)
+				c.setState(imap.ConnStateAuthenticated)
 			default:
-				c.setState(StateLogout)
+				c.setState(imap.ConnStateLogout)
 				c.greetingErr = &imap.Error{
 					Type: imap.StatusResponseType(typ),
 					Code: imap.ResponseCode(code),

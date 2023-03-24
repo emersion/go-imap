@@ -6,6 +6,41 @@
 // server. See the imapclient and imapserver sub-packages.
 package imap
 
+import (
+	"fmt"
+)
+
+// ConnState describes the connection state.
+//
+// See RFC 9051 section 3.
+type ConnState int
+
+const (
+	ConnStateNone ConnState = iota
+	ConnStateNotAuthenticated
+	ConnStateAuthenticated
+	ConnStateSelected
+	ConnStateLogout
+)
+
+// String implements fmt.Stringer.
+func (state ConnState) String() string {
+	switch state {
+	case ConnStateNone:
+		return "none"
+	case ConnStateNotAuthenticated:
+		return "not authenticated"
+	case ConnStateAuthenticated:
+		return "authenticated"
+	case ConnStateSelected:
+		return "selected"
+	case ConnStateLogout:
+		return "logout"
+	default:
+		panic(fmt.Errorf("imap: unknown connection state %v", int(state)))
+	}
+}
+
 // MailboxAttr is a mailbox attribute.
 //
 // Mailbox attributes are defined in RFC 9051 section 7.3.1.

@@ -49,7 +49,7 @@ func (c *Client) handleFlags() error {
 	}
 
 	c.mutex.Lock()
-	if c.state == StateSelected {
+	if c.state == imap.ConnStateSelected {
 		c.mailbox = c.mailbox.copy()
 		c.mailbox.PermanentFlags = flags
 	}
@@ -71,7 +71,7 @@ func (c *Client) handleExists(num uint32) error {
 		cmd.data.NumMessages = num
 	} else {
 		c.mutex.Lock()
-		if c.state == StateSelected {
+		if c.state == imap.ConnStateSelected {
 			c.mailbox = c.mailbox.copy()
 			c.mailbox.NumMessages = num
 		}
