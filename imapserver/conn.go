@@ -20,7 +20,7 @@ type conn struct {
 	dec      *imapwire.Decoder
 	encMutex sync.Mutex
 
-	logout bool // TODO: replace with imapclient.State
+	state imap.ConnState
 }
 
 func newConn(c net.Conn, server *Server) *conn {
@@ -44,6 +44,7 @@ func (c *conn) serve() {
 		c.conn.Close()
 	}()
 
+	c.state = imap.ConnStateNotAuthenticated
 	err := c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeOK,
 		Text: "IMAP4rev2 server ready",
@@ -54,7 +55,7 @@ func (c *conn) serve() {
 	}
 
 	for {
-		if c.logout || c.dec.EOF() {
+		if c.state == imap.ConnStateLogout || c.dec.EOF() {
 			break
 		}
 
@@ -114,7 +115,7 @@ func (c *conn) readCommand() error {
 }
 
 func (c *conn) handleLogout() error {
-	c.logout = true
+	c.state = imap.ConnStateLogout
 	return c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeBye,
 		Text: "Logging out",
