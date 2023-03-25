@@ -11,7 +11,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleFetch(dec *imapwire.Decoder) error {
+func (c *conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	var seqSetStr string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() {
 		return dec.Err()
@@ -49,8 +49,18 @@ func (c *conn) handleFetch(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	if numKind == NumKindUID {
+		itemsWithUID := []imap.FetchItem{imap.FetchItemUID}
+		for _, item := range items {
+			if item != imap.FetchItemUID {
+				itemsWithUID = append(itemsWithUID, item)
+			}
+		}
+		items = itemsWithUID
+	}
+
 	w := &FetchWriter{conn: c}
-	if err := c.session.Fetch(w, seqSet, items); err != nil {
+	if err := c.session.Fetch(w, numKind, seqSet, items); err != nil {
 		return err
 	}
 	return nil
