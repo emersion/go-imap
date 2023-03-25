@@ -122,6 +122,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogin(dec)
 	case "STATUS":
 		err = c.handleStatus(dec)
+	case "LIST":
+		err = c.handleList(dec)
 	case "IDLE":
 		err = c.handleIdle(dec)
 	default:

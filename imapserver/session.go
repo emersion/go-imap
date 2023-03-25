@@ -18,4 +18,5 @@ type Session interface {
 	Close() error
 	Login(username, password string) error
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
+	List(ref, pattern string, options *imap.ListOptions) ([]imap.ListData, error)
 }
