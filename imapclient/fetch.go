@@ -337,7 +337,7 @@ var (
 // FetchItemDataBodySection holds data returned by FETCH BODY[].
 type FetchItemDataBodySection struct {
 	Section *FetchItemBodySection
-	Literal LiteralReader
+	Literal imap.LiteralReader
 }
 
 func (FetchItemDataBodySection) fetchItemData() {}
@@ -349,7 +349,7 @@ func (item FetchItemDataBodySection) discard() {
 // FetchItemDataBinarySection holds data returned by FETCH BINARY[].
 type FetchItemDataBinarySection struct {
 	Section *FetchItemBinarySection
-	Literal LiteralReader
+	Literal imap.LiteralReader
 }
 
 func (FetchItemDataBinarySection) fetchItemData() {}
@@ -603,12 +603,6 @@ type BodyStructureDisposition struct {
 // to skip them.
 type BodyStructureWalkFunc func(path []int, part BodyStructure) (walkChildren bool)
 
-// LiteralReader is a reader for IMAP literals.
-type LiteralReader interface {
-	io.Reader
-	Size() int64
-}
-
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -806,7 +800,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 					return dec.Err()
 				}
 
-				var fetchLit LiteralReader
+				var fetchLit imap.LiteralReader
 				if lit != nil {
 					done = make(chan struct{})
 					fetchLit = &fetchLiteralReader{

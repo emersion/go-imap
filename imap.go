@@ -8,6 +8,7 @@ package imap
 
 import (
 	"fmt"
+	"io"
 )
 
 // ConnState describes the connection state.
@@ -92,3 +93,9 @@ const (
 	// Permanent flags
 	FlagWildcard Flag = "\\*"
 )
+
+// LiteralReader is a reader for IMAP literals.
+type LiteralReader interface {
+	io.Reader
+	Size() int64
+}
