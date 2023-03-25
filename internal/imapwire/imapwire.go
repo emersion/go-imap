@@ -7,6 +7,14 @@ import (
 	"fmt"
 )
 
+// ConnSide describes the side of a connection: client or server.
+type ConnSide int
+
+const (
+	ConnSideClient ConnSide = 1 + iota
+	ConnSideServer
+)
+
 // ContinuationRequest is a continuation request.
 //
 // The sender must call either Done or Cancel. The receiver must call Wait.

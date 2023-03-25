@@ -295,7 +295,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 		done: make(chan error, 1),
 	}
 	enc := &commandEncoder{
-		Encoder: imapwire.NewEncoder(c.bw),
+		Encoder: imapwire.NewEncoder(c.bw, imapwire.ConnSideClient),
 		client:  c,
 		cmd:     baseCmd,
 	}

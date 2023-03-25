@@ -272,7 +272,7 @@ type responseEncoder struct {
 func newResponseEncoder(conn *conn) *responseEncoder {
 	conn.encMutex.Lock() // released by responseEncoder.end
 	return &responseEncoder{
-		Encoder: imapwire.NewEncoder(conn.bw),
+		Encoder: imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer),
 		conn:    conn,
 	}
 }
