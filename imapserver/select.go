@@ -61,7 +61,11 @@ func (c *conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 		return err
 	}
 
-	// TODO: expunge
+	if expunge {
+		if err := c.session.Expunge(nil); err != nil {
+			return err
+		}
+	}
 
 	if err := c.session.Unselect(); err != nil {
 		return err

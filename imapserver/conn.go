@@ -144,6 +144,10 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleAppend(dec)
 	case "FETCH", "UID FETCH":
 		err = c.handleFetch(dec, numKind)
+	case "EXPUNGE":
+		err = c.handleExpunge(dec)
+	case "UID EXPUNGE":
+		err = c.handleUIDExpunge(dec)
 	default:
 		discardLine(dec)
 		err = &imap.Error{
