@@ -2,9 +2,9 @@ package imapclient
 
 import (
 	"io"
-	"time"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 )
 
 // Append sends an APPEND command.
@@ -22,7 +22,7 @@ func (c *Client) Append(mailbox string, size int64, options *imap.AppendOptions)
 		}).SP()
 	}
 	if options != nil && !options.Time.IsZero() {
-		cmd.enc.String(options.Time.Format(dateTimeLayout)).SP()
+		cmd.enc.String(options.Time.Format(internal.DateTimeLayout)).SP()
 	}
 	cmd.wc = cmd.enc.Literal(size)
 	return cmd
