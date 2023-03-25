@@ -2,6 +2,8 @@ package imapserver
 
 import (
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -280,6 +282,47 @@ func (w *FetchResponseWriter) WriteInternalDate(t time.Time) {
 	w.enc.Atom("INTERNALDATE").SP().String(t.Format(internal.DateTimeLayout))
 }
 
+// WriteBodySection writes a body section.
+//
+// The returned io.WriteCloser must be closed before writing any more message
+// data items.
+func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySection, size int64) io.WriteCloser {
+	w.writeItemSep()
+	enc := w.enc.Encoder
+
+	enc.Atom("BODY")
+	enc.Special('[')
+	writeSectionPart(enc, section.Part)
+	if len(section.Part) > 0 && section.Specifier != imap.PartSpecifierNone {
+		enc.Special('.')
+	}
+	if section.Specifier != imap.PartSpecifierNone {
+		enc.Atom(string(section.Specifier))
+
+		var headerList []string
+		if len(section.HeaderFields) > 0 {
+			headerList = section.HeaderFields
+			enc.Atom(".FIELDS")
+		} else if len(section.HeaderFieldsNot) > 0 {
+			headerList = section.HeaderFieldsNot
+			enc.Atom(".FIELDS.NOT")
+		}
+
+		if len(headerList) > 0 {
+			enc.SP().List(len(headerList), func(i int) {
+				enc.String(headerList[i])
+			})
+		}
+	}
+	enc.Special(']')
+	if partial := section.Partial; partial != nil {
+		enc.Special('<').Number(uint32(partial.Offset)).Special('>')
+	}
+
+	enc.SP()
+	return enc.Literal(size, nil)
+}
+
 // WriteEnvelope writes the message's envelope.
 func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 	w.writeItemSep()
@@ -342,4 +385,16 @@ func writeNString(enc *imapwire.Encoder, s string) {
 	} else {
 		enc.String(s)
 	}
+}
+
+func writeSectionPart(enc *imapwire.Encoder, part []int) {
+	if len(part) == 0 {
+		return
+	}
+
+	var l []string
+	for _, num := range part {
+		l = append(l, fmt.Sprintf("%v", num))
+	}
+	enc.Atom(strings.Join(l, "."))
 }
