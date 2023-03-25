@@ -113,7 +113,7 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 		msg := fmt.Sprintf("expected %v", name)
 		if dec.r.Buffered() > 0 {
 			b, _ := dec.r.Peek(1)
-			msg += fmt.Sprintf(", got '%v'", string(b))
+			msg += fmt.Sprintf(", got %q", b)
 		}
 		return dec.returnErr(&DecoderExpectError{Message: msg})
 	}
