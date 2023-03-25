@@ -20,4 +20,5 @@ type Session interface {
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	List(ref, pattern string, options *imap.ListOptions) ([]imap.ListData, error)
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
+	Unselect() error
 }

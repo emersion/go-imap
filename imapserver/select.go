@@ -52,6 +52,25 @@ func (c *conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
 	return nil
 }
 
+func (c *conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+
+	if err := c.checkState(imap.ConnStateSelected); err != nil {
+		return err
+	}
+
+	// TODO: expunge
+
+	if err := c.session.Unselect(); err != nil {
+		return err
+	}
+
+	c.state = imap.ConnStateAuthenticated
+	return nil
+}
+
 func (c *conn) writeExists(numMessages uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()

@@ -128,6 +128,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleIdle(dec)
 	case "SELECT", "EXAMINE":
 		err = c.handleSelect(dec, name == "EXAMINE")
+	case "CLOSE", "UNSELECT":
+		err = c.handleUnselect(dec, name == "CLOSE")
 	default:
 		discardLine(dec)
 		err = &imap.Error{
