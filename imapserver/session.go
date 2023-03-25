@@ -46,4 +46,5 @@ type Session interface {
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
 	Unselect() error
 	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
+	Expunge(uids *imap.SeqSet) error
 }
