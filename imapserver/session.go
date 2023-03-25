@@ -19,4 +19,5 @@ type Session interface {
 	Login(username, password string) error
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	List(ref, pattern string, options *imap.ListOptions) ([]imap.ListData, error)
+	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
 }
