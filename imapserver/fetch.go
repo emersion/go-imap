@@ -280,6 +280,33 @@ func (w *FetchResponseWriter) WriteInternalDate(t time.Time) {
 	w.enc.Atom("INTERNALDATE").SP().String(t.Format(internal.DateTimeLayout))
 }
 
+// WriteEnvelope writes the message's envelope.
+func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
+	w.writeItemSep()
+	enc := w.enc.Encoder
+	enc.Atom("ENVELOPE").SP().Special('(')
+	writeNString(enc, envelope.Date)
+	enc.SP()
+	writeNString(enc, envelope.Subject)
+	addrs := [][]imap.Address{
+		envelope.From,
+		envelope.Sender,
+		envelope.ReplyTo,
+		envelope.To,
+		envelope.Cc,
+		envelope.Bcc,
+	}
+	for _, l := range addrs {
+		enc.SP()
+		writeAddressList(enc, l)
+	}
+	enc.SP()
+	writeNString(enc, envelope.InReplyTo)
+	enc.SP()
+	writeNString(enc, envelope.MessageID)
+	enc.Special(')')
+}
+
 // Close closes the FETCH message writer.
 func (w *FetchResponseWriter) Close() error {
 	if w.enc == nil {
@@ -289,4 +316,30 @@ func (w *FetchResponseWriter) Close() error {
 	w.enc.end()
 	w.enc = nil
 	return err
+}
+
+func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
+	if l == nil {
+		enc.NIL()
+		return
+	}
+
+	enc.List(len(l), func(i int) {
+		addr := l[i]
+		enc.Special('(')
+		writeNString(enc, addr.Name)
+		enc.SP().NIL().SP()
+		writeNString(enc, addr.Mailbox)
+		enc.SP()
+		writeNString(enc, addr.Host)
+		enc.Special(')')
+	})
+}
+
+func writeNString(enc *imapwire.Encoder, s string) {
+	if s == "" {
+		enc.NIL()
+	} else {
+		enc.String(s)
+	}
 }
