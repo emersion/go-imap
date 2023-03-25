@@ -19,6 +19,7 @@ type Session interface {
 	Login(username, password string) error
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	List(ref, pattern string, options *imap.ListOptions) ([]imap.ListData, error)
+	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
 	Unselect() error
 }
