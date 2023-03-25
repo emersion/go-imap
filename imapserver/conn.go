@@ -223,11 +223,7 @@ func (c *conn) handleIdle(dec *imapwire.Decoder) error {
 	if err != nil {
 		return err
 	} else if isPrefix || string(line) != "DONE" {
-		return &imap.Error{
-			Type: imap.StatusResponseTypeBad,
-			Code: imap.ResponseCodeClientBug,
-			Text: "Syntax error: expected DONE to end IDLE command",
-		}
+		return newClientBugError("Syntax error: expected DONE to end IDLE command")
 	}
 
 	return nil
@@ -250,11 +246,7 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 
 func (c *conn) checkState(state imap.ConnState) error {
 	if c.state != state {
-		return &imap.Error{
-			Type: imap.StatusResponseTypeBad,
-			Code: imap.ResponseCodeClientBug,
-			Text: fmt.Sprintf("This command is only valid in the %s state", state),
-		}
+		return newClientBugError(fmt.Sprintf("This command is only valid in the %s state", state))
 	}
 	return nil
 }
@@ -288,4 +280,12 @@ func discardLine(dec *imapwire.Decoder) {
 
 func writeContReq(enc *imapwire.Encoder, text string) error {
 	return enc.Atom("+").SP().Text(text).CRLF()
+}
+
+func newClientBugError(text string) error {
+	return &imap.Error{
+		Type: imap.StatusResponseTypeBad,
+		Code: imap.ResponseCodeClientBug,
+		Text: text,
+	}
 }
