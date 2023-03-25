@@ -39,6 +39,10 @@ func (c *conn) handleStatus(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	return c.writeStatus(data, items)
+}
+
+func (c *conn) writeStatus(data *imap.StatusData, items []imap.StatusItem) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	return enc.Atom("*").SP().Atom("STATUS").SP().Mailbox(data.Mailbox).SP().List(len(items), func(i int) {
