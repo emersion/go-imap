@@ -18,13 +18,14 @@ import (
 // chained.
 type Encoder struct {
 	w       *bufio.Writer
+	side    ConnSide
 	err     error
 	literal bool
 }
 
 // NewEncoder creates a new encoder.
-func NewEncoder(w *bufio.Writer) *Encoder {
-	return &Encoder{w: w}
+func NewEncoder(w *bufio.Writer, side ConnSide) *Encoder {
+	return &Encoder{w: w, side: side}
 }
 
 func (enc *Encoder) writeString(s string) *Encoder {
@@ -147,10 +148,14 @@ func (enc *Encoder) Text(s string) *Encoder {
 // nil to be sent to the channel before writing the literal data. If an error
 // is sent to the channel, the literal will be cancelled.
 func (enc *Encoder) Literal(size int64, sync *ContinuationRequest) io.WriteCloser {
+	if sync != nil && enc.side == ConnSideServer {
+		panic("imapwire: sync must be nil on a server-side Encoder.Literal")
+	}
+
 	// TODO: literal8
 	enc.writeString("{")
 	enc.Number64(size)
-	if sync == nil {
+	if sync == nil && enc.side == ConnSideClient {
 		enc.writeString("+")
 	}
 	enc.writeString("}")
