@@ -294,7 +294,7 @@ func (FetchItemDataFlags) fetchItemData() {}
 
 // FetchItemDataEnvelope holds data returned by FETCH ENVELOPE.
 type FetchItemDataEnvelope struct {
-	Envelope *Envelope
+	Envelope *imap.Envelope
 }
 
 func (FetchItemDataEnvelope) fetchItemData() {}
@@ -336,49 +336,6 @@ type FetchItemDataBinarySectionSize struct {
 }
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
-
-// Envelope is the envelope structure of a message.
-type Envelope struct {
-	Date      string // see net/mail.ParseDate
-	Subject   string
-	From      []Address
-	Sender    []Address
-	ReplyTo   []Address
-	To        []Address
-	Cc        []Address
-	Bcc       []Address
-	InReplyTo string
-	MessageID string
-}
-
-// Address represents a sender or recipient of a message.
-type Address struct {
-	Name    string
-	Mailbox string
-	Host    string
-}
-
-// Addr returns the e-mail address in the form "foo@example.org".
-//
-// If the address is a start or end of group, the empty string is returned.
-func (addr *Address) Addr() string {
-	if addr.Mailbox == "" || addr.Host == "" {
-		return ""
-	}
-	return addr.Mailbox + "@" + addr.Host
-}
-
-// IsGroupStart returns true if this address is a start of group marker.
-//
-// In that case, Mailbox contains the group name phrase.
-func (addr *Address) IsGroupStart() bool {
-	return addr.Host == "" && addr.Mailbox != ""
-}
-
-// IsGroupEnd returns true if this address is a end of group marker.
-func (addr *Address) IsGroupEnd() bool {
-	return addr.Host == "" && addr.Mailbox == ""
-}
 
 // BodyStructure describes the body structure of a message.
 //
@@ -446,7 +403,7 @@ func (bs *BodyStructureSinglePart) Filename() string {
 func (*BodyStructureSinglePart) bodyStructure() {}
 
 type BodyStructureMessageRFC822 struct {
-	Envelope      *Envelope
+	Envelope      *imap.Envelope
 	BodyStructure BodyStructure
 	NumLines      int64
 }
@@ -536,7 +493,7 @@ type BodyStructureWalkFunc func(path []int, part BodyStructure) (walkChildren bo
 type FetchMessageBuffer struct {
 	SeqNum            uint32
 	Flags             []imap.Flag
-	Envelope          *Envelope
+	Envelope          *imap.Envelope
 	InternalDate      time.Time
 	RFC822Size        int64
 	UID               uint32
@@ -810,8 +767,8 @@ func isMsgAttNameChar(ch byte) bool {
 	return ch != '[' && imapwire.IsAtomChar(ch)
 }
 
-func readEnvelope(dec *imapwire.Decoder, options *Options) (*Envelope, error) {
-	var envelope Envelope
+func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, error) {
+	var envelope imap.Envelope
 
 	if !dec.ExpectSpecial('(') {
 		return nil, dec.Err()
@@ -826,7 +783,7 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*Envelope, error) {
 
 	addrLists := []struct {
 		name string
-		out  *[]Address
+		out  *[]imap.Address
 	}{
 		{"env-from", &envelope.From},
 		{"env-sender", &envelope.Sender},
@@ -855,8 +812,8 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*Envelope, error) {
 	return &envelope, nil
 }
 
-func readAddressList(dec *imapwire.Decoder, options *Options) ([]Address, error) {
-	var l []Address
+func readAddressList(dec *imapwire.Decoder, options *Options) ([]imap.Address, error) {
+	var l []imap.Address
 	err := dec.ExpectNList(func() error {
 		addr, err := readAddress(dec, options)
 		if err != nil {
@@ -868,9 +825,9 @@ func readAddressList(dec *imapwire.Decoder, options *Options) ([]Address, error)
 	return l, err
 }
 
-func readAddress(dec *imapwire.Decoder, options *Options) (*Address, error) {
+func readAddress(dec *imapwire.Decoder, options *Options) (*imap.Address, error) {
 	var (
-		addr     Address
+		addr     imap.Address
 		name     string
 		obsRoute string
 	)

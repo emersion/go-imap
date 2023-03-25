@@ -72,3 +72,46 @@ type FetchItemBinarySectionSize struct {
 }
 
 func (*FetchItemBinarySectionSize) fetchItem() {}
+
+// Envelope is the envelope structure of a message.
+type Envelope struct {
+	Date      string // see net/mail.ParseDate
+	Subject   string
+	From      []Address
+	Sender    []Address
+	ReplyTo   []Address
+	To        []Address
+	Cc        []Address
+	Bcc       []Address
+	InReplyTo string
+	MessageID string
+}
+
+// Address represents a sender or recipient of a message.
+type Address struct {
+	Name    string
+	Mailbox string
+	Host    string
+}
+
+// Addr returns the e-mail address in the form "foo@example.org".
+//
+// If the address is a start or end of group, the empty string is returned.
+func (addr *Address) Addr() string {
+	if addr.Mailbox == "" || addr.Host == "" {
+		return ""
+	}
+	return addr.Mailbox + "@" + addr.Host
+}
+
+// IsGroupStart returns true if this address is a start of group marker.
+//
+// In that case, Mailbox contains the group name phrase.
+func (addr *Address) IsGroupStart() bool {
+	return addr.Host == "" && addr.Mailbox != ""
+}
+
+// IsGroupEnd returns true if this address is a end of group marker.
+func (addr *Address) IsGroupEnd() bool {
+	return addr.Host == "" && addr.Mailbox == ""
+}
