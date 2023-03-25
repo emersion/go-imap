@@ -8,18 +8,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-// ListOptions contains options for the LIST command.
-type ListOptions struct {
-	SelectSubscribed     bool
-	SelectRemote         bool
-	SelectRecursiveMatch bool // requires SelectSubscribed to be set
-
-	ReturnSubscribed bool
-	ReturnChildren   bool
-	ReturnStatus     []imap.StatusItem // requires IMAP4rev2 or LIST-STATUS
-}
-
-func (options *ListOptions) selectOpts() []string {
+func getSelectOpts(options *imap.ListOptions) []string {
 	if options == nil {
 		return nil
 	}
@@ -37,7 +26,7 @@ func (options *ListOptions) selectOpts() []string {
 	return l
 }
 
-func (options *ListOptions) returnOpts() []string {
+func getReturnOpts(options *imap.ListOptions) []string {
 	if options == nil {
 		return nil
 	}
@@ -64,19 +53,19 @@ func (options *ListOptions) returnOpts() []string {
 //
 // A non-zero options value requires support for IMAP4rev2 or the LIST-EXTENDED
 // extension.
-func (c *Client) List(ref, pattern string, options *ListOptions) *ListCommand {
+func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListCommand {
 	cmd := &ListCommand{
-		mailboxes:    make(chan *ListData, 64),
+		mailboxes:    make(chan *imap.ListData, 64),
 		returnStatus: options != nil && len(options.ReturnStatus) > 0,
 	}
 	enc := c.beginCommand("LIST", cmd)
-	if selectOpts := options.selectOpts(); len(selectOpts) > 0 {
+	if selectOpts := getSelectOpts(options); len(selectOpts) > 0 {
 		enc.SP().List(len(selectOpts), func(i int) {
 			enc.Atom(selectOpts[i])
 		})
 	}
 	enc.SP().Mailbox(ref).SP().String(pattern)
-	if returnOpts := options.returnOpts(); len(returnOpts) > 0 {
+	if returnOpts := getReturnOpts(options); len(returnOpts) > 0 {
 		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
 			opt := returnOpts[i]
 			enc.Atom(opt)
@@ -127,17 +116,17 @@ func (c *Client) handleList() error {
 // ListCommand is a LIST command.
 type ListCommand struct {
 	cmd
-	mailboxes chan *ListData
+	mailboxes chan *imap.ListData
 
 	returnStatus bool
-	pendingData  *ListData
+	pendingData  *imap.ListData
 }
 
 // Next advances to the next mailbox.
 //
 // On success, the mailbox LIST data is returned. On error or if there are no
 // more mailboxes, nil is returned.
-func (cmd *ListCommand) Next() *ListData {
+func (cmd *ListCommand) Next() *imap.ListData {
 	return <-cmd.mailboxes
 }
 
@@ -155,8 +144,8 @@ func (cmd *ListCommand) Close() error {
 // Collect accumulates mailboxes into a list.
 //
 // This is equivalent to calling Next repeatedly and then Close.
-func (cmd *ListCommand) Collect() ([]*ListData, error) {
-	var l []*ListData
+func (cmd *ListCommand) Collect() ([]*imap.ListData, error) {
+	var l []*imap.ListData
 	for {
 		data := cmd.Next()
 		if data == nil {
@@ -167,24 +156,8 @@ func (cmd *ListCommand) Collect() ([]*ListData, error) {
 	return l, cmd.Close()
 }
 
-// ListData is the mailbox data returned by a LIST command.
-type ListData struct {
-	Attrs   []imap.MailboxAttr
-	Delim   rune
-	Mailbox string
-
-	// Extended data
-	ChildInfo *ListDataChildInfo
-	OldName   string
-	Status    *imap.StatusData
-}
-
-type ListDataChildInfo struct {
-	Subscribed bool
-}
-
-func readList(dec *imapwire.Decoder) (*ListData, error) {
-	var data ListData
+func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
+	var data imap.ListData
 
 	err := dec.ExpectList(func() error {
 		attr, err := readFlag(dec)
@@ -244,8 +217,8 @@ func readList(dec *imapwire.Decoder) (*ListData, error) {
 	return &data, nil
 }
 
-func readChildInfoExtendedItem(dec *imapwire.Decoder) (*ListDataChildInfo, error) {
-	var childInfo ListDataChildInfo
+func readChildInfoExtendedItem(dec *imapwire.Decoder) (*imap.ListDataChildInfo, error) {
+	var childInfo imap.ListDataChildInfo
 	err := dec.ExpectList(func() error {
 		var opt string
 		if !dec.ExpectAString(&opt) {

@@ -112,5 +112,5 @@ type SelectData struct {
 	UIDNext     uint32
 	UIDValidity uint32
 
-	List *ListData // requires IMAP4rev2
+	List *imap.ListData // requires IMAP4rev2
 }
