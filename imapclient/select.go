@@ -88,29 +88,13 @@ func (c *Client) handleExists(num uint32) error {
 type SelectCommand struct {
 	cmd
 	mailbox string
-	data    SelectData
+	data    imap.SelectData
 }
 
-func (cmd *SelectCommand) Wait() (*SelectData, error) {
+func (cmd *SelectCommand) Wait() (*imap.SelectData, error) {
 	return &cmd.data, cmd.cmd.Wait()
 }
 
 type unselectCommand struct {
 	cmd
-}
-
-// SelectData is the data returned by a SELECT command.
-//
-// In the old RFC 2060, PermanentFlags, UIDNext and UIDValidity are optional.
-type SelectData struct {
-	// Flags defined for this mailbox
-	Flags []imap.Flag
-	// Flags that the client can change permanently
-	PermanentFlags []imap.Flag
-	// Number of messages in this mailbox (aka. "EXISTS")
-	NumMessages uint32
-	UIDNext     uint32
-	UIDValidity uint32
-
-	List *imap.ListData // requires IMAP4rev2
 }
