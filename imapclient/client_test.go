@@ -35,7 +35,7 @@ func ExampleClient() {
 
 	if selectedMbox.NumMessages > 0 {
 		seqSet := imap.SeqSetNum(1)
-		fetchItems := []imapclient.FetchItem{imapclient.FetchItemEnvelope}
+		fetchItems := []imap.FetchItem{imap.FetchItemEnvelope}
 		messages, err := c.Fetch(seqSet, fetchItems).Collect()
 		if err != nil {
 			log.Fatalf("failed to fetch first message in INBOX: %v", err)
