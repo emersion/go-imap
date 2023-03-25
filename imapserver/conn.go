@@ -132,6 +132,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleUnselect(dec, name == "CLOSE")
 	case "APPEND":
 		err = c.handleAppend(dec)
+	case "FETCH":
+		err = c.handleFetch(dec)
 	default:
 		discardLine(dec)
 		err = &imap.Error{
