@@ -323,6 +323,30 @@ func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySectio
 	return enc.Literal(size, nil)
 }
 
+// WriteBinarySection writes a binary section.
+//
+// The returned io.WriteCloser must be closed before writing any more message
+// data items.
+func (w *FetchResponseWriter) WriteBinarySection(section *imap.FetchItemBinarySection, size int64) io.WriteCloser {
+	w.writeItemSep()
+	enc := w.enc.Encoder
+
+	enc.Atom("BINARY").Special('[')
+	writeSectionPart(enc, section.Part)
+	enc.Special(']').SP()
+	return enc.Literal(size, nil)
+}
+
+// WriteBinarySectionSize writes a binary section size.
+func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBinarySection, size uint32) {
+	w.writeItemSep()
+	enc := w.enc.Encoder
+
+	enc.Atom("BINARY.SIZE").Special('[')
+	writeSectionPart(enc, section.Part)
+	enc.Special(']').SP().Number(size)
+}
+
 // WriteEnvelope writes the message's envelope.
 func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 	w.writeItemSep()
