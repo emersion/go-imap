@@ -469,6 +469,14 @@ func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	return lit, nonSync, true
 }
 
+func (dec *Decoder) ExpectLiteralReader() (lit *LiteralReader, nonSync bool, err error) {
+	lit, nonSync, ok := dec.LiteralReader()
+	if !dec.Expect(ok, "literal") {
+		return nil, false, dec.Err()
+	}
+	return lit, nonSync, nil
+}
+
 type LiteralReader struct {
 	dec  *Decoder
 	size int64
