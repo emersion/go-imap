@@ -126,6 +126,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleList(dec)
 	case "IDLE":
 		err = c.handleIdle(dec)
+	case "SELECT", "EXAMINE":
+		err = c.handleSelect(dec, name == "EXAMINE")
 	default:
 		discardLine(dec)
 		err = &imap.Error{
@@ -247,6 +249,9 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 }
 
 func (c *conn) checkState(state imap.ConnState) error {
+	if state == imap.ConnStateAuthenticated && c.state == imap.ConnStateSelected {
+		return nil
+	}
 	if c.state != state {
 		return newClientBugError(fmt.Sprintf("This command is only valid in the %s state", state))
 	}
