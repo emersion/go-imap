@@ -7,18 +7,12 @@ import (
 	"github.com/emersion/go-imap/v2"
 )
 
-// AppendOptions contains options for the APPEND command.
-type AppendOptions struct {
-	Flags []imap.Flag
-	Time  time.Time
-}
-
 // Append sends an APPEND command.
 //
 // The caller must call AppendCommand.Close.
 //
 // The options are optional.
-func (c *Client) Append(mailbox string, size int64, options *AppendOptions) *AppendCommand {
+func (c *Client) Append(mailbox string, size int64, options *imap.AppendOptions) *AppendCommand {
 	cmd := &AppendCommand{}
 	cmd.enc = c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
@@ -41,7 +35,7 @@ type AppendCommand struct {
 	cmd
 	enc  *commandEncoder
 	wc   io.WriteCloser
-	data AppendData
+	data imap.AppendData
 }
 
 func (cmd *AppendCommand) Write(b []byte) (int, error) {
@@ -57,11 +51,6 @@ func (cmd *AppendCommand) Close() error {
 	return err
 }
 
-func (cmd *AppendCommand) Wait() (*AppendData, error) {
+func (cmd *AppendCommand) Wait() (*imap.AppendData, error) {
 	return &cmd.data, cmd.cmd.Wait()
-}
-
-// AppendData is the data returned by an APPEND command.
-type AppendData struct {
-	UID, UIDValidity uint32 // requires UIDPLUS or IMAP4rev2
 }
