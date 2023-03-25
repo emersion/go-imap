@@ -107,6 +107,16 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	}
 	name = strings.ToUpper(name)
 
+	numKind := NumKindSeq
+	if name == "UID" {
+		numKind = NumKindUID
+		var subName string
+		if !dec.ExpectSP() || !dec.ExpectAtom(&subName) {
+			return fmt.Errorf("in command: %w", dec.Err())
+		}
+		name = "UID " + strings.ToUpper(subName)
+	}
+
 	// TODO: handle multiple commands concurrently
 	var err error
 	switch name {
@@ -132,8 +142,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleUnselect(dec, name == "CLOSE")
 	case "APPEND":
 		err = c.handleAppend(dec)
-	case "FETCH":
-		err = c.handleFetch(dec)
+	case "FETCH", "UID FETCH":
+		err = c.handleFetch(dec, numKind)
 	default:
 		discardLine(dec)
 		err = &imap.Error{
