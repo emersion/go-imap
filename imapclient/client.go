@@ -18,8 +18,6 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-const dateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
-
 const (
 	idleReadTimeout    = time.Duration(0)
 	respReadTimeout    = 30 * time.Second

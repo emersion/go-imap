@@ -751,7 +751,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 
-			t, err := readDateTime(dec)
+			t, err := internal.ExpectDateTime(dec)
 			if err != nil {
 				return err
 			}
@@ -958,18 +958,6 @@ func readAddress(dec *imapwire.Decoder, options *Options) (*Address, error) {
 	// TODO: handle error
 	addr.Name, _ = options.decodeText(name)
 	return &addr, nil
-}
-
-func readDateTime(dec *imapwire.Decoder) (time.Time, error) {
-	var s string
-	if !dec.Expect(dec.Quoted(&s), "date-time") {
-		return time.Time{}, dec.Err()
-	}
-	t, err := time.Parse(dateTimeLayout, s)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("in date-time: %v", err)
-	}
-	return t, err
 }
 
 func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
