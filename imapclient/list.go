@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -160,7 +161,7 @@ func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
 	var data imap.ListData
 
 	err := dec.ExpectList(func() error {
-		attr, err := readFlag(dec)
+		attr, err := internal.ReadFlag(dec)
 		if err != nil {
 			return err
 		}

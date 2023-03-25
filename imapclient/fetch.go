@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -734,7 +735,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 
-			flags, err := readFlagList(dec)
+			flags, err := internal.ReadFlagList(dec)
 			if err != nil {
 				return err
 			}

@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 )
 
 // Select sends a SELECT command.
@@ -43,7 +44,7 @@ func (c *Client) UnselectAndExpunge() *Command {
 }
 
 func (c *Client) handleFlags() error {
-	flags, err := readFlagList(c.dec)
+	flags, err := internal.ReadFlagList(c.dec)
 	if err != nil {
 		return err
 	}
