@@ -22,4 +22,5 @@ type Session interface {
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
 	Unselect() error
+	Fetch(w *FetchWriter, seqSet imap.SeqSet, items []imap.FetchItem) error
 }
