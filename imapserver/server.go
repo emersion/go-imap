@@ -18,6 +18,9 @@ type Server struct {
 	NewSession func() (Session, error)
 	Logger     Logger
 	TLSConfig  *tls.Config
+	// InsecureAuth allows clients to authenticate without TLS. In this mode,
+	// the server is susceptible to man-in-the-middle attacks.
+	InsecureAuth bool
 }
 
 func (s *Server) logger() Logger {
