@@ -17,23 +17,11 @@ func (c *conn) handleList(dec *imapwire.Decoder) error {
 		return err
 	}
 
-	l, err := c.session.List(ref, pattern, options)
-	if err != nil {
-		return err
+	w := &ListWriter{
+		conn:    c,
+		options: options,
 	}
-
-	for _, data := range l {
-		if err := c.writeList(&data); err != nil {
-			return err
-		}
-		if len(options.ReturnStatus) > 0 && data.Status != nil {
-			if err := c.writeStatus(data.Status, options.ReturnStatus); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return c.session.List(w, ref, pattern, options)
 }
 
 func (c *conn) writeList(data *imap.ListData) error {
@@ -206,6 +194,25 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 		})
 	default:
 		return newClientBugError("Unknown LIST RETURN options")
+	}
+	return nil
+}
+
+// ListWriter writes LIST responses.
+type ListWriter struct {
+	conn    *conn
+	options *imap.ListOptions
+}
+
+// WriteList writes a single LIST response for a mailbox.
+func (w *ListWriter) WriteList(data *imap.ListData) error {
+	if err := w.conn.writeList(data); err != nil {
+		return err
+	}
+	if len(w.options.ReturnStatus) > 0 && data.Status != nil {
+		if err := w.conn.writeStatus(data.Status, w.options.ReturnStatus); err != nil {
+			return err
+		}
 	}
 	return nil
 }
