@@ -2,6 +2,7 @@
 package imapserver
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ type Logger interface {
 type Server struct {
 	NewSession func() (Session, error)
 	Logger     Logger
+	TLSConfig  *tls.Config
 }
 
 func (s *Server) logger() Logger {

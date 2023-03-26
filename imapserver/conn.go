@@ -118,6 +118,7 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	}
 
 	// TODO: handle multiple commands concurrently
+	sendOK := true
 	var err error
 	switch name {
 	case "NOOP":
@@ -126,6 +127,9 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogout(dec)
 	case "CAPABILITY":
 		err = c.handleCapability(dec)
+	case "STARTTLS":
+		err = c.handleStartTLS(tag, dec)
+		sendOK = false
 	case "AUTHENTICATE":
 		err = c.handleAuthenticate(dec)
 	case "LOGIN":
@@ -173,6 +177,9 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		c.server.logger().Printf("handling %v command: %v", name, err)
 		resp = internalServerErrorResp
 	} else {
+		if !sendOK {
+			return nil
+		}
 		resp = &imap.StatusResponse{
 			Type: imap.StatusResponseTypeOK,
 			Text: fmt.Sprintf("%v completed", name),
@@ -206,9 +213,17 @@ func (c *conn) handleCapability(dec *imapwire.Decoder) error {
 		return dec.Err()
 	}
 
+	caps := []imap.Cap{imap.CapIMAP4rev2}
+	if c.canStartTLS() {
+		caps = append(caps, imap.CapStartTLS)
+	}
+
 	enc := newResponseEncoder(c)
 	defer enc.end()
-	enc.Atom("*").SP().Atom("CAPABILITY").SP().Atom(string(imap.CapIMAP4rev2))
+	enc.Atom("*").SP().Atom("CAPABILITY")
+	for _, c := range caps {
+		enc.SP().Atom(string(c))
+	}
 	return enc.CRLF()
 }
 
