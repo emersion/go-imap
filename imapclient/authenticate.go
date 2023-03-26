@@ -18,11 +18,17 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 		return err
 	}
 
+	// c.Caps may send a CAPABILITY command, so check it before c.beginCommand
+	var hasSASLIR bool
+	if initialResp != nil {
+		hasSASLIR = c.Caps().Has(imap.CapSASLIR)
+	}
+
 	cmd := &authenticateCommand{}
 	contReq := c.registerContReq(cmd)
 	enc := c.beginCommand("AUTHENTICATE", cmd)
 	enc.SP().Atom(mech)
-	if initialResp != nil && c.Caps().Has(imap.CapSASLIR) {
+	if initialResp != nil && hasSASLIR {
 		enc.SP().Atom(internal.EncodeSASL(initialResp))
 		initialResp = nil
 	}
