@@ -36,6 +36,13 @@ func (c *conn) handleAuthenticate(dec *imapwire.Decoder) error {
 	if err := c.checkState(imap.ConnStateNotAuthenticated); err != nil {
 		return err
 	}
+	if !c.canAuth() {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodePrivacyRequired,
+			Text: "TLS is required to authenticate",
+		}
+	}
 
 	// TODO: support other SASL mechanisms
 	if mech != "PLAIN" {

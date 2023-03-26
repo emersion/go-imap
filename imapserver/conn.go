@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -217,6 +218,11 @@ func (c *conn) handleCapability(dec *imapwire.Decoder) error {
 	if c.canStartTLS() {
 		caps = append(caps, imap.CapStartTLS)
 	}
+	if c.canAuth() {
+		caps = append(caps, imap.Cap("AUTH=PLAIN"))
+	} else if c.state == imap.ConnStateNotAuthenticated {
+		caps = append(caps, imap.CapLoginDisabled)
+	}
 
 	enc := newResponseEncoder(c)
 	defer enc.end()
@@ -227,6 +233,14 @@ func (c *conn) handleCapability(dec *imapwire.Decoder) error {
 	return enc.CRLF()
 }
 
+func (c *conn) canAuth() bool {
+	if c.state != imap.ConnStateNotAuthenticated {
+		return false
+	}
+	_, isTLS := c.conn.(*tls.Conn)
+	return isTLS || c.server.InsecureAuth
+}
+
 func (c *conn) handleLogin(dec *imapwire.Decoder) error {
 	var username, password string
 	if !dec.ExpectSP() || !dec.ExpectAString(&username) || !dec.ExpectSP() || !dec.ExpectAString(&password) || !dec.ExpectCRLF() {
@@ -234,6 +248,13 @@ func (c *conn) handleLogin(dec *imapwire.Decoder) error {
 	}
 	if err := c.checkState(imap.ConnStateNotAuthenticated); err != nil {
 		return err
+	}
+	if !c.canAuth() {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodePrivacyRequired,
+			Text: "TLS is required to authenticate",
+		}
 	}
 	if err := c.session.Login(username, password); err != nil {
 		return err
