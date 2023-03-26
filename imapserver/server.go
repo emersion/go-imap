@@ -4,6 +4,7 @@ package imapserver
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
@@ -15,6 +16,13 @@ type Logger interface {
 type Server struct {
 	NewSession func() (Session, error)
 	Logger     Logger
+}
+
+func (s *Server) logger() Logger {
+	if s.Logger == nil {
+		return log.Default()
+	}
+	return s.Logger
 }
 
 func (s *Server) Serve(ln net.Listener) error {
@@ -30,9 +38,7 @@ func (s *Server) Serve(ln net.Listener) error {
 			if max := 1 * time.Second; delay > max {
 				delay = max
 			}
-			if s.Logger != nil {
-				s.Logger.Printf("accept error (retrying in %v): %v", delay, err)
-			}
+			s.logger().Printf("accept error (retrying in %v): %v", delay, err)
 			time.Sleep(delay)
 			continue
 		} else if errors.Is(err, net.ErrClosed) {

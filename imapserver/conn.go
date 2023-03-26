@@ -44,7 +44,7 @@ func newConn(c net.Conn, server *Server) *conn {
 func (c *conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
-			c.server.Logger.Printf("panic handling command: %v\n%s", v, debug.Stack())
+			c.server.logger().Printf("panic handling command: %v\n%s", v, debug.Stack())
 		}
 
 		c.conn.Close()
@@ -60,11 +60,11 @@ func (c *conn) serve() {
 		if errors.As(err, &imapErr) {
 			resp = (*imap.StatusResponse)(imapErr)
 		} else {
-			c.server.Logger.Printf("failed to create session: %v", err)
+			c.server.logger().Printf("failed to create session: %v", err)
 			resp = internalServerErrorResp
 		}
 		if err := c.writeStatusResp("", resp); err != nil {
-			c.server.Logger.Printf("failed to write greeting: %v", err)
+			c.server.logger().Printf("failed to write greeting: %v", err)
 		}
 		return
 	}
@@ -72,7 +72,7 @@ func (c *conn) serve() {
 	defer func() {
 		if c.session != nil {
 			if err := c.session.Close(); err != nil {
-				c.server.Logger.Printf("failed to close session: %v", err)
+				c.server.logger().Printf("failed to close session: %v", err)
 			}
 		}
 	}()
@@ -83,7 +83,7 @@ func (c *conn) serve() {
 		Text: "IMAP4rev2 server ready",
 	})
 	if err != nil {
-		c.server.Logger.Printf("failed to write greeting: %v", err)
+		c.server.logger().Printf("failed to write greeting: %v", err)
 		return
 	}
 
@@ -94,7 +94,7 @@ func (c *conn) serve() {
 		}
 
 		if err := c.readCommand(dec); err != nil {
-			c.server.Logger.Printf("failed to read command: %v", err)
+			c.server.logger().Printf("failed to read command: %v", err)
 			break
 		}
 	}
@@ -170,7 +170,7 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 			Text: "Syntax error: " + decErr.Message,
 		}
 	} else if err != nil {
-		c.server.Logger.Printf("handling %v command: %v", name, err)
+		c.server.logger().Printf("handling %v command: %v", name, err)
 		resp = internalServerErrorResp
 	} else {
 		resp = &imap.StatusResponse{
