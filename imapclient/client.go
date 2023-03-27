@@ -23,7 +23,7 @@ const (
 	respReadTimeout    = 30 * time.Second
 	literalReadTimeout = 5 * time.Minute
 
-	respWriteTimeout    = 30 * time.Second
+	cmdWriteTimeout     = 30 * time.Second
 	literalWriteTimeout = 5 * time.Minute
 )
 
@@ -289,7 +289,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	c.mutex.Unlock()
 
-	c.setWriteTimeout(respWriteTimeout)
+	c.setWriteTimeout(cmdWriteTimeout)
 
 	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
 	wireEnc.QuotedUTF8 = quotedUTF8
@@ -964,7 +964,7 @@ type literalWriter struct {
 }
 
 func (lw literalWriter) Close() error {
-	lw.client.setWriteTimeout(respWriteTimeout)
+	lw.client.setWriteTimeout(cmdWriteTimeout)
 	return lw.WriteCloser.Close()
 }
 
