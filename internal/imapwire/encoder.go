@@ -17,6 +17,17 @@ import (
 // CRLF is called. These methods return the Encoder so that calls can be
 // chained.
 type Encoder struct {
+	// QuotedUTF8 allows non-ASCII strings to be encoded as quoted strings.
+	// This requires IMAP4rev2 or UTF8=ACCEPT.
+	QuotedUTF8 bool
+	// LiteralMinus enables non-synchronizing literals for short payloads.
+	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
+	// clients.
+	LiteralMinus bool
+	// NewContinuationRequest creates a new continuation request. This is only
+	// meaningful for clients.
+	NewContinuationRequest func() *ContinuationRequest
+
 	w       *bufio.Writer
 	side    ConnSide
 	err     error
@@ -26,6 +37,12 @@ type Encoder struct {
 // NewEncoder creates a new encoder.
 func NewEncoder(w *bufio.Writer, side ConnSide) *Encoder {
 	return &Encoder{w: w, side: side}
+}
+
+func (enc *Encoder) setErr(err error) {
+	if enc.err == nil {
+		enc.err = err
+	}
 }
 
 func (enc *Encoder) writeString(s string) *Encoder {
@@ -64,7 +81,11 @@ func (enc *Encoder) Special(ch byte) *Encoder {
 }
 
 func (enc *Encoder) String(s string) *Encoder {
-	// TODO: if the string contains CR/LF, use a literal
+	if !enc.validQuoted(s) {
+		enc.stringLiteral(s)
+		return enc
+	}
+
 	var sb strings.Builder
 	sb.Grow(2 + len(s))
 	sb.WriteByte('"')
@@ -77,6 +98,48 @@ func (enc *Encoder) String(s string) *Encoder {
 	}
 	sb.WriteByte('"')
 	return enc.writeString(sb.String())
+}
+
+func (enc *Encoder) validQuoted(s string) bool {
+	if len(s) > 4096 {
+		return false
+	}
+
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+
+		// NUL, CR and LF are never valid
+		switch ch {
+		case 0, '\r', '\n':
+			return false
+		}
+
+		if !enc.QuotedUTF8 && ch > 0x7F {
+			return false
+		}
+	}
+	return true
+}
+
+func (enc *Encoder) stringLiteral(s string) {
+	var sync *ContinuationRequest
+	if enc.side == ConnSideClient && (!enc.LiteralMinus || len(s) > 4096) {
+		if enc.NewContinuationRequest != nil {
+			sync = enc.NewContinuationRequest()
+		}
+		if sync == nil {
+			enc.setErr(fmt.Errorf("imapwire: cannot send synchronizing literal"))
+			return
+		}
+	}
+	wc := enc.Literal(int64(len(s)), sync)
+	_, writeErr := io.WriteString(wc, s)
+	closeErr := wc.Close()
+	if writeErr != nil {
+		enc.setErr(writeErr)
+	} else if closeErr != nil {
+		enc.setErr(closeErr)
+	}
 }
 
 func (enc *Encoder) Mailbox(name string) *Encoder {
@@ -100,9 +163,7 @@ func (enc *Encoder) Flag(flag imap.Flag) *Encoder {
 				valid = IsAtomChar(ch)
 			}
 			if !valid {
-				if enc.err == nil {
-					enc.err = fmt.Errorf("imapwire: character '%v' not allowed in flag", string(ch))
-				}
+				enc.setErr(fmt.Errorf("imapwire: character '%v' not allowed in flag", string(ch)))
 				return enc
 			}
 		}
@@ -167,9 +228,7 @@ func (enc *Encoder) Literal(size int64, sync *ContinuationRequest) io.WriteClose
 			return errorWriter{err}
 		}
 		if _, err := sync.Wait(); err != nil {
-			if enc.err == nil {
-				enc.err = err
-			}
+			enc.setErr(err)
 			return errorWriter{err}
 		}
 	}
