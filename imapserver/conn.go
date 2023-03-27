@@ -33,13 +33,13 @@ var internalServerErrorResp = &imap.StatusResponse{
 
 // A Conn represents an IMAP connection to the server.
 type Conn struct {
-	conn     net.Conn
 	server   *Server
 	br       *bufio.Reader
 	bw       *bufio.Writer
 	encMutex sync.Mutex
 
 	mutex   sync.Mutex
+	conn    net.Conn
 	enabled imap.CapSet
 
 	state   imap.ConnState
@@ -56,6 +56,17 @@ func newConn(c net.Conn, server *Server) *Conn {
 		bw:      bw,
 		enabled: make(imap.CapSet),
 	}
+}
+
+// NetConn returns the underlying connection that is wrapped by the IMAP
+// connection.
+//
+// Writing to or reading from this connection directly will corrupt the IMAP
+// session.
+func (c *Conn) NetConn() net.Conn {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.conn
 }
 
 func (c *Conn) serve() {
