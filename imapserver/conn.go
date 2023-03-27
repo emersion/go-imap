@@ -153,6 +153,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleExpunge(dec)
 	case "UID EXPUNGE":
 		err = c.handleUIDExpunge(dec)
+	case "STORE", "UID STORE":
+		err = c.handleStore(dec, numKind)
 	case "COPY", "UID COPY":
 		err = c.handleCopy(dec, numKind)
 	case "MOVE", "UID MOVE":
