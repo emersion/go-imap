@@ -217,84 +217,12 @@ func (c *conn) handleLogout(dec *imapwire.Decoder) error {
 	})
 }
 
-func (c *conn) handleCapability(dec *imapwire.Decoder) error {
-	if !dec.ExpectCRLF() {
-		return dec.Err()
-	}
-
-	caps := []imap.Cap{imap.CapIMAP4rev2}
-	if c.canStartTLS() {
-		caps = append(caps, imap.CapStartTLS)
-	}
-	if c.canAuth() {
-		caps = append(caps, imap.Cap("AUTH=PLAIN"))
-	} else if c.state == imap.ConnStateNotAuthenticated {
-		caps = append(caps, imap.CapLoginDisabled)
-	}
-
-	enc := newResponseEncoder(c)
-	defer enc.end()
-	enc.Atom("*").SP().Atom("CAPABILITY")
-	for _, c := range caps {
-		enc.SP().Atom(string(c))
-	}
-	return enc.CRLF()
-}
-
 func (c *conn) canAuth() bool {
 	if c.state != imap.ConnStateNotAuthenticated {
 		return false
 	}
 	_, isTLS := c.conn.(*tls.Conn)
 	return isTLS || c.server.InsecureAuth
-}
-
-func (c *conn) handleLogin(dec *imapwire.Decoder) error {
-	var username, password string
-	if !dec.ExpectSP() || !dec.ExpectAString(&username) || !dec.ExpectSP() || !dec.ExpectAString(&password) || !dec.ExpectCRLF() {
-		return dec.Err()
-	}
-	if err := c.checkState(imap.ConnStateNotAuthenticated); err != nil {
-		return err
-	}
-	if !c.canAuth() {
-		return &imap.Error{
-			Type: imap.StatusResponseTypeNo,
-			Code: imap.ResponseCodePrivacyRequired,
-			Text: "TLS is required to authenticate",
-		}
-	}
-	if err := c.session.Login(username, password); err != nil {
-		return err
-	}
-	c.state = imap.ConnStateAuthenticated
-	return nil
-}
-
-func (c *conn) handleIdle(dec *imapwire.Decoder) error {
-	if !dec.ExpectCRLF() {
-		return dec.Err()
-	}
-
-	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
-		return err
-	}
-
-	enc := newResponseEncoder(c)
-	defer enc.end()
-
-	if err := writeContReq(enc.Encoder, "idling"); err != nil {
-		return err
-	}
-
-	line, isPrefix, err := c.br.ReadLine()
-	if err != nil {
-		return err
-	} else if isPrefix || string(line) != "DONE" {
-		return newClientBugError("Syntax error: expected DONE to end IDLE command")
-	}
-
-	return nil
 }
 
 func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
