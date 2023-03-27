@@ -57,7 +57,7 @@ type Session interface {
 
 	// Selected state
 	Unselect() error
-	Expunge(uids *imap.SeqSet) error
+	Expunge(w *ExpungeWriter, uids *imap.SeqSet) error
 	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
 	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
 	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error

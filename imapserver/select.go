@@ -62,7 +62,8 @@ func (c *Conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 	}
 
 	if expunge {
-		if err := c.session.Expunge(nil); err != nil {
+		w := &ExpungeWriter{}
+		if err := c.session.Expunge(w, nil); err != nil {
 			return err
 		}
 	}
