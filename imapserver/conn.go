@@ -143,6 +143,10 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleDelete(dec)
 	case "RENAME":
 		err = c.handleRename(dec)
+	case "SUBSCRIBE":
+		err = c.handleSubscribe(dec)
+	case "UNSUBSCRIBE":
+		err = c.handleUnsubscribe(dec)
 	case "STATUS":
 		err = c.handleStatus(dec)
 	case "LIST":
@@ -256,6 +260,28 @@ func (c *conn) handleRename(dec *imapwire.Decoder) error {
 		return err
 	}
 	return c.session.Rename(oldName, newName)
+}
+
+func (c *conn) handleSubscribe(dec *imapwire.Decoder) error {
+	var name string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	return c.session.Subscribe(name)
+}
+
+func (c *conn) handleUnsubscribe(dec *imapwire.Decoder) error {
+	var name string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	return c.session.Unsubscribe(name)
 }
 
 func (c *conn) canAuth() bool {
