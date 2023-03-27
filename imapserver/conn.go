@@ -89,7 +89,7 @@ func (c *conn) serve() {
 	}
 
 	for {
-		dec := imapwire.NewDecoder(c.br)
+		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
 		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break
 		}
