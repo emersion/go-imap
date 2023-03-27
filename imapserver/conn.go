@@ -183,7 +183,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	case "CLOSE", "UNSELECT":
 		err = c.handleUnselect(dec, name == "CLOSE")
 	case "APPEND":
-		err = c.handleAppend(dec)
+		err = c.handleAppend(tag, dec)
+		sendOK = false
 	case "FETCH", "UID FETCH":
 		err = c.handleFetch(dec, numKind)
 	case "EXPUNGE":
