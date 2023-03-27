@@ -159,6 +159,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleCopy(dec, numKind)
 	case "MOVE", "UID MOVE":
 		err = c.handleMove(dec, numKind)
+	case "SEARCH", "UID SEARCH":
+		err = c.handleSearch(tag, dec, numKind)
 	default:
 		discardLine(dec)
 		err = &imap.Error{
