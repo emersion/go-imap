@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) error {
 	seqSet, dest, err := readCopy(dec)
 	if err != nil {
 		return err
@@ -20,7 +20,7 @@ func (c *conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	return c.writeCopyOK(tag, data)
 }
 
-func (c *conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 	seqSet, dest, err := readCopy(dec)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (c *conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 	return c.session.Move(numKind, seqSet, dest)
 }
 
-func (c *conn) writeCopyOK(tag string, data *imap.CopyData) error {
+func (c *Conn) writeCopyOK(tag string, data *imap.CopyData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 

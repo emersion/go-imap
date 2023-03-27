@@ -31,7 +31,8 @@ var internalServerErrorResp = &imap.StatusResponse{
 	Text: "Internal server error",
 }
 
-type conn struct {
+// A Conn represents an IMAP connection to the server.
+type Conn struct {
 	conn     net.Conn
 	server   *Server
 	br       *bufio.Reader
@@ -45,10 +46,10 @@ type conn struct {
 	session Session
 }
 
-func newConn(c net.Conn, server *Server) *conn {
+func newConn(c net.Conn, server *Server) *Conn {
 	br := bufio.NewReader(c)
 	bw := bufio.NewWriter(c)
-	return &conn{
+	return &Conn{
 		conn:    c,
 		server:  server,
 		br:      br,
@@ -57,7 +58,7 @@ func newConn(c net.Conn, server *Server) *conn {
 	}
 }
 
-func (c *conn) serve() {
+func (c *Conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
 			c.server.logger().Printf("panic handling command: %v\n%s", v, debug.Stack())
@@ -67,7 +68,7 @@ func (c *conn) serve() {
 	}()
 
 	var err error
-	c.session, err = c.server.NewSession()
+	c.session, err = c.server.NewSession(c)
 	if err != nil {
 		var (
 			resp    *imap.StatusResponse
@@ -124,7 +125,7 @@ func (c *conn) serve() {
 	}
 }
 
-func (c *conn) readCommand(dec *imapwire.Decoder) error {
+func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
 		return fmt.Errorf("in command: %w", dec.Err())
@@ -236,14 +237,14 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	return c.writeStatusResp(tag, resp)
 }
 
-func (c *conn) handleNoop(dec *imapwire.Decoder) error {
+func (c *Conn) handleNoop(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
 	return nil
 }
 
-func (c *conn) handleLogout(dec *imapwire.Decoder) error {
+func (c *Conn) handleLogout(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
@@ -256,7 +257,7 @@ func (c *conn) handleLogout(dec *imapwire.Decoder) error {
 	})
 }
 
-func (c *conn) handleCreate(dec *imapwire.Decoder) error {
+func (c *Conn) handleCreate(dec *imapwire.Decoder) error {
 	var name string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -267,7 +268,7 @@ func (c *conn) handleCreate(dec *imapwire.Decoder) error {
 	return c.session.Create(name)
 }
 
-func (c *conn) handleDelete(dec *imapwire.Decoder) error {
+func (c *Conn) handleDelete(dec *imapwire.Decoder) error {
 	var name string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -278,7 +279,7 @@ func (c *conn) handleDelete(dec *imapwire.Decoder) error {
 	return c.session.Delete(name)
 }
 
-func (c *conn) handleRename(dec *imapwire.Decoder) error {
+func (c *Conn) handleRename(dec *imapwire.Decoder) error {
 	var oldName, newName string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&oldName) || !dec.ExpectSP() || !dec.ExpectMailbox(&newName) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -289,7 +290,7 @@ func (c *conn) handleRename(dec *imapwire.Decoder) error {
 	return c.session.Rename(oldName, newName)
 }
 
-func (c *conn) handleSubscribe(dec *imapwire.Decoder) error {
+func (c *Conn) handleSubscribe(dec *imapwire.Decoder) error {
 	var name string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -300,7 +301,7 @@ func (c *conn) handleSubscribe(dec *imapwire.Decoder) error {
 	return c.session.Subscribe(name)
 }
 
-func (c *conn) handleUnsubscribe(dec *imapwire.Decoder) error {
+func (c *Conn) handleUnsubscribe(dec *imapwire.Decoder) error {
 	var name string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -311,7 +312,7 @@ func (c *conn) handleUnsubscribe(dec *imapwire.Decoder) error {
 	return c.session.Unsubscribe(name)
 }
 
-func (c *conn) checkBufferedLiteral(size int64, nonSync bool) error {
+func (c *Conn) checkBufferedLiteral(size int64, nonSync bool) error {
 	if size > 4096 {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
@@ -323,7 +324,7 @@ func (c *conn) checkBufferedLiteral(size int64, nonSync bool) error {
 	return c.acceptLiteral(size, nonSync)
 }
 
-func (c *conn) acceptLiteral(size int64, nonSync bool) error {
+func (c *Conn) acceptLiteral(size int64, nonSync bool) error {
 	if nonSync && size > 4096 {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
@@ -340,7 +341,7 @@ func (c *conn) acceptLiteral(size int64, nonSync bool) error {
 	return writeContReq(enc.Encoder, "Ready for literal data")
 }
 
-func (c *conn) canAuth() bool {
+func (c *Conn) canAuth() bool {
 	if c.state != imap.ConnStateNotAuthenticated {
 		return false
 	}
@@ -348,7 +349,7 @@ func (c *conn) canAuth() bool {
 	return isTLS || c.server.InsecureAuth
 }
 
-func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
+func (c *Conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -363,7 +364,7 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 	return enc.CRLF()
 }
 
-func (c *conn) writeGreeting() error {
+func (c *Conn) writeGreeting() error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -375,7 +376,7 @@ func (c *conn) writeGreeting() error {
 	return enc.CRLF()
 }
 
-func (c *conn) checkState(state imap.ConnState) error {
+func (c *Conn) checkState(state imap.ConnState) error {
 	if state == imap.ConnStateAuthenticated && c.state == imap.ConnStateSelected {
 		return nil
 	}
@@ -385,7 +386,7 @@ func (c *conn) checkState(state imap.ConnState) error {
 	return nil
 }
 
-func (c *conn) setReadTimeout(dur time.Duration) {
+func (c *Conn) setReadTimeout(dur time.Duration) {
 	if dur > 0 {
 		c.conn.SetReadDeadline(time.Now().Add(dur))
 	} else {
@@ -393,7 +394,7 @@ func (c *conn) setReadTimeout(dur time.Duration) {
 	}
 }
 
-func (c *conn) setWriteTimeout(dur time.Duration) {
+func (c *Conn) setWriteTimeout(dur time.Duration) {
 	if dur > 0 {
 		c.conn.SetWriteDeadline(time.Now().Add(dur))
 	} else {
@@ -403,10 +404,10 @@ func (c *conn) setWriteTimeout(dur time.Duration) {
 
 type responseEncoder struct {
 	*imapwire.Encoder
-	conn *conn
+	conn *Conn
 }
 
-func newResponseEncoder(conn *conn) *responseEncoder {
+func newResponseEncoder(conn *Conn) *responseEncoder {
 	conn.mutex.Lock()
 	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2)
 	conn.mutex.Unlock()
@@ -441,7 +442,7 @@ func (enc *responseEncoder) Literal(size int64) io.WriteCloser {
 
 type literalWriter struct {
 	io.WriteCloser
-	conn *conn
+	conn *Conn
 }
 
 func (lw literalWriter) Close() error {

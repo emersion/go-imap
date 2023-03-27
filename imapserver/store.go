@@ -8,7 +8,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	var seqSetStr, item string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()

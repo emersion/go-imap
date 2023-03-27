@@ -10,7 +10,7 @@ type SelectOptions struct {
 	ReadOnly bool
 }
 
-func (c *conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
+func (c *Conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
 	var mailbox string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -52,7 +52,7 @@ func (c *conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
 	return nil
 }
 
-func (c *conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
+func (c *Conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
@@ -75,13 +75,13 @@ func (c *conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 	return nil
 }
 
-func (c *conn) writeExists(numMessages uint32) error {
+func (c *Conn) writeExists(numMessages uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	return enc.Atom("*").SP().Number(numMessages).SP().Atom("EXISTS").CRLF()
 }
 
-func (c *conn) writeUIDValidity(uidValidity uint32) error {
+func (c *Conn) writeUIDValidity(uidValidity uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()
@@ -90,7 +90,7 @@ func (c *conn) writeUIDValidity(uidValidity uint32) error {
 	return enc.CRLF()
 }
 
-func (c *conn) writeUIDNext(uidNext uint32) error {
+func (c *Conn) writeUIDNext(uidNext uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()
@@ -99,7 +99,7 @@ func (c *conn) writeUIDNext(uidNext uint32) error {
 	return enc.CRLF()
 }
 
-func (c *conn) writeFlags(flags []imap.Flag) error {
+func (c *Conn) writeFlags(flags []imap.Flag) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("FLAGS").SP().List(len(flags), func(i int) {
@@ -108,7 +108,7 @@ func (c *conn) writeFlags(flags []imap.Flag) error {
 	return enc.CRLF()
 }
 
-func (c *conn) writePermanentFlags(flags []imap.Flag) error {
+func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()

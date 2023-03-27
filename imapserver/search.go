@@ -10,7 +10,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) error {
 	if !dec.ExpectSP() {
 		return dec.Err()
 	}
@@ -83,7 +83,7 @@ func (c *conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	return c.writeESearch(tag, data, &options)
 }
 
-func (c *conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
+func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
