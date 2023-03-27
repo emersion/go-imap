@@ -70,6 +70,8 @@ const (
 	CapUnauthenticate   Cap = "UNAUTHENTICATE"     // RFC 8437
 	CapURLPartial       Cap = "URL-PARTIAL"        // RFC 5550
 	CapURLAuth          Cap = "URLAUTH"            // RFC 4467
+	CapUTF8Accept       Cap = "UTF8=ACCEPT"        // RFC 6855
+	CapUTF8Only         Cap = "UTF8=ONLY"          // RFC 6855
 	CapWithin           Cap = "WITHIN"             // RFC 5032
 )
 

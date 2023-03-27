@@ -285,9 +285,18 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	c.cmdTag++
 	tag := fmt.Sprintf("T%v", c.cmdTag)
 	c.pendingCmds = append(c.pendingCmds, cmd)
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.caps.Has(imap.CapUTF8Accept)
+	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	c.mutex.Unlock()
 
 	c.setWriteTimeout(respWriteTimeout)
+
+	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
+	wireEnc.QuotedUTF8 = quotedUTF8
+	wireEnc.LiteralMinus = literalMinus
+	wireEnc.NewContinuationRequest = func() *imapwire.ContinuationRequest {
+		return c.registerContReq(cmd)
+	}
 
 	baseCmd := cmd.base()
 	*baseCmd = Command{
@@ -295,7 +304,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 		done: make(chan error, 1),
 	}
 	enc := &commandEncoder{
-		Encoder: imapwire.NewEncoder(c.bw, imapwire.ConnSideClient),
+		Encoder: wireEnc,
 		client:  c,
 		cmd:     baseCmd,
 	}
