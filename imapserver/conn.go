@@ -167,7 +167,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleStartTLS(tag, dec)
 		sendOK = false
 	case "AUTHENTICATE":
-		err = c.handleAuthenticate(dec)
+		err = c.handleAuthenticate(tag, dec)
+		sendOK = false
 	case "LOGIN":
 		err = c.handleLogin(dec)
 	case "ENABLE":
