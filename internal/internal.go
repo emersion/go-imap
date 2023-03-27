@@ -8,7 +8,10 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-const DateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
+const (
+	DateTimeLayout = "_2-Jan-2006 15:04:05 -0700"
+	DateLayout     = "2-Jan-2006"
+)
 
 func DecodeDateTime(dec *imapwire.Decoder) (time.Time, error) {
 	var s string

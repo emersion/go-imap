@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
-
-const searchDateLayout = "2-Jan-2006"
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	// TODO: use CHARSET UTF-8 with an US-ASCII fallback for IMAP4rev1 servers
@@ -125,23 +124,23 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
-		encodeItem("ON").SP().String(criteria.Since.Format(searchDateLayout))
+		encodeItem("ON").SP().String(criteria.Since.Format(internal.DateLayout))
 	} else {
 		if !criteria.Since.IsZero() {
-			encodeItem("SINCE").SP().String(criteria.Since.Format(searchDateLayout))
+			encodeItem("SINCE").SP().String(criteria.Since.Format(internal.DateLayout))
 		}
 		if !criteria.Before.IsZero() {
-			encodeItem("BEFORE").SP().String(criteria.Before.Format(searchDateLayout))
+			encodeItem("BEFORE").SP().String(criteria.Before.Format(internal.DateLayout))
 		}
 	}
 	if !criteria.SentSince.IsZero() && !criteria.SentBefore.IsZero() && criteria.SentBefore.Sub(criteria.SentSince) == 24*time.Hour {
-		encodeItem("SENTON").SP().String(criteria.SentSince.Format(searchDateLayout))
+		encodeItem("SENTON").SP().String(criteria.SentSince.Format(internal.DateLayout))
 	} else {
 		if !criteria.SentSince.IsZero() {
-			encodeItem("SENTSINCE").SP().String(criteria.SentSince.Format(searchDateLayout))
+			encodeItem("SENTSINCE").SP().String(criteria.SentSince.Format(internal.DateLayout))
 		}
 		if !criteria.SentBefore.IsZero() {
-			encodeItem("SENTBEFORE").SP().String(criteria.SentBefore.Format(searchDateLayout))
+			encodeItem("SENTBEFORE").SP().String(criteria.SentBefore.Format(internal.DateLayout))
 		}
 	}
 
