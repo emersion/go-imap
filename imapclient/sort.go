@@ -1,5 +1,9 @@
 package imapclient
 
+import (
+	"github.com/emersion/go-imap/v2"
+)
+
 type SortKey string
 
 const (
@@ -19,7 +23,7 @@ type SortCriterion struct {
 
 // SortOptions contains options for the SORT command.
 type SortOptions struct {
-	SearchCriteria *SearchCriteria
+	SearchCriteria *imap.SearchCriteria
 	SortCriteria   []SortCriterion
 }
 

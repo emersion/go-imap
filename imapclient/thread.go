@@ -10,7 +10,7 @@ import (
 // ThreadOptions contains options for the THREAD command.
 type ThreadOptions struct {
 	Algorithm      imap.ThreadAlgorithm
-	SearchCriteria *SearchCriteria
+	SearchCriteria *imap.SearchCriteria
 }
 
 func (c *Client) thread(uid bool, options *ThreadOptions) *ThreadCommand {

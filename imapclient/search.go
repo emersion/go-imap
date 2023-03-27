@@ -11,23 +11,7 @@ import (
 
 const searchDateLayout = "2-Jan-2006"
 
-// SearchReturnOption indicates what kind of results to return from a SEARCH
-// command.
-type SearchReturnOption string
-
-const (
-	SearchReturnMin   SearchReturnOption = "MIN"
-	SearchReturnMax   SearchReturnOption = "MAX"
-	SearchReturnAll   SearchReturnOption = "ALL"
-	SearchReturnCount SearchReturnOption = "COUNT"
-)
-
-// SearchOptions contains options for the SEARCH command.
-type SearchOptions struct {
-	Return []SearchReturnOption // requires IMAP4rev2 or ESEARCH
-}
-
-func (c *Client) search(uid bool, criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	// TODO: use CHARSET UTF-8 with an US-ASCII fallback for IMAP4rev1 servers
 	// TODO: add support for SEARCHRES
 	cmd := &SearchCommand{}
@@ -44,12 +28,12 @@ func (c *Client) search(uid bool, criteria *SearchCriteria, options *SearchOptio
 }
 
 // Search sends a SEARCH command.
-func (c *Client) Search(criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+func (c *Client) Search(criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	return c.search(false, criteria, options)
 }
 
 // UIDSearch sends a UID SEARCH command.
-func (c *Client) UIDSearch(criteria *SearchCriteria, options *SearchOptions) *SearchCommand {
+func (c *Client) UIDSearch(criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	return c.search(true, criteria, options)
 }
 
@@ -121,39 +105,7 @@ func (data *SearchData) AllNums() []uint32 {
 	return nums
 }
 
-// SearchCriteria is a criteria for the SEARCH command.
-//
-// When multiple fields are populated, the result is the intersection ("and"
-// function) of all messages that match the fields.
-type SearchCriteria struct {
-	SeqNum imap.SeqSet
-	UID    imap.SeqSet
-
-	// Only the date is used, the time and timezone are ignored
-	Since      time.Time
-	Before     time.Time
-	SentSince  time.Time
-	SentBefore time.Time
-
-	Header []SearchCriteriaHeaderField
-	Body   []string
-	Text   []string
-
-	Flag    []imap.Flag
-	NotFlag []imap.Flag
-
-	Larger  int64
-	Smaller int64
-
-	Not []SearchCriteria
-	Or  [][2]SearchCriteria
-}
-
-type SearchCriteriaHeaderField struct {
-	Key, Value string
-}
-
-func writeSearchKey(enc *imapwire.Encoder, criteria *SearchCriteria) {
+func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 	enc.Special('(')
 
 	firstItem := true
@@ -283,20 +235,20 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *SearchData, e
 		}
 	}
 	for {
-		switch returnOpt := SearchReturnOption(name); returnOpt {
-		case SearchReturnMin:
+		switch returnOpt := imap.SearchReturnOption(name); returnOpt {
+		case imap.SearchReturnMin:
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()
 			}
 			data.Min = num
-		case SearchReturnMax:
+		case imap.SearchReturnMax:
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()
 			}
 			data.Max = num
-		case SearchReturnAll:
+		case imap.SearchReturnAll:
 			var s string
 			if !dec.ExpectAtom(&s) {
 				return "", nil, dec.Err()
@@ -305,7 +257,7 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *SearchData, e
 			if err != nil {
 				return "", nil, err
 			}
-		case SearchReturnCount:
+		case imap.SearchReturnCount:
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()
