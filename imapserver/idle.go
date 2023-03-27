@@ -14,10 +14,7 @@ func (c *Conn) handleIdle(dec *imapwire.Decoder) error {
 		return err
 	}
 
-	enc := newResponseEncoder(c)
-	defer enc.end()
-
-	if err := writeContReq(enc.Encoder, "idling"); err != nil {
+	if err := c.writeContReq("idling"); err != nil {
 		return err
 	}
 

@@ -348,9 +348,7 @@ func (c *Conn) acceptLiteral(size int64, nonSync bool) error {
 		return nil
 	}
 
-	enc := newResponseEncoder(c)
-	defer enc.end()
-	return writeContReq(enc.Encoder, "Ready for literal data")
+	return c.writeContReq("Ready for literal data")
 }
 
 func (c *Conn) canAuth() bool {
@@ -365,6 +363,12 @@ func (c *Conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	return writeStatusResp(enc.Encoder, tag, statusResp)
+}
+
+func (c *Conn) writeContReq(text string) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	return writeContReq(enc.Encoder, text)
 }
 
 func (c *Conn) writeGreeting() error {
