@@ -3,6 +3,7 @@ package imapclient
 import (
 	"fmt"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -29,29 +30,16 @@ func (c *Client) handleNamespace() error {
 // NamespaceCommand is a NAMESPACE command.
 type NamespaceCommand struct {
 	cmd
-	data NamespaceData
+	data imap.NamespaceData
 }
 
-func (cmd *NamespaceCommand) Wait() (*NamespaceData, error) {
+func (cmd *NamespaceCommand) Wait() (*imap.NamespaceData, error) {
 	return &cmd.data, cmd.cmd.Wait()
 }
 
-// NamespaceData is the data returned by the NAMESPACE command.
-type NamespaceData struct {
-	Personal []NamespaceDescriptor
-	Other    []NamespaceDescriptor
-	Shared   []NamespaceDescriptor
-}
-
-// NamespaceDescriptor describes a namespace.
-type NamespaceDescriptor struct {
-	Prefix string
-	Delim  rune
-}
-
-func readNamespaceResponse(dec *imapwire.Decoder) (*NamespaceData, error) {
+func readNamespaceResponse(dec *imapwire.Decoder) (*imap.NamespaceData, error) {
 	var (
-		data NamespaceData
+		data imap.NamespaceData
 		err  error
 	)
 
@@ -81,8 +69,8 @@ func readNamespaceResponse(dec *imapwire.Decoder) (*NamespaceData, error) {
 	return &data, nil
 }
 
-func readNamespace(dec *imapwire.Decoder) ([]NamespaceDescriptor, error) {
-	var l []NamespaceDescriptor
+func readNamespace(dec *imapwire.Decoder) ([]imap.NamespaceDescriptor, error) {
+	var l []imap.NamespaceDescriptor
 	err := dec.ExpectNList(func() error {
 		descr, err := readNamespaceDescr(dec)
 		if err != nil {
@@ -94,8 +82,8 @@ func readNamespace(dec *imapwire.Decoder) ([]NamespaceDescriptor, error) {
 	return l, err
 }
 
-func readNamespaceDescr(dec *imapwire.Decoder) (*NamespaceDescriptor, error) {
-	var descr NamespaceDescriptor
+func readNamespaceDescr(dec *imapwire.Decoder) (*imap.NamespaceDescriptor, error) {
+	var descr imap.NamespaceDescriptor
 
 	if !dec.ExpectSpecial('(') || !dec.ExpectString(&descr.Prefix) || !dec.ExpectSP() {
 		return nil, dec.Err()
