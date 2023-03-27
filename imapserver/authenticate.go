@@ -10,7 +10,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Conn) handleAuthenticate(dec *imapwire.Decoder) error {
+func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 	var mech string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&mech) {
 		return dec.Err()
@@ -102,7 +102,10 @@ func (c *Conn) handleAuthenticate(dec *imapwire.Decoder) error {
 	}
 
 	c.state = imap.ConnStateAuthenticated
-	return nil
+	return writeStatusResp(enc.Encoder, tag, &imap.StatusResponse{
+		Type: imap.StatusResponseTypeOK,
+		Text: fmt.Sprintf("%v authentication successful", mech),
+	})
 }
 
 func decodeSASL(s string) ([]byte, error) {
