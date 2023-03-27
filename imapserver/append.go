@@ -14,7 +14,7 @@ import (
 // TODO: make configurable
 const appendLimit = 100 * 1024 * 1024 // 100MiB
 
-func (c *conn) handleAppend(dec *imapwire.Decoder) error {
+func (c *conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	var (
 		mailbox string
 		options imap.AppendOptions
@@ -71,8 +71,7 @@ func (c *conn) handleAppend(dec *imapwire.Decoder) error {
 		return err
 	}
 
-	// TODO: send back APPENDUID
-	_, appendErr := c.session.Append(mailbox, lit, &options)
+	data, appendErr := c.session.Append(mailbox, lit, &options)
 	if _, discardErr := io.Copy(io.Discard, lit); discardErr != nil {
 		return err
 	}
@@ -82,6 +81,19 @@ func (c *conn) handleAppend(dec *imapwire.Decoder) error {
 	if appendErr != nil {
 		return appendErr
 	}
+	return c.writeAppendOK(tag, data)
+}
 
-	return nil
+func (c *conn) writeAppendOK(tag string, data *imap.AppendData) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom(tag).SP().Atom("OK").SP()
+	if data != nil {
+		enc.Special('[')
+		enc.Atom("APPENDUID").SP().Number(data.UIDValidity).SP().Number(data.UID)
+		enc.Special(']').SP()
+	}
+	enc.Text("APPEND completed")
+	return enc.CRLF()
 }
