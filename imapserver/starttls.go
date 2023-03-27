@@ -33,7 +33,12 @@ func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 		}
 	}
 
-	err := c.writeStatusResp(tag, &imap.StatusResponse{
+	// Do not allow to write cleartext data past this point: keep c.encMutex
+	// locked until the end
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	err := writeStatusResp(enc.Encoder, tag, &imap.StatusResponse{
 		Type: imap.StatusResponseTypeOK,
 		Text: "Begin TLS negotiation now",
 	})
@@ -63,6 +68,7 @@ func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 
 	c.br.Reset(tlsConn)
 	c.bw.Reset(tlsConn)
+
 	return nil
 }
 

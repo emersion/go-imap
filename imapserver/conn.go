@@ -363,16 +363,7 @@ func (c *Conn) canAuth() bool {
 func (c *Conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
-
-	if tag == "" {
-		tag = "*"
-	}
-	enc.Atom(tag).SP().Atom(string(statusResp.Type)).SP()
-	if statusResp.Code != "" {
-		enc.Atom(fmt.Sprintf("[%v]", statusResp.Code)).SP()
-	}
-	enc.Text(statusResp.Text)
-	return enc.CRLF()
+	return writeStatusResp(enc.Encoder, tag, statusResp)
 }
 
 func (c *Conn) writeGreeting() error {
@@ -465,6 +456,18 @@ func discardLine(dec *imapwire.Decoder) {
 	var text string
 	dec.Text(&text)
 	dec.CRLF()
+}
+
+func writeStatusResp(enc *imapwire.Encoder, tag string, statusResp *imap.StatusResponse) error {
+	if tag == "" {
+		tag = "*"
+	}
+	enc.Atom(tag).SP().Atom(string(statusResp.Type)).SP()
+	if statusResp.Code != "" {
+		enc.Atom(fmt.Sprintf("[%v]", statusResp.Code)).SP()
+	}
+	enc.Text(statusResp.Text)
+	return enc.CRLF()
 }
 
 func writeContReq(enc *imapwire.Encoder, text string) error {
