@@ -43,6 +43,7 @@ type Session interface {
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	List(w *ListWriter, ref, pattern string, options *imap.ListOptions) error
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
+	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
 	Unselect() error
 	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
