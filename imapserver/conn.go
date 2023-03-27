@@ -151,6 +151,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleStatus(dec)
 	case "LIST":
 		err = c.handleList(dec)
+	case "NAMESPACE":
+		err = c.handleNamespace(dec)
 	case "IDLE":
 		err = c.handleIdle(dec)
 	case "SELECT", "EXAMINE":
