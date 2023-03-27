@@ -36,6 +36,18 @@ func ExpectDateTime(dec *imapwire.Decoder) (time.Time, error) {
 	return t, nil
 }
 
+func ExpectDate(dec *imapwire.Decoder) (time.Time, error) {
+	var s string
+	if !dec.ExpectAString(&s) {
+		return time.Time{}, dec.Err()
+	}
+	t, err := time.Parse(DateLayout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("in date: %v", err) // use imapwire.DecodeExpectError?
+	}
+	return t, nil
+}
+
 func ReadFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	var flags []imap.Flag
 	err := dec.ExpectList(func() error {
