@@ -39,15 +39,21 @@ func (kind NumKind) String() string {
 // Session is an IMAP session.
 type Session interface {
 	Close() error
+
+	// Not authenticated state
 	Login(username, password string) error
-	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
-	List(w *ListWriter, ref, pattern string, options *imap.ListOptions) error
-	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
-	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
+
+	// Authenticated state
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
+	List(w *ListWriter, ref, pattern string, options *imap.ListOptions) error
+	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
+	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
+
+	// Selected state
 	Unselect() error
-	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
 	Expunge(uids *imap.SeqSet) error
+	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
+	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
 	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error
 	Copy(kind NumKind, seqSet imap.SeqSet, dest string) error
 	Move(kind NumKind, seqSet imap.SeqSet, dest string) error
