@@ -12,7 +12,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	var seqSetStr string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() {
 		return dec.Err()
@@ -243,7 +243,7 @@ func maybeReadPartial(dec *imapwire.Decoder) (*imap.SectionPartial, error) {
 
 // FetchWriter writes FETCH responses.
 type FetchWriter struct {
-	conn *conn
+	conn *Conn
 }
 
 // CreateMessage writes a FETCH response for a message.

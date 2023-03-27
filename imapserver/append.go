@@ -14,7 +14,7 @@ import (
 // TODO: make configurable
 const appendLimit = 100 * 1024 * 1024 // 100MiB
 
-func (c *conn) handleAppend(tag string, dec *imapwire.Decoder) error {
+func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	var (
 		mailbox string
 		options imap.AppendOptions
@@ -84,7 +84,7 @@ func (c *conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	return c.writeAppendOK(tag, data)
 }
 
-func (c *conn) writeAppendOK(tag string, data *imap.AppendData) error {
+func (c *Conn) writeAppendOK(tag string, data *imap.AppendData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 

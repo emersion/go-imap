@@ -7,7 +7,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleList(dec *imapwire.Decoder) error {
+func (c *Conn) handleList(dec *imapwire.Decoder) error {
 	ref, pattern, options, err := readListCmd(dec)
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func (c *conn) handleList(dec *imapwire.Decoder) error {
 	return c.session.List(w, ref, pattern, options)
 }
 
-func (c *conn) writeList(data *imap.ListData) error {
+func (c *Conn) writeList(data *imap.ListData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -200,7 +200,7 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 
 // ListWriter writes LIST responses.
 type ListWriter struct {
-	conn    *conn
+	conn    *Conn
 	options *imap.ListOptions
 }
 

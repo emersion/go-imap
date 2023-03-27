@@ -7,7 +7,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleStatus(dec *imapwire.Decoder) error {
+func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 	var mailbox string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectSP() {
 		return dec.Err()
@@ -42,7 +42,7 @@ func (c *conn) handleStatus(dec *imapwire.Decoder) error {
 	return c.writeStatus(data, items)
 }
 
-func (c *conn) writeStatus(data *imap.StatusData, items []imap.StatusItem) error {
+func (c *Conn) writeStatus(data *imap.StatusData, items []imap.StatusItem) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	return enc.Atom("*").SP().Atom("STATUS").SP().Mailbox(data.Mailbox).SP().List(len(items), func(i int) {

@@ -5,14 +5,14 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleExpunge(dec *imapwire.Decoder) error {
+func (c *Conn) handleExpunge(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
 	return c.expunge(nil)
 }
 
-func (c *conn) handleUIDExpunge(dec *imapwire.Decoder) error {
+func (c *Conn) handleUIDExpunge(dec *imapwire.Decoder) error {
 	var seqSetStr string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -24,7 +24,7 @@ func (c *conn) handleUIDExpunge(dec *imapwire.Decoder) error {
 	return c.expunge(&seqSet)
 }
 
-func (c *conn) expunge(uids *imap.SeqSet) error {
+func (c *Conn) expunge(uids *imap.SeqSet) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}

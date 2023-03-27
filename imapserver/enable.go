@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleEnable(dec *imapwire.Decoder) error {
+func (c *Conn) handleEnable(dec *imapwire.Decoder) error {
 	var requested []imap.Cap
 	for dec.SP() {
 		var c string

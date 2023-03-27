@@ -15,7 +15,7 @@ type Logger interface {
 }
 
 type Server struct {
-	NewSession func() (Session, error)
+	NewSession func(*Conn) (Session, error)
 	Logger     Logger
 	TLSConfig  *tls.Config
 	// InsecureAuth allows clients to authenticate without TLS. In this mode,

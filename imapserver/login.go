@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleLogin(dec *imapwire.Decoder) error {
+func (c *Conn) handleLogin(dec *imapwire.Decoder) error {
 	var username, password string
 	if !dec.ExpectSP() || !dec.ExpectAString(&username) || !dec.ExpectSP() || !dec.ExpectAString(&password) || !dec.ExpectCRLF() {
 		return dec.Err()

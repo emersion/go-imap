@@ -10,12 +10,12 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) canStartTLS() bool {
+func (c *Conn) canStartTLS() bool {
 	_, isTLS := c.conn.(*tls.Conn)
 	return c.server.TLSConfig != nil && c.state == imap.ConnStateNotAuthenticated && !isTLS
 }
 
-func (c *conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
+func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}

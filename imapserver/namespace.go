@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleNamespace(dec *imapwire.Decoder) error {
+func (c *Conn) handleNamespace(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}

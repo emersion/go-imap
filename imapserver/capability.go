@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleCapability(dec *imapwire.Decoder) error {
+func (c *Conn) handleCapability(dec *imapwire.Decoder) error {
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
@@ -19,7 +19,7 @@ func (c *conn) handleCapability(dec *imapwire.Decoder) error {
 	return enc.CRLF()
 }
 
-func (c *conn) availableCaps() []imap.Cap {
+func (c *Conn) availableCaps() []imap.Cap {
 	caps := []imap.Cap{imap.CapIMAP4rev2}
 	if c.canStartTLS() {
 		caps = append(caps, imap.CapStartTLS)

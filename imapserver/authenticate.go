@@ -10,7 +10,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleAuthenticate(dec *imapwire.Decoder) error {
+func (c *Conn) handleAuthenticate(dec *imapwire.Decoder) error {
 	var mech string
 	if !dec.ExpectSP() || !dec.ExpectAtom(&mech) {
 		return dec.Err()
