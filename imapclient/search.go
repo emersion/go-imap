@@ -79,29 +79,11 @@ func (c *Client) handleESearch() error {
 // SearchCommand is a SEARCH command.
 type SearchCommand struct {
 	cmd
-	data SearchData
+	data imap.SearchData
 }
 
-func (cmd *SearchCommand) Wait() (*SearchData, error) {
+func (cmd *SearchCommand) Wait() (*imap.SearchData, error) {
 	return &cmd.data, cmd.cmd.Wait()
-}
-
-// SearchData is the data returned by a SEARCH command.
-type SearchData struct {
-	All imap.SeqSet
-
-	// requires IMAP4rev2 or ESEARCH
-	UID   bool
-	Min   uint32
-	Max   uint32
-	Count uint32
-}
-
-// AllNums returns All as a slice of numbers.
-func (data *SearchData) AllNums() []uint32 {
-	// Note: a dynamic sequence set would be a server bug
-	nums, _ := data.All.Nums()
-	return nums
 }
 
 func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
@@ -210,8 +192,8 @@ func flagSearchKey(flag imap.Flag) string {
 	}
 }
 
-func readESearchResponse(dec *imapwire.Decoder) (tag string, data *SearchData, err error) {
-	data = &SearchData{}
+func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchData, err error) {
+	data = &imap.SearchData{}
 
 	if dec.Special('(') { // search-correlator
 		var correlator string
