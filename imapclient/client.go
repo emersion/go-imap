@@ -138,7 +138,7 @@ func New(conn net.Conn, options *Options) *Client {
 		options:    *options,
 		br:         br,
 		bw:         bw,
-		dec:        imapwire.NewDecoder(br),
+		dec:        imapwire.NewDecoder(br, imapwire.ConnSideClient),
 		greetingCh: make(chan struct{}),
 		decCh:      make(chan struct{}),
 		state:      imap.ConnStateNone,

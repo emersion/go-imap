@@ -40,13 +40,14 @@ func (err *DecoderExpectError) Error() string {
 //     failure.
 type Decoder struct {
 	r       *bufio.Reader
+	side    ConnSide
 	err     error
 	literal bool
 }
 
 // NewDecoder creates a new decoder.
-func NewDecoder(r *bufio.Reader) *Decoder {
-	return &Decoder{r: r}
+func NewDecoder(r *bufio.Reader, side ConnSide) *Decoder {
+	return &Decoder{r: r, side: side}
 }
 
 func (dec *Decoder) mustUnreadByte() {
@@ -456,7 +457,9 @@ func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	if !dec.ExpectNumber64(&size) {
 		return nil, false, false
 	}
-	nonSync = dec.acceptByte('+')
+	if dec.side == ConnSideServer {
+		nonSync = dec.acceptByte('+')
+	}
 	if !dec.ExpectSpecial('}') || !dec.ExpectCRLF() {
 		return nil, false, false
 	}
