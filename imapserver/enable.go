@@ -26,10 +26,15 @@ func (c *conn) handleEnable(dec *imapwire.Decoder) error {
 	for _, req := range requested {
 		switch req {
 		case imap.CapIMAP4rev2:
-			c.enabled[req] = struct{}{}
 			enabled = append(enabled, req)
 		}
 	}
+
+	c.mutex.Lock()
+	for _, e := range enabled {
+		c.enabled[e] = struct{}{}
+	}
+	c.mutex.Unlock()
 
 	enc := newResponseEncoder(c)
 	defer enc.end()
