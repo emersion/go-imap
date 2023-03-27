@@ -3,6 +3,7 @@ package imapserver
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
@@ -362,7 +363,45 @@ func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBina
 func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 	w.writeItemSep()
 	enc := w.enc.Encoder
-	enc.Atom("ENVELOPE").SP().Special('(')
+	enc.Atom("ENVELOPE").SP()
+	writeEnvelope(enc, envelope)
+}
+
+// WriteBodyStructure writes the message's body structure (either BODYSTRUCTURE
+// or BODY).
+func (w *FetchResponseWriter) WriteBodyStructure(bs imap.BodyStructure) {
+	var extended bool
+	switch bs := bs.(type) {
+	case *imap.BodyStructureSinglePart:
+		extended = bs.Extended != nil
+	case *imap.BodyStructureMultiPart:
+		extended = bs.Extended != nil
+	}
+
+	item := "BODY"
+	if extended {
+		item = "BODYSTRUCTURE"
+	}
+
+	w.writeItemSep()
+	enc := w.enc.Encoder
+	enc.Atom(item).SP()
+	writeBodyStructure(enc, bs)
+}
+
+// Close closes the FETCH message writer.
+func (w *FetchResponseWriter) Close() error {
+	if w.enc == nil {
+		return fmt.Errorf("imapserver: FetchResponseWriter already closed")
+	}
+	err := w.enc.Special(')').CRLF()
+	w.enc.end()
+	w.enc = nil
+	return err
+}
+
+func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
+	enc.Special('(')
 	writeNString(enc, envelope.Date)
 	enc.SP()
 	writeNString(enc, envelope.Subject)
@@ -383,17 +422,6 @@ func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 	enc.SP()
 	writeNString(enc, envelope.MessageID)
 	enc.Special(')')
-}
-
-// Close closes the FETCH message writer.
-func (w *FetchResponseWriter) Close() error {
-	if w.enc == nil {
-		return fmt.Errorf("imapserver: FetchResponseWriter already closed")
-	}
-	err := w.enc.Special(')').CRLF()
-	w.enc.end()
-	w.enc = nil
-	return err
 }
 
 func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
@@ -432,4 +460,125 @@ func writeSectionPart(enc *imapwire.Encoder, part []int) {
 		l = append(l, fmt.Sprintf("%v", num))
 	}
 	enc.Atom(strings.Join(l, "."))
+}
+
+func writeBodyStructure(enc *imapwire.Encoder, bs imap.BodyStructure) {
+	enc.Special('(')
+	switch bs := bs.(type) {
+	case *imap.BodyStructureSinglePart:
+		writeBodyType1part(enc, bs)
+	case *imap.BodyStructureMultiPart:
+		writeBodyTypeMpart(enc, bs)
+	default:
+		panic(fmt.Errorf("unknown body structure type %T", bs))
+	}
+	enc.Special(')')
+}
+
+func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart) {
+	enc.String(bs.Type).SP().String(bs.Subtype).SP()
+	writeBodyFldParam(enc, bs.Params)
+	enc.SP()
+	writeNString(enc, bs.ID)
+	enc.SP()
+	writeNString(enc, bs.Description)
+	enc.SP()
+	if bs.Encoding == "" {
+		enc.String("7BIT")
+	} else {
+		enc.String(strings.ToUpper(bs.Encoding))
+	}
+	enc.SP().Number(bs.Size)
+
+	if msg := bs.MessageRFC822; msg != nil {
+		enc.SP()
+		writeEnvelope(enc, msg.Envelope)
+		enc.SP()
+		writeBodyStructure(enc, msg.BodyStructure)
+		enc.SP().Number64(msg.NumLines)
+	} else if text := bs.Text; text != nil {
+		enc.SP().Number64(msg.NumLines)
+	}
+
+	ext := bs.Extended
+	if ext == nil {
+		return
+	}
+
+	enc.SP()
+	writeNString(enc, ext.MD5)
+	enc.SP()
+	writeBodyFldDsp(enc, ext.Disposition)
+	enc.SP()
+	writeBodyFldLang(enc, ext.Language)
+	enc.SP()
+	writeNString(enc, ext.Location)
+}
+
+func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart) {
+	if len(bs.Children) == 0 {
+		panic("imapserver: imap.BodyStructureMultiPart must have at least one child")
+	}
+	for i, child := range bs.Children {
+		if i > 0 {
+			enc.SP()
+		}
+		writeBodyStructure(enc, child)
+	}
+
+	enc.SP().String(bs.Subtype)
+
+	ext := bs.Extended
+	if ext == nil {
+		return
+	}
+
+	enc.SP()
+	writeBodyFldParam(enc, ext.Params)
+	enc.SP()
+	writeBodyFldDsp(enc, ext.Disposition)
+	enc.SP()
+	writeBodyFldLang(enc, ext.Language)
+	enc.SP()
+	writeNString(enc, ext.Location)
+}
+
+func writeBodyFldParam(enc *imapwire.Encoder, params map[string]string) {
+	if params == nil {
+		enc.NIL()
+		return
+	}
+
+	var l []string
+	for k := range params {
+		l = append(l, k)
+	}
+	sort.Strings(l)
+
+	enc.List(len(l), func(i int) {
+		k := l[i]
+		v := params[k]
+		enc.String(k).SP().String(v)
+	})
+}
+
+func writeBodyFldDsp(enc *imapwire.Encoder, disp *imap.BodyStructureDisposition) {
+	if disp == nil {
+		enc.NIL()
+		return
+	}
+
+	enc.Special('(').String(disp.Value).SP()
+	writeBodyFldParam(enc, disp.Params)
+	enc.Special(')')
+}
+
+func writeBodyFldLang(enc *imapwire.Encoder, l []string) {
+	if l == nil {
+		enc.NIL()
+	} else {
+		enc.List(len(l), func(i int) {
+			enc.String(l[i])
+		})
+	}
 }
