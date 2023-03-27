@@ -45,6 +45,9 @@ type Session interface {
 
 	// Authenticated state
 	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
+	Create(mailbox string) error
+	Delete(mailbox string) error
+	Rename(mailbox, newName string) error
 	List(w *ListWriter, ref, pattern string, options *imap.ListOptions) error
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)

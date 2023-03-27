@@ -137,6 +137,12 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogin(dec)
 	case "ENABLE":
 		err = c.handleEnable(dec)
+	case "CREATE":
+		err = c.handleCreate(dec)
+	case "DELETE":
+		err = c.handleDelete(dec)
+	case "RENAME":
+		err = c.handleRename(dec)
 	case "STATUS":
 		err = c.handleStatus(dec)
 	case "LIST":
@@ -217,6 +223,39 @@ func (c *conn) handleLogout(dec *imapwire.Decoder) error {
 		Type: imap.StatusResponseTypeBye,
 		Text: "Logging out",
 	})
+}
+
+func (c *conn) handleCreate(dec *imapwire.Decoder) error {
+	var name string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	return c.session.Create(name)
+}
+
+func (c *conn) handleDelete(dec *imapwire.Decoder) error {
+	var name string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	return c.session.Delete(name)
+}
+
+func (c *conn) handleRename(dec *imapwire.Decoder) error {
+	var oldName, newName string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&oldName) || !dec.ExpectSP() || !dec.ExpectMailbox(&newName) || !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	return c.session.Rename(oldName, newName)
 }
 
 func (c *conn) canAuth() bool {
