@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *conn) handleCopy(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) error {
 	seqSet, dest, err := readCopy(dec)
 	if err != nil {
 		return err
@@ -13,8 +13,11 @@ func (c *conn) handleCopy(dec *imapwire.Decoder, numKind NumKind) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
-	// TODO: send back COPYUID
-	return c.session.Copy(numKind, seqSet, dest)
+	data, err := c.session.Copy(numKind, seqSet, dest)
+	if err != nil {
+		return err
+	}
+	return c.writeCopyOK(tag, data)
 }
 
 func (c *conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
@@ -27,6 +30,24 @@ func (c *conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 	// TODO: send back COPYUID
 	return c.session.Move(numKind, seqSet, dest)
+}
+
+func (c *conn) writeCopyOK(tag string, data *imap.CopyData) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	if tag == "" {
+		tag = "*"
+	}
+
+	enc.Atom(tag).SP().Atom("OK").SP()
+	if data != nil {
+		enc.Special('[')
+		enc.Atom("COPYUID").SP().Number(data.UIDValidity).SP().Atom(data.SourceUIDs.String()).SP().Atom(data.DestUIDs.String())
+		enc.Special(']').SP()
+	}
+	enc.Text("COPY completed")
+	return enc.CRLF()
 }
 
 func readCopy(dec *imapwire.Decoder) (seqSet imap.SeqSet, dest string, err error) {

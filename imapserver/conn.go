@@ -194,7 +194,8 @@ func (c *conn) readCommand(dec *imapwire.Decoder) error {
 	case "STORE", "UID STORE":
 		err = c.handleStore(dec, numKind)
 	case "COPY", "UID COPY":
-		err = c.handleCopy(dec, numKind)
+		err = c.handleCopy(tag, dec, numKind)
+		sendOK = false
 	case "MOVE", "UID MOVE":
 		err = c.handleMove(dec, numKind)
 	case "SEARCH", "UID SEARCH":
