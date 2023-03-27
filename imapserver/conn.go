@@ -90,6 +90,8 @@ func (c *conn) serve() {
 
 	for {
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
+		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
+
 		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break
 		}
@@ -284,6 +286,35 @@ func (c *conn) handleUnsubscribe(dec *imapwire.Decoder) error {
 		return err
 	}
 	return c.session.Unsubscribe(name)
+}
+
+func (c *conn) checkBufferedLiteral(size int64, nonSync bool) error {
+	if size > 4096 {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeTooBig,
+			Text: "Literals are limited to 4096 bytes for this command",
+		}
+	}
+
+	return c.acceptLiteral(size, nonSync)
+}
+
+func (c *conn) acceptLiteral(size int64, nonSync bool) error {
+	if nonSync && size > 4096 {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Text: "Non-synchronizing literals are limited to 4096 bytes",
+		}
+	}
+
+	if nonSync {
+		return nil
+	}
+
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	return writeContReq(enc.Encoder, "Ready for literal data")
 }
 
 func (c *conn) canAuth() bool {
