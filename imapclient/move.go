@@ -18,8 +18,8 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 	enc.end()
 
 	if cmdName == "COPY" {
-		cmd.store = c.store(uid, seqSet, &StoreFlags{
-			Op:     StoreFlagsAdd,
+		cmd.store = c.store(uid, seqSet, &imap.StoreFlags{
+			Op:     imap.StoreFlagsAdd,
 			Silent: true,
 			Flags:  []imap.Flag{imap.FlagDeleted},
 		})
