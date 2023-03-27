@@ -1205,13 +1205,14 @@ func readHeaderList(dec *imapwire.Decoder) ([]string, error) {
 
 func readSectionPart(dec *imapwire.Decoder) (part []int, dot bool) {
 	for {
-		if len(part) > 0 && !dec.Special('.') {
+		dot = len(part) > 0
+		if dot && !dec.Special('.') {
 			return part, false
 		}
 
 		var num uint32
 		if !dec.Number(&num) {
-			return part, true
+			return part, dot
 		}
 		part = append(part, int(num))
 	}
