@@ -39,6 +39,10 @@ func (err *DecoderExpectError) Error() string {
 //   - "Expect" methods do the same, but set the decoder error (see Err) on
 //     failure.
 type Decoder struct {
+	// CheckBufferedLiteralFunc is called when a literal is about to be decoded
+	// and needs to be fully buffered in memory.
+	CheckBufferedLiteralFunc func(size int64, nonSync bool) error
+
 	r       *bufio.Reader
 	side    ConnSide
 	err     error
@@ -437,9 +441,15 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 }
 
 func (dec *Decoder) Literal(ptr *string) bool {
-	lit, _, ok := dec.LiteralReader()
+	lit, nonSync, ok := dec.LiteralReader()
 	if !ok {
 		return false
+	}
+	if dec.CheckBufferedLiteralFunc != nil {
+		if err := dec.CheckBufferedLiteralFunc(lit.Size(), nonSync); err != nil {
+			lit.cancel()
+			return false
+		}
 	}
 	var sb strings.Builder
 	_, err := io.Copy(&sb, lit)
@@ -499,9 +509,16 @@ func (lit *LiteralReader) Size() int64 {
 
 func (lit *LiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.r.Read(b)
-	if err == io.EOF && lit.dec != nil {
-		lit.dec.literal = false
-		lit.dec = nil
+	if err == io.EOF {
+		lit.cancel()
 	}
 	return n, err
+}
+
+func (lit *LiteralReader) cancel() {
+	if lit.dec == nil {
+		return
+	}
+	lit.dec.literal = false
+	lit.dec = nil
 }

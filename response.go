@@ -45,6 +45,9 @@ const (
 	// METADATA
 	ResponseCodeTooMany   ResponseCode = "TOOMANY"
 	ResponseCodeNoPrivate ResponseCode = "NOPRIVATE"
+
+	// APPENDLIMIT
+	ResponseCodeTooBig ResponseCode = "TOOBIG"
 )
 
 // StatusResponse is a generic status response.
