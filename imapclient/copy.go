@@ -28,19 +28,11 @@ func (c *Client) UIDCopy(seqSet imap.SeqSet, mailbox string) *CopyCommand {
 // CopyCommand is a COPY command.
 type CopyCommand struct {
 	cmd
-	data CopyData
+	data imap.CopyData
 }
 
-func (cmd *CopyCommand) Wait() (*CopyData, error) {
+func (cmd *CopyCommand) Wait() (*imap.CopyData, error) {
 	return &cmd.data, cmd.cmd.Wait()
-}
-
-// CopyData is the data returned by a COPY command.
-type CopyData struct {
-	// requires UIDPLUS or IMAP4rev2
-	UIDValidity uint32
-	SourceUIDs  imap.SeqSet
-	DestUIDs    imap.SeqSet
 }
 
 func readRespCodeCopy(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.SeqSet, err error) {
