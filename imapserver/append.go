@@ -62,6 +62,9 @@ func (c *conn) handleAppend(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	c.setReadTimeout(literalReadTimeout)
+	defer c.setReadTimeout(cmdReadTimeout)
+
 	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
 		io.Copy(io.Discard, lit)
 		dec.CRLF()

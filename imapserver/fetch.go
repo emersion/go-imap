@@ -332,7 +332,7 @@ func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySectio
 	}
 
 	enc.SP()
-	return enc.Literal(size, nil)
+	return w.enc.Literal(size)
 }
 
 // WriteBinarySection writes a binary section.
@@ -346,7 +346,7 @@ func (w *FetchResponseWriter) WriteBinarySection(section *imap.FetchItemBinarySe
 	enc.Atom("BINARY").Special('[')
 	writeSectionPart(enc, section.Part)
 	enc.Special(']').SP()
-	return enc.Literal(size, nil)
+	return w.enc.Literal(size)
 }
 
 // WriteBinarySectionSize writes a binary section size.
