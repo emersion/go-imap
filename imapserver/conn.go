@@ -94,11 +94,7 @@ func (c *conn) serve() {
 	}()
 
 	c.state = imap.ConnStateNotAuthenticated
-	err = c.writeStatusResp("", &imap.StatusResponse{
-		Type: imap.StatusResponseTypeOK,
-		Text: "IMAP4rev2 server ready",
-	})
-	if err != nil {
+	if err := c.writeGreeting(); err != nil {
 		c.server.logger().Printf("failed to write greeting: %v", err)
 		return
 	}
@@ -362,6 +358,18 @@ func (c *conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) erro
 		enc.Atom(fmt.Sprintf("[%v]", statusResp.Code)).SP()
 	}
 	enc.Text(statusResp.Text)
+	return enc.CRLF()
+}
+
+func (c *conn) writeGreeting() error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom("*").SP().Atom("OK").SP().Special('[').Atom("CAPABILITY")
+	for _, c := range c.availableCaps() {
+		enc.SP().Atom(string(c))
+	}
+	enc.Special(']').SP().Text("IMAP4rev2 server ready")
 	return enc.CRLF()
 }
 
