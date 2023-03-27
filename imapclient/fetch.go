@@ -323,7 +323,7 @@ func (FetchItemDataUID) fetchItemData() {}
 // FetchItemDataBodyStructure holds data returned by FETCH BODYSTRUCTURE or
 // FETCH BODY.
 type FetchItemDataBodyStructure struct {
-	BodyStructure BodyStructure
+	BodyStructure imap.BodyStructure
 	IsExtended    bool // True if BODYSTRUCTURE, false if BODY
 }
 
@@ -337,156 +337,6 @@ type FetchItemDataBinarySectionSize struct {
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
 
-// BodyStructure describes the body structure of a message.
-//
-// A BodyStructure value is either a *BodyStructureSinglePart or a
-// *BodyStructureMultiPart.
-type BodyStructure interface {
-	// MediaType returns the MIME type of this body structure, e.g. "text/plain".
-	MediaType() string
-	// Walk walks the body structure tree, calling f for each part in the tree,
-	// including bs itself. The parts are visited in DFS pre-order.
-	Walk(f BodyStructureWalkFunc)
-	// Disposition returns the body structure disposition, if available.
-	Disposition() *BodyStructureDisposition
-
-	bodyStructure()
-}
-
-var (
-	_ BodyStructure = (*BodyStructureSinglePart)(nil)
-	_ BodyStructure = (*BodyStructureMultiPart)(nil)
-)
-
-// BodyStructureSinglePart is a body structure with a single part.
-type BodyStructureSinglePart struct {
-	Type, Subtype string
-	Params        map[string]string
-	ID            string
-	Description   string
-	Encoding      string
-	Size          uint32
-
-	MessageRFC822 *BodyStructureMessageRFC822 // only for "message/rfc822"
-	Text          *BodyStructureText          // only for "text/*"
-	Extended      *BodyStructureSinglePartExt
-}
-
-func (bs *BodyStructureSinglePart) MediaType() string {
-	return strings.ToLower(bs.Type) + "/" + strings.ToLower(bs.Subtype)
-}
-
-func (bs *BodyStructureSinglePart) Walk(f BodyStructureWalkFunc) {
-	f([]int{1}, bs)
-}
-
-func (bs *BodyStructureSinglePart) Disposition() *BodyStructureDisposition {
-	if bs.Extended == nil {
-		return nil
-	}
-	return bs.Extended.Disposition
-}
-
-// Filename decodes the body structure's filename, if any.
-func (bs *BodyStructureSinglePart) Filename() string {
-	var filename string
-	if bs.Extended != nil && bs.Extended.Disposition != nil {
-		filename = bs.Extended.Disposition.Params["filename"]
-	}
-	if filename == "" {
-		// Note: using "name" in Content-Type is discouraged
-		filename = bs.Params["name"]
-	}
-	return filename
-}
-
-func (*BodyStructureSinglePart) bodyStructure() {}
-
-type BodyStructureMessageRFC822 struct {
-	Envelope      *imap.Envelope
-	BodyStructure BodyStructure
-	NumLines      int64
-}
-
-type BodyStructureText struct {
-	NumLines int64
-}
-
-type BodyStructureSinglePartExt struct {
-	MD5         string
-	Disposition *BodyStructureDisposition
-	Language    []string
-	Location    string
-}
-
-// BodyStructureMultiPart is a body structure with multiple parts.
-type BodyStructureMultiPart struct {
-	Children []BodyStructure
-	Subtype  string
-
-	Extended *BodyStructureMultiPartExt
-}
-
-func (bs *BodyStructureMultiPart) MediaType() string {
-	return "multipart/" + strings.ToLower(bs.Subtype)
-}
-
-func (bs *BodyStructureMultiPart) Walk(f BodyStructureWalkFunc) {
-	bs.walk(f, nil)
-}
-
-func (bs *BodyStructureMultiPart) walk(f BodyStructureWalkFunc, path []int) {
-	if !f(path, bs) {
-		return
-	}
-
-	pathBuf := make([]int, len(path))
-	copy(pathBuf, path)
-	for i, part := range bs.Children {
-		num := i + 1
-		partPath := append(pathBuf, num)
-
-		switch part := part.(type) {
-		case *BodyStructureSinglePart:
-			f(partPath, part)
-		case *BodyStructureMultiPart:
-			part.walk(f, partPath)
-		default:
-			panic(fmt.Errorf("unsupported body structure type %T", part))
-		}
-	}
-}
-
-func (bs *BodyStructureMultiPart) Disposition() *BodyStructureDisposition {
-	if bs.Extended == nil {
-		return nil
-	}
-	return bs.Extended.Disposition
-}
-
-func (*BodyStructureMultiPart) bodyStructure() {}
-
-type BodyStructureMultiPartExt struct {
-	Params      map[string]string
-	Disposition *BodyStructureDisposition
-	Language    []string
-	Location    string
-}
-
-type BodyStructureDisposition struct {
-	Value  string
-	Params map[string]string
-}
-
-// BodyStructureWalkFunc is a function called for each body structure visited
-// by BodyStructure.Walk.
-//
-// The path argument contains the IMAP part path.
-//
-// The function should return true to visit all of the part's children or false
-// to skip them.
-type BodyStructureWalkFunc func(path []int, part BodyStructure) (walkChildren bool)
-
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -497,7 +347,7 @@ type FetchMessageBuffer struct {
 	InternalDate      time.Time
 	RFC822Size        int64
 	UID               uint32
-	BodyStructure     BodyStructure
+	BodyStructure     imap.BodyStructure
 	BodySection       map[*imap.FetchItemBodySection][]byte
 	BinarySection     map[*imap.FetchItemBinarySection][]byte
 	BinarySectionSize []FetchItemDataBinarySectionSize
@@ -844,7 +694,7 @@ func readAddress(dec *imapwire.Decoder, options *Options) (*imap.Address, error)
 	return &addr, nil
 }
 
-func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
+func readBody(dec *imapwire.Decoder, options *Options) (imap.BodyStructure, error) {
 	if !dec.ExpectSpecial('(') {
 		return nil, dec.Err()
 	}
@@ -852,7 +702,7 @@ func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
 	var (
 		mediaType string
 		token     string
-		bs        BodyStructure
+		bs        imap.BodyStructure
 		err       error
 	)
 	if dec.String(&mediaType) {
@@ -879,8 +729,8 @@ func readBody(dec *imapwire.Decoder, options *Options) (BodyStructure, error) {
 	return bs, nil
 }
 
-func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*BodyStructureSinglePart, error) {
-	bs := BodyStructureSinglePart{Type: typ}
+func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*imap.BodyStructureSinglePart, error) {
+	bs := imap.BodyStructureSinglePart{Type: typ}
 
 	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
 		return nil, dec.Err()
@@ -904,7 +754,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 	bs.Description, _ = options.decodeText(description)
 
 	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
-		var msg BodyStructureMessageRFC822
+		var msg imap.BodyStructureMessageRFC822
 
 		if !dec.ExpectSP() {
 			return nil, dec.Err()
@@ -930,7 +780,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 
 		bs.MessageRFC822 = &msg
 	} else if strings.EqualFold(bs.Type, "text") {
-		var text BodyStructureText
+		var text imap.BodyStructureText
 
 		if !dec.ExpectSP() || !dec.ExpectNumber64(&text.NumLines) {
 			return nil, dec.Err()
@@ -949,8 +799,8 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*Bo
 	return &bs, nil
 }
 
-func readBodyExt1part(dec *imapwire.Decoder, options *Options) (*BodyStructureSinglePartExt, error) {
-	var ext BodyStructureSinglePartExt
+func readBodyExt1part(dec *imapwire.Decoder, options *Options) (*imap.BodyStructureSinglePartExt, error) {
+	var ext imap.BodyStructureSinglePartExt
 
 	if !dec.ExpectNString(&ext.MD5) {
 		return nil, dec.Err()
@@ -986,8 +836,8 @@ func readBodyExt1part(dec *imapwire.Decoder, options *Options) (*BodyStructureSi
 	return &ext, nil
 }
 
-func readBodyTypeMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureMultiPart, error) {
-	var bs BodyStructureMultiPart
+func readBodyTypeMpart(dec *imapwire.Decoder, options *Options) (*imap.BodyStructureMultiPart, error) {
+	var bs imap.BodyStructureMultiPart
 
 	for {
 		child, err := readBody(dec, options)
@@ -1012,8 +862,8 @@ func readBodyTypeMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureM
 	return &bs, nil
 }
 
-func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureMultiPartExt, error) {
-	var ext BodyStructureMultiPartExt
+func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*imap.BodyStructureMultiPartExt, error) {
+	var ext imap.BodyStructureMultiPartExt
 
 	var err error
 	ext.Params, err = readBodyFldParam(dec)
@@ -1050,7 +900,7 @@ func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*BodyStructureMu
 	return &ext, nil
 }
 
-func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*BodyStructureDisposition, error) {
+func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*imap.BodyStructureDisposition, error) {
 	if !dec.Special('(') {
 		if !dec.ExpectNIL() {
 			return nil, dec.Err()
@@ -1058,7 +908,7 @@ func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*BodyStructureDisp
 		return nil, nil
 	}
 
-	var disp BodyStructureDisposition
+	var disp imap.BodyStructureDisposition
 	if !dec.ExpectString(&disp.Value) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
