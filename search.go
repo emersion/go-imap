@@ -51,3 +51,21 @@ type SearchCriteria struct {
 type SearchCriteriaHeaderField struct {
 	Key, Value string
 }
+
+// SearchData is the data returned by a SEARCH command.
+type SearchData struct {
+	All SeqSet
+
+	// requires IMAP4rev2 or ESEARCH
+	UID   bool
+	Min   uint32
+	Max   uint32
+	Count uint32
+}
+
+// AllNums returns All as a slice of numbers.
+func (data *SearchData) AllNums() []uint32 {
+	// Note: a dynamic sequence set would be a server bug
+	nums, _ := data.All.Nums()
+	return nums
+}
