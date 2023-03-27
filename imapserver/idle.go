@@ -21,6 +21,7 @@ func (c *conn) handleIdle(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	c.setReadTimeout(idleReadTimeout)
 	line, isPrefix, err := c.br.ReadLine()
 	if err != nil {
 		return err

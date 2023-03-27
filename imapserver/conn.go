@@ -5,13 +5,24 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"runtime/debug"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
+)
+
+const (
+	cmdReadTimeout     = 30 * time.Second
+	idleReadTimeout    = 35 * time.Minute // section 5.4 says 30min minimum
+	literalReadTimeout = 5 * time.Minute
+
+	respWriteTimeout    = 30 * time.Second
+	literalWriteTimeout = 5 * time.Minute
 )
 
 var internalServerErrorResp = &imap.StatusResponse{
@@ -93,6 +104,15 @@ func (c *conn) serve() {
 	}
 
 	for {
+		var readTimeout time.Duration
+		switch c.state {
+		case imap.ConnStateAuthenticated, imap.ConnStateSelected:
+			readTimeout = idleReadTimeout
+		default:
+			readTimeout = cmdReadTimeout
+		}
+		c.setReadTimeout(readTimeout)
+
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
 
@@ -100,6 +120,7 @@ func (c *conn) serve() {
 			break
 		}
 
+		c.setReadTimeout(cmdReadTimeout)
 		if err := c.readCommand(dec); err != nil {
 			c.server.logger().Printf("failed to read command: %v", err)
 			break
@@ -354,6 +375,22 @@ func (c *conn) checkState(state imap.ConnState) error {
 	return nil
 }
 
+func (c *conn) setReadTimeout(dur time.Duration) {
+	if dur > 0 {
+		c.conn.SetReadDeadline(time.Now().Add(dur))
+	} else {
+		c.conn.SetReadDeadline(time.Time{})
+	}
+}
+
+func (c *conn) setWriteTimeout(dur time.Duration) {
+	if dur > 0 {
+		c.conn.SetWriteDeadline(time.Now().Add(dur))
+	} else {
+		c.conn.SetWriteDeadline(time.Time{})
+	}
+}
+
 type responseEncoder struct {
 	*imapwire.Encoder
 	conn *conn
@@ -368,6 +405,7 @@ func newResponseEncoder(conn *conn) *responseEncoder {
 	wireEnc.QuotedUTF8 = quotedUTF8
 
 	conn.encMutex.Lock() // released by responseEncoder.end
+	conn.setWriteTimeout(respWriteTimeout)
 	return &responseEncoder{
 		Encoder: wireEnc,
 		conn:    conn,
@@ -379,7 +417,26 @@ func (enc *responseEncoder) end() {
 		panic("imapserver: responseEncoder.end called twice")
 	}
 	enc.Encoder = nil
+	enc.conn.setWriteTimeout(0)
 	enc.conn.encMutex.Unlock()
+}
+
+func (enc *responseEncoder) Literal(size int64) io.WriteCloser {
+	enc.conn.setWriteTimeout(literalWriteTimeout)
+	return literalWriter{
+		WriteCloser: enc.Encoder.Literal(size, nil),
+		conn:        enc.conn,
+	}
+}
+
+type literalWriter struct {
+	io.WriteCloser
+	conn *conn
+}
+
+func (lw literalWriter) Close() error {
+	lw.conn.setWriteTimeout(respWriteTimeout)
+	return lw.WriteCloser.Close()
 }
 
 func discardLine(dec *imapwire.Decoder) {
