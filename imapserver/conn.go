@@ -29,16 +29,18 @@ type conn struct {
 
 	state   imap.ConnState
 	session Session
+	enabled imap.CapSet
 }
 
 func newConn(c net.Conn, server *Server) *conn {
 	br := bufio.NewReader(c)
 	bw := bufio.NewWriter(c)
 	return &conn{
-		conn:   c,
-		server: server,
-		br:     br,
-		bw:     bw,
+		conn:    c,
+		server:  server,
+		br:      br,
+		bw:      bw,
+		enabled: make(imap.CapSet),
 	}
 }
 
@@ -356,9 +358,12 @@ type responseEncoder struct {
 }
 
 func newResponseEncoder(conn *conn) *responseEncoder {
+	wireEnc := imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer)
+	wireEnc.QuotedUTF8 = conn.enabled.Has(imap.CapIMAP4rev2)
+
 	conn.encMutex.Lock() // released by responseEncoder.end
 	return &responseEncoder{
-		Encoder: imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer),
+		Encoder: wireEnc,
 		conn:    conn,
 	}
 }
