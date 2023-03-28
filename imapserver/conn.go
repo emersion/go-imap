@@ -79,7 +79,7 @@ func (c *Conn) serve() {
 	}()
 
 	var err error
-	c.session, err = c.server.NewSession(c)
+	c.session, err = c.server.options.NewSession(c)
 	if err != nil {
 		var (
 			resp    *imap.StatusResponse
@@ -356,7 +356,7 @@ func (c *Conn) canAuth() bool {
 		return false
 	}
 	_, isTLS := c.conn.(*tls.Conn)
-	return isTLS || c.server.InsecureAuth
+	return isTLS || c.server.options.InsecureAuth
 }
 
 func (c *Conn) writeStatusResp(tag string, statusResp *imap.StatusResponse) error {
