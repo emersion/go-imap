@@ -42,11 +42,13 @@ func (mbox *SelectedMailbox) copy() *SelectedMailbox {
 
 // Options contains options for Client.
 type Options struct {
-	// Raw ingress and egress data will be written to this writer, if any
+	// Raw ingress and egress data will be written to this writer, if any.
+	// Note, this may include sensitive information such as credentials used
+	// during authentication.
 	DebugWriter io.Writer
-	// Unilateral data handler
+	// Unilateral data handler.
 	UnilateralDataHandler *UnilateralDataHandler
-	// Decoder for RFC 2047 words
+	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
 }
 
