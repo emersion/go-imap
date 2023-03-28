@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Logger is a facility to log error messages.
 type Logger interface {
 	Printf(format string, args ...interface{})
 }
@@ -18,9 +19,13 @@ type Logger interface {
 //
 // The only required field is NewSession.
 type Options struct {
+	// NewSession is called when a client connects.
 	NewSession func(*Conn) (Session, error)
-	Logger     Logger
-	TLSConfig  *tls.Config
+	// Logger is a logger to print error messages. If nil, log.Default is used.
+	Logger Logger
+	// TLSConfig is a TLS configuration for STARTTLS. If nil, STARTTLS is
+	// disabled.
+	TLSConfig *tls.Config
 	// InsecureAuth allows clients to authenticate without TLS. In this mode,
 	// the server is susceptible to man-in-the-middle attacks.
 	InsecureAuth bool
@@ -45,6 +50,7 @@ func (s *Server) logger() Logger {
 	return s.options.Logger
 }
 
+// Serve accepts incoming connections on the listener ln.
 func (s *Server) Serve(ln net.Listener) error {
 	var delay time.Duration
 	for {
