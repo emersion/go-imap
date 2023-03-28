@@ -278,7 +278,7 @@ func (w *FetchResponseWriter) WriteUID(uid uint32) {
 func (w *FetchResponseWriter) WriteFlags(flags []imap.Flag) {
 	w.writeItemSep()
 	w.enc.Atom("FLAGS").SP().List(len(flags), func(i int) {
-		w.enc.Atom(string(flags[i])) // TODO: validate flag
+		w.enc.Flag(flags[i])
 	})
 }
 

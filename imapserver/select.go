@@ -104,7 +104,7 @@ func (c *Conn) writeFlags(flags []imap.Flag) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("FLAGS").SP().List(len(flags), func(i int) {
-		enc.Atom(string(flags[i])) // TODO: validate flag
+		enc.Flag(flags[i])
 	})
 	return enc.CRLF()
 }
@@ -114,7 +114,7 @@ func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()
 	enc.Special('[').Atom("PERMANENTFLAGS").SP().List(len(flags), func(i int) {
-		enc.Atom(string(flags[i])) // TODO: validate flag
+		enc.Flag(flags[i])
 	}).Special(']')
 	enc.SP().Text("Permanent flags")
 	return enc.CRLF()
