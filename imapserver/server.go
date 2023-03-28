@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -29,6 +30,23 @@ type Options struct {
 	// InsecureAuth allows clients to authenticate without TLS. In this mode,
 	// the server is susceptible to man-in-the-middle attacks.
 	InsecureAuth bool
+	// Raw ingress and egress data will be written to this writer, if any.
+	// Note, this may include sensitive information such as credentials used
+	// during authentication.
+	DebugWriter io.Writer
+}
+
+func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
+	if options.DebugWriter == nil {
+		return rw
+	}
+	return struct {
+		io.Reader
+		io.Writer
+	}{
+		Reader: io.TeeReader(rw, options.DebugWriter),
+		Writer: io.MultiWriter(rw, options.DebugWriter),
+	}
 }
 
 // Server is an IMAP server.

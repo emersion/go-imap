@@ -66,8 +66,9 @@ func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 	c.conn = tlsConn
 	c.mutex.Unlock()
 
-	c.br.Reset(tlsConn)
-	c.bw.Reset(tlsConn)
+	rw := c.server.options.wrapReadWriter(tlsConn)
+	c.br.Reset(rw)
+	c.bw.Reset(rw)
 
 	return nil
 }
