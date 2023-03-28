@@ -14,7 +14,10 @@ type Logger interface {
 	Printf(format string, args ...interface{})
 }
 
-type Server struct {
+// Options contains server options.
+//
+// The only required field is NewSession.
+type Options struct {
 	NewSession func(*Conn) (Session, error)
 	Logger     Logger
 	TLSConfig  *tls.Config
@@ -23,11 +26,23 @@ type Server struct {
 	InsecureAuth bool
 }
 
+// Server is an IMAP server.
+type Server struct {
+	options Options
+}
+
+// New creates a new server.
+func New(options *Options) *Server {
+	return &Server{
+		options: *options,
+	}
+}
+
 func (s *Server) logger() Logger {
-	if s.Logger == nil {
+	if s.options.Logger == nil {
 		return log.Default()
 	}
-	return s.Logger
+	return s.options.Logger
 }
 
 func (s *Server) Serve(ln net.Listener) error {

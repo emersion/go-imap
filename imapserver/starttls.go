@@ -12,7 +12,7 @@ import (
 
 func (c *Conn) canStartTLS() bool {
 	_, isTLS := c.conn.(*tls.Conn)
-	return c.server.TLSConfig != nil && c.state == imap.ConnStateNotAuthenticated && !isTLS
+	return c.server.options.TLSConfig != nil && c.state == imap.ConnStateNotAuthenticated && !isTLS
 }
 
 func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
@@ -20,7 +20,7 @@ func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 		return dec.Err()
 	}
 
-	if c.server.TLSConfig == nil {
+	if c.server.options.TLSConfig == nil {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
 			Text: "STARTTLS not supported",
@@ -60,7 +60,7 @@ func (c *Conn) handleStartTLS(tag string, dec *imapwire.Decoder) error {
 		cleartextConn = c.conn
 	}
 
-	tlsConn := tls.Server(cleartextConn, c.server.TLSConfig)
+	tlsConn := tls.Server(cleartextConn, c.server.options.TLSConfig)
 
 	c.mutex.Lock()
 	c.conn = tlsConn
