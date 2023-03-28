@@ -47,8 +47,9 @@ type Conn struct {
 }
 
 func newConn(c net.Conn, server *Server) *Conn {
-	br := bufio.NewReader(c)
-	bw := bufio.NewWriter(c)
+	rw := server.options.wrapReadWriter(c)
+	br := bufio.NewReader(rw)
+	bw := bufio.NewWriter(rw)
 	return &Conn{
 		conn:    c,
 		server:  server,
