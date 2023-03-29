@@ -20,18 +20,6 @@ func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	return c.writeCopyOK(tag, data)
 }
 
-func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
-	seqSet, dest, err := readCopy(dec)
-	if err != nil {
-		return err
-	}
-	if err := c.checkState(imap.ConnStateSelected); err != nil {
-		return err
-	}
-	// TODO: send back COPYUID
-	return c.session.Move(numKind, seqSet, dest)
-}
-
 func (c *Conn) writeCopyOK(tag string, data *imap.CopyData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()

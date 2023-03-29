@@ -62,5 +62,5 @@ type Session interface {
 	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
 	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error
 	Copy(kind NumKind, seqSet imap.SeqSet, dest string) (*imap.CopyData, error)
-	Move(kind NumKind, seqSet imap.SeqSet, dest string) error
+	Move(w *MoveWriter, kind NumKind, seqSet imap.SeqSet, dest string) error
 }
