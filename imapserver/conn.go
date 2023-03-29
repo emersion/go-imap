@@ -70,6 +70,19 @@ func (c *Conn) NetConn() net.Conn {
 	return c.conn
 }
 
+// Bye terminates the IMAP connection.
+func (c *Conn) Bye(text string) error {
+	respErr := c.writeStatusResp("", &imap.StatusResponse{
+		Type: imap.StatusResponseTypeBye,
+		Text: text,
+	})
+	closeErr := c.conn.Close()
+	if respErr != nil {
+		return respErr
+	}
+	return closeErr
+}
+
 func (c *Conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
