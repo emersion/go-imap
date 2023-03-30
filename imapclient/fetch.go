@@ -990,10 +990,14 @@ func readSectionSpec(dec *imapwire.Decoder) (*imap.FetchItemBodySection, error) 
 
 	var dot bool
 	section.Part, dot = readSectionPart(dec)
-	if dot {
+	if dot || len(section.Part) == 0 {
 		var specifier string
-		if !dec.ExpectAtom(&specifier) {
-			return nil, dec.Err()
+		if dot {
+			if !dec.ExpectAtom(&specifier) {
+				return nil, dec.Err()
+			}
+		} else {
+			dec.Atom(&specifier)
 		}
 		section.Specifier = imap.PartSpecifier(specifier)
 
