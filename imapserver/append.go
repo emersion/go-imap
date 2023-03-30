@@ -81,6 +81,9 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	if appendErr != nil {
 		return appendErr
 	}
+	if err := c.poll("APPEND"); err != nil {
+		return err
+	}
 	return c.writeAppendOK(tag, data)
 }
 

@@ -54,6 +54,7 @@ type Session interface {
 	Namespace() (*imap.NamespaceData, error)
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
+	Poll(w *UpdateWriter, allowExpunge bool) error
 
 	// Selected state
 	Unselect() error

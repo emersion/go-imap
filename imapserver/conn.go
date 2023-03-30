@@ -255,6 +255,9 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		if !sendOK {
 			return nil
 		}
+		if err := c.poll(name); err != nil {
+			return err
+		}
 		resp = &imap.StatusResponse{
 			Type: imap.StatusResponseTypeOK,
 			Text: fmt.Sprintf("%v completed", name),
@@ -423,6 +426,24 @@ func (c *Conn) setWriteTimeout(dur time.Duration) {
 	}
 }
 
+func (c *Conn) poll(cmd string) error {
+	switch c.state {
+	case imap.ConnStateAuthenticated, imap.ConnStateSelected:
+		// nothing to do
+	default:
+		return nil
+	}
+
+	allowExpunge := true
+	switch cmd {
+	case "FETCH", "STORE", "SEARCH":
+		allowExpunge = false
+	}
+
+	w := &UpdateWriter{conn: c, allowExpunge: allowExpunge}
+	return c.session.Poll(w, allowExpunge)
+}
+
 type responseEncoder struct {
 	*imapwire.Encoder
 	conn *Conn
@@ -499,4 +520,23 @@ func newClientBugError(text string) error {
 		Code: imap.ResponseCodeClientBug,
 		Text: text,
 	}
+}
+
+// UpdateWriter writes status updates.
+type UpdateWriter struct {
+	conn         *Conn
+	allowExpunge bool
+}
+
+// WriteExpunge writes an EXPUNGE response.
+func (w *UpdateWriter) WriteExpunge(seqNum uint32) error {
+	if !w.allowExpunge {
+		return fmt.Errorf("imapserver: EXPUNGE updates are not allowed in this context")
+	}
+	return w.conn.writeExpunge(seqNum)
+}
+
+// WriteNumMessages writes an EXISTS response.
+func (w *UpdateWriter) WriteNumMessages(num uint32) error {
+	return w.conn.writeExists(num)
 }
