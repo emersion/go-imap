@@ -20,6 +20,21 @@ func (c *Conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
 		return err
 	}
 
+	if c.state == imap.ConnStateSelected {
+		if err := c.session.Unselect(); err != nil {
+			return err
+		}
+		c.state = imap.ConnStateAuthenticated
+		err := c.writeStatusResp("", &imap.StatusResponse{
+			Type: imap.StatusResponseTypeOK,
+			Code: "CLOSED",
+			Text: "Previous mailbox is now closed",
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	options := SelectOptions{ReadOnly: readOnly}
 	data, err := c.session.Select(mailbox, &options)
 	if err != nil {
