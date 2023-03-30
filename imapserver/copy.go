@@ -17,6 +17,15 @@ func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	if err != nil {
 		return err
 	}
+
+	cmdName := "COPY"
+	if numKind == NumKindUID {
+		cmdName = "UID COPY"
+	}
+	if err := c.poll(cmdName); err != nil {
+		return err
+	}
+
 	return c.writeCopyOK(tag, data)
 }
 
