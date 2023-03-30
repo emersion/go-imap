@@ -73,11 +73,24 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 		return nil, dec.Err()
 	}
 
+	// Keyword fetch items are variables: return the variable so that it can be
+	// compared directly
+	keywords := map[imap.FetchItemKeyword]imap.FetchItem{
+		imap.FetchItemAll.(imap.FetchItemKeyword):           imap.FetchItemAll,
+		imap.FetchItemFast.(imap.FetchItemKeyword):          imap.FetchItemFast,
+		imap.FetchItemFull.(imap.FetchItemKeyword):          imap.FetchItemFull,
+		imap.FetchItemBodyStructure.(imap.FetchItemKeyword): imap.FetchItemBodyStructure,
+		imap.FetchItemEnvelope.(imap.FetchItemKeyword):      imap.FetchItemEnvelope,
+		imap.FetchItemFlags.(imap.FetchItemKeyword):         imap.FetchItemFlags,
+		imap.FetchItemInternalDate.(imap.FetchItemKeyword):  imap.FetchItemInternalDate,
+		imap.FetchItemRFC822Size.(imap.FetchItemKeyword):    imap.FetchItemRFC822Size,
+		imap.FetchItemUID.(imap.FetchItemKeyword):           imap.FetchItemUID,
+	}
+	if item, ok := keywords[imap.FetchItemKeyword(attName)]; ok {
+		return item, nil
+	}
+
 	switch attName := imap.FetchItemKeyword(attName); attName {
-	case imap.FetchItemAll, imap.FetchItemFast, imap.FetchItemFull:
-		return attName, nil
-	case imap.FetchItemBodyStructure, imap.FetchItemEnvelope, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size, imap.FetchItemUID:
-		return attName, nil
 	case "BINARY", "BINARY.PEEK":
 		part, err := readSectionBinary(dec)
 		if err != nil {
