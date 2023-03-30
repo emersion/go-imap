@@ -82,8 +82,9 @@ type trackerUpdate struct {
 type SessionTracker struct {
 	mailbox *MailboxTracker
 
-	mutex sync.Mutex
-	queue []trackerUpdate
+	mutex   sync.Mutex
+	queue   []trackerUpdate
+	updates chan<- struct{}
 }
 
 // Close unregisters the session.
@@ -95,9 +96,20 @@ func (t *SessionTracker) Close() {
 }
 
 func (t *SessionTracker) queueUpdate(update *trackerUpdate) {
+	var updates chan<- struct{}
 	t.mutex.Lock()
 	t.queue = append(t.queue, *update)
+	updates = t.updates
 	t.mutex.Unlock()
+
+	if updates != nil {
+		select {
+		case updates <- struct{}{}:
+			// we notified SessionTracker.Idle about the update
+		default:
+			// skip the update
+		}
+	}
 }
 
 // Poll dequeues pending mailbox updates for this session.
@@ -139,6 +151,41 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 		}
 	}
 	return nil
+}
+
+// Idle continuously writes mailbox updates.
+//
+// When the stop channel is closed, it returns.
+//
+// Idle cannot be invoked concurrently from two separate goroutines.
+func (t *SessionTracker) Idle(w *UpdateWriter, stop <-chan struct{}) error {
+	updates := make(chan struct{}, 64)
+	t.mutex.Lock()
+	ok := t.updates == nil
+	if ok {
+		t.updates = updates
+	}
+	t.mutex.Unlock()
+	if !ok {
+		return fmt.Errorf("imapserver: only a single SessionTracker.Idle call is allowed at a time")
+	}
+
+	defer func() {
+		t.mutex.Lock()
+		t.updates = nil
+		t.mutex.Unlock()
+	}()
+
+	for {
+		select {
+		case <-updates:
+			if err := t.Poll(w, true); err != nil {
+				return err
+			}
+		case <-stop:
+			return nil
+		}
+	}
 }
 
 // DecodeSeqNum converts a message sequence number from the client view to the
