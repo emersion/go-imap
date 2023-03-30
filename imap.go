@@ -92,9 +92,6 @@ const (
 
 	// Permanent flags
 	FlagWildcard Flag = "\\*"
-
-	// Deprecated in IMAP4rev2
-	FlagRecent Flag = "\\Recent"
 )
 
 // LiteralReader is a reader for IMAP literals.

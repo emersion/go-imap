@@ -185,10 +185,10 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		notKey := strings.TrimPrefix(key, "UN")
 		criteria.NotFlag = append(criteria.NotFlag, searchKeyFlag(notKey))
 	case "NEW":
-		criteria.Flag = append(criteria.Flag, imap.FlagRecent)
+		criteria.Flag = append(criteria.Flag, internal.FlagRecent)
 		criteria.NotFlag = append(criteria.Flag, imap.FlagSeen)
 	case "OLD":
-		criteria.NotFlag = append(criteria.NotFlag, imap.FlagRecent)
+		criteria.NotFlag = append(criteria.NotFlag, internal.FlagRecent)
 	case "KEYWORD", "UNKEYWORD":
 		if !dec.ExpectSP() {
 			return dec.Err()
