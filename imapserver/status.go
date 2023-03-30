@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -14,10 +15,14 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 	}
 
 	var items []imap.StatusItem
+	recent := false
 	err := dec.ExpectList(func() error {
 		item, err := readStatusItem(dec)
 		if err != nil {
 			return err
+		} else if item == internal.StatusItemRecent {
+			recent = true
+			return nil
 		}
 		items = append(items, item)
 		return nil
@@ -39,6 +44,9 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	if recent {
+		items = append(items, internal.StatusItemRecent)
+	}
 	return c.writeStatus(data, items)
 }
 
@@ -69,6 +77,8 @@ func (c *Conn) writeStatus(data *imap.StatusData, items []imap.StatusItem) error
 			}
 		case imap.StatusItemDeletedStorage:
 			enc.Number64(*data.DeletedStorage)
+		case internal.StatusItemRecent:
+			enc.Number(0)
 		default:
 			panic(fmt.Errorf("imapserver: unknown STATUS item %v", item))
 		}
@@ -82,6 +92,8 @@ func readStatusItem(dec *imapwire.Decoder) (imap.StatusItem, error) {
 	}
 	switch item := imap.StatusItem(name); item {
 	case imap.StatusItemNumMessages, imap.StatusItemUIDNext, imap.StatusItemUIDValidity, imap.StatusItemNumUnseen, imap.StatusItemNumDeleted, imap.StatusItemSize, imap.StatusItemAppendLimit, imap.StatusItemDeletedStorage:
+		return item, nil
+	case internal.StatusItemRecent:
 		return item, nil
 	default:
 		return "", &imap.Error{

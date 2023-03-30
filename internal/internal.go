@@ -13,6 +13,8 @@ const (
 	DateLayout     = "2-Jan-2006"
 )
 
+const StatusItemRecent imap.StatusItem = "RECENT" // removed in IMAP4rev2
+
 func DecodeDateTime(dec *imapwire.Decoder) (time.Time, error) {
 	var s string
 	if !dec.Quoted(&s) {
