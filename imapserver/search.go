@@ -79,8 +79,12 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	if err != nil {
 		return err
 	}
-	// TODO: write obsolete search response for IMAP4rev1 clients
-	return c.writeESearch(tag, data, &options)
+
+	if c.enabled.Has(imap.CapIMAP4rev2) || len(options.Return) > 0 {
+		return c.writeESearch(tag, data, &options)
+	} else {
+		return c.writeSearch(data.All)
+	}
 }
 
 func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
@@ -110,6 +114,22 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	}
 	if returnOpts[imap.SearchReturnCount] {
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
+	}
+	return enc.CRLF()
+}
+
+func (c *Conn) writeSearch(seqSet imap.SeqSet) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	nums, ok := seqSet.Nums()
+	if !ok {
+		return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response")
+	}
+
+	enc.Atom("*").SP().Atom("SEARCH")
+	for _, num := range nums {
+		enc.SP().Number(num)
 	}
 	return enc.CRLF()
 }
