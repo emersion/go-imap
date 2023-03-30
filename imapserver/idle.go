@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"fmt"
+	"io"
 	"runtime/debug"
 
 	"github.com/emersion/go-imap/v2"
@@ -37,7 +38,9 @@ func (c *Conn) handleIdle(dec *imapwire.Decoder) error {
 	c.setReadTimeout(idleReadTimeout)
 	line, isPrefix, err := c.br.ReadLine()
 	close(stop)
-	if err != nil {
+	if err == io.EOF {
+		return nil
+	} else if err != nil {
 		return err
 	} else if isPrefix || string(line) != "DONE" {
 		return newClientBugError("Syntax error: expected DONE to end IDLE command")
