@@ -50,6 +50,23 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	}
 
+	for i, item := range items {
+		// TODO: return back these obsolete items to the client
+		switch item {
+		case internal.FetchItemRFC822:
+			items[i] = &imap.FetchItemBodySection{}
+		case internal.FetchItemRFC822Header:
+			items[i] = &imap.FetchItemBodySection{
+				Peek:      true,
+				Specifier: imap.PartSpecifierHeader,
+			}
+		case internal.FetchItemRFC822Text:
+			items[i] = &imap.FetchItemBodySection{
+				Specifier: imap.PartSpecifierText,
+			}
+		}
+	}
+
 	if numKind == NumKindUID {
 		itemsWithUID := []imap.FetchItem{imap.FetchItemUID}
 		for _, item := range items {
@@ -76,15 +93,18 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 	// Keyword fetch items are variables: return the variable so that it can be
 	// compared directly
 	keywords := map[imap.FetchItemKeyword]imap.FetchItem{
-		imap.FetchItemAll.(imap.FetchItemKeyword):           imap.FetchItemAll,
-		imap.FetchItemFast.(imap.FetchItemKeyword):          imap.FetchItemFast,
-		imap.FetchItemFull.(imap.FetchItemKeyword):          imap.FetchItemFull,
-		imap.FetchItemBodyStructure.(imap.FetchItemKeyword): imap.FetchItemBodyStructure,
-		imap.FetchItemEnvelope.(imap.FetchItemKeyword):      imap.FetchItemEnvelope,
-		imap.FetchItemFlags.(imap.FetchItemKeyword):         imap.FetchItemFlags,
-		imap.FetchItemInternalDate.(imap.FetchItemKeyword):  imap.FetchItemInternalDate,
-		imap.FetchItemRFC822Size.(imap.FetchItemKeyword):    imap.FetchItemRFC822Size,
-		imap.FetchItemUID.(imap.FetchItemKeyword):           imap.FetchItemUID,
+		imap.FetchItemAll.(imap.FetchItemKeyword):              imap.FetchItemAll,
+		imap.FetchItemFast.(imap.FetchItemKeyword):             imap.FetchItemFast,
+		imap.FetchItemFull.(imap.FetchItemKeyword):             imap.FetchItemFull,
+		imap.FetchItemBodyStructure.(imap.FetchItemKeyword):    imap.FetchItemBodyStructure,
+		imap.FetchItemEnvelope.(imap.FetchItemKeyword):         imap.FetchItemEnvelope,
+		imap.FetchItemFlags.(imap.FetchItemKeyword):            imap.FetchItemFlags,
+		imap.FetchItemInternalDate.(imap.FetchItemKeyword):     imap.FetchItemInternalDate,
+		imap.FetchItemRFC822Size.(imap.FetchItemKeyword):       imap.FetchItemRFC822Size,
+		imap.FetchItemUID.(imap.FetchItemKeyword):              imap.FetchItemUID,
+		internal.FetchItemRFC822.(imap.FetchItemKeyword):       internal.FetchItemRFC822,
+		internal.FetchItemRFC822Header.(imap.FetchItemKeyword): internal.FetchItemRFC822Header,
+		internal.FetchItemRFC822Text.(imap.FetchItemKeyword):   internal.FetchItemRFC822Text,
 	}
 	if item, ok := keywords[imap.FetchItemKeyword(attName)]; ok {
 		return item, nil
