@@ -178,7 +178,7 @@ func TestClient_Search_Badcharset(t *testing.T) {
 	s.WriteString(tag + " NO [BADCHARSET (US-ASCII)]\r\n")
 
 	// internal fall-back to US-ASCII which sets utf8SearchUnsupported = true
-	wantCmd = `SEARCH CHARSET US-ASCII SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
+	wantCmd = `SEARCH SINCE "1-Feb-1994" FROM "Smith" DELETED NOT (TO "Pauline")`
 	tag, cmd = s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
@@ -289,7 +289,7 @@ func TestClient_Search_Uid_Badcharset(t *testing.T) {
 	s.WriteString(tag + " NO [BADCHARSET (US-ASCII)]\r\n")
 
 	// internal fall-back to US-ASCII which sets utf8SearchUnsupported = true
-	wantCmd = "UID SEARCH CHARSET US-ASCII UNDELETED"
+	wantCmd = "UID SEARCH UNDELETED"
 	tag, cmd = s.ScanCmd()
 	if cmd != wantCmd {
 		t.Fatalf("client sent command %v, want %v", cmd, wantCmd)
