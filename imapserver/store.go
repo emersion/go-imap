@@ -13,9 +13,29 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
-	flags, err := internal.ReadFlagList(dec)
+	var flags []imap.Flag
+	isList, err := dec.List(func() error {
+		flag, err := internal.ReadFlag(dec)
+		if err != nil {
+			return err
+		}
+		flags = append(flags, imap.Flag(flag))
+		return nil
+	})
 	if err != nil {
 		return err
+	} else if !isList {
+		for {
+			flag, err := internal.ReadFlag(dec)
+			if err != nil {
+				return err
+			}
+			flags = append(flags, imap.Flag(flag))
+
+			if !dec.SP() {
+				break
+			}
+		}
 	}
 	if !dec.ExpectCRLF() {
 		return dec.Err()
