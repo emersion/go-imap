@@ -28,6 +28,10 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		if err != nil {
 			return err
 		}
+		switch item {
+		case imap.FetchItemAll, imap.FetchItemFast, imap.FetchItemFull:
+			return newClientBugError("FETCH macros are not allowed in a list")
+		}
 		items = append(items, item)
 		return nil
 	})
@@ -39,7 +43,18 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		if err != nil {
 			return err
 		}
-		items = append(items, item)
+
+		// Handle macros
+		switch item {
+		case imap.FetchItemAll:
+			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size, imap.FetchItemEnvelope)
+		case imap.FetchItemFast:
+			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size)
+		case imap.FetchItemFull:
+			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size, imap.FetchItemEnvelope, imap.FetchItemBody)
+		default:
+			items = append(items, item)
+		}
 	}
 
 	if !dec.ExpectCRLF() {
