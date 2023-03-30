@@ -55,6 +55,7 @@ type Session interface {
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
 	Poll(w *UpdateWriter, allowExpunge bool) error
+	Idle(w *UpdateWriter, stop <-chan struct{}) error
 
 	// Selected state
 	Unselect() error
