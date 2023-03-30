@@ -453,6 +453,10 @@ func (w *FetchResponseWriter) Close() error {
 }
 
 func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
+	if envelope == nil {
+		envelope = new(imap.Envelope)
+	}
+
 	enc.Special('(')
 	writeNString(enc, envelope.Date)
 	enc.SP()
