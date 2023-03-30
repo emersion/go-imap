@@ -171,7 +171,7 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	sendOK := true
 	var err error
 	switch name {
-	case "NOOP":
+	case "NOOP", "CHECK":
 		err = c.handleNoop(dec)
 	case "LOGOUT":
 		err = c.handleLogout(dec)
