@@ -13,13 +13,9 @@ import (
 )
 
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
-	var seqSetStr string
-	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() {
+	var seqSet imap.SeqSet
+	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
 		return dec.Err()
-	}
-	seqSet, err := imap.ParseSeqSet(seqSetStr)
-	if err != nil {
-		return err
 	}
 
 	var items []imap.FetchItem

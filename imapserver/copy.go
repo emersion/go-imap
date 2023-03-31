@@ -48,10 +48,8 @@ func (c *Conn) writeCopyOK(tag string, data *imap.CopyData) error {
 }
 
 func readCopy(dec *imapwire.Decoder) (seqSet imap.SeqSet, dest string, err error) {
-	var seqSetStr string
-	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
+	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
 		return nil, "", dec.Err()
 	}
-	seqSet, err = imap.ParseSeqSet(seqSetStr)
-	return seqSet, dest, err
+	return seqSet, dest, nil
 }
