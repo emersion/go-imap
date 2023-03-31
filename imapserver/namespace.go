@@ -42,7 +42,7 @@ func writeNamespace(enc *imapwire.Encoder, l []imap.NamespaceDescriptor) {
 		if descr.Delim == 0 {
 			enc.NIL()
 		} else {
-			enc.String(string(descr.Delim)) // TODO: ensure we always use DQUOTE QUOTED-CHAR DQUOTE
+			enc.Quoted(string(descr.Delim))
 		}
 		enc.Special(')')
 	})

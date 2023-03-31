@@ -37,7 +37,7 @@ func (c *Conn) writeList(data *imap.ListData) error {
 	if data.Delim == 0 {
 		enc.NIL()
 	} else {
-		enc.String(string(data.Delim)) // TODO: ensure we always use DQUOTE QUOTED-CHAR DQUOTE
+		enc.Quoted(string(data.Delim))
 	}
 	enc.SP().Mailbox(data.Mailbox)
 
@@ -58,7 +58,7 @@ func (c *Conn) writeList(data *imap.ListData) error {
 			case "CHILDINFO":
 				enc.Special('(')
 				if data.ChildInfo.Subscribed {
-					enc.String("SUBSCRIBED") // TODO: ensure always quoted
+					enc.Quoted("SUBSCRIBED")
 				}
 				enc.Special(')')
 			case "OLDNAME":
