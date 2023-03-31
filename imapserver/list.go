@@ -25,6 +25,31 @@ func (c *Conn) handleList(dec *imapwire.Decoder) error {
 	return c.session.List(w, ref, pattern, options)
 }
 
+func (c *Conn) handleLSub(dec *imapwire.Decoder) error {
+	var ref string
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&ref) || !dec.ExpectSP() {
+		return dec.Err()
+	}
+	pattern, err := readListMailbox(dec)
+	if err != nil {
+		return err
+	}
+	if !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+
+	options := &imap.ListOptions{SelectSubscribed: true}
+	w := &ListWriter{
+		conn: c,
+		lsub: true,
+	}
+	return c.session.List(w, ref, pattern, options)
+}
+
 func (c *Conn) writeList(data *imap.ListData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
@@ -69,6 +94,24 @@ func (c *Conn) writeList(data *imap.ListData) error {
 		})
 	}
 
+	return enc.CRLF()
+}
+
+func (c *Conn) writeLSub(data *imap.ListData) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom("*").SP().Atom("LSUB").SP()
+	enc.List(len(data.Attrs), func(i int) {
+		enc.Atom(string(data.Attrs[i])) // TODO: validate attr
+	})
+	enc.SP()
+	if data.Delim == 0 {
+		enc.NIL()
+	} else {
+		enc.Quoted(string(data.Delim))
+	}
+	enc.SP().Mailbox(data.Mailbox)
 	return enc.CRLF()
 }
 
@@ -203,10 +246,15 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 type ListWriter struct {
 	conn    *Conn
 	options *imap.ListOptions
+	lsub    bool
 }
 
 // WriteList writes a single LIST response for a mailbox.
 func (w *ListWriter) WriteList(data *imap.ListData) error {
+	if w.lsub {
+		return w.conn.writeLSub(data)
+	}
+
 	if err := w.conn.writeList(data); err != nil {
 		return err
 	}
