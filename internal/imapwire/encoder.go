@@ -80,12 +80,7 @@ func (enc *Encoder) Special(ch byte) *Encoder {
 	return enc.writeString(string(ch))
 }
 
-func (enc *Encoder) String(s string) *Encoder {
-	if !enc.validQuoted(s) {
-		enc.stringLiteral(s)
-		return enc
-	}
-
+func (enc *Encoder) Quoted(s string) *Encoder {
 	var sb strings.Builder
 	sb.Grow(2 + len(s))
 	sb.WriteByte('"')
@@ -98,6 +93,14 @@ func (enc *Encoder) String(s string) *Encoder {
 	}
 	sb.WriteByte('"')
 	return enc.writeString(sb.String())
+}
+
+func (enc *Encoder) String(s string) *Encoder {
+	if !enc.validQuoted(s) {
+		enc.stringLiteral(s)
+		return enc
+	}
+	return enc.Quoted(s)
 }
 
 func (enc *Encoder) validQuoted(s string) bool {
