@@ -18,7 +18,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		atom    string
 		options imap.SearchOptions
 	)
-	if dec.Atom(&atom) && atom == "RETURN" {
+	if dec.Atom(&atom) && strings.EqualFold(atom, "RETURN") {
 		var err error
 		options.Return, err = readSearchReturnOpts(dec)
 		if err != nil {
@@ -30,7 +30,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		atom = ""
 		dec.Atom(&atom)
 	}
-	if atom == "CHARSET" {
+	if strings.EqualFold(atom, "CHARSET") {
 		var charset string
 		if !dec.ExpectSP() || !dec.ExpectAString(&charset) || !dec.ExpectSP() {
 			return dec.Err()
@@ -166,6 +166,7 @@ func readSearchKey(criteria *imap.SearchCriteria, dec *imapwire.Decoder) error {
 }
 
 func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder, key string) error {
+	key = strings.ToUpper(key)
 	switch key {
 	case "ALL":
 		// nothing to do
