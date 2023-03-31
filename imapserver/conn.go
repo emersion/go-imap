@@ -144,7 +144,9 @@ func (c *Conn) serve() {
 
 		c.setReadTimeout(cmdReadTimeout)
 		if err := c.readCommand(dec); err != nil {
-			c.server.logger().Printf("failed to read command: %v", err)
+			if !errors.Is(err, net.ErrClosed) {
+				c.server.logger().Printf("failed to read command: %v", err)
+			}
 			break
 		}
 	}
