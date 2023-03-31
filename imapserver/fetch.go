@@ -3,6 +3,7 @@ package imapserver
 import (
 	"fmt"
 	"io"
+	"mime"
 	"sort"
 	"strings"
 	"time"
@@ -457,7 +458,7 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 	enc.Special('(')
 	writeNString(enc, envelope.Date)
 	enc.SP()
-	writeNString(enc, envelope.Subject)
+	writeNString(enc, mime.QEncoding.Encode("utf-8", envelope.Subject))
 	addrs := [][]imap.Address{
 		envelope.From,
 		envelope.Sender,
@@ -486,7 +487,7 @@ func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
 	enc.List(len(l), func(i int) {
 		addr := l[i]
 		enc.Special('(')
-		writeNString(enc, addr.Name)
+		writeNString(enc, mime.QEncoding.Encode("utf-8", addr.Name))
 		enc.SP().NIL().SP()
 		writeNString(enc, addr.Mailbox)
 		enc.SP()
