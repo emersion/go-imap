@@ -219,7 +219,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "IDLE":
 		err = c.handleIdle(dec)
 	case "SELECT", "EXAMINE":
-		err = c.handleSelect(dec, name == "EXAMINE")
+		err = c.handleSelect(tag, dec, name == "EXAMINE")
+		sendOK = false
 	case "CLOSE", "UNSELECT":
 		err = c.handleUnselect(dec, name == "CLOSE")
 	case "APPEND":
