@@ -1,6 +1,8 @@
 package imapserver
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -10,7 +12,7 @@ type SelectOptions struct {
 	ReadOnly bool
 }
 
-func (c *Conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
+func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) error {
 	var mailbox string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -62,9 +64,25 @@ func (c *Conn) handleSelect(dec *imapwire.Decoder, readOnly bool) error {
 		}
 	}
 
-	// TODO: send OK with READ-WRITE/READ-ONLY
 	c.state = imap.ConnStateSelected
-	return nil
+	// TODO: forbid write commands in read-only mode
+
+	var (
+		cmdName string
+		code    imap.ResponseCode
+	)
+	if readOnly {
+		cmdName = "EXAMINE"
+		code = "READ-ONLY"
+	} else {
+		cmdName = "SELECT"
+		code = "READ-WRITE"
+	}
+	return c.writeStatusResp(tag, &imap.StatusResponse{
+		Type: imap.StatusResponseTypeOK,
+		Code: code,
+		Text: fmt.Sprintf("%v completed", cmdName),
+	})
 }
 
 func (c *Conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
