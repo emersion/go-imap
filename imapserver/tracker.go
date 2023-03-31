@@ -211,6 +211,10 @@ func (t *SessionTracker) DecodeSeqNum(seqNum uint32) uint32 {
 		}
 	}
 
+	if seqNum > t.mailbox.numMessages {
+		return 0
+	}
+
 	return seqNum
 }
 
@@ -225,6 +229,10 @@ func (t *SessionTracker) EncodeSeqNum(seqNum uint32) uint32 {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
+
+	if seqNum > t.mailbox.numMessages {
+		return 0
+	}
 
 	for i := len(t.queue) - 1; i >= 0; i-- {
 		update := t.queue[i]
