@@ -19,8 +19,26 @@ var sessionTrackerSeqNumTests = []struct {
 	{
 		name:         "noop",
 		pending:      nil,
+		clientSeqNum: 20,
+		serverSeqNum: 20,
+	},
+	{
+		name:         "noop_last",
+		pending:      nil,
 		clientSeqNum: 42,
 		serverSeqNum: 42,
+	},
+	{
+		name:         "noop_client_oob",
+		pending:      nil,
+		clientSeqNum: 43,
+		serverSeqNum: 0,
+	},
+	{
+		name:         "noop_server_oob",
+		pending:      nil,
+		clientSeqNum: 0,
+		serverSeqNum: 43,
 	},
 	{
 		name:         "expunge_eq",
