@@ -241,12 +241,13 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "SEARCH", "UID SEARCH":
 		err = c.handleSearch(tag, dec, numKind)
 	default:
-		discardLine(dec)
 		err = &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown command",
 		}
 	}
+
+	dec.DiscardLine()
 
 	var (
 		resp   *imap.StatusResponse
@@ -255,7 +256,6 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	if imapErr, ok := err.(*imap.Error); ok {
 		resp = (*imap.StatusResponse)(imapErr)
 	} else if errors.As(err, &decErr) {
-		discardLine(dec)
 		resp = &imap.StatusResponse{
 			Type: imap.StatusResponseTypeBad,
 			Code: imap.ResponseCodeClientBug,
@@ -503,12 +503,6 @@ type literalWriter struct {
 func (lw literalWriter) Close() error {
 	lw.conn.setWriteTimeout(respWriteTimeout)
 	return lw.WriteCloser.Close()
-}
-
-func discardLine(dec *imapwire.Decoder) {
-	var text string
-	dec.Text(&text)
-	dec.CRLF()
 }
 
 func writeStatusResp(enc *imapwire.Encoder, tag string, statusResp *imap.StatusResponse) error {
