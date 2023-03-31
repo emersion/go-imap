@@ -168,7 +168,7 @@ func readListCmd(dec *imapwire.Decoder) (ref, pattern string, options *imap.List
 
 	if dec.SP() { // list-return-opts
 		var atom string
-		if !dec.ExpectAtom(&atom) || !dec.Expect(atom == "RETURN", "RETURN") || !dec.ExpectSP() {
+		if !dec.ExpectAtom(&atom) || !dec.Expect(strings.EqualFold(atom, "RETURN"), "RETURN") || !dec.ExpectSP() {
 			return "", "", nil, dec.Err()
 		}
 
