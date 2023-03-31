@@ -370,10 +370,10 @@ func (dec *Decoder) ExpectNString(ptr *string) bool {
 func (dec *Decoder) ExpectNStringReader() (lit *LiteralReader, nonSync, ok bool) {
 	var s string
 	if dec.Atom(&s) {
-		if s == "NIL" {
-			return nil, true, true
+		if !dec.Expect(s == "NIL", "nstring") {
+			return nil, false, false
 		}
-		return newLiteralReaderFromString(s), true, true
+		return nil, true, true
 	}
 	// TODO: read quoted string as a string instead of buffering
 	if dec.Quoted(&s) {
