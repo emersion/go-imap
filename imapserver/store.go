@@ -9,8 +9,11 @@ import (
 )
 
 func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
-	var seqSetStr, item string
-	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
+	var (
+		seqSet imap.SeqSet
+		item   string
+	)
+	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 	var flags []imap.Flag
@@ -39,11 +42,6 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 	if !dec.ExpectCRLF() {
 		return dec.Err()
-	}
-
-	seqSet, err := imap.ParseSeqSet(seqSetStr)
-	if err != nil {
-		return err
 	}
 
 	item = strings.ToUpper(item)

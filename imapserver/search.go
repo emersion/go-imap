@@ -18,7 +18,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		atom    string
 		options imap.SearchOptions
 	)
-	if dec.Atom(&atom) && strings.EqualFold(atom, "RETURN") {
+	if maybeReadSearchKeyAtom(dec, &atom) && strings.EqualFold(atom, "RETURN") {
 		var err error
 		options.Return, err = readSearchReturnOpts(dec)
 		if err != nil {
@@ -28,7 +28,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 			return dec.Err()
 		}
 		atom = ""
-		dec.Atom(&atom)
+		maybeReadSearchKeyAtom(dec, &atom)
 	}
 	if strings.EqualFold(atom, "CHARSET") {
 		var charset string
@@ -46,7 +46,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 			}
 		}
 		atom = ""
-		dec.Atom(&atom)
+		maybeReadSearchKeyAtom(dec, &atom)
 	}
 
 	var criteria imap.SearchCriteria
@@ -155,9 +155,15 @@ func readSearchReturnOpts(dec *imapwire.Decoder) ([]imap.SearchReturnOption, err
 	return l, err
 }
 
+func maybeReadSearchKeyAtom(dec *imapwire.Decoder, ptr *string) bool {
+	return dec.Func(ptr, func(ch byte) bool {
+		return ch == '*' || imapwire.IsAtomChar(ch)
+	})
+}
+
 func readSearchKey(criteria *imap.SearchCriteria, dec *imapwire.Decoder) error {
 	var key string
-	if dec.Atom(&key) {
+	if maybeReadSearchKeyAtom(dec, &key) {
 		return readSearchKeyWithAtom(criteria, dec, key)
 	}
 	return dec.ExpectList(func() error {
@@ -171,13 +177,9 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 	case "ALL":
 		// nothing to do
 	case "UID":
-		var seqSetStr string
-		if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) {
+		var seqSet imap.SeqSet
+		if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) {
 			return dec.Err()
-		}
-		seqSet, err := imap.ParseSeqSet(seqSetStr)
-		if err != nil {
-			return err
 		}
 		criteria.UID = seqSet // TODO: intersect
 	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":

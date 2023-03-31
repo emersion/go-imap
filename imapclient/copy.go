@@ -36,16 +36,7 @@ func (cmd *CopyCommand) Wait() (*imap.CopyData, error) {
 }
 
 func readRespCodeCopy(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.SeqSet, err error) {
-	var srcStr, dstStr string
-	if !dec.ExpectNumber(&uidValidity) || !dec.ExpectSP() || !dec.ExpectAtom(&srcStr) || !dec.ExpectSP() || !dec.ExpectAtom(&dstStr) {
-		return 0, imap.SeqSet{}, imap.SeqSet{}, dec.Err()
-	}
-	srcUIDs, err = imap.ParseSeqSet(srcStr)
-	if err != nil {
-		return 0, imap.SeqSet{}, imap.SeqSet{}, dec.Err()
-	}
-	dstUIDs, err = imap.ParseSeqSet(dstStr)
-	if err != nil {
+	if !dec.ExpectNumber(&uidValidity) || !dec.ExpectSP() || !dec.ExpectSeqSet(&srcUIDs) || !dec.ExpectSP() || !dec.ExpectSeqSet(&dstUIDs) {
 		return 0, imap.SeqSet{}, imap.SeqSet{}, dec.Err()
 	}
 	return uidValidity, srcUIDs, dstUIDs, nil

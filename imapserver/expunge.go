@@ -13,13 +13,9 @@ func (c *Conn) handleExpunge(dec *imapwire.Decoder) error {
 }
 
 func (c *Conn) handleUIDExpunge(dec *imapwire.Decoder) error {
-	var seqSetStr string
-	if !dec.ExpectSP() || !dec.ExpectAtom(&seqSetStr) || !dec.ExpectCRLF() {
+	var seqSet imap.SeqSet
+	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectCRLF() {
 		return dec.Err()
-	}
-	seqSet, err := imap.ParseSeqSet(seqSetStr)
-	if err != nil {
-		return err
 	}
 	return c.expunge(&seqSet)
 }

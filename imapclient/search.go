@@ -230,13 +230,8 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			}
 			data.Max = num
 		case imap.SearchReturnAll:
-			var s string
-			if !dec.ExpectAtom(&s) {
+			if !dec.ExpectSeqSet(&data.All) {
 				return "", nil, dec.Err()
-			}
-			data.All, err = imap.ParseSeqSet(s)
-			if err != nil {
-				return "", nil, err
 			}
 		case imap.SearchReturnCount:
 			var num uint32

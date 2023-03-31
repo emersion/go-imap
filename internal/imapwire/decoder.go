@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
@@ -442,6 +443,22 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 		*ptr = name
 	}
 	return dec.returnErr(err)
+}
+
+func (dec *Decoder) ExpectSeqSet(ptr *imap.SeqSet) bool {
+	var s string
+	if !dec.Expect(dec.Func(&s, isSeqSetChar), "sequence-set") {
+		return false
+	}
+	seqSet, err := imap.ParseSeqSet(s)
+	if err == nil {
+		*ptr = seqSet
+	}
+	return dec.returnErr(err)
+}
+
+func isSeqSetChar(ch byte) bool {
+	return ch == '*' || IsAtomChar(ch)
 }
 
 func (dec *Decoder) Literal(ptr *string) bool {
