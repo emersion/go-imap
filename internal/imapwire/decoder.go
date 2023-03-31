@@ -48,6 +48,7 @@ type Decoder struct {
 	side    ConnSide
 	err     error
 	literal bool
+	crlf    bool
 }
 
 // NewDecoder creates a new decoder.
@@ -77,6 +78,7 @@ func (dec *Decoder) returnErr(err error) bool {
 }
 
 func (dec *Decoder) readByte() (byte, bool) {
+	dec.crlf = false
 	if dec.literal {
 		return 0, dec.returnErr(fmt.Errorf("imapwire: cannot decode while a literal is open"))
 	}
@@ -146,7 +148,11 @@ func (dec *Decoder) ExpectSP() bool {
 
 func (dec *Decoder) CRLF() bool {
 	dec.acceptByte('\r') // be liberal in what we receive and accept lone LF
-	return dec.acceptByte('\n')
+	if !dec.acceptByte('\n') {
+		return false
+	}
+	dec.crlf = true
+	return true
 }
 
 func (dec *Decoder) ExpectCRLF() bool {
@@ -229,6 +235,15 @@ func (dec *Decoder) DiscardUntilByte(untilCh byte) {
 			return
 		}
 	}
+}
+
+func (dec *Decoder) DiscardLine() {
+	if dec.crlf {
+		return
+	}
+	var text string
+	dec.Text(&text)
+	dec.CRLF()
 }
 
 func (dec *Decoder) DiscardValue() bool {
