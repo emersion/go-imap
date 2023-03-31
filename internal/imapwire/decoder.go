@@ -433,6 +433,10 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 	if !dec.ExpectAString(&name) {
 		return false
 	}
+	if strings.EqualFold(name, "INBOX") {
+		*ptr = "INBOX"
+		return true
+	}
 	name, err := utf7.Encoding.NewDecoder().String(name)
 	if err == nil {
 		*ptr = name
