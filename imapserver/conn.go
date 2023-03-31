@@ -92,6 +92,15 @@ func (c *Conn) serve() {
 		c.conn.Close()
 	}()
 
+	c.server.mutex.Lock()
+	c.server.conns[c] = struct{}{}
+	c.server.mutex.Unlock()
+	defer func() {
+		c.server.mutex.Lock()
+		delete(c.server.conns, c)
+		c.server.mutex.Unlock()
+	}()
+
 	var err error
 	c.session, err = c.server.options.NewSession(c)
 	if err != nil {

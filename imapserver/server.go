@@ -8,8 +8,11 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
+
+var errClosed = errors.New("imapserver: server closed")
 
 // Logger is a facility to log error messages.
 type Logger interface {
@@ -52,12 +55,21 @@ func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
 // Server is an IMAP server.
 type Server struct {
 	options Options
+
+	listenerWaitGroup sync.WaitGroup
+
+	mutex     sync.Mutex
+	listeners map[net.Listener]struct{}
+	conns     map[*Conn]struct{}
+	closed    bool
 }
 
 // New creates a new server.
 func New(options *Options) *Server {
 	return &Server{
-		options: *options,
+		options:   *options,
+		listeners: make(map[net.Listener]struct{}),
+		conns:     make(map[*Conn]struct{}),
 	}
 }
 
@@ -70,6 +82,25 @@ func (s *Server) logger() Logger {
 
 // Serve accepts incoming connections on the listener ln.
 func (s *Server) Serve(ln net.Listener) error {
+	s.mutex.Lock()
+	ok := !s.closed
+	if ok {
+		s.listeners[ln] = struct{}{}
+	}
+	s.mutex.Unlock()
+	if !ok {
+		return errClosed
+	}
+
+	defer func() {
+		s.mutex.Lock()
+		delete(s.listeners, ln)
+		s.mutex.Unlock()
+	}()
+
+	s.listenerWaitGroup.Add(1)
+	defer s.listenerWaitGroup.Done()
+
 	var delay time.Duration
 	for {
 		conn, err := ln.Accept()
@@ -94,4 +125,40 @@ func (s *Server) Serve(ln net.Listener) error {
 		delay = 0
 		go newConn(conn, s).serve()
 	}
+}
+
+// Close immediately closes all active listeners and connections.
+//
+// Close returns any error returned from closing the server's underlying
+// listeners.
+//
+// Once Close has been called on a server, it may not be reused; future calls
+// to methods such as Serve will return an error.
+func (s *Server) Close() error {
+	var err error
+
+	s.mutex.Lock()
+	ok := !s.closed
+	if ok {
+		s.closed = true
+		for l := range s.listeners {
+			if closeErr := l.Close(); closeErr != nil && err == nil {
+				err = closeErr
+			}
+		}
+	}
+	s.mutex.Unlock()
+	if !ok {
+		return errClosed
+	}
+
+	s.listenerWaitGroup.Wait()
+
+	s.mutex.Lock()
+	for c := range s.conns {
+		c.conn.Close()
+	}
+	s.mutex.Unlock()
+
+	return err
 }
