@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/emersion/go-imap/v2"
@@ -192,7 +193,7 @@ func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
 				return dec.Err()
 			}
 			var err error
-			switch tag {
+			switch strings.ToUpper(tag) {
 			case "CHILDINFO":
 				data.ChildInfo, err = readChildInfoExtendedItem(dec)
 				if err != nil {
@@ -225,7 +226,7 @@ func readChildInfoExtendedItem(dec *imapwire.Decoder) (*imap.ListDataChildInfo, 
 		if !dec.ExpectAString(&opt) {
 			return dec.Err()
 		}
-		if opt == "SUBSCRIBED" {
+		if strings.ToUpper(opt) == "SUBSCRIBED" {
 			childInfo.Subscribed = true
 		}
 		return nil

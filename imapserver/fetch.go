@@ -104,6 +104,7 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 	if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
 		return nil, dec.Err()
 	}
+	attName = strings.ToUpper(attName)
 
 	// Keyword fetch items are variables: return the variable so that it can be
 	// compared directly
@@ -177,7 +178,7 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 			Peek: true,
 		}, nil
 	default:
-		return nil, newClientBugError("Invalid FETCH data item")
+		return nil, newClientBugError("Unknown FETCH data item")
 	}
 }
 
@@ -201,7 +202,7 @@ func readSection(dec *imapwire.Decoder, section *imap.FetchItemBodySection) erro
 		} else {
 			dec.Atom(&specifier)
 		}
-		section.Specifier = imap.PartSpecifier(specifier)
+		section.Specifier = imap.PartSpecifier(strings.ToUpper(specifier))
 
 		if specifier == "HEADER.FIELDS" || specifier == "HEADER.FIELDS.NOT" {
 			if !dec.ExpectSP() {
