@@ -46,6 +46,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	}
 
+	item = strings.ToUpper(item)
 	silent := strings.HasSuffix(item, ".SILENT")
 	item = strings.TrimSuffix(item, ".SILENT")
 

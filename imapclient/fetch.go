@@ -452,6 +452,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 		if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
 			return dec.Err()
 		}
+		attName = strings.ToUpper(attName)
 
 		var (
 			item FetchItemData
@@ -999,7 +1000,7 @@ func readSectionSpec(dec *imapwire.Decoder) (*imap.FetchItemBodySection, error) 
 		} else {
 			dec.Atom(&specifier)
 		}
-		section.Specifier = imap.PartSpecifier(specifier)
+		section.Specifier = imap.PartSpecifier(strings.ToUpper(specifier))
 
 		if specifier == "HEADER.FIELDS" || specifier == "HEADER.FIELDS.NOT" {
 			if !dec.ExpectSP() {

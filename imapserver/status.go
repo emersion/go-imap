@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
@@ -90,7 +91,7 @@ func readStatusItem(dec *imapwire.Decoder) (imap.StatusItem, error) {
 	if !dec.ExpectAtom(&name) {
 		return "", dec.Err()
 	}
-	switch item := imap.StatusItem(name); item {
+	switch item := imap.StatusItem(strings.ToUpper(name)); item {
 	case imap.StatusItemNumMessages, imap.StatusItemUIDNext, imap.StatusItemUIDValidity, imap.StatusItemNumUnseen, imap.StatusItemNumDeleted, imap.StatusItemSize, imap.StatusItemAppendLimit, imap.StatusItemDeletedStorage:
 		return item, nil
 	case internal.StatusItemRecent:

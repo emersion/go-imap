@@ -219,7 +219,7 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 		return dec.Err()
 	}
 
-	switch name {
+	switch strings.ToUpper(name) {
 	case "SUBSCRIBED":
 		options.ReturnSubscribed = true
 	case "CHILDREN":

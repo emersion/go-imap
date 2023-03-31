@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
@@ -81,7 +82,7 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 	}
 
 	var ok bool
-	switch imap.StatusItem(name) {
+	switch imap.StatusItem(strings.ToUpper(name)) {
 	case imap.StatusItemNumMessages:
 		var num uint32
 		ok = dec.ExpectNumber(&num)

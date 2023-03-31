@@ -144,7 +144,7 @@ func readSearchReturnOpts(dec *imapwire.Decoder) ([]imap.SearchReturnOption, err
 		if !dec.ExpectAtom(&name) {
 			return dec.Err()
 		}
-		switch opt := imap.SearchReturnOption(name); opt {
+		switch opt := imap.SearchReturnOption(strings.ToUpper(name)); opt {
 		case imap.SearchReturnMin, imap.SearchReturnMax, imap.SearchReturnAll, imap.SearchReturnCount:
 			l = append(l, opt)
 		default:
