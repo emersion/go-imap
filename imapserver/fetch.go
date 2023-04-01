@@ -286,7 +286,7 @@ func maybeReadPartial(dec *imapwire.Decoder) (*imap.SectionPartial, error) {
 		return nil, nil
 	}
 	var partial imap.SectionPartial
-	if !dec.ExpectSpecial('<') || !dec.ExpectNumber64(&partial.Offset) || !dec.ExpectSpecial('.') || !dec.ExpectNumber64(&partial.Size) || !dec.ExpectSpecial('>') {
+	if !dec.ExpectNumber64(&partial.Offset) || !dec.ExpectSpecial('.') || !dec.ExpectNumber64(&partial.Size) || !dec.ExpectSpecial('>') {
 		return nil, dec.Err()
 	}
 	return &partial, nil
