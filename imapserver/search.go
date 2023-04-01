@@ -105,13 +105,13 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if data.UID {
 		enc.SP().Atom("UID")
 	}
-	if returnOpts[imap.SearchReturnAll] || len(options.Return) == 0 {
+	if (returnOpts[imap.SearchReturnAll] || len(options.Return) == 0) && len(data.All) > 0 {
 		enc.SP().Atom("ALL").SP().Atom(data.All.String())
 	}
-	if returnOpts[imap.SearchReturnMin] {
+	if returnOpts[imap.SearchReturnMin] && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
 	}
-	if returnOpts[imap.SearchReturnMax] {
+	if returnOpts[imap.SearchReturnMax] && data.Max > 0 {
 		enc.SP().Atom("MAX").SP().Number(data.Max)
 	}
 	if returnOpts[imap.SearchReturnCount] {
