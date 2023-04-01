@@ -15,8 +15,9 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		return dec.Err()
 	}
 	var (
-		atom    string
-		options imap.SearchOptions
+		atom     string
+		options  imap.SearchOptions
+		extended bool
 	)
 	if maybeReadSearchKeyAtom(dec, &atom) && strings.EqualFold(atom, "RETURN") {
 		var err error
@@ -27,6 +28,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		if !dec.ExpectSP() {
 			return dec.Err()
 		}
+		extended = true
 		atom = ""
 		maybeReadSearchKeyAtom(dec, &atom)
 	}
@@ -80,7 +82,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		return err
 	}
 
-	if c.enabled.Has(imap.CapIMAP4rev2) || len(options.Return) > 0 {
+	if c.enabled.Has(imap.CapIMAP4rev2) || extended {
 		return c.writeESearch(tag, data, &options)
 	} else {
 		return c.writeSearch(data.All)
