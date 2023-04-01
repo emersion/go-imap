@@ -199,7 +199,8 @@ func readSection(dec *imapwire.Decoder, section *imap.FetchItemBodySection) erro
 		} else {
 			dec.Atom(&specifier)
 		}
-		section.Specifier = imap.PartSpecifier(strings.ToUpper(specifier))
+		specifier = strings.ToUpper(specifier)
+		section.Specifier = imap.PartSpecifier(specifier)
 
 		if specifier == "HEADER.FIELDS" || specifier == "HEADER.FIELDS.NOT" {
 			if !dec.ExpectSP() {
