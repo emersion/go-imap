@@ -50,7 +50,7 @@ type Session interface {
 	Rename(mailbox, newName string) error
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
-	List(w *ListWriter, ref, pattern string, options *imap.ListOptions) error
+	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
 	Namespace() (*imap.NamespaceData, error)
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
