@@ -134,6 +134,8 @@ func readListCmd(dec *imapwire.Decoder) (ref, pattern string, options *imap.List
 			options.SelectRemote = true
 		case "RECURSIVEMATCH":
 			options.SelectRecursiveMatch = true
+		default:
+			return newClientBugError("Unknown LIST select option")
 		}
 		return nil
 	})
