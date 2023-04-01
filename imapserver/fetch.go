@@ -455,14 +455,23 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 		envelope = new(imap.Envelope)
 	}
 
+	sender := envelope.Sender
+	if sender == nil {
+		sender = envelope.From
+	}
+	replyTo := envelope.ReplyTo
+	if replyTo == nil {
+		replyTo = envelope.From
+	}
+
 	enc.Special('(')
 	writeNString(enc, envelope.Date)
 	enc.SP()
 	writeNString(enc, mime.QEncoding.Encode("utf-8", envelope.Subject))
 	addrs := [][]imap.Address{
 		envelope.From,
-		envelope.Sender,
-		envelope.ReplyTo,
+		sender,
+		replyTo,
 		envelope.To,
 		envelope.Cc,
 		envelope.Bcc,
