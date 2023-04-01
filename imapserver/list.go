@@ -127,7 +127,7 @@ func readListCmd(dec *imapwire.Decoder) (ref, pattern string, options *imap.List
 		if !dec.ExpectAString(&selectOpt) {
 			return dec.Err()
 		}
-		switch selectOpt {
+		switch strings.ToUpper(selectOpt) {
 		case "SUBSCRIBED":
 			options.SelectSubscribed = true
 		case "REMOTE":
