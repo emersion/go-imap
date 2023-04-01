@@ -560,7 +560,7 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart)
 		writeBodyStructure(enc, msg.BodyStructure)
 		enc.SP().Number64(msg.NumLines)
 	} else if text := bs.Text; text != nil {
-		enc.SP().Number64(msg.NumLines)
+		enc.SP().Number64(text.NumLines)
 	}
 
 	ext := bs.Extended
