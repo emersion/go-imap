@@ -803,7 +803,8 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 func readBodyExt1part(dec *imapwire.Decoder, options *Options) (*imap.BodyStructureSinglePartExt, error) {
 	var ext imap.BodyStructureSinglePartExt
 
-	if !dec.ExpectNString(&ext.MD5) {
+	var md5 string
+	if !dec.ExpectNString(&md5) {
 		return nil, dec.Err()
 	}
 

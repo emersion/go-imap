@@ -569,7 +569,7 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart)
 	}
 
 	enc.SP()
-	writeNString(enc, ext.MD5)
+	enc.NIL() // MD5
 	enc.SP()
 	writeBodyFldDsp(enc, ext.Disposition)
 	enc.SP()
