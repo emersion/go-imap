@@ -197,7 +197,6 @@ type BodyStructureText struct {
 }
 
 type BodyStructureSinglePartExt struct {
-	MD5         string
 	Disposition *BodyStructureDisposition
 	Language    []string
 	Location    string
