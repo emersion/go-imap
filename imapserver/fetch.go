@@ -148,7 +148,7 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 		if !dec.Special('[') {
 			return attName, nil
 		}
-		var section imap.FetchItemBodySection
+		section := imap.FetchItemBodySection{}
 		err := readSection(dec, &section)
 		if err != nil {
 			return nil, err
@@ -157,12 +157,12 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &imap.FetchItemBodySection{}, nil
+		return &section, nil
 	case "BODY.PEEK":
 		if !dec.ExpectSpecial('[') {
 			return nil, dec.Err()
 		}
-		var section imap.FetchItemBodySection
+		section := imap.FetchItemBodySection{Peek: true}
 		err := readSection(dec, &section)
 		if err != nil {
 			return nil, err
@@ -171,9 +171,7 @@ func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &imap.FetchItemBodySection{
-			Peek: true,
-		}, nil
+		return &section, nil
 	default:
 		return nil, newClientBugError("Unknown FETCH data item")
 	}
