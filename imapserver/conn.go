@@ -545,6 +545,14 @@ func (w *UpdateWriter) WriteExpunge(seqNum uint32) error {
 }
 
 // WriteNumMessages writes an EXISTS response.
-func (w *UpdateWriter) WriteNumMessages(num uint32) error {
-	return w.conn.writeExists(num)
+func (w *UpdateWriter) WriteNumMessages(n uint32) error {
+	return w.conn.writeExists(n)
+}
+
+// WriteMessageFlags writes a FETCH response with FLAGS.
+func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, flags []imap.Flag) error {
+	fetchWriter := &FetchWriter{conn: w.conn}
+	respWriter := fetchWriter.CreateMessage(seqNum)
+	respWriter.WriteFlags(flags)
+	return respWriter.Close()
 }
