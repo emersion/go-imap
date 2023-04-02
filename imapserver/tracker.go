@@ -76,9 +76,10 @@ func (t *MailboxTracker) QueueNumMessages(n uint32) {
 }
 
 // QueueMessageFlags queues a new FETCH FLAGS update.
-func (t *MailboxTracker) QueueMessageFlags(seqNum uint32, flags []imap.Flag) {
+func (t *MailboxTracker) QueueMessageFlags(seqNum, uid uint32, flags []imap.Flag) {
 	t.queueUpdate(&trackerUpdate{fetch: &trackerUpdateFetch{
 		seqNum: seqNum,
+		uid:    uid,
 		flags:  flags,
 	}})
 }
@@ -91,6 +92,7 @@ type trackerUpdate struct {
 
 type trackerUpdateFetch struct {
 	seqNum uint32
+	uid    uint32
 	flags  []imap.Flag
 }
 
@@ -160,7 +162,7 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 		case update.numMessages != 0:
 			err = w.WriteNumMessages(update.numMessages)
 		case update.fetch != nil:
-			err = w.WriteMessageFlags(update.fetch.seqNum, update.fetch.flags)
+			err = w.WriteMessageFlags(update.fetch.seqNum, update.fetch.uid, update.fetch.flags)
 		default:
 			panic(fmt.Errorf("imapserver: unknown tracker update %#v", update))
 		}
