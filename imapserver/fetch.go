@@ -62,20 +62,25 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	}
 
+	obsolete := make(map[imap.FetchItem]imap.FetchItemKeyword)
 	for i, item := range items {
-		// TODO: return back these obsolete items to the client
+		var repl imap.FetchItem
 		switch item {
 		case internal.FetchItemRFC822:
-			items[i] = &imap.FetchItemBodySection{}
+			repl = &imap.FetchItemBodySection{}
 		case internal.FetchItemRFC822Header:
-			items[i] = &imap.FetchItemBodySection{
+			repl = &imap.FetchItemBodySection{
 				Peek:      true,
 				Specifier: imap.PartSpecifierHeader,
 			}
 		case internal.FetchItemRFC822Text:
-			items[i] = &imap.FetchItemBodySection{
+			repl = &imap.FetchItemBodySection{
 				Specifier: imap.PartSpecifierText,
 			}
+		}
+		if repl != nil {
+			items[i] = repl
+			obsolete[repl] = item.(imap.FetchItemKeyword)
 		}
 	}
 
@@ -89,7 +94,7 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		items = itemsWithUID
 	}
 
-	w := &FetchWriter{conn: c}
+	w := &FetchWriter{conn: c, obsolete: obsolete}
 	if err := c.session.Fetch(w, numKind, seqSet, items); err != nil {
 		return err
 	}
@@ -296,7 +301,8 @@ func maybeReadPartial(dec *imapwire.Decoder) (*imap.SectionPartial, error) {
 
 // FetchWriter writes FETCH responses.
 type FetchWriter struct {
-	conn *Conn
+	conn     *Conn
+	obsolete map[imap.FetchItem]imap.FetchItemKeyword
 }
 
 // CreateMessage writes a FETCH response for a message.
@@ -305,13 +311,14 @@ type FetchWriter struct {
 func (cmd *FetchWriter) CreateMessage(seqNum uint32) *FetchResponseWriter {
 	enc := newResponseEncoder(cmd.conn)
 	enc.Atom("*").SP().Number(seqNum).SP().Atom("FETCH").SP().Special('(')
-	return &FetchResponseWriter{enc: enc}
+	return &FetchResponseWriter{enc: enc, obsolete: cmd.obsolete}
 }
 
 // FetchResponseWriter writes a single FETCH response for a message.
 type FetchResponseWriter struct {
-	enc     *responseEncoder
-	hasItem bool
+	enc      *responseEncoder
+	hasItem  bool
+	obsolete map[imap.FetchItem]imap.FetchItemKeyword
 }
 
 func (w *FetchResponseWriter) writeItemSep() {
@@ -355,6 +362,17 @@ func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySectio
 	w.writeItemSep()
 	enc := w.enc.Encoder
 
+	if obs, ok := w.obsolete[section]; ok {
+		enc.Atom(string(obs))
+	} else {
+		writeItemBodySection(enc, section)
+	}
+
+	enc.SP()
+	return w.enc.Literal(size)
+}
+
+func writeItemBodySection(enc *imapwire.Encoder, section *imap.FetchItemBodySection) {
 	enc.Atom("BODY")
 	enc.Special('[')
 	writeSectionPart(enc, section.Part)
@@ -383,9 +401,6 @@ func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySectio
 	if partial := section.Partial; partial != nil {
 		enc.Special('<').Number(uint32(partial.Offset)).Special('>')
 	}
-
-	enc.SP()
-	return w.enc.Literal(size)
 }
 
 // WriteBinarySection writes a binary section.
