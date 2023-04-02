@@ -1013,6 +1013,7 @@ func readSectionSpec(dec *imapwire.Decoder) (*imap.FetchItemBodySection, error) 
 			if err != nil {
 				return nil, err
 			}
+			section.Specifier = imap.PartSpecifierHeader
 			if specifier == "HEADER.FIELDS" {
 				section.HeaderFields = headerList
 			} else {

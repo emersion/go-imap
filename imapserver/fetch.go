@@ -197,10 +197,11 @@ func readSection(dec *imapwire.Decoder, section *imap.FetchItemBodySection) erro
 		} else {
 			dec.Atom(&specifier)
 		}
-		specifier = strings.ToUpper(specifier)
-		section.Specifier = imap.PartSpecifier(specifier)
 
-		if specifier == "HEADER.FIELDS" || specifier == "HEADER.FIELDS.NOT" {
+		switch specifier := imap.PartSpecifier(strings.ToUpper(specifier)); specifier {
+		case imap.PartSpecifierNone, imap.PartSpecifierHeader, imap.PartSpecifierMIME, imap.PartSpecifierText:
+			section.Specifier = specifier
+		case "HEADER.FIELDS", "HEADER.FIELDS.NOT":
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -209,11 +210,14 @@ func readSection(dec *imapwire.Decoder, section *imap.FetchItemBodySection) erro
 			if err != nil {
 				return err
 			}
+			section.Specifier = imap.PartSpecifierHeader
 			if specifier == "HEADER.FIELDS" {
 				section.HeaderFields = headerList
 			} else {
 				section.HeaderFieldsNot = headerList
 			}
+		default:
+			return newClientBugError("unknown body section specifier")
 		}
 	}
 
