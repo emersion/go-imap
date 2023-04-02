@@ -3,6 +3,8 @@ package imapserver
 import (
 	"fmt"
 	"sync"
+
+	"github.com/emersion/go-imap/v2"
 )
 
 // MailboxTracker tracks the state of a mailbox.
@@ -73,9 +75,23 @@ func (t *MailboxTracker) QueueNumMessages(n uint32) {
 	t.queueUpdate(&trackerUpdate{numMessages: n})
 }
 
+// QueueMessageFlags queues a new FETCH FLAGS update.
+func (t *MailboxTracker) QueueMessageFlags(seqNum uint32, flags []imap.Flag) {
+	t.queueUpdate(&trackerUpdate{fetch: &trackerUpdateFetch{
+		seqNum: seqNum,
+		flags:  flags,
+	}})
+}
+
 type trackerUpdate struct {
 	expunge     uint32
 	numMessages uint32
+	fetch       *trackerUpdateFetch
+}
+
+type trackerUpdateFetch struct {
+	seqNum uint32
+	flags  []imap.Flag
 }
 
 // SessionTracker tracks the state of a mailbox for an IMAP client.
@@ -143,6 +159,8 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 			err = w.WriteExpunge(update.expunge)
 		case update.numMessages != 0:
 			err = w.WriteNumMessages(update.numMessages)
+		case update.fetch != nil:
+			err = w.WriteMessageFlags(update.fetch.seqNum, update.fetch.flags)
 		default:
 			panic(fmt.Errorf("imapserver: unknown tracker update %#v", update))
 		}
