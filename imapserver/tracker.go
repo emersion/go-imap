@@ -38,7 +38,7 @@ func (t *MailboxTracker) NewSession() *SessionTracker {
 	return st
 }
 
-func (t *MailboxTracker) queueUpdate(update *trackerUpdate) {
+func (t *MailboxTracker) queueUpdate(update *trackerUpdate, source *SessionTracker) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -50,6 +50,9 @@ func (t *MailboxTracker) queueUpdate(update *trackerUpdate) {
 	}
 
 	for st := range t.sessions {
+		if source != nil && st == source {
+			continue
+		}
 		st.queueUpdate(update)
 	}
 
@@ -66,22 +69,24 @@ func (t *MailboxTracker) QueueExpunge(seqNum uint32) {
 	if seqNum == 0 {
 		panic("imapserver: invalid expunge message sequence number")
 	}
-	t.queueUpdate(&trackerUpdate{expunge: seqNum})
+	t.queueUpdate(&trackerUpdate{expunge: seqNum}, nil)
 }
 
 // QueueNumMessages queues a new EXISTS update.
 func (t *MailboxTracker) QueueNumMessages(n uint32) {
 	// TODO: merge consecutive NumMessages updates
-	t.queueUpdate(&trackerUpdate{numMessages: n})
+	t.queueUpdate(&trackerUpdate{numMessages: n}, nil)
 }
 
 // QueueMessageFlags queues a new FETCH FLAGS update.
-func (t *MailboxTracker) QueueMessageFlags(seqNum, uid uint32, flags []imap.Flag) {
+//
+// If source is not nil, the update won't be dispatched to it.
+func (t *MailboxTracker) QueueMessageFlags(seqNum, uid uint32, flags []imap.Flag, source *SessionTracker) {
 	t.queueUpdate(&trackerUpdate{fetch: &trackerUpdateFetch{
 		seqNum: seqNum,
 		uid:    uid,
 		flags:  flags,
-	}})
+	}}, source)
 }
 
 type trackerUpdate struct {
