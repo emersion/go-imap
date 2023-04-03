@@ -128,6 +128,17 @@ func (c *Conn) serve() {
 		}
 	}()
 
+	caps := c.server.options.caps()
+	if _, ok := c.session.(SessionIMAP4rev2); !ok && caps.Has(imap.CapIMAP4rev2) {
+		panic("imapserver: server advertises IMAP4rev2 but session doesn't support it")
+	}
+	if _, ok := c.session.(SessionNamespace); !ok && caps.Has(imap.CapNamespace) {
+		panic("imapserver: server advertises NAMESPACE but session doesn't support it")
+	}
+	if _, ok := c.session.(SessionMove); !ok && caps.Has(imap.CapMove) {
+		panic("imapserver: server advertises MOVE but session doesn't support it")
+	}
+
 	c.state = imap.ConnStateNotAuthenticated
 	if err := c.writeCapabilityOK("", "IMAP server ready"); err != nil {
 		c.server.logger().Printf("failed to write greeting: %v", err)
