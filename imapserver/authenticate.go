@@ -102,10 +102,8 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 	}
 
 	c.state = imap.ConnStateAuthenticated
-	return writeStatusResp(enc.Encoder, tag, &imap.StatusResponse{
-		Type: imap.StatusResponseTypeOK,
-		Text: fmt.Sprintf("%v authentication successful", mech),
-	})
+	text := fmt.Sprintf("%v authentication successful", mech)
+	return writeCapabilityOK(enc.Encoder, tag, c.availableCaps(), text)
 }
 
 func decodeSASL(s string) ([]byte, error) {
