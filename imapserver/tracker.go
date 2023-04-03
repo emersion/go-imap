@@ -78,6 +78,14 @@ func (t *MailboxTracker) QueueNumMessages(n uint32) {
 	t.queueUpdate(&trackerUpdate{numMessages: n}, nil)
 }
 
+// QueueMailboxFlags queues a new FLAGS update.
+func (t *MailboxTracker) QueueMailboxFlags(flags []imap.Flag) {
+	if flags == nil {
+		flags = []imap.Flag{}
+	}
+	t.queueUpdate(&trackerUpdate{mailboxFlags: flags}, nil)
+}
+
 // QueueMessageFlags queues a new FETCH FLAGS update.
 //
 // If source is not nil, the update won't be dispatched to it.
@@ -90,9 +98,10 @@ func (t *MailboxTracker) QueueMessageFlags(seqNum, uid uint32, flags []imap.Flag
 }
 
 type trackerUpdate struct {
-	expunge     uint32
-	numMessages uint32
-	fetch       *trackerUpdateFetch
+	expunge      uint32
+	numMessages  uint32
+	mailboxFlags []imap.Flag
+	fetch        *trackerUpdateFetch
 }
 
 type trackerUpdateFetch struct {
@@ -166,6 +175,8 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 			err = w.WriteExpunge(update.expunge)
 		case update.numMessages != 0:
 			err = w.WriteNumMessages(update.numMessages)
+		case update.mailboxFlags != nil:
+			err = w.WriteMailboxFlags(update.mailboxFlags)
 		case update.fetch != nil:
 			err = w.WriteMessageFlags(update.fetch.seqNum, update.fetch.uid, update.fetch.flags)
 		default:

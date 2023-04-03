@@ -569,6 +569,11 @@ func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	return w.conn.writeExists(n)
 }
 
+// WriteMailboxFlags writes a FLAGS response.
+func (w *UpdateWriter) WriteMailboxFlags(flags []imap.Flag) error {
+	return w.conn.writeFlags(flags)
+}
+
 // WriteMessageFlags writes a FETCH response with FLAGS.
 func (w *UpdateWriter) WriteMessageFlags(seqNum, uid uint32, flags []imap.Flag) error {
 	fetchWriter := &FetchWriter{conn: w.conn}
