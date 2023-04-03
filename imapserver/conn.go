@@ -251,10 +251,11 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	dec.DiscardLine()
 
 	var (
-		resp   *imap.StatusResponse
-		decErr *imapwire.DecoderExpectError
+		resp    *imap.StatusResponse
+		imapErr *imap.Error
+		decErr  *imapwire.DecoderExpectError
 	)
-	if imapErr, ok := err.(*imap.Error); ok {
+	if errors.As(err, &imapErr) {
 		resp = (*imap.StatusResponse)(imapErr)
 	} else if errors.As(err, &decErr) {
 		resp = &imap.StatusResponse{
