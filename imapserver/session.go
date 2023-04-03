@@ -51,7 +51,6 @@ type Session interface {
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
-	Namespace() (*imap.NamespaceData, error)
 	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
 	Poll(w *UpdateWriter, allowExpunge bool) error
@@ -64,5 +63,27 @@ type Session interface {
 	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
 	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error
 	Copy(kind NumKind, seqSet imap.SeqSet, dest string) (*imap.CopyData, error)
+}
+
+// SessionNamespace is an IMAP session which supports NAMESPACE.
+type SessionNamespace interface {
+	Session
+
+	// Authenticated state
+	Namespace() (*imap.NamespaceData, error)
+}
+
+// SessionMove is an IMAP session which supports MOVE.
+type SessionMove interface {
+	Session
+
+	// Selected state
 	Move(w *MoveWriter, kind NumKind, seqSet imap.SeqSet, dest string) error
+}
+
+// SessionIMAP4rev2 is an IMAP session which supports IMAP4rev2.
+type SessionIMAP4rev2 interface {
+	Session
+	SessionNamespace
+	SessionMove
 }

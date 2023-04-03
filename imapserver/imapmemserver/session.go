@@ -19,7 +19,7 @@ type UserSession struct {
 	*mailbox // may be nil
 }
 
-var _ imapserver.Session = (*UserSession)(nil)
+var _ imapserver.SessionIMAP4rev2 = (*UserSession)(nil)
 
 // NewUserSession creates a new user session.
 func NewUserSession(user *User) *UserSession {

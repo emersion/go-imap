@@ -13,8 +13,12 @@ func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
+	session, ok := c.session.(SessionMove)
+	if !ok {
+		return newClientBugError("MOVE is not supported")
+	}
 	w := &MoveWriter{conn: c}
-	return c.session.Move(w, numKind, seqSet, dest)
+	return session.Move(w, numKind, seqSet, dest)
 }
 
 // MoveWriter writes responses for the MOVE command.
