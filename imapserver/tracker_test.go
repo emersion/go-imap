@@ -106,6 +106,24 @@ var sessionTrackerSeqNumTests = []struct {
 		clientSeqNum: 0,
 		serverSeqNum: 42,
 	},
+	{
+		name: "multi_expunge_middle",
+		pending: []trackerUpdate{
+			{expunge: 3},
+			{expunge: 1},
+		},
+		clientSeqNum: 2,
+		serverSeqNum: 1,
+	},
+	{
+		name: "multi_expunge_after",
+		pending: []trackerUpdate{
+			{expunge: 3},
+			{expunge: 1},
+		},
+		clientSeqNum: 4,
+		serverSeqNum: 2,
+	},
 }
 
 func TestSessionTracker(t *testing.T) {
