@@ -10,6 +10,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/emersion/go-imap/v2"
 )
 
 var errClosed = errors.New("imapserver: server closed")
@@ -25,6 +27,20 @@ type Logger interface {
 type Options struct {
 	// NewSession is called when a client connects.
 	NewSession func(*Conn) (Session, error)
+	// Supported capabilities. If nil, only IMAP4rev1 is advertised. This set
+	// must contain at least IMAP4rev1 or IMAP4rev2.
+	//
+	// The following capabilities are part of IMAP4rev2 and need to be
+	// explicitly enabled by IMAP4rev1-only servers:
+	//
+	//   - NAMESPACE
+	//   - UIDPLUS
+	//   - ESEARCH
+	//   - LIST-EXTENDED
+	//   - LIST-STATUS
+	//   - MOVE
+	//   - STATUS=SIZE
+	Caps imap.CapSet
 	// Logger is a logger to print error messages. If nil, log.Default is used.
 	Logger Logger
 	// TLSConfig is a TLS configuration for STARTTLS. If nil, STARTTLS is
@@ -52,6 +68,13 @@ func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
 	}
 }
 
+func (options *Options) caps() imap.CapSet {
+	if options.Caps != nil {
+		return options.Caps
+	}
+	return imap.CapSet{imap.CapIMAP4rev1: {}}
+}
+
 // Server is an IMAP server.
 type Server struct {
 	options Options
@@ -66,6 +89,9 @@ type Server struct {
 
 // New creates a new server.
 func New(options *Options) *Server {
+	if caps := options.caps(); !caps.Has(imap.CapIMAP4rev2) && !caps.Has(imap.CapIMAP4rev1) {
+		panic("imapserver: at least IMAP4rev1 must be supported")
+	}
 	return &Server{
 		options:   *options,
 		listeners: make(map[net.Listener]struct{}),

@@ -19,9 +19,30 @@ func (c *Conn) handleCapability(dec *imapwire.Decoder) error {
 	return enc.CRLF()
 }
 
+// availableCaps returns the capabilities supported by the server.
+//
+// They depend on the connection state.
+//
+// Some extensions (e.g. SASL-IR, ENABLE) don't require backend support and
+// thus are always enabled.
 func (c *Conn) availableCaps() []imap.Cap {
-	caps := []imap.Cap{imap.CapIMAP4rev2, imap.CapIMAP4rev1}
-	caps = append(caps, imap4rev1BaseCaps...)
+	available := c.server.options.caps()
+
+	var caps []imap.Cap
+	addAvailableCaps(&caps, available, []imap.Cap{
+		imap.CapIMAP4rev2,
+		imap.CapIMAP4rev1,
+	})
+	if len(caps) == 0 {
+		panic("imapserver: must support at least IMAP4rev1 or IMAP4rev2")
+	}
+
+	if available.Has(imap.CapIMAP4rev1) {
+		caps = append(caps, []imap.Cap{
+			imap.CapSASLIR,
+			imap.CapLiteralMinus,
+		}...)
+	}
 	if c.canStartTLS() {
 		caps = append(caps, imap.CapStartTLS)
 	}
@@ -31,26 +52,31 @@ func (c *Conn) availableCaps() []imap.Cap {
 		caps = append(caps, imap.CapLoginDisabled)
 	}
 	if c.state == imap.ConnStateAuthenticated || c.state == imap.ConnStateSelected {
-		caps = append(caps, imap4rev1AuthCaps...)
+		if available.Has(imap.CapIMAP4rev1) {
+			caps = append(caps, []imap.Cap{
+				imap.CapUnselect,
+				imap.CapEnable,
+				imap.CapIdle,
+			}...)
+			// TODO: implement imap.CapSearchRes
+			addAvailableCaps(&caps, available, []imap.Cap{
+				imap.CapNamespace,
+				imap.CapUIDPlus,
+				imap.CapESearch,
+				imap.CapListExtended,
+				imap.CapListStatus,
+				imap.CapMove,
+				imap.CapStatusSize,
+			})
+		}
 	}
 	return caps
 }
 
-var imap4rev1BaseCaps = []imap.Cap{
-	imap.CapSASLIR,
-	imap.CapLiteralMinus,
-}
-
-var imap4rev1AuthCaps = []imap.Cap{
-	imap.CapNamespace,
-	imap.CapUnselect,
-	imap.CapUIDPlus,
-	imap.CapESearch,
-	// TODO: implement imap.CapSearchRes
-	imap.CapEnable,
-	imap.CapIdle,
-	imap.CapListExtended,
-	imap.CapListStatus,
-	imap.CapMove,
-	imap.CapStatusSize,
+func addAvailableCaps(caps *[]imap.Cap, available imap.CapSet, l []imap.Cap) {
+	for _, c := range l {
+		if available.Has(c) {
+			*caps = append(*caps, c)
+		}
+	}
 }

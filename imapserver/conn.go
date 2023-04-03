@@ -411,7 +411,7 @@ func (c *Conn) writeGreeting() error {
 	for _, c := range c.availableCaps() {
 		enc.SP().Atom(string(c))
 	}
-	enc.Special(']').SP().Text("IMAP4rev2 server ready")
+	enc.Special(']').SP().Text("IMAP server ready")
 	return enc.CRLF()
 }
 
