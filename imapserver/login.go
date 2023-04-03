@@ -5,7 +5,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Conn) handleLogin(dec *imapwire.Decoder) error {
+func (c *Conn) handleLogin(tag string, dec *imapwire.Decoder) error {
 	var username, password string
 	if !dec.ExpectSP() || !dec.ExpectAString(&username) || !dec.ExpectSP() || !dec.ExpectAString(&password) || !dec.ExpectCRLF() {
 		return dec.Err()
@@ -24,5 +24,5 @@ func (c *Conn) handleLogin(dec *imapwire.Decoder) error {
 		return err
 	}
 	c.state = imap.ConnStateAuthenticated
-	return nil
+	return c.writeCapabilityOK(tag, "Logged in")
 }

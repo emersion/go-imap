@@ -129,7 +129,7 @@ func (c *Conn) serve() {
 	}()
 
 	c.state = imap.ConnStateNotAuthenticated
-	if err := c.writeGreeting(); err != nil {
+	if err := c.writeCapabilityOK("", "IMAP server ready"); err != nil {
 		c.server.logger().Printf("failed to write greeting: %v", err)
 		return
 	}
@@ -195,7 +195,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleAuthenticate(tag, dec)
 		sendOK = false
 	case "LOGIN":
-		err = c.handleLogin(dec)
+		err = c.handleLogin(tag, dec)
+		sendOK = false
 	case "ENABLE":
 		err = c.handleEnable(dec)
 	case "CREATE":
@@ -403,16 +404,10 @@ func (c *Conn) writeContReq(text string) error {
 	return writeContReq(enc.Encoder, text)
 }
 
-func (c *Conn) writeGreeting() error {
+func (c *Conn) writeCapabilityOK(tag, text string) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
-
-	enc.Atom("*").SP().Atom("OK").SP().Special('[').Atom("CAPABILITY")
-	for _, c := range c.availableCaps() {
-		enc.SP().Atom(string(c))
-	}
-	enc.Special(']').SP().Text("IMAP server ready")
-	return enc.CRLF()
+	return writeCapabilityOK(enc.Encoder, tag, c.availableCaps(), text)
 }
 
 func (c *Conn) checkState(state imap.ConnState) error {
@@ -516,6 +511,19 @@ func writeStatusResp(enc *imapwire.Encoder, tag string, statusResp *imap.StatusR
 		enc.Atom(fmt.Sprintf("[%v]", statusResp.Code)).SP()
 	}
 	enc.Text(statusResp.Text)
+	return enc.CRLF()
+}
+
+func writeCapabilityOK(enc *imapwire.Encoder, tag string, caps []imap.Cap, text string) error {
+	if tag == "" {
+		tag = "*"
+	}
+
+	enc.Atom(tag).SP().Atom("OK").SP().Special('[').Atom("CAPABILITY")
+	for _, c := range caps {
+		enc.SP().Atom(string(c))
+	}
+	enc.Special(']').SP().Text(text)
 	return enc.CRLF()
 }
 
