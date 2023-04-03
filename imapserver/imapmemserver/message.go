@@ -230,7 +230,7 @@ func (msg *message) flagList() []imap.Flag {
 	return flags
 }
 
-func (msg *message) store(store *imap.StoreFlags) error {
+func (msg *message) store(store *imap.StoreFlags) {
 	switch store.Op {
 	case imap.StoreFlagsSet:
 		msg.flags = make(map[imap.Flag]struct{})
@@ -246,7 +246,6 @@ func (msg *message) store(store *imap.StoreFlags) error {
 	default:
 		panic(fmt.Errorf("unknown STORE flag operation: %v", store.Op))
 	}
-	return nil
 }
 
 func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
