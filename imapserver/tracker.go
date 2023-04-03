@@ -260,12 +260,8 @@ func (t *SessionTracker) EncodeSeqNum(seqNum uint32) uint32 {
 		if update.numMessages != 0 && seqNum == update.numMessages {
 			return 0
 		}
-		if update.expunge != 0 {
-			if seqNum == update.expunge {
-				return 0
-			} else if seqNum > update.expunge {
-				seqNum++
-			}
+		if update.expunge != 0 && seqNum >= update.expunge {
+			seqNum++
 		}
 	}
 	return seqNum
