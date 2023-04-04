@@ -28,7 +28,7 @@ func main() {
 	flag.StringVar(&tlsCert, "tls-cert", "", "TLS certificate")
 	flag.StringVar(&tlsKey, "tls-key", "", "TLS key")
 	flag.StringVar(&username, "username", "user", "Username")
-	flag.StringVar(&username, "password", "user", "Password")
+	flag.StringVar(&password, "password", "user", "Password")
 	flag.BoolVar(&debug, "debug", false, "Print all commands and responses")
 	flag.BoolVar(&insecureAuth, "insecure-auth", false, "Allow authentication without TLS")
 	flag.Parse()
