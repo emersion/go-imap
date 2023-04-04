@@ -153,6 +153,36 @@ func (s *Server) Serve(ln net.Listener) error {
 	}
 }
 
+// ListenAndServe listens on the TCP network address addr and then calls Serve.
+//
+// If addr is empty, ":143" is used.
+func (s *Server) ListenAndServe(addr string) error {
+	if addr == "" {
+		addr = ":143"
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	return s.Serve(ln)
+}
+
+// ListenAndServeTLS listens on the TCP network address addr and then calls
+// Serve to handle incoming TLS connections.
+//
+// The TLS configuration set in Options.TLSConfig is used. If addr is empty,
+// ":993" is used.
+func (s *Server) ListenAndServeTLS(addr string) error {
+	if addr == "" {
+		addr = ":993"
+	}
+	ln, err := tls.Listen("tcp", addr, s.options.TLSConfig)
+	if err != nil {
+		return err
+	}
+	return s.Serve(ln)
+}
+
 // Close immediately closes all active listeners and connections.
 //
 // Close returns any error returned from closing the server's underlying
