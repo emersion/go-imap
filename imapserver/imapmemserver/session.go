@@ -53,7 +53,11 @@ func (sess *UserSession) Unselect() error {
 func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, destName string) (*imap.CopyData, error) {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
-		return nil, err
+		return nil, &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeTryCreate,
+			Text: "No such mailbox",
+		}
 	} else if sess.mailbox != nil && dest == sess.mailbox.Mailbox {
 		return nil, &imap.Error{
 			Type: imap.StatusResponseTypeNo,
@@ -78,7 +82,11 @@ func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, de
 func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, destName string) error {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
-		return err
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeTryCreate,
+			Text: "No such mailbox",
+		}
 	} else if sess.mailbox != nil && dest == sess.mailbox.Mailbox {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
