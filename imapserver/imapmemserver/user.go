@@ -15,8 +15,9 @@ const mailboxDelim rune = '/'
 type User struct {
 	username, password string
 
-	mutex     sync.Mutex
-	mailboxes map[string]*Mailbox
+	mutex           sync.Mutex
+	mailboxes       map[string]*Mailbox
+	prevUidValidity uint32
 }
 
 func NewUser(username, password string) *User {
@@ -132,7 +133,10 @@ func (u *User) Create(name string) error {
 		}
 	}
 
-	u.mailboxes[name] = NewMailbox(name, 1)
+	// UIDVALIDITY must change if a mailbox is deleted and re-created with the
+	// same name.
+	u.prevUidValidity++
+	u.mailboxes[name] = NewMailbox(name, u.prevUidValidity)
 	return nil
 }
 
