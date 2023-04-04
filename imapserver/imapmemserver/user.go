@@ -132,7 +132,7 @@ func (u *User) Create(name string) error {
 		}
 	}
 
-	u.mailboxes[name] = NewMailbox(name)
+	u.mailboxes[name] = NewMailbox(name, 1)
 	return nil
 }
 

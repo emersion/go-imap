@@ -11,14 +11,13 @@ import (
 	"github.com/emersion/go-imap/v2/imapserver"
 )
 
-const uidValidity = 1
-
 // Mailbox is an in-memory mailbox.
 //
 // The same mailbox can be shared between multiple connections and multiple
 // users.
 type Mailbox struct {
-	tracker *imapserver.MailboxTracker
+	tracker     *imapserver.MailboxTracker
+	uidValidity uint32
 
 	mutex      sync.Mutex
 	name       string
@@ -28,11 +27,12 @@ type Mailbox struct {
 }
 
 // NewMailbox creates a new mailbox.
-func NewMailbox(name string) *Mailbox {
+func NewMailbox(name string, uidValidity uint32) *Mailbox {
 	return &Mailbox{
-		tracker: imapserver.NewMailboxTracker(0),
-		name:    name,
-		uidNext: 1,
+		tracker:     imapserver.NewMailboxTracker(0),
+		uidValidity: uidValidity,
+		name:        name,
+		uidNext:     1,
 	}
 }
 
@@ -74,7 +74,7 @@ func (mbox *Mailbox) statusDataLocked(items []imap.StatusItem) *imap.StatusData 
 		case imap.StatusItemUIDNext:
 			data.UIDNext = mbox.uidNext
 		case imap.StatusItemUIDValidity:
-			data.UIDValidity = uidValidity
+			data.UIDValidity = mbox.uidValidity
 		case imap.StatusItemNumUnseen:
 			num := uint32(len(mbox.l)) - mbox.countByFlagLocked(imap.FlagSeen)
 			data.NumUnseen = &num
@@ -150,7 +150,7 @@ func (mbox *Mailbox) appendBytes(buf []byte, options *imap.AppendOptions) *imap.
 	mbox.tracker.QueueNumMessages(uint32(len(mbox.l)))
 
 	return &imap.AppendData{
-		UIDValidity: uidValidity,
+		UIDValidity: mbox.uidValidity,
 		UID:         msg.uid,
 	}
 }
@@ -180,7 +180,7 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 		PermanentFlags: permanentFlags,
 		NumMessages:    uint32(len(mbox.l)),
 		UIDNext:        mbox.uidNext,
-		UIDValidity:    uidValidity,
+		UIDValidity:    mbox.uidValidity,
 	}
 }
 

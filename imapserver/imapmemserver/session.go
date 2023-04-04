@@ -69,7 +69,7 @@ func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, de
 	})
 
 	return &imap.CopyData{
-		UIDValidity: uidValidity,
+		UIDValidity: dest.uidValidity,
 		SourceUIDs:  sourceUIDs,
 		DestUIDs:    destUIDs,
 	}, nil
@@ -100,7 +100,7 @@ func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKi
 	seqNums := sess.mailbox.expungeLocked(expunged)
 
 	err = w.WriteCopyData(&imap.CopyData{
-		UIDValidity: uidValidity,
+		UIDValidity: dest.uidValidity,
 		SourceUIDs:  sourceUIDs,
 		DestUIDs:    destUIDs,
 	})
