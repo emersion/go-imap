@@ -43,6 +43,7 @@ func (u *User) mailboxLocked(name string) (*Mailbox, error) {
 	if mbox == nil {
 		return nil, &imap.Error{
 			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeNonExistent,
 			Text: "No such mailbox",
 		}
 	}
@@ -129,6 +130,7 @@ func (u *User) Create(name string) error {
 	if u.mailboxes[name] != nil {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeAlreadyExists,
 			Text: "Mailbox already exists",
 		}
 	}
@@ -166,6 +168,7 @@ func (u *User) Rename(oldName, newName string) error {
 	if u.mailboxes[newName] != nil {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeAlreadyExists,
 			Text: "Mailbox already exists",
 		}
 	}
