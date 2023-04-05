@@ -667,6 +667,7 @@ func (c *Client) readResponseData(typ string) error {
 		}
 
 		var code string
+		hasText := true
 		if c.dec.Special('[') { // resp-text-code
 			if !c.dec.ExpectAtom(&code) {
 				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
@@ -739,13 +740,16 @@ func (c *Client) readResponseData(typ string) error {
 					c.dec.DiscardUntilByte(']')
 				}
 			}
-			if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
+			if !c.dec.ExpectSpecial(']') {
 				return fmt.Errorf("in resp-text: %v", c.dec.Err())
 			}
+			// Some servers don't provide a text even if the RFC requires it,
+			// see #500
+			hasText = c.dec.SP()
 		}
 
 		var text string
-		if !c.dec.ExpectText(&text) {
+		if hasText && !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 
