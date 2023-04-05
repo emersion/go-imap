@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
@@ -11,8 +12,21 @@ import (
 )
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
-	// TODO: use CHARSET UTF-8 with an US-ASCII fallback for IMAP4rev1 servers
 	// TODO: add support for SEARCHRES
+
+	// The IMAP4rev2 SEARCH charset defaults to UTF-8. For IMAP4rev1 the
+	// default is undefined and only US-ASCII support is required. What's more,
+	// some servers completely reject the CHARSET keyword. So, let's check if
+	// we actually have UTF-8 strings in the search criteria before using that.
+	// TODO: there might be a benefit in specifying CHARSET UTF-8 for IMAP4rev1
+	// servers even if we only send ASCII characters: the server then must
+	// decode encoded headers and Content-Transfer-Encoding before matching the
+	// criteria.
+	var charset string
+	if !c.Caps().Has(imap.CapIMAP4rev2) && !searchCriteriaIsASCII(criteria) {
+		charset = "UTF-8"
+	}
+
 	cmd := &SearchCommand{}
 	enc := c.beginCommand(uidCmdName("SEARCH", uid), cmd)
 	if options != nil && len(options.Return) > 0 {
@@ -21,6 +35,9 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.S
 		})
 	}
 	enc.SP()
+	if charset != "" {
+		enc.Atom("CHARSET").SP().Atom(charset).SP()
+	}
 	writeSearchKey(enc.Encoder, criteria)
 	enc.end()
 	return cmd
@@ -255,4 +272,42 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 	}
 
 	return tag, data, nil
+}
+
+func searchCriteriaIsASCII(criteria *imap.SearchCriteria) bool {
+	for _, kv := range criteria.Header {
+		if !isASCII(kv.Key) || !isASCII(kv.Value) {
+			return false
+		}
+	}
+	for _, s := range criteria.Body {
+		if !isASCII(s) {
+			return false
+		}
+	}
+	for _, s := range criteria.Text {
+		if !isASCII(s) {
+			return false
+		}
+	}
+	for _, not := range criteria.Not {
+		if !searchCriteriaIsASCII(&not) {
+			return false
+		}
+	}
+	for _, or := range criteria.Or {
+		if !searchCriteriaIsASCII(&or[0]) || !searchCriteriaIsASCII(&or[1]) {
+			return false
+		}
+	}
+	return true
+}
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
 }
