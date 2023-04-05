@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/utf7"
@@ -117,7 +118,7 @@ func (enc *Encoder) validQuoted(s string) bool {
 			return false
 		}
 
-		if !enc.QuotedUTF8 && ch > 0x7F {
+		if !enc.QuotedUTF8 && ch > unicode.MaxASCII {
 			return false
 		}
 	}
