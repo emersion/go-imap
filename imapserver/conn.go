@@ -108,7 +108,7 @@ func (c *Conn) serve() {
 			resp    *imap.StatusResponse
 			imapErr *imap.Error
 		)
-		if errors.As(err, &imapErr) {
+		if errors.As(err, &imapErr) && imapErr.Type == imap.StatusResponseTypeBye {
 			resp = (*imap.StatusResponse)(imapErr)
 		} else {
 			c.server.logger().Printf("failed to create session: %v", err)
