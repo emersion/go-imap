@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/emersion/go-sasl"
 
@@ -15,6 +16,7 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 	if !dec.ExpectSP() || !dec.ExpectAtom(&mech) {
 		return dec.Err()
 	}
+	mech = strings.ToUpper(mech)
 
 	var initialResp []byte
 	if dec.SP() {
@@ -44,27 +46,34 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 		}
 	}
 
-	// TODO: support other SASL mechanisms
-	if mech != "PLAIN" {
-		return &imap.Error{
-			Type: imap.StatusResponseTypeNo,
-			Text: "SASL mechanism not supported",
+	var saslServer sasl.Server
+	if authSess, ok := c.session.(SessionSASL); ok {
+		var err error
+		saslServer, err = authSess.Authenticate(mech)
+		if err != nil {
+			return err
 		}
+	} else {
+		if mech != "PLAIN" {
+			return &imap.Error{
+				Type: imap.StatusResponseTypeNo,
+				Text: "SASL mechanism not supported",
+			}
+		}
+		saslServer = sasl.NewPlainServer(func(identity, username, password string) error {
+			if identity != "" && identity != username {
+				return &imap.Error{
+					Type: imap.StatusResponseTypeNo,
+					Code: imap.ResponseCodeAuthorizationFailed,
+					Text: "SASL identity not supported",
+				}
+			}
+			return c.session.Login(username, password)
+		})
 	}
 
 	enc := newResponseEncoder(c)
 	defer enc.end()
-
-	saslServer := sasl.NewPlainServer(func(identity, username, password string) error {
-		if identity != "" && identity != username {
-			return &imap.Error{
-				Type: imap.StatusResponseTypeNo,
-				Code: imap.ResponseCodeAuthorizationFailed,
-				Text: "SASL identity not supported",
-			}
-		}
-		return c.session.Login(username, password)
-	})
 
 	resp := initialResp
 	for {

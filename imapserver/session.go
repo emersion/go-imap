@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-sasl"
 )
 
 var errAuthFailed = &imap.Error{
@@ -86,4 +87,12 @@ type SessionIMAP4rev2 interface {
 	Session
 	SessionNamespace
 	SessionMove
+}
+
+// SessionSASL is an IMAP session which supports its own set of SASL
+// authentication mechanisms.
+type SessionSASL interface {
+	Session
+	AuthenticateMechanisms() []string
+	Authenticate(mech string) (sasl.Server, error)
 }

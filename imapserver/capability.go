@@ -47,7 +47,13 @@ func (c *Conn) availableCaps() []imap.Cap {
 		caps = append(caps, imap.CapStartTLS)
 	}
 	if c.canAuth() {
-		caps = append(caps, imap.Cap("AUTH=PLAIN"))
+		mechs := []string{"PLAIN"}
+		if authSess, ok := c.session.(SessionSASL); ok {
+			mechs = authSess.AuthenticateMechanisms()
+		}
+		for _, mech := range mechs {
+			caps = append(caps, imap.Cap("AUTH="+mech))
+		}
 	} else if c.state == imap.ConnStateNotAuthenticated {
 		caps = append(caps, imap.CapLoginDisabled)
 	}
