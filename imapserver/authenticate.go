@@ -92,19 +92,19 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 			return err
 		}
 
-		respStr, isPrefix, err := c.br.ReadLine()
+		encodedResp, isPrefix, err := c.br.ReadLine()
 		if err != nil {
 			return err
 		} else if isPrefix {
 			return fmt.Errorf("SASL response too long")
-		} else if string(respStr) == "*" {
+		} else if string(encodedResp) == "*" {
 			return &imap.Error{
 				Type: imap.StatusResponseTypeBad,
 				Text: "AUTHENTICATE cancelled",
 			}
 		}
 
-		resp, err = decodeSASL(string(respStr))
+		resp, err = decodeSASL(string(encodedResp))
 		if err != nil {
 			return err
 		}
