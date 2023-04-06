@@ -66,5 +66,9 @@ var _ error = (*Error)(nil)
 
 // Error implements the error interface.
 func (err *Error) Error() string {
-	return fmt.Sprintf("imap: %v %v", err.Type, err.Text)
+	text := err.Text
+	if text == "" {
+		text = "<unknown>"
+	}
+	return fmt.Sprintf("imap: %v %v", err.Type, text)
 }
