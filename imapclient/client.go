@@ -178,6 +178,12 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
+	// Per section 7.1.4, refuse PREAUTH when using STARTTLS
+	if conn.State() != imap.ConnStateNotAuthenticated {
+		client.Close()
+		return nil, fmt.Errorf("imapclient: server sent PREAUTH on unencrypted connection")
+	}
+
 	return client, err
 }
 
