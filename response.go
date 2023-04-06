@@ -2,6 +2,7 @@ package imap
 
 import (
 	"fmt"
+	"strings"
 )
 
 // StatusResponseType is a generic status response type.
@@ -66,9 +67,15 @@ var _ error = (*Error)(nil)
 
 // Error implements the error interface.
 func (err *Error) Error() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "imap: %v", err.Type)
+	if err.Code != "" {
+		fmt.Fprintf(&sb, " [%v]", err.Code)
+	}
 	text := err.Text
 	if text == "" {
 		text = "<unknown>"
 	}
-	return fmt.Sprintf("imap: %v %v", err.Type, text)
+	fmt.Fprintf(&sb, " %v", text)
+	return sb.String()
 }
