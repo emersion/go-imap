@@ -727,13 +727,12 @@ func (c *Client) readResponseData(typ string) error {
 
 	switch typ {
 	case "OK", "PREAUTH", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye / resp-cond-auth
-		if !c.dec.ExpectSP() {
-			return c.dec.Err()
-		}
+		// Some servers don't provide a text even if the RFC requires it,
+		// see #500 and #502
+		hasSP := c.dec.SP()
 
 		var code string
-		hasText := true
-		if c.dec.Special('[') { // resp-text-code
+		if hasSP && c.dec.Special('[') { // resp-text-code
 			if !c.dec.ExpectAtom(&code) {
 				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 			}
@@ -812,13 +811,11 @@ func (c *Client) readResponseData(typ string) error {
 			if !c.dec.ExpectSpecial(']') {
 				return fmt.Errorf("in resp-text: %v", c.dec.Err())
 			}
-			// Some servers don't provide a text even if the RFC requires it,
-			// see #500
-			hasText = c.dec.SP()
+			hasSP = c.dec.SP()
 		}
 
 		var text string
-		if hasText && !c.dec.ExpectText(&text) {
+		if hasSP && !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 
