@@ -322,6 +322,9 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	wireEnc.NewContinuationRequest = func() *imapwire.ContinuationRequest {
 		return c.registerContReq(cmd)
 	}
+	if c.caps.Has(imap.CapGmailExtension) {
+		wireEnc.ImapThreadIdTag = "X-GM-THRID"
+	}
 
 	baseCmd := cmd.base()
 	*baseCmd = Command{

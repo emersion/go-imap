@@ -73,6 +73,8 @@ const (
 	CapUTF8Accept       Cap = "UTF8=ACCEPT"        // RFC 6855
 	CapUTF8Only         Cap = "UTF8=ONLY"          // RFC 6855
 	CapWithin           Cap = "WITHIN"             // RFC 5032
+
+	CapGmailExtension Cap = "X-GM-EXT-1"
 )
 
 var imap4rev2Caps = CapSet{

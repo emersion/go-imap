@@ -46,6 +46,8 @@ type SearchCriteria struct {
 
 	Not []SearchCriteria
 	Or  [][2]SearchCriteria
+
+	ThreadId int64
 }
 
 type SearchCriteriaHeaderField struct {

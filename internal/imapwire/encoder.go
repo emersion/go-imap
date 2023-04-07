@@ -33,6 +33,10 @@ type Encoder struct {
 	side    ConnSide
 	err     error
 	literal bool
+	// ImapThreadIdTag contains the tag identifying the imap thread id extension
+	// regarding imap servers like Gmail.
+	// https://developers.google.com/gmail/imap/imap-extensions?hl=en#access_to_the_thread_id_x-gm-thrid
+	ImapThreadIdTag string
 }
 
 // NewEncoder creates a new encoder.

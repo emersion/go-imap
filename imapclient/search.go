@@ -182,6 +182,10 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 		encodeItem("SMALLER").SP().Number64(criteria.Smaller)
 	}
 
+	if criteria.ThreadId > 0 && enc.ImapThreadIdTag != "" {
+		encodeItem(enc.ImapThreadIdTag).SP().Number64(criteria.ThreadId)
+	}
+
 	for _, not := range criteria.Not {
 		encodeItem("NOT").SP()
 		writeSearchKey(enc, &not)
