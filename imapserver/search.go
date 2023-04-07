@@ -285,7 +285,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		if err := readSearchKey(&not, dec); err != nil {
 			return nil
 		}
-		criteria.Not = append(criteria.Not, not)
+		criteria.And(&imap.SearchCriteria{Not: &not})
 	case "OR":
 		if !dec.ExpectSP() {
 			return dec.Err()

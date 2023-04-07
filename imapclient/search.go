@@ -203,9 +203,9 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 		encodeItem("SMALLER").SP().Number64(criteria.Smaller)
 	}
 
-	for _, not := range criteria.Not {
+	if criteria.Not != nil {
 		encodeItem("NOT").SP()
-		writeSearchKey(enc, &not)
+		writeSearchKey(enc, criteria.Not)
 	}
 	for _, or := range criteria.Or {
 		encodeItem("OR").SP()
@@ -311,10 +311,8 @@ func searchCriteriaIsASCII(criteria *imap.SearchCriteria) bool {
 			return false
 		}
 	}
-	for _, not := range criteria.Not {
-		if !searchCriteriaIsASCII(&not) {
-			return false
-		}
+	if criteria.Not != nil && !searchCriteriaIsASCII(criteria.Not) {
+		return false
 	}
 	for _, or := range criteria.Or {
 		if !searchCriteriaIsASCII(&or[0]) || !searchCriteriaIsASCII(&or[1]) {

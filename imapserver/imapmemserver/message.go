@@ -325,10 +325,8 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 		}
 	}
 
-	for _, not := range criteria.Not {
-		if msg.search(seqNum, &not) {
-			return false
-		}
+	if criteria.Not != nil && msg.search(seqNum, criteria.Not) {
+		return false
 	}
 	for _, or := range criteria.Or {
 		if !msg.search(seqNum, &or[0]) && !msg.search(seqNum, &or[1]) {
