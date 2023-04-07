@@ -64,11 +64,11 @@ func (c *Conn) availableCaps() []imap.Cap {
 				imap.CapEnable,
 				imap.CapIdle,
 			}...)
-			// TODO: implement imap.CapSearchRes
 			addAvailableCaps(&caps, available, []imap.Cap{
 				imap.CapNamespace,
 				imap.CapUIDPlus,
 				imap.CapESearch,
+				imap.CapSearchRes,
 				imap.CapListExtended,
 				imap.CapListStatus,
 				imap.CapMove,

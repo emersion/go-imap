@@ -214,6 +214,9 @@ func (s SeqSet) Nums() (nums []uint32, ok bool) {
 
 // String returns a sorted representation of all contained sequence values.
 func (s SeqSet) String() string {
+	if IsSearchRes(s) {
+		return "$"
+	}
 	if len(s) == 0 {
 		return ""
 	}

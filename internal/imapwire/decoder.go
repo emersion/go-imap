@@ -461,6 +461,11 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 }
 
 func (dec *Decoder) ExpectSeqSet(ptr *imap.SeqSet) bool {
+	if dec.Special('$') {
+		*ptr = imap.SearchRes()
+		return true
+	}
+
 	var s string
 	if !dec.Expect(dec.Func(&s, isSeqSetChar), "sequence-set") {
 		return false
