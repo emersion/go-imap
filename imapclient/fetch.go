@@ -530,6 +530,11 @@ func (c *Client) handleFetch(seqNum uint32) error {
 					return dec.Err()
 				}
 
+				// Ignore literal8 marker, if any
+				if attName == "BINARY" {
+					dec.Special('~')
+				}
+
 				lit, _, ok := dec.ExpectNStringReader()
 				if !ok {
 					return dec.Err()
