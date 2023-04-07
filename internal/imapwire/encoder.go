@@ -155,6 +155,14 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	}
 }
 
+func (enc *Encoder) SeqSet(seqSet imap.SeqSet) *Encoder {
+	if len(seqSet) == 0 {
+		enc.setErr(fmt.Errorf("imapwire: cannot encode empty sequence set"))
+		return enc
+	}
+	return enc.writeString(seqSet.String())
+}
+
 func (enc *Encoder) Flag(flag imap.Flag) *Encoder {
 	if flag != "\\*" {
 		for i := 0; i < len(flag); i++ {

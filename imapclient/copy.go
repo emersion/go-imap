@@ -8,7 +8,7 @@ import (
 func (c *Client) copy(uid bool, seqSet imap.SeqSet, mailbox string) *CopyCommand {
 	cmd := &CopyCommand{}
 	enc := c.beginCommand(uidCmdName("COPY", uid), cmd)
-	enc.SP().Atom(seqSet.String()).SP().Mailbox(mailbox)
+	enc.SP().SeqSet(seqSet).SP().Mailbox(mailbox)
 	enc.end()
 	return cmd
 }

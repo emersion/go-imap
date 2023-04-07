@@ -30,7 +30,7 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem) *Fe
 		msgs:   make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
-	enc.SP().Atom(seqSet.String()).SP().List(len(items), func(i int) {
+	enc.SP().SeqSet(seqSet).SP().List(len(items), func(i int) {
 		writeFetchItem(enc.Encoder, items[i])
 	})
 	enc.end()

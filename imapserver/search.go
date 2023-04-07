@@ -106,7 +106,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 		enc.SP().Atom("UID")
 	}
 	if (returnOpts[imap.SearchReturnAll] || len(options.Return) == 0) && len(data.All) > 0 {
-		enc.SP().Atom("ALL").SP().Atom(data.All.String())
+		enc.SP().Atom("ALL").SP().SeqSet(data.All)
 	}
 	if returnOpts[imap.SearchReturnMin] && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)

@@ -17,7 +17,7 @@ func (c *Client) Expunge() *ExpungeCommand {
 func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
 	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
 	enc := c.beginCommand("UID EXPUNGE", cmd)
-	enc.SP().Atom(uids.String())
+	enc.SP().SeqSet(uids)
 	enc.end()
 	return cmd
 }

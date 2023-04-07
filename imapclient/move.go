@@ -14,7 +14,7 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 
 	cmd := &MoveCommand{}
 	enc := c.beginCommand(uidCmdName(cmdName, uid), cmd)
-	enc.SP().Atom(seqSet.String()).SP().Mailbox(mailbox)
+	enc.SP().SeqSet(seqSet).SP().Mailbox(mailbox)
 	enc.end()
 
 	if cmdName == "COPY" {

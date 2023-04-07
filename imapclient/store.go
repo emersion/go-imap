@@ -9,7 +9,7 @@ import (
 func (c *Client) store(uid bool, seqSet imap.SeqSet, store *imap.StoreFlags) *FetchCommand {
 	cmd := &FetchCommand{msgs: make(chan *FetchMessageData, 128)}
 	enc := c.beginCommand(uidCmdName("STORE", uid), cmd)
-	enc.SP().Atom(seqSet.String()).SP()
+	enc.SP().SeqSet(seqSet).SP()
 	switch store.Op {
 	case imap.StoreFlagsSet:
 		// nothing to do
