@@ -293,7 +293,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	c.cmdTag++
 	tag := fmt.Sprintf("T%v", c.cmdTag)
 	c.pendingCmds = append(c.pendingCmds, cmd)
-	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.caps.Has(imap.CapUTF8Accept)
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2)
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	c.mutex.Unlock()
 
