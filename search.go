@@ -41,6 +41,60 @@ type SearchCriteria struct {
 	Or  [][2]SearchCriteria
 }
 
+// And intersects two search criteria.
+func (criteria *SearchCriteria) And(other *SearchCriteria) {
+	criteria.SeqNum = append(criteria.SeqNum, other.SeqNum...)
+	criteria.UID = append(criteria.UID, other.UID...)
+
+	criteria.Since = intersectSince(criteria.Since, other.Since)
+	criteria.Before = intersectBefore(criteria.Before, other.Before)
+	criteria.SentSince = intersectSince(criteria.SentSince, other.SentSince)
+	criteria.SentBefore = intersectBefore(criteria.SentBefore, other.SentBefore)
+
+	criteria.Header = append(criteria.Header, other.Header...)
+	criteria.Body = append(criteria.Body, other.Body...)
+	criteria.Text = append(criteria.Text, other.Text...)
+
+	criteria.Flag = append(criteria.Flag, other.Flag...)
+	criteria.NotFlag = append(criteria.NotFlag, other.NotFlag...)
+
+	if criteria.Larger == 0 || other.Larger > criteria.Larger {
+		criteria.Larger = other.Larger
+	}
+	if criteria.Smaller == 0 || other.Smaller < criteria.Smaller {
+		criteria.Smaller = other.Smaller
+	}
+
+	criteria.Not = append(criteria.Not, other.Not...)
+	criteria.Or = append(criteria.Or, other.Or...)
+}
+
+func intersectSince(t1, t2 time.Time) time.Time {
+	switch {
+	case t1.IsZero():
+		return t2
+	case t2.IsZero():
+		return t1
+	case t1.After(t2):
+		return t1
+	default:
+		return t2
+	}
+}
+
+func intersectBefore(t1, t2 time.Time) time.Time {
+	switch {
+	case t1.IsZero():
+		return t2
+	case t2.IsZero():
+		return t1
+	case t1.Before(t2):
+		return t1
+	default:
+		return t2
+	}
+}
+
 type SearchCriteriaHeaderField struct {
 	Key, Value string
 }
