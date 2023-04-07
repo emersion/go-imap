@@ -414,6 +414,7 @@ func (w *FetchResponseWriter) WriteBinarySection(section *imap.FetchItemBinarySe
 	enc.Atom("BINARY").Special('[')
 	writeSectionPart(enc, section.Part)
 	enc.Special(']').SP()
+	enc.Special('~') // indicates literal8
 	return w.enc.Literal(size)
 }
 
