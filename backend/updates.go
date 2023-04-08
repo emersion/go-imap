@@ -94,5 +94,11 @@ type BackendUpdater interface {
 // message status updates during a period of inactivity.
 type MailboxPoller interface {
 	// Poll requests mailbox updates.
-	Poll() error
+	Poll(writer RespWriter) error
+}
+
+// RespWriter is an interface that allows writing responses to a connection.
+type RespWriter interface {
+	// WriteResp writes a response to the connection.
+	WriteResp(res imap.WriterTo) error
 }
