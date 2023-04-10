@@ -46,7 +46,7 @@ type Session interface {
 
 	// Authenticated state
 	Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error)
-	Create(mailbox string) error
+	Create(mailbox string, options *imap.CreateOptions) error
 	Delete(mailbox string) error
 	Rename(mailbox, newName string) error
 	Subscribe(mailbox string) error
