@@ -5,21 +5,17 @@ import (
 	"github.com/emersion/go-imap/v2/internal"
 )
 
-// Select sends a SELECT command.
-func (c *Client) Select(mailbox string) *SelectCommand {
-	cmd := &SelectCommand{mailbox: mailbox}
-	enc := c.beginCommand("SELECT", cmd)
-	enc.SP().Mailbox(mailbox)
-	enc.end()
-	return cmd
-}
-
-// Examine sends an EXAMINE command.
+// Select sends a SELECT or EXAMINE command.
 //
-// See Select.
-func (c *Client) Examine(mailbox string) *SelectCommand {
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectCommand {
+	cmdName := "SELECT"
+	if options != nil && options.ReadOnly {
+		cmdName = "EXAMINE"
+	}
+
 	cmd := &SelectCommand{mailbox: mailbox}
-	enc := c.beginCommand("EXAMINE", cmd)
+	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
 	enc.end()
 	return cmd

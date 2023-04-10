@@ -27,7 +27,7 @@ func ExampleClient() {
 		log.Printf(" - %v", mbox.Mailbox)
 	}
 
-	selectedMbox, err := c.Select("INBOX").Wait()
+	selectedMbox, err := c.Select("INBOX", nil).Wait()
 	if err != nil {
 		log.Fatalf("failed to select INBOX: %v", err)
 	}

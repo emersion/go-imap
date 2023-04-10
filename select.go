@@ -1,5 +1,10 @@
 package imap
 
+// SelectOptions contains options for the SELECT or EXAMINE command.
+type SelectOptions struct {
+	ReadOnly bool
+}
+
 // SelectData is the data returned by a SELECT command.
 //
 // In the old RFC 2060, PermanentFlags, UIDNext and UIDValidity are optional.

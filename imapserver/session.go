@@ -45,7 +45,7 @@ type Session interface {
 	Login(username, password string) error
 
 	// Authenticated state
-	Select(mailbox string, options *SelectOptions) (*imap.SelectData, error)
+	Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error)
 	Create(mailbox string) error
 	Delete(mailbox string) error
 	Rename(mailbox, newName string) error

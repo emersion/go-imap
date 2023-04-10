@@ -7,11 +7,6 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-// SelectOptions contains options for the SELECT or EXAMINE command.
-type SelectOptions struct {
-	ReadOnly bool
-}
-
 func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) error {
 	var mailbox string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectCRLF() {
@@ -37,7 +32,7 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
-	options := SelectOptions{ReadOnly: readOnly}
+	options := imap.SelectOptions{ReadOnly: readOnly}
 	data, err := c.session.Select(mailbox, &options)
 	if err != nil {
 		return err

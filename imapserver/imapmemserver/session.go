@@ -33,7 +33,7 @@ func (sess *UserSession) Close() error {
 	return nil
 }
 
-func (sess *UserSession) Select(name string, options *imapserver.SelectOptions) (*imap.SelectData, error) {
+func (sess *UserSession) Select(name string, options *imap.SelectOptions) (*imap.SelectData, error) {
 	mbox, err := sess.user.mailbox(name)
 	if err != nil {
 		return nil, err
