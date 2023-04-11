@@ -121,7 +121,7 @@ func (u *User) Append(mailbox string, r imap.LiteralReader, options *imap.Append
 	return mbox.appendLiteral(r, options)
 }
 
-func (u *User) Create(name string) error {
+func (u *User) Create(name string, options *imap.CreateOptions) error {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
 

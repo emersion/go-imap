@@ -54,7 +54,7 @@ func main() {
 
 	if username != "" || password != "" {
 		user := imapmemserver.NewUser(username, password)
-		user.Create("INBOX")
+		user.Create("INBOX", nil)
 		memServer.AddUser(user)
 	}
 
