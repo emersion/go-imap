@@ -85,3 +85,16 @@ func (c *Client) writeSASLResp(resp []byte) error {
 	}
 	return nil
 }
+
+// Unauthenticate sends an UNAUTHENTICATE command.
+//
+// This command requires support for the UNAUTHENTICATE extension.
+func (c *Client) Unauthenticate() *Command {
+	cmd := &unauthenticateCommand{}
+	c.beginCommand("UNAUTHENTICATE", cmd).end()
+	return &cmd.cmd
+}
+
+type unauthenticateCommand struct {
+	cmd
+}

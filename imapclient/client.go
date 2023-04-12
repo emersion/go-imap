@@ -382,6 +382,10 @@ func (c *Client) completeCommand(cmd command, err error) {
 		if err == nil {
 			c.setState(imap.ConnStateAuthenticated)
 		}
+	case *unauthenticateCommand:
+		if err == nil {
+			c.setState(imap.ConnStateNotAuthenticated)
+		}
 	case *SelectCommand:
 		if err == nil {
 			c.mutex.Lock()
@@ -643,7 +647,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 
 	if cmdErr == nil && code != "CAPABILITY" {
 		switch cmd.(type) {
-		case *startTLSCommand, *loginCommand, *authenticateCommand:
+		case *startTLSCommand, *loginCommand, *authenticateCommand, *unauthenticateCommand:
 			c.setCaps(nil)
 		}
 	}
