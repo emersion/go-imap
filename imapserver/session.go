@@ -57,7 +57,7 @@ type Session interface {
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
-	Status(mailbox string, items []imap.StatusItem) (*imap.StatusData, error)
+	Status(mailbox string, options *imap.StatusOptions) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
 	Poll(w *UpdateWriter, allowExpunge bool) error
 	Idle(w *UpdateWriter, stop <-chan struct{}) error

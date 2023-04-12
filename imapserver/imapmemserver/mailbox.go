@@ -2,7 +2,6 @@ package imapmemserver
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -51,42 +50,42 @@ func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {
 	if mbox.subscribed {
 		data.Attrs = append(data.Attrs, imap.MailboxAttrSubscribed)
 	}
-	if len(options.ReturnStatus) > 0 {
+	if options.ReturnStatus != nil {
 		data.Status = mbox.statusDataLocked(options.ReturnStatus)
 	}
 	return &data
 }
 
 // StatusData returns data for the STATUS command.
-func (mbox *Mailbox) StatusData(items []imap.StatusItem) *imap.StatusData {
+func (mbox *Mailbox) StatusData(options *imap.StatusOptions) *imap.StatusData {
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
-	return mbox.statusDataLocked(items)
+	return mbox.statusDataLocked(options)
 }
 
-func (mbox *Mailbox) statusDataLocked(items []imap.StatusItem) *imap.StatusData {
+func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusData {
 	data := imap.StatusData{Mailbox: mbox.name}
-	for _, item := range items {
-		switch item {
-		case imap.StatusItemNumMessages:
-			num := uint32(len(mbox.l))
-			data.NumMessages = &num
-		case imap.StatusItemUIDNext:
-			data.UIDNext = mbox.uidNext
-		case imap.StatusItemUIDValidity:
-			data.UIDValidity = mbox.uidValidity
-		case imap.StatusItemNumUnseen:
-			num := uint32(len(mbox.l)) - mbox.countByFlagLocked(imap.FlagSeen)
-			data.NumUnseen = &num
-		case imap.StatusItemNumDeleted:
-			num := mbox.countByFlagLocked(imap.FlagDeleted)
-			data.NumUnseen = &num
-		case imap.StatusItemSize:
-			size := mbox.sizeLocked()
-			data.Size = &size
-		default:
-			panic(fmt.Errorf("unknown STATUS item: %v", item))
-		}
+	if options.NumMessages {
+		num := uint32(len(mbox.l))
+		data.NumMessages = &num
+	}
+	if options.UIDNext {
+		data.UIDNext = mbox.uidNext
+	}
+	if options.UIDValidity {
+		data.UIDValidity = mbox.uidValidity
+	}
+	if options.NumUnseen {
+		num := uint32(len(mbox.l)) - mbox.countByFlagLocked(imap.FlagSeen)
+		data.NumUnseen = &num
+	}
+	if options.NumDeleted {
+		num := mbox.countByFlagLocked(imap.FlagDeleted)
+		data.NumUnseen = &num
+	}
+	if options.Size {
+		size := mbox.sizeLocked()
+		data.Size = &size
 	}
 	return &data
 }

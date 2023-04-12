@@ -56,12 +56,12 @@ func (u *User) mailbox(name string) (*Mailbox, error) {
 	return u.mailboxLocked(name)
 }
 
-func (u *User) Status(name string, items []imap.StatusItem) (*imap.StatusData, error) {
+func (u *User) Status(name string, options *imap.StatusOptions) (*imap.StatusData, error) {
 	mbox, err := u.mailbox(name)
 	if err != nil {
 		return nil, err
 	}
-	return mbox.StatusData(items), nil
+	return mbox.StatusData(options), nil
 }
 
 func (u *User) List(w *imapserver.ListWriter, ref string, patterns []string, options *imap.ListOptions) error {

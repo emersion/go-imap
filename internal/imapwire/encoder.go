@@ -219,6 +219,11 @@ func (enc *Encoder) List(n int, f func(i int)) *Encoder {
 	return enc
 }
 
+func (enc *Encoder) BeginList() *ListEncoder {
+	enc.Special('(')
+	return &ListEncoder{enc: enc}
+}
+
 func (enc *Encoder) NIL() *Encoder {
 	return enc.Atom("NIL")
 }
@@ -298,4 +303,22 @@ func (lw *literalWriter) Close() error {
 		return fmt.Errorf("wrote too few bytes in literal (%v remaining)", lw.n)
 	}
 	return nil
+}
+
+type ListEncoder struct {
+	enc *Encoder
+	n   int
+}
+
+func (le *ListEncoder) Item() *Encoder {
+	if le.n > 0 {
+		le.enc.SP()
+	}
+	le.n++
+	return le.enc
+}
+
+func (le *ListEncoder) End() {
+	le.enc.Special(')')
+	le.enc = nil
 }

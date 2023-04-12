@@ -8,7 +8,7 @@ type ListOptions struct {
 
 	ReturnSubscribed bool
 	ReturnChildren   bool
-	ReturnStatus     []StatusItem // requires IMAP4rev2 or LIST-STATUS
+	ReturnStatus     *StatusOptions // requires IMAP4rev2 or LIST-STATUS
 }
 
 // ListData is the mailbox data returned by a LIST command.

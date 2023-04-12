@@ -8,13 +8,35 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
+func statusItems(options *imap.StatusOptions) []string {
+	m := map[string]bool{
+		"MESSAGES":        options.NumMessages,
+		"UIDNEXT":         options.UIDNext,
+		"UIDVALIDITY":     options.UIDValidity,
+		"UNSEEN":          options.NumUnseen,
+		"DELETED":         options.NumDeleted,
+		"SIZE":            options.Size,
+		"APPENDLIMIT":     options.AppendLimit,
+		"DELETED-STORAGE": options.DeletedStorage,
+	}
+
+	var l []string
+	for k, req := range m {
+		if req {
+			l = append(l, k)
+		}
+	}
+	return l
+}
+
 // Status sends a STATUS command.
-func (c *Client) Status(mailbox string, items []imap.StatusItem) *StatusCommand {
+func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusCommand {
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
 	enc.SP().Mailbox(mailbox).SP()
+	items := statusItems(options)
 	enc.List(len(items), func(i int) {
-		enc.Atom(string(items[i]))
+		enc.Atom(items[i])
 	})
 	enc.end()
 	return cmd
@@ -82,28 +104,28 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 	}
 
 	var ok bool
-	switch imap.StatusItem(strings.ToUpper(name)) {
-	case imap.StatusItemNumMessages:
+	switch strings.ToUpper(name) {
+	case "MESSAGES":
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumMessages = &num
-	case imap.StatusItemUIDNext:
+	case "UIDNEXT":
 		ok = dec.ExpectNumber(&data.UIDNext)
-	case imap.StatusItemUIDValidity:
+	case "UIDVALIDITY":
 		ok = dec.ExpectNumber(&data.UIDValidity)
-	case imap.StatusItemNumUnseen:
+	case "UNSEEN":
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumUnseen = &num
-	case imap.StatusItemNumDeleted:
+	case "DELETED":
 		var num uint32
 		ok = dec.ExpectNumber(&num)
 		data.NumDeleted = &num
-	case imap.StatusItemSize:
+	case "SIZE":
 		var size int64
 		ok = dec.ExpectNumber64(&size)
 		data.Size = &size
-	case imap.StatusItemAppendLimit:
+	case "APPENDLIMIT":
 		var num uint32
 		if dec.Number(&num) {
 			ok = true
@@ -112,7 +134,7 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 			num = ^uint32(0)
 		}
 		data.AppendLimit = &num
-	case imap.StatusItemDeletedStorage:
+	case "DELETED-STORAGE":
 		var storage int64
 		ok = dec.ExpectNumber64(&storage)
 		data.DeletedStorage = &storage
