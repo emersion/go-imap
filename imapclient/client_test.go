@@ -93,8 +93,8 @@ func ExampleClient_Append() {
 func ExampleClient_Status() {
 	var c *imapclient.Client
 
-	statusItems := []imap.StatusItem{imap.StatusItemNumMessages}
-	if data, err := c.Status("INBOX", statusItems).Wait(); err != nil {
+	options := imap.StatusOptions{NumMessages: true}
+	if data, err := c.Status("INBOX", &options).Wait(); err != nil {
 		log.Fatalf("STATUS command failed: %v", err)
 	} else {
 		log.Printf("INBOX contains %v messages", *data.NumMessages)
@@ -106,9 +106,9 @@ func ExampleClient_List_stream() {
 
 	// ReturnStatus requires server support for IMAP4rev2 or LIST-STATUS
 	listCmd := c.List("", "%", &imap.ListOptions{
-		ReturnStatus: []imap.StatusItem{
-			imap.StatusItemNumMessages,
-			imap.StatusItemNumUnseen,
+		ReturnStatus: &imap.StatusOptions{
+			NumMessages: true,
+			NumUnseen:   true,
 		},
 	})
 	for {

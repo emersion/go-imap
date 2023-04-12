@@ -15,8 +15,6 @@ const (
 	DateLayout     = "2-Jan-2006"
 )
 
-const StatusItemRecent imap.StatusItem = "RECENT" // removed in IMAP4rev2
-
 // Fetch items removed in IMAP4rev2.
 var (
 	FetchItemRFC822       imap.FetchItem = imap.FetchItemKeyword("RFC822")        // equivalent to BODY[]

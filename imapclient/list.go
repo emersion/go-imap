@@ -40,7 +40,7 @@ func getReturnOpts(options *imap.ListOptions) []string {
 	if options.ReturnChildren {
 		l = append(l, "CHILDREN")
 	}
-	if len(options.ReturnStatus) > 0 {
+	if options.ReturnStatus != nil {
 		l = append(l, "STATUS")
 	}
 	return l
@@ -58,7 +58,7 @@ func getReturnOpts(options *imap.ListOptions) []string {
 func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListCommand {
 	cmd := &ListCommand{
 		mailboxes:    make(chan *imap.ListData, 64),
-		returnStatus: options != nil && len(options.ReturnStatus) > 0,
+		returnStatus: options != nil && options.ReturnStatus != nil,
 	}
 	enc := c.beginCommand("LIST", cmd)
 	if selectOpts := getSelectOpts(options); len(selectOpts) > 0 {
@@ -72,8 +72,9 @@ func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListComma
 			opt := returnOpts[i]
 			enc.Atom(opt)
 			if opt == "STATUS" {
-				enc.SP().List(len(options.ReturnStatus), func(j int) {
-					enc.Atom(string(options.ReturnStatus[j]))
+				returnStatus := statusItems(options.ReturnStatus)
+				enc.SP().List(len(returnStatus), func(j int) {
+					enc.Atom(returnStatus[j])
 				})
 			}
 		})

@@ -1,19 +1,17 @@
 package imap
 
-// StatusItem is a data item which can be requested by a STATUS command.
-type StatusItem string
+// StatusOptions contains options for the STATUS command.
+type StatusOptions struct {
+	NumMessages bool
+	UIDNext     bool
+	UIDValidity bool
+	NumUnseen   bool
+	NumDeleted  bool // requires IMAP4rev2 or QUOTA
+	Size        bool // requires IMAP4rev2 or STATUS=SIZE
 
-const (
-	StatusItemNumMessages StatusItem = "MESSAGES"
-	StatusItemUIDNext     StatusItem = "UIDNEXT"
-	StatusItemUIDValidity StatusItem = "UIDVALIDITY"
-	StatusItemNumUnseen   StatusItem = "UNSEEN"
-	StatusItemNumDeleted  StatusItem = "DELETED" // requires IMAP4rev2 or QUOTA
-	StatusItemSize        StatusItem = "SIZE"    // requires IMAP4rev2 or STATUS=SIZE
-
-	StatusItemAppendLimit    StatusItem = "APPENDLIMIT"     // requires APPENDLIMIT
-	StatusItemDeletedStorage StatusItem = "DELETED-STORAGE" // requires QUOTA=RES-STORAGE
-)
+	AppendLimit    bool // requires APPENDLIMIT
+	DeletedStorage bool // requires QUOTA=RES-STORAGE
+}
 
 // StatusData is the data returned by a STATUS command.
 //

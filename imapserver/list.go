@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Conn) handleList(dec *imapwire.Decoder) error {
-	ref, pattern, options, err := readListCmd(dec)
+	ref, pattern, options, returnRecent, err := readListCmd(dec)
 	if err != nil {
 		return err
 	}
@@ -20,8 +20,9 @@ func (c *Conn) handleList(dec *imapwire.Decoder) error {
 	}
 
 	w := &ListWriter{
-		conn:    c,
-		options: options,
+		conn:         c,
+		options:      options,
+		returnRecent: returnRecent,
 	}
 	return c.session.List(w, ref, pattern, options)
 }
@@ -116,11 +117,11 @@ func (c *Conn) writeLSub(data *imap.ListData) error {
 	return enc.CRLF()
 }
 
-func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options *imap.ListOptions, err error) {
+func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options *imap.ListOptions, returnRecent bool, err error) {
 	options = &imap.ListOptions{}
 
 	if !dec.ExpectSP() {
-		return "", nil, nil, dec.Err()
+		return "", nil, nil, false, dec.Err()
 	}
 
 	hasSelectOpts, err := dec.List(func() error {
@@ -141,14 +142,14 @@ func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options 
 		return nil
 	})
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("in list-select-opts: %w", err)
+		return "", nil, nil, false, fmt.Errorf("in list-select-opts: %w", err)
 	}
 	if hasSelectOpts && !dec.ExpectSP() {
-		return "", nil, nil, dec.Err()
+		return "", nil, nil, false, dec.Err()
 	}
 
 	if !dec.ExpectMailbox(&ref) || !dec.ExpectSP() {
-		return "", nil, nil, dec.Err()
+		return "", nil, nil, false, dec.Err()
 	}
 
 	hasPatterns, err := dec.List(func() error {
@@ -159,13 +160,13 @@ func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options 
 		return err
 	})
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, nil, false, err
 	} else if hasPatterns && len(patterns) == 0 {
-		return "", nil, nil, newClientBugError("LIST-EXTENDED requires a non-empty parenthesized pattern list")
+		return "", nil, nil, false, newClientBugError("LIST-EXTENDED requires a non-empty parenthesized pattern list")
 	} else if !hasPatterns {
 		pattern, err := readListMailbox(dec)
 		if err != nil {
-			return "", nil, nil, err
+			return "", nil, nil, false, err
 		}
 		if pattern != "" {
 			patterns = append(patterns, pattern)
@@ -175,26 +176,26 @@ func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options 
 	if dec.SP() { // list-return-opts
 		var atom string
 		if !dec.ExpectAtom(&atom) || !dec.Expect(strings.EqualFold(atom, "RETURN"), "RETURN") || !dec.ExpectSP() {
-			return "", nil, nil, dec.Err()
+			return "", nil, nil, false, dec.Err()
 		}
 
 		err := dec.ExpectList(func() error {
-			return readReturnOption(dec, options)
+			return readReturnOption(dec, options, &returnRecent)
 		})
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("in list-return-opts: %w", err)
+			return "", nil, nil, false, fmt.Errorf("in list-return-opts: %w", err)
 		}
 	}
 
 	if !dec.ExpectCRLF() {
-		return "", nil, nil, dec.Err()
+		return "", nil, nil, false, dec.Err()
 	}
 
 	if options.SelectRecursiveMatch && !options.SelectSubscribed {
-		return "", nil, nil, newClientBugError("The LIST RECURSIVEMATCH select option requires SUBSCRIBED")
+		return "", nil, nil, false, newClientBugError("The LIST RECURSIVEMATCH select option requires SUBSCRIBED")
 	}
 
-	return ref, patterns, options, nil
+	return ref, patterns, options, returnRecent, nil
 }
 
 func readListMailbox(dec *imapwire.Decoder) (string, error) {
@@ -218,7 +219,7 @@ func isListChar(ch byte) bool {
 	}
 }
 
-func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
+func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions, recent *bool) error {
 	var name string
 	if !dec.ExpectAtom(&name) {
 		return dec.Err()
@@ -233,13 +234,13 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 		if !dec.ExpectSP() {
 			return dec.Err()
 		}
+		options.ReturnStatus = new(imap.StatusOptions)
 		return dec.ExpectList(func() error {
-			item, err := readStatusItem(dec)
-			if err != nil {
-				return err
+			isRecent, err := readStatusItem(dec, options.ReturnStatus)
+			if isRecent {
+				*recent = true
 			}
-			options.ReturnStatus = append(options.ReturnStatus, item)
-			return nil
+			return err
 		})
 	default:
 		return newClientBugError("Unknown LIST RETURN options")
@@ -249,9 +250,10 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 
 // ListWriter writes LIST responses.
 type ListWriter struct {
-	conn    *Conn
-	options *imap.ListOptions
-	lsub    bool
+	conn         *Conn
+	options      *imap.ListOptions
+	returnRecent bool
+	lsub         bool
 }
 
 // WriteList writes a single LIST response for a mailbox.
@@ -263,8 +265,8 @@ func (w *ListWriter) WriteList(data *imap.ListData) error {
 	if err := w.conn.writeList(data); err != nil {
 		return err
 	}
-	if len(w.options.ReturnStatus) > 0 && data.Status != nil {
-		if err := w.conn.writeStatus(data.Status, w.options.ReturnStatus); err != nil {
+	if w.options.ReturnStatus != nil && data.Status != nil {
+		if err := w.conn.writeStatus(data.Status, w.options.ReturnStatus, w.returnRecent); err != nil {
 			return err
 		}
 	}
