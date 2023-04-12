@@ -95,7 +95,8 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c, obsolete: obsolete}
-	if err := c.session.Fetch(w, numKind, seqSet, items); err != nil {
+	options := imap.FetchOptions{}
+	if err := c.session.Fetch(w, numKind, seqSet, items, &options); err != nil {
 		return err
 	}
 	return nil

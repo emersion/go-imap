@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// FetchOptions contains options for the FETCH command.
+type FetchOptions struct{}
+
 // FetchItem is a message data item which can be requested by a FETCH command.
 type FetchItem interface {
 	fetchItem()

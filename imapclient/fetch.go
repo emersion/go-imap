@@ -11,7 +11,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem) *FetchCommand {
+func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
 	// Ensure we request UID as the first data item for UID FETCH, to be safer.
 	// We want to get it before any literal.
 	if uid {
@@ -41,15 +41,17 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem) *Fe
 //
 // The caller must fully consume the FetchCommand. A simple way to do so is to
 // defer a call to FetchCommand.Close.
-func (c *Client) Fetch(seqSet imap.SeqSet, items []imap.FetchItem) *FetchCommand {
-	return c.fetch(false, seqSet, items)
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Fetch(seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
+	return c.fetch(false, seqSet, items, options)
 }
 
 // UIDFetch sends a UID FETCH command.
 //
 // See Fetch.
-func (c *Client) UIDFetch(seqSet imap.SeqSet, items []imap.FetchItem) *FetchCommand {
-	return c.fetch(true, seqSet, items)
+func (c *Client) UIDFetch(seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
+	return c.fetch(true, seqSet, items, options)
 }
 
 func writeFetchItem(enc *imapwire.Encoder, item imap.FetchItem) {

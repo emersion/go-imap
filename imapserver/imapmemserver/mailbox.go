@@ -283,7 +283,7 @@ func (mbox *MailboxView) Close() {
 	mbox.tracker.Close()
 }
 
-func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error {
+func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) error {
 	markSeen := false
 	for _, item := range items {
 		if item, ok := item.(*imap.FetchItemBodySection); ok && !item.Peek {
@@ -356,7 +356,7 @@ func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.Num
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
 	})
 	if !flags.Silent {
-		return mbox.Fetch(w, numKind, seqSet, []imap.FetchItem{imap.FetchItemFlags})
+		return mbox.Fetch(w, numKind, seqSet, []imap.FetchItem{imap.FetchItemFlags}, nil)
 	}
 	return nil
 }

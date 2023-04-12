@@ -61,7 +61,7 @@ type Session interface {
 	Unselect() error
 	Expunge(w *ExpungeWriter, uids *imap.SeqSet) error
 	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
-	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem) error
+	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) error
 	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error
 	Copy(kind NumKind, seqSet imap.SeqSet, dest string) (*imap.CopyData, error)
 }
