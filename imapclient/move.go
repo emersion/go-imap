@@ -22,7 +22,7 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 			Op:     imap.StoreFlagsAdd,
 			Silent: true,
 			Flags:  []imap.Flag{imap.FlagDeleted},
-		})
+		}, nil)
 		if uid && c.Caps().Has(imap.CapUIDPlus) {
 			cmd.expunge = c.UIDExpunge(seqSet)
 		} else {

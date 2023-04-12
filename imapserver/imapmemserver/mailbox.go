@@ -350,7 +350,7 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	return &data, nil
 }
 
-func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags) error {
+func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
 	mbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
 		msg.store(flags)
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)

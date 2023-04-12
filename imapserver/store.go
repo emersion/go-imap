@@ -69,9 +69,10 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c}
+	options := imap.StoreOptions{}
 	return c.session.Store(w, numKind, seqSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,
-	})
+	}, &options)
 }

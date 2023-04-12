@@ -6,7 +6,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 )
 
-func (c *Client) store(uid bool, seqSet imap.SeqSet, store *imap.StoreFlags) *FetchCommand {
+func (c *Client) store(uid bool, seqSet imap.SeqSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
 	cmd := &FetchCommand{msgs: make(chan *FetchMessageData, 128)}
 	enc := c.beginCommand(uidCmdName("STORE", uid), cmd)
 	enc.SP().SeqSet(seqSet).SP()
@@ -34,13 +34,15 @@ func (c *Client) store(uid bool, seqSet imap.SeqSet, store *imap.StoreFlags) *Fe
 // Store sends a STORE command.
 //
 // Unless StoreFlags.Silent is set, the server will return the updated values.
-func (c *Client) Store(seqSet imap.SeqSet, store *imap.StoreFlags) *FetchCommand {
-	return c.store(false, seqSet, store)
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Store(seqSet imap.SeqSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
+	return c.store(false, seqSet, store, options)
 }
 
 // UIDStore sends a UID STORE command.
 //
 // See Store.
-func (c *Client) UIDStore(seqSet imap.SeqSet, store *imap.StoreFlags) *FetchCommand {
-	return c.store(true, seqSet, store)
+func (c *Client) UIDStore(seqSet imap.SeqSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
+	return c.store(true, seqSet, store, options)
 }
