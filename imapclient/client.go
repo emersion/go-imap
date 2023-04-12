@@ -114,6 +114,7 @@ type Client struct {
 	mutex       sync.Mutex
 	state       imap.ConnState
 	caps        imap.CapSet
+	capsCh      chan struct{}
 	mailbox     *SelectedMailbox
 	cmdTag      uint64
 	pendingCmds []command
@@ -231,10 +232,18 @@ func (c *Client) Caps() imap.CapSet {
 
 	c.mutex.Lock()
 	caps := c.caps
+	if caps == nil && c.capsCh == nil {
+		c.capsCh = make(chan struct{})
+	}
+	capsCh := c.capsCh
 	c.mutex.Unlock()
 
 	if caps != nil {
 		return caps
+	} else if capsCh != nil {
+		// A CAPABILITY command is already running, wait for it to finish
+		<-capsCh
+		return c.Caps()
 	}
 
 	caps, _ = c.Capability().Wait()
@@ -244,6 +253,10 @@ func (c *Client) Caps() imap.CapSet {
 func (c *Client) setCaps(caps imap.CapSet) {
 	c.mutex.Lock()
 	c.caps = caps
+	if caps != nil && c.capsCh != nil {
+		close(c.capsCh)
+		c.capsCh = nil
+	}
 	c.mutex.Unlock()
 }
 
