@@ -313,17 +313,6 @@ func (c *Conn) handleLogout(dec *imapwire.Decoder) error {
 	})
 }
 
-func (c *Conn) handleCreate(dec *imapwire.Decoder) error {
-	var name string
-	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {
-		return dec.Err()
-	}
-	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
-		return err
-	}
-	return c.session.Create(name, &imap.CreateOptions{})
-}
-
 func (c *Conn) handleDelete(dec *imapwire.Decoder) error {
 	var name string
 	if !dec.ExpectSP() || !dec.ExpectMailbox(&name) || !dec.ExpectCRLF() {

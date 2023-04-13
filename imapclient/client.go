@@ -880,17 +880,6 @@ func (c *Client) Login(username, password string) *Command {
 	return &cmd.cmd
 }
 
-// Create sends a CREATE command.
-//
-// A nil options pointer is equivalent to a zero options value.
-func (c *Client) Create(mailbox string, options *imap.CreateOptions) *Command {
-	cmd := &Command{}
-	enc := c.beginCommand("CREATE", cmd)
-	enc.SP().Mailbox(mailbox)
-	enc.end()
-	return cmd
-}
-
 // Delete sends a DELETE command.
 func (c *Client) Delete(mailbox string) *Command {
 	cmd := &Command{}
