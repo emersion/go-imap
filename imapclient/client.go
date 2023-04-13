@@ -111,14 +111,15 @@ type Client struct {
 	decCh  chan struct{}
 	decErr error
 
-	mutex       sync.Mutex
-	state       imap.ConnState
-	caps        imap.CapSet
-	mailbox     *SelectedMailbox
-	cmdTag      uint64
-	pendingCmds []command
-	contReqs    []continuationRequest
-	closed      bool
+	mutex         sync.Mutex
+	state         imap.ConnState
+	caps          imap.CapSet
+	pendingCapCmd *CapabilityCommand
+	mailbox       *SelectedMailbox
+	cmdTag        uint64
+	pendingCmds   []command
+	contReqs      []continuationRequest
+	closed        bool
 }
 
 // New creates a new IMAP client.
@@ -231,19 +232,35 @@ func (c *Client) Caps() imap.CapSet {
 
 	c.mutex.Lock()
 	caps := c.caps
+	capCmd := c.pendingCapCmd
 	c.mutex.Unlock()
 
 	if caps != nil {
 		return caps
 	}
 
-	caps, _ = c.Capability().Wait()
+	if capCmd == nil {
+		capCmd = c.Capability()
+		c.mutex.Lock()
+		c.pendingCapCmd = capCmd
+		c.mutex.Unlock()
+	}
+
+	caps, _ = capCmd.Wait()
 	return caps
 }
 
 func (c *Client) setCaps(caps imap.CapSet) {
+	// If the capabilities are being reset, request the updated capabilities
+	// from the server
+	var capCmd *CapabilityCommand
+	if caps == nil {
+		capCmd = c.Capability()
+	}
+
 	c.mutex.Lock()
 	c.caps = caps
+	c.pendingCapCmd = capCmd
 	c.mutex.Unlock()
 }
 
@@ -648,6 +665,7 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 	if cmdErr == nil && code != "CAPABILITY" {
 		switch cmd.(type) {
 		case *startTLSCommand, *loginCommand, *authenticateCommand, *unauthenticateCommand:
+			// These commands invalidate the capabilities
 			c.setCaps(nil)
 		}
 	}
@@ -776,6 +794,9 @@ func (c *Client) readResponseData(typ string) error {
 				}
 			}
 			c.greetingRecv = true
+			if c.greetingErr == nil && code != "CAPABILITY" {
+				c.setCaps(nil) // request initial capabilities
+			}
 			close(c.greetingCh)
 		}
 	case "CAPABILITY":
