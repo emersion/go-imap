@@ -2,7 +2,8 @@ package imap
 
 // SelectOptions contains options for the SELECT or EXAMINE command.
 type SelectOptions struct {
-	ReadOnly bool
+	ReadOnly  bool
+	CondStore bool // requires CONDSTORE
 }
 
 // SelectData is the data returned by a SELECT command.
@@ -19,4 +20,6 @@ type SelectData struct {
 	UIDValidity uint32
 
 	List *ListData // requires IMAP4rev2
+
+	HighestModSeq uint64 // requires CONDSTORE
 }

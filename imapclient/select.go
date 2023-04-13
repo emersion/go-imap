@@ -17,6 +17,9 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
+	if options != nil && options.CondStore {
+		enc.SP().Special('(').Atom("CONDSTORE").Special(')')
+	}
 	enc.end()
 	return cmd
 }

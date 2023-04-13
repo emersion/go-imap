@@ -42,6 +42,8 @@ type SearchCriteria struct {
 
 	Not []SearchCriteria
 	Or  [][2]SearchCriteria
+
+	ModSeq *SearchCriteriaModSeq // requires CONDSTORE
 }
 
 // And intersects two search criteria.
@@ -102,6 +104,20 @@ type SearchCriteriaHeaderField struct {
 	Key, Value string
 }
 
+type SearchCriteriaModSeq struct {
+	ModSeq       uint64
+	MetadataName string
+	MetadataType SearchCriteriaMetadataType
+}
+
+type SearchCriteriaMetadataType string
+
+const (
+	SearchCriteriaMetadataAll     SearchCriteriaMetadataType = "all"
+	SearchCriteriaMetadataPrivate SearchCriteriaMetadataType = "priv"
+	SearchCriteriaMetadataShared  SearchCriteriaMetadataType = "shared"
+)
+
 // SearchData is the data returned by a SEARCH command.
 type SearchData struct {
 	All SeqSet
@@ -111,6 +127,9 @@ type SearchData struct {
 	Min   uint32
 	Max   uint32
 	Count uint32
+
+	// requires CONDSTORE
+	ModSeq uint64
 }
 
 // AllNums returns All as a slice of numbers.
