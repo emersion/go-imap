@@ -711,22 +711,16 @@ func (c *Client) readResponseData(typ string) error {
 					handler(&UnilateralDataMailbox{PermanentFlags: flags})
 				}
 			case "UIDNEXT":
-				if !c.dec.ExpectSP() {
-					return c.dec.Err()
-				}
 				var uidNext uint32
-				if !c.dec.ExpectNumber(&uidNext) {
+				if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidNext) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
 					cmd.data.UIDNext = uidNext
 				}
 			case "UIDVALIDITY":
-				if !c.dec.ExpectSP() {
-					return c.dec.Err()
-				}
 				var uidValidity uint32
-				if !c.dec.ExpectNumber(&uidValidity) {
+				if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
