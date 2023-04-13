@@ -13,8 +13,6 @@ import (
 //
 // The options are optional.
 func (c *Client) Append(mailbox string, size int64, options *imap.AppendOptions) *AppendCommand {
-	// Keep caps in cache to avoid beginCommand to be stuck
-	c.Caps()
 	cmd := &AppendCommand{}
 	cmd.enc = c.beginCommand("APPEND", cmd)
 	cmd.enc.SP().Mailbox(mailbox).SP()
