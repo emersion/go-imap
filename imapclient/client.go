@@ -793,6 +793,16 @@ func (c *Client) readResponseData(typ string) error {
 					cmd.data.SourceUIDs = srcUIDs
 					cmd.data.DestUIDs = dstUIDs
 				}
+			case "HIGHESTMODSEQ":
+				var modSeq uint64
+				if !c.dec.ExpectSP() || !c.dec.ExpectModSeq(&modSeq) {
+					return c.dec.Err()
+				}
+				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
+					cmd.data.HighestModSeq = modSeq
+				}
+			case "NOMODSEQ":
+				// ignore
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
 					c.dec.DiscardUntilByte(']')

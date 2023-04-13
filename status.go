@@ -11,6 +11,7 @@ type StatusOptions struct {
 
 	AppendLimit    bool // requires APPENDLIMIT
 	DeletedStorage bool // requires QUOTA=RES-STORAGE
+	HighestModSeq  bool // requires CONDSTORE
 }
 
 // StatusData is the data returned by a STATUS command.
@@ -28,4 +29,5 @@ type StatusData struct {
 
 	AppendLimit    *uint32
 	DeletedStorage *int64
+	HighestModSeq  uint64
 }

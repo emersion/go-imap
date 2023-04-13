@@ -10,6 +10,9 @@ func (c *Client) store(uid bool, seqSet imap.SeqSet, store *imap.StoreFlags, opt
 	cmd := &FetchCommand{msgs: make(chan *FetchMessageData, 128)}
 	enc := c.beginCommand(uidCmdName("STORE", uid), cmd)
 	enc.SP().SeqSet(seqSet).SP()
+	if options != nil && options.UnchangedSince != 0 {
+		enc.Special('(').Atom("UNCHANGEDSINCE").SP().ModSeq(options.UnchangedSince).Special(')').SP()
+	}
 	switch store.Op {
 	case imap.StoreFlagsSet:
 		// nothing to do

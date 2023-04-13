@@ -324,6 +324,23 @@ func (dec *Decoder) ExpectNumber64(ptr *int64) bool {
 	return dec.Expect(dec.Number64(ptr), "number64")
 }
 
+func (dec *Decoder) ModSeq(ptr *uint64) bool {
+	s, ok := dec.numberStr()
+	if !ok {
+		return false
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return false // can happen on overflow
+	}
+	*ptr = v
+	return true
+}
+
+func (dec *Decoder) ExpectModSeq(ptr *uint64) bool {
+	return dec.Expect(dec.ModSeq(ptr), "mod-sequence-value")
+}
+
 func (dec *Decoder) Quoted(ptr *string) bool {
 	if !dec.Special('"') {
 		return false

@@ -21,6 +21,9 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions)
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
 	enc.SP().SeqSet(seqSet).SP()
 	writeFetchItems(enc.Encoder, uid, options)
+	if options != nil && options.ChangedSince != 0 {
+		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
+	}
 	enc.end()
 	return cmd
 }
@@ -58,6 +61,7 @@ func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions
 		"FLAGS":         options.Flags,
 		"INTERNALDATE":  options.InternalDate,
 		"RFC822.SIZE":   options.RFC822Size,
+		"MODSEQ":        options.ModSeq,
 	}
 	for k, req := range m {
 		if req {
@@ -358,6 +362,15 @@ type FetchItemDataBinarySectionSize struct {
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
 
+// FetchItemDataModSeq holds data returned by FETCH MODSEQ.
+//
+// This requires the CONDSTORE extension.
+type FetchItemDataModSeq struct {
+	ModSeq uint64
+}
+
+func (FetchItemDataModSeq) fetchItemData() {}
+
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -372,6 +385,7 @@ type FetchMessageBuffer struct {
 	BodySection       map[*imap.FetchItemBodySection][]byte
 	BinarySection     map[*imap.FetchItemBinarySection][]byte
 	BinarySectionSize []FetchItemDataBinarySectionSize
+	ModSeq            uint64 // requires CONDSTORE
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -408,6 +422,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.BodyStructure = item.BodyStructure
 	case FetchItemDataBinarySectionSize:
 		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
+	case FetchItemDataModSeq:
+		buf.ModSeq = item.ModSeq
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
@@ -617,6 +633,12 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				Part: part,
 				Size: size,
 			}
+		case "MODSEQ":
+			var modSeq uint64
+			if !dec.ExpectSP() || !dec.ExpectSpecial('(') || !dec.ExpectModSeq(&modSeq) || !dec.ExpectSpecial(')') {
+				return dec.Err()
+			}
+			item = FetchItemDataModSeq{ModSeq: modSeq}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}

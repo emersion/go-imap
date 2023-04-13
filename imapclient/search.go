@@ -77,6 +77,23 @@ func (c *Client) UIDSearch(criteria *imap.SearchCriteria, options *imap.SearchOp
 func (c *Client) handleSearch() error {
 	cmd := findPendingCmdByType[*SearchCommand](c)
 	for c.dec.SP() {
+		if c.dec.Special('(') {
+			var name string
+			if !c.dec.ExpectAtom(&name) || !c.dec.ExpectSP() {
+				return c.dec.Err()
+			} else if strings.ToUpper(name) != "MODSEQ" {
+				return fmt.Errorf("in search-sort-mod-seq: expected %q, got %q", "MODSEQ", name)
+			}
+			var modSeq uint64
+			if !c.dec.ExpectModSeq(&modSeq) || !c.dec.ExpectSpecial(')') {
+				return c.dec.Err()
+			}
+			if cmd != nil {
+				cmd.data.ModSeq = modSeq
+			}
+			break
+		}
+
 		var num uint32
 		if !c.dec.ExpectNumber(&num) {
 			return c.dec.Err()
@@ -203,6 +220,19 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 		encodeItem().Atom("SMALLER").SP().Number64(criteria.Smaller)
 	}
 
+	if modSeq := criteria.ModSeq; modSeq != nil {
+		encodeItem().Atom("MODSEQ")
+		if modSeq.MetadataName != "" && modSeq.MetadataType != "" {
+			enc.SP().Quoted(modSeq.MetadataName).SP().Atom(string(modSeq.MetadataType))
+		}
+		enc.SP()
+		if modSeq.ModSeq != 0 {
+			enc.ModSeq(modSeq.ModSeq)
+		} else {
+			enc.Atom("0")
+		}
+	}
+
 	for _, not := range criteria.Not {
 		encodeItem().Atom("NOT").SP()
 		writeSearchKey(enc, &not)
@@ -277,6 +307,12 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 				return "", nil, dec.Err()
 			}
 			data.Count = num
+		case "MODSEQ":
+			var modSeq uint64
+			if !dec.ExpectModSeq(&modSeq) {
+				return "", nil, dec.Err()
+			}
+			data.ModSeq = modSeq
 		default:
 			if !dec.DiscardValue() {
 				return "", nil, dec.Err()

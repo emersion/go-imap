@@ -18,6 +18,7 @@ func statusItems(options *imap.StatusOptions) []string {
 		"SIZE":            options.Size,
 		"APPENDLIMIT":     options.AppendLimit,
 		"DELETED-STORAGE": options.DeletedStorage,
+		"HIGHESTMODSEQ":   options.HighestModSeq,
 	}
 
 	var l []string
@@ -138,6 +139,8 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 		var storage int64
 		ok = dec.ExpectNumber64(&storage)
 		data.DeletedStorage = &storage
+	case "HIGHESTMODSEQ":
+		ok = dec.ExpectModSeq(&data.HighestModSeq)
 	default:
 		if !dec.DiscardValue() {
 			return dec.Err()
