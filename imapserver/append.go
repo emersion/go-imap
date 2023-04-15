@@ -28,7 +28,7 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 		if err != nil {
 			return err
 		}
-		options.Flags = append(options.Flags, imap.Flag(flag))
+		options.Flags = append(options.Flags, flag)
 		return nil
 	})
 	if err != nil {

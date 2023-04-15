@@ -22,7 +22,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		if err != nil {
 			return err
 		}
-		flags = append(flags, imap.Flag(flag))
+		flags = append(flags, flag)
 		return nil
 	})
 	if err != nil {
@@ -33,7 +33,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 			if err != nil {
 				return err
 			}
-			flags = append(flags, imap.Flag(flag))
+			flags = append(flags, flag)
 
 			if !dec.SP() {
 				break

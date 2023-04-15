@@ -198,11 +198,10 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		if !dec.ExpectSP() {
 			return dec.Err()
 		}
-		flagStr, err := internal.ExpectFlag(dec)
+		flag, err := internal.ExpectFlag(dec)
 		if err != nil {
 			return err
 		}
-		flag := imap.Flag(flagStr)
 		switch key {
 		case "KEYWORD":
 			criteria.Flag = append(criteria.Flag, flag)

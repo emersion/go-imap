@@ -23,14 +23,8 @@ func (c *Conn) handleCreate(dec *imapwire.Decoder) error {
 		}
 		switch strings.ToUpper(name) {
 		case "USE":
-			err := dec.ExpectList(func() error {
-				flag, err := internal.ExpectFlag(dec)
-				if err != nil {
-					return err
-				}
-				options.SpecialUse = append(options.SpecialUse, imap.MailboxAttr(flag))
-				return nil
-			})
+			var err error
+			options.SpecialUse, err = internal.ExpectMailboxAttrList(dec)
 			if err != nil {
 				return err
 			}

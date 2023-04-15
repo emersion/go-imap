@@ -66,16 +66,16 @@ func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 		if err != nil {
 			return err
 		}
-		flags = append(flags, imap.Flag(flag))
+		flags = append(flags, flag)
 		return nil
 	})
 	return flags, err
 }
 
-func ExpectFlag(dec *imapwire.Decoder) (string, error) {
+func ExpectFlag(dec *imapwire.Decoder) (imap.Flag, error) {
 	isSystem := dec.Special('\\')
 	if isSystem && dec.Special('*') {
-		return "\\*", nil // flag-perm
+		return imap.FlagWildcard, nil // flag-perm
 	}
 	var name string
 	if !dec.ExpectAtom(&name) {
@@ -84,5 +84,23 @@ func ExpectFlag(dec *imapwire.Decoder) (string, error) {
 	if isSystem {
 		name = "\\" + name
 	}
-	return name, nil
+	return imap.Flag(name), nil
+}
+
+func ExpectMailboxAttrList(dec *imapwire.Decoder) ([]imap.MailboxAttr, error) {
+	var attrs []imap.MailboxAttr
+	err := dec.ExpectList(func() error {
+		flag, err := ExpectMailboxAttr(dec)
+		if err != nil {
+			return err
+		}
+		attrs = append(attrs, imap.MailboxAttr(flag))
+		return nil
+	})
+	return attrs, err
+}
+
+func ExpectMailboxAttr(dec *imapwire.Decoder) (imap.MailboxAttr, error) {
+	flag, err := ExpectFlag(dec)
+	return imap.MailboxAttr(flag), err
 }

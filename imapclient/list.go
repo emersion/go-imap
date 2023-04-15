@@ -161,16 +161,10 @@ func (cmd *ListCommand) Collect() ([]*imap.ListData, error) {
 func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
 	var data imap.ListData
 
-	err := dec.ExpectList(func() error {
-		attr, err := internal.ExpectFlag(dec)
-		if err != nil {
-			return err
-		}
-		data.Attrs = append(data.Attrs, imap.MailboxAttr(attr))
-		return nil
-	})
+	var err error
+	data.Attrs, err = internal.ExpectMailboxAttrList(dec)
 	if err != nil {
-		return nil, fmt.Errorf("in mbx-list-flags")
+		return nil, fmt.Errorf("in mbx-list-flags: %w", err)
 	}
 
 	if !dec.ExpectSP() {
