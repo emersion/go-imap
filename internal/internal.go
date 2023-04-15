@@ -59,10 +59,10 @@ func ExpectDate(dec *imapwire.Decoder) (time.Time, error) {
 	return t, nil
 }
 
-func ReadFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
+func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	var flags []imap.Flag
 	err := dec.ExpectList(func() error {
-		flag, err := ReadFlag(dec)
+		flag, err := ExpectFlag(dec)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func ReadFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	return flags, err
 }
 
-func ReadFlag(dec *imapwire.Decoder) (string, error) {
+func ExpectFlag(dec *imapwire.Decoder) (string, error) {
 	isSystem := dec.Special('\\')
 	if isSystem && dec.Special('*') {
 		return "\\*", nil // flag-perm

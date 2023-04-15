@@ -162,7 +162,7 @@ func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
 	var data imap.ListData
 
 	err := dec.ExpectList(func() error {
-		attr, err := internal.ReadFlag(dec)
+		attr, err := internal.ExpectFlag(dec)
 		if err != nil {
 			return err
 		}

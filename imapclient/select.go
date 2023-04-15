@@ -40,7 +40,7 @@ func (c *Client) UnselectAndExpunge() *Command {
 }
 
 func (c *Client) handleFlags() error {
-	flags, err := internal.ReadFlagList(c.dec)
+	flags, err := internal.ExpectFlagList(c.dec)
 	if err != nil {
 		return err
 	}

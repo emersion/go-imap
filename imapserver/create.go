@@ -24,7 +24,7 @@ func (c *Conn) handleCreate(dec *imapwire.Decoder) error {
 		switch strings.ToUpper(name) {
 		case "USE":
 			err := dec.ExpectList(func() error {
-				flag, err := internal.ReadFlag(dec)
+				flag, err := internal.ExpectFlag(dec)
 				if err != nil {
 					return err
 				}

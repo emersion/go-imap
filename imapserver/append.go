@@ -24,7 +24,7 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	}
 
 	hasFlagList, err := dec.List(func() error {
-		flag, err := internal.ReadFlag(dec)
+		flag, err := internal.ExpectFlag(dec)
 		if err != nil {
 			return err
 		}

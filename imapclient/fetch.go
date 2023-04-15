@@ -466,7 +466,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 
-			flags, err := internal.ReadFlagList(dec)
+			flags, err := internal.ExpectFlagList(dec)
 			if err != nil {
 				return err
 			}

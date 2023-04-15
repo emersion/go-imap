@@ -711,7 +711,7 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				flags, err := internal.ReadFlagList(c.dec)
+				flags, err := internal.ExpectFlagList(c.dec)
 				if err != nil {
 					return err
 				}

@@ -18,7 +18,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 	var flags []imap.Flag
 	isList, err := dec.List(func() error {
-		flag, err := internal.ReadFlag(dec)
+		flag, err := internal.ExpectFlag(dec)
 		if err != nil {
 			return err
 		}
@@ -29,7 +29,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	} else if !isList {
 		for {
-			flag, err := internal.ReadFlag(dec)
+			flag, err := internal.ExpectFlag(dec)
 			if err != nil {
 				return err
 			}
