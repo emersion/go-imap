@@ -13,7 +13,7 @@ func (c *Client) Create(mailbox string, options *imap.CreateOptions) *Command {
 	enc.SP().Mailbox(mailbox)
 	if options != nil && len(options.SpecialUse) > 0 {
 		enc.SP().Special('(').Atom("USE").SP().List(len(options.SpecialUse), func(i int) {
-			enc.Atom(string(options.SpecialUse[i])) // TODO: validate attr
+			enc.MailboxAttr(options.SpecialUse[i])
 		}).Special(')')
 	}
 	enc.end()

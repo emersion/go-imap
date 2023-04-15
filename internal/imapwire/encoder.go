@@ -164,23 +164,37 @@ func (enc *Encoder) SeqSet(seqSet imap.SeqSet) *Encoder {
 }
 
 func (enc *Encoder) Flag(flag imap.Flag) *Encoder {
-	if flag != "\\*" {
-		for i := 0; i < len(flag); i++ {
-			ch := flag[i]
-			valid := false
-			switch ch {
-			case '\\':
-				valid = i == 0
-			default:
-				valid = IsAtomChar(ch)
+	if flag != "\\*" && !isValidFlag(string(flag)) {
+		enc.setErr(fmt.Errorf("imapwire: invalid flag %q", flag))
+		return enc
+	}
+	return enc.writeString(string(flag))
+}
+
+func (enc *Encoder) MailboxAttr(attr imap.MailboxAttr) *Encoder {
+	if !strings.HasPrefix(string(attr), "\\") || !isValidFlag(string(attr)) {
+		enc.setErr(fmt.Errorf("imapwire: invalid mailbox attribute %q", attr))
+		return enc
+	}
+	return enc.writeString(string(attr))
+}
+
+// isValidFlag checks whether the provided string satisfies
+// flag-keyword / flag-extension.
+func isValidFlag(s string) bool {
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch == '\\' {
+			if i != 0 {
+				return false
 			}
-			if !valid {
-				enc.setErr(fmt.Errorf("imapwire: character '%v' not allowed in flag", string(ch)))
-				return enc
+		} else {
+			if !IsAtomChar(ch) {
+				return false
 			}
 		}
 	}
-	return enc.Atom(string(flag))
+	return len(s) > 0
 }
 
 func (enc *Encoder) Number(v uint32) *Encoder {

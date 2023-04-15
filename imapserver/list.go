@@ -57,7 +57,7 @@ func (c *Conn) writeList(data *imap.ListData) error {
 
 	enc.Atom("*").SP().Atom("LIST").SP()
 	enc.List(len(data.Attrs), func(i int) {
-		enc.Atom(string(data.Attrs[i])) // TODO: validate attr
+		enc.MailboxAttr(data.Attrs[i])
 	})
 	enc.SP()
 	if data.Delim == 0 {
@@ -104,7 +104,7 @@ func (c *Conn) writeLSub(data *imap.ListData) error {
 
 	enc.Atom("*").SP().Atom("LSUB").SP()
 	enc.List(len(data.Attrs), func(i int) {
-		enc.Atom(string(data.Attrs[i])) // TODO: validate attr
+		enc.MailboxAttr(data.Attrs[i])
 	})
 	enc.SP()
 	if data.Delim == 0 {
