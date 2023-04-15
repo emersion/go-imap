@@ -26,7 +26,7 @@ type Logger interface {
 // The only required field is NewSession.
 type Options struct {
 	// NewSession is called when a client connects.
-	NewSession func(*Conn) (Session, error)
+	NewSession func(*Conn) (Session, *GreetingData, error)
 	// Supported capabilities. If nil, only IMAP4rev1 is advertised. This set
 	// must contain at least IMAP4rev1 or IMAP4rev2.
 	//

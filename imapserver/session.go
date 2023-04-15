@@ -16,6 +16,11 @@ var errAuthFailed = &imap.Error{
 // ErrAuthFailed is returned by Session.Login on authentication failure.
 var ErrAuthFailed = errAuthFailed
 
+// GreetingData is the data associated with an IMAP greeting.
+type GreetingData struct {
+	PreAuth bool
+}
+
 // NumKind describes how a number should be interpreted: either as a sequence
 // number, either as a UID.
 type NumKind int

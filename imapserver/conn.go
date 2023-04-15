@@ -101,8 +101,11 @@ func (c *Conn) serve() {
 		c.server.mutex.Unlock()
 	}()
 
-	var err error
-	c.session, err = c.server.options.NewSession(c)
+	var (
+		greetingData *GreetingData
+		err          error
+	)
+	c.session, greetingData, err = c.server.options.NewSession(c)
 	if err != nil {
 		var (
 			resp    *imap.StatusResponse
@@ -140,7 +143,12 @@ func (c *Conn) serve() {
 	}
 
 	c.state = imap.ConnStateNotAuthenticated
-	if err := c.writeCapabilityOK("", "IMAP server ready"); err != nil {
+	statusType := imap.StatusResponseTypeOK
+	if greetingData != nil && greetingData.PreAuth {
+		c.state = imap.ConnStateAuthenticated
+		statusType = imap.StatusResponseTypePreAuth
+	}
+	if err := c.writeCapabilityStatus("", statusType, "IMAP server ready"); err != nil {
 		c.server.logger().Printf("failed to write greeting: %v", err)
 		return
 	}
@@ -404,10 +412,10 @@ func (c *Conn) writeContReq(text string) error {
 	return writeContReq(enc.Encoder, text)
 }
 
-func (c *Conn) writeCapabilityOK(tag, text string) error {
+func (c *Conn) writeCapabilityStatus(tag string, typ imap.StatusResponseType, text string) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
-	return writeCapabilityOK(enc.Encoder, tag, c.availableCaps(), text)
+	return writeCapabilityStatus(enc.Encoder, tag, typ, c.availableCaps(), text)
 }
 
 func (c *Conn) checkState(state imap.ConnState) error {
@@ -515,11 +523,15 @@ func writeStatusResp(enc *imapwire.Encoder, tag string, statusResp *imap.StatusR
 }
 
 func writeCapabilityOK(enc *imapwire.Encoder, tag string, caps []imap.Cap, text string) error {
+	return writeCapabilityStatus(enc, tag, imap.StatusResponseTypeOK, caps, text)
+}
+
+func writeCapabilityStatus(enc *imapwire.Encoder, tag string, typ imap.StatusResponseType, caps []imap.Cap, text string) error {
 	if tag == "" {
 		tag = "*"
 	}
 
-	enc.Atom(tag).SP().Atom("OK").SP().Special('[').Atom("CAPABILITY")
+	enc.Atom(tag).SP().Atom(string(typ)).SP().Special('[').Atom("CAPABILITY")
 	for _, c := range caps {
 		enc.SP().Atom(string(c))
 	}

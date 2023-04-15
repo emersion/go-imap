@@ -24,5 +24,5 @@ func (c *Conn) handleLogin(tag string, dec *imapwire.Decoder) error {
 		return err
 	}
 	c.state = imap.ConnStateAuthenticated
-	return c.writeCapabilityOK(tag, "Logged in")
+	return c.writeCapabilityStatus(tag, imap.StatusResponseTypeOK, "Logged in")
 }
