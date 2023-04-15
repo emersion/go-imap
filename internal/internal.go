@@ -2,6 +2,8 @@ package internal
 
 import (
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -84,17 +86,17 @@ func ExpectFlag(dec *imapwire.Decoder) (imap.Flag, error) {
 	if isSystem {
 		name = "\\" + name
 	}
-	return imap.Flag(name), nil
+	return canonicalFlag(name), nil
 }
 
 func ExpectMailboxAttrList(dec *imapwire.Decoder) ([]imap.MailboxAttr, error) {
 	var attrs []imap.MailboxAttr
 	err := dec.ExpectList(func() error {
-		flag, err := ExpectMailboxAttr(dec)
+		attr, err := ExpectMailboxAttr(dec)
 		if err != nil {
 			return err
 		}
-		attrs = append(attrs, imap.MailboxAttr(flag))
+		attrs = append(attrs, attr)
 		return nil
 	})
 	return attrs, err
@@ -102,5 +104,71 @@ func ExpectMailboxAttrList(dec *imapwire.Decoder) ([]imap.MailboxAttr, error) {
 
 func ExpectMailboxAttr(dec *imapwire.Decoder) (imap.MailboxAttr, error) {
 	flag, err := ExpectFlag(dec)
-	return imap.MailboxAttr(flag), err
+	return canonicalMailboxAttr(string(flag)), err
+}
+
+var (
+	canonOnce        sync.Once
+	canonFlag        map[string]imap.Flag
+	canonMailboxAttr map[string]imap.MailboxAttr
+)
+
+func canonInit() {
+	flags := []imap.Flag{
+		imap.FlagSeen,
+		imap.FlagAnswered,
+		imap.FlagFlagged,
+		imap.FlagDeleted,
+		imap.FlagDraft,
+		imap.FlagForwarded,
+		imap.FlagMDNSent,
+		imap.FlagJunk,
+		imap.FlagNotJunk,
+		imap.FlagPhishing,
+		imap.FlagImportant,
+	}
+	mailboxAttrs := []imap.MailboxAttr{
+		imap.MailboxAttrNonExistent,
+		imap.MailboxAttrNoInferiors,
+		imap.MailboxAttrNoSelect,
+		imap.MailboxAttrHasChildren,
+		imap.MailboxAttrHasNoChildren,
+		imap.MailboxAttrMarked,
+		imap.MailboxAttrUnmarked,
+		imap.MailboxAttrSubscribed,
+		imap.MailboxAttrRemote,
+		imap.MailboxAttrAll,
+		imap.MailboxAttrArchive,
+		imap.MailboxAttrDrafts,
+		imap.MailboxAttrFlagged,
+		imap.MailboxAttrJunk,
+		imap.MailboxAttrSent,
+		imap.MailboxAttrTrash,
+	}
+
+	canonFlag = make(map[string]imap.Flag)
+	for _, flag := range flags {
+		canonFlag[strings.ToLower(string(flag))] = flag
+	}
+
+	canonMailboxAttr = make(map[string]imap.MailboxAttr)
+	for _, attr := range mailboxAttrs {
+		canonMailboxAttr[strings.ToLower(string(attr))] = attr
+	}
+}
+
+func canonicalFlag(s string) imap.Flag {
+	canonOnce.Do(canonInit)
+	if flag, ok := canonFlag[strings.ToLower(s)]; ok {
+		return flag
+	}
+	return imap.Flag(s)
+}
+
+func canonicalMailboxAttr(s string) imap.MailboxAttr {
+	canonOnce.Do(canonInit)
+	if attr, ok := canonMailboxAttr[strings.ToLower(s)]; ok {
+		return attr
+	}
+	return imap.MailboxAttr(s)
 }
