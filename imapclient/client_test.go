@@ -49,6 +49,30 @@ func ExampleClient() {
 	}
 }
 
+func ExampleClient_pipelining() {
+	var c *imapclient.Client
+
+	uid := uint32(42)
+	fetchItems := []imap.FetchItem{imap.FetchItemEnvelope}
+
+	// Login, select and fetch a message in a single roundtrip
+	loginCmd := c.Login("root", "root")
+	selectCmd := c.Select("INBOX", nil)
+	fetchCmd := c.UIDFetch(imap.SeqSetNum(uid), fetchItems, nil)
+
+	if err := loginCmd.Wait(); err != nil {
+		log.Fatalf("failed to login: %v", err)
+	}
+	if _, err := selectCmd.Wait(); err != nil {
+		log.Fatalf("failed to select INBOX: %v", err)
+	}
+	if messages, err := fetchCmd.Collect(); err != nil {
+		log.Fatalf("failed to fetch message: %v", err)
+	} else {
+		log.Printf("Subject: %v", messages[0].Envelope.Subject)
+	}
+}
+
 func ExampleClient_Append() {
 	var c *imapclient.Client
 
