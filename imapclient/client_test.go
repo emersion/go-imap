@@ -77,6 +77,28 @@ func ExampleClient_Status() {
 	}
 }
 
+func ExampleClient_List_stream() {
+	var c *imapclient.Client
+
+	// ReturnStatus requires server support for IMAP4rev2 or LIST-STATUS
+	listCmd := c.List("", "%", &imap.ListOptions{
+		ReturnStatus: []imap.StatusItem{
+			imap.StatusItemNumMessages,
+			imap.StatusItemNumUnseen,
+		},
+	})
+	for {
+		mbox := listCmd.Next()
+		if mbox == nil {
+			break
+		}
+		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, mbox.Status.NumMessages, mbox.Status.NumUnseen)
+	}
+	if err := listCmd.Close(); err != nil {
+		log.Fatalf("LIST command failed: %v", err)
+	}
+}
+
 func ExampleClient_Store() {
 	var c *imapclient.Client
 
