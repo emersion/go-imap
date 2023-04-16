@@ -262,6 +262,13 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "SEARCH", "UID SEARCH":
 		err = c.handleSearch(tag, dec, numKind)
 	default:
+		if c.state == imap.ConnStateNotAuthenticated {
+			// Don't allow a single unknown command before authentication to
+			// mitigate cross-protocol attacks:
+			// https://www-archive.mozilla.org/projects/netlib/portbanning
+			c.state = imap.ConnStateLogout
+			defer c.Bye("Unknown command")
+		}
 		err = &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown command",
