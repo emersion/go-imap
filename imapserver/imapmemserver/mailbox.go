@@ -282,10 +282,10 @@ func (mbox *MailboxView) Close() {
 	mbox.tracker.Close()
 }
 
-func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) error {
+func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, options *imap.FetchOptions) error {
 	markSeen := false
-	for _, item := range items {
-		if item, ok := item.(*imap.FetchItemBodySection); ok && !item.Peek {
+	for _, bs := range options.BodySection {
+		if !bs.Peek {
 			markSeen = true
 			break
 		}
@@ -303,7 +303,7 @@ func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.Num
 		}
 
 		respWriter := w.CreateMessage(mbox.tracker.EncodeSeqNum(seqNum))
-		err = msg.fetch(respWriter, items)
+		err = msg.fetch(respWriter, options)
 	})
 	return err
 }
@@ -359,7 +359,7 @@ func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.Num
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
 	})
 	if !flags.Silent {
-		return mbox.Fetch(w, numKind, seqSet, []imap.FetchItem{imap.FetchItemFlags}, nil)
+		return mbox.Fetch(w, numKind, seqSet, &imap.FetchOptions{Flags: true})
 	}
 	return nil
 }

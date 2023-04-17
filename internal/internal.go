@@ -15,13 +15,6 @@ const (
 	DateLayout     = "2-Jan-2006"
 )
 
-// Fetch items removed in IMAP4rev2.
-var (
-	FetchItemRFC822       imap.FetchItem = imap.FetchItemKeyword("RFC822")        // equivalent to BODY[]
-	FetchItemRFC822Header imap.FetchItem = imap.FetchItemKeyword("RFC822.HEADER") // equivalent to BODY.PEEK[HEADER]
-	FetchItemRFC822Text   imap.FetchItem = imap.FetchItemKeyword("RFC822.TEXT")   // equivalent to BODY[TEXT]
-)
-
 const FlagRecent imap.Flag = "\\Recent" // removed in IMAP4rev2
 
 func DecodeDateTime(dec *imapwire.Decoder) (time.Time, error) {
