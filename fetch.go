@@ -38,6 +38,7 @@ var (
 	FetchItemInternalDate  FetchItem = FetchItemKeyword("INTERNALDATE")
 	FetchItemRFC822Size    FetchItem = FetchItemKeyword("RFC822.SIZE")
 	FetchItemUID           FetchItem = FetchItemKeyword("UID")
+	FetchItemGmailThreadId FetchItem = FetchItemKeyword("X-GM-THRID")
 )
 
 type PartSpecifier string

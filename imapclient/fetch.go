@@ -252,6 +252,7 @@ var (
 	_ FetchItemData = FetchItemDataRFC822Size{}
 	_ FetchItemData = FetchItemDataUID{}
 	_ FetchItemData = FetchItemDataBodyStructure{}
+	_ FetchItemData = FetchItemDataGmailThreadId{}
 )
 
 type discarder interface {
@@ -339,6 +340,13 @@ type FetchItemDataBinarySectionSize struct {
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
 
+// FetchItemDataGmailThreadId holds data returned by FETCH X-GM-THRID.
+type FetchItemDataGmailThreadId struct {
+	ThreadId uint64
+}
+
+func (FetchItemDataGmailThreadId) fetchItemData() {}
+
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -353,6 +361,7 @@ type FetchMessageBuffer struct {
 	BodySection       map[*imap.FetchItemBodySection][]byte
 	BinarySection     map[*imap.FetchItemBinarySection][]byte
 	BinarySectionSize []FetchItemDataBinarySectionSize
+	GmailThreadId     uint64
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -389,6 +398,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.BodyStructure = item.BodyStructure
 	case FetchItemDataBinarySectionSize:
 		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
+	case FetchItemDataGmailThreadId:
+		buf.GmailThreadId = item.ThreadId
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
@@ -598,6 +609,16 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				Part: part,
 				Size: size,
 			}
+		case imap.FetchItemGmailThreadId:
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+			var threadId int64
+			if !dec.ExpectNumber64(&threadId) {
+				return dec.Err()
+			}
+
+			item = FetchItemDataGmailThreadId{ThreadId: uint64(threadId)}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
