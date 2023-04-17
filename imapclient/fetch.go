@@ -12,28 +12,15 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
-	// Ensure we request UID as the first data item for UID FETCH, to be safer.
-	// We want to get it before any literal.
-	if uid {
-		itemsWithUID := []imap.FetchItem{imap.FetchItemUID}
-		for _, item := range items {
-			if item != imap.FetchItemUID {
-				itemsWithUID = append(itemsWithUID, item)
-			}
-		}
-		items = itemsWithUID
-	}
-
+func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
 	cmd := &FetchCommand{
 		uid:    uid,
 		seqSet: seqSet,
 		msgs:   make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
-	enc.SP().SeqSet(seqSet).SP().List(len(items), func(i int) {
-		writeFetchItem(enc.Encoder, items[i])
-	})
+	enc.SP().SeqSet(seqSet).SP()
+	writeFetchItems(enc.Encoder, uid, options)
 	enc.end()
 	return cmd
 }
@@ -44,68 +31,99 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, items []imap.FetchItem, opt
 // defer a call to FetchCommand.Close.
 //
 // A nil options pointer is equivalent to a zero options value.
-func (c *Client) Fetch(seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
-	return c.fetch(false, seqSet, items, options)
+func (c *Client) Fetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+	return c.fetch(false, seqSet, options)
 }
 
 // UIDFetch sends a UID FETCH command.
 //
 // See Fetch.
-func (c *Client) UIDFetch(seqSet imap.SeqSet, items []imap.FetchItem, options *imap.FetchOptions) *FetchCommand {
-	return c.fetch(true, seqSet, items, options)
+func (c *Client) UIDFetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+	return c.fetch(true, seqSet, options)
 }
 
-func writeFetchItem(enc *imapwire.Encoder, item imap.FetchItem) {
-	switch item := item.(type) {
-	case imap.FetchItemKeyword:
-		enc.Atom(string(item))
-	case *imap.FetchItemBodySection:
-		enc.Atom("BODY")
-		if item.Peek {
-			enc.Atom(".PEEK")
-		}
-		enc.Special('[')
-		writeSectionPart(enc, item.Part)
-		if len(item.Part) > 0 && item.Specifier != imap.PartSpecifierNone {
-			enc.Special('.')
-		}
-		if item.Specifier != imap.PartSpecifierNone {
-			enc.Atom(string(item.Specifier))
+func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions) {
+	listEnc := enc.BeginList()
 
-			var headerList []string
-			if len(item.HeaderFields) > 0 {
-				headerList = item.HeaderFields
-				enc.Atom(".FIELDS")
-			} else if len(item.HeaderFieldsNot) > 0 {
-				headerList = item.HeaderFieldsNot
-				enc.Atom(".FIELDS.NOT")
-			}
-
-			if len(headerList) > 0 {
-				enc.SP().List(len(headerList), func(i int) {
-					enc.String(headerList[i])
-				})
-			}
-		}
-		enc.Special(']')
-		writeSectionPartial(enc, item.Partial)
-	case *imap.FetchItemBinarySection:
-		enc.Atom("BINARY")
-		if item.Peek {
-			enc.Atom(".PEEK")
-		}
-		enc.Special('[')
-		writeSectionPart(enc, item.Part)
-		enc.Special(']')
-		writeSectionPartial(enc, item.Partial)
-	case *imap.FetchItemBinarySectionSize:
-		enc.Atom("BINARY.SIZE")
-		enc.Special('[')
-		writeSectionPart(enc, item.Part)
-		enc.Special(']')
-	default:
-		panic(fmt.Errorf("imapclient: unknown fetch item type %T", item))
+	// Ensure we request UID as the first data item for UID FETCH, to be safer.
+	// We want to get it before any literal.
+	if options.UID || uid {
+		listEnc.Item().Atom("UID")
 	}
+
+	m := map[string]bool{
+		"BODY":          options.BodyStructure != nil && !options.BodyStructure.Extended,
+		"BODYSTRUCTURE": options.BodyStructure != nil && options.BodyStructure.Extended,
+		"ENVELOPE":      options.Envelope,
+		"FLAGS":         options.Flags,
+		"INTERNALDATE":  options.InternalDate,
+		"RFC822.SIZE":   options.RFC822Size,
+	}
+	for k, req := range m {
+		if req {
+			listEnc.Item().Atom(k)
+		}
+	}
+
+	for _, bs := range options.BodySection {
+		writeFetchItemBodySection(listEnc.Item(), bs)
+	}
+	for _, bs := range options.BinarySection {
+		writeFetchItemBinarySection(listEnc.Item(), bs)
+	}
+	for _, bss := range options.BinarySectionSize {
+		writeFetchItemBinarySectionSize(listEnc.Item(), bss)
+	}
+}
+
+func writeFetchItemBodySection(enc *imapwire.Encoder, item *imap.FetchItemBodySection) {
+	enc.Atom("BODY")
+	if item.Peek {
+		enc.Atom(".PEEK")
+	}
+	enc.Special('[')
+	writeSectionPart(enc, item.Part)
+	if len(item.Part) > 0 && item.Specifier != imap.PartSpecifierNone {
+		enc.Special('.')
+	}
+	if item.Specifier != imap.PartSpecifierNone {
+		enc.Atom(string(item.Specifier))
+
+		var headerList []string
+		if len(item.HeaderFields) > 0 {
+			headerList = item.HeaderFields
+			enc.Atom(".FIELDS")
+		} else if len(item.HeaderFieldsNot) > 0 {
+			headerList = item.HeaderFieldsNot
+			enc.Atom(".FIELDS.NOT")
+		}
+
+		if len(headerList) > 0 {
+			enc.SP().List(len(headerList), func(i int) {
+				enc.String(headerList[i])
+			})
+		}
+	}
+	enc.Special(']')
+	writeSectionPartial(enc, item.Partial)
+}
+
+func writeFetchItemBinarySection(enc *imapwire.Encoder, item *imap.FetchItemBinarySection) {
+	enc.Atom("BINARY")
+	if item.Peek {
+		enc.Atom(".PEEK")
+	}
+	enc.Special('[')
+	writeSectionPart(enc, item.Part)
+	enc.Special(']')
+	writeSectionPartial(enc, item.Partial)
+}
+
+func writeFetchItemBinarySectionSize(enc *imapwire.Encoder, item *imap.FetchItemBinarySectionSize) {
+	enc.Atom("BINARY.SIZE")
+	enc.Special('[')
+	writeSectionPart(enc, item.Part)
+	enc.Special(']')
 }
 
 func writeSectionPart(enc *imapwire.Encoder, part []int) {
@@ -461,8 +479,8 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			item FetchItemData
 			done chan struct{}
 		)
-		switch attName := imap.FetchItemKeyword(attName); attName {
-		case imap.FetchItemFlags:
+		switch attName {
+		case "FLAGS":
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -473,7 +491,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			}
 
 			item = FetchItemDataFlags{Flags: flags}
-		case imap.FetchItemEnvelope:
+		case "ENVELOPE":
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -484,7 +502,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			}
 
 			item = FetchItemDataEnvelope{Envelope: envelope}
-		case imap.FetchItemInternalDate:
+		case "INTERNALDATE":
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -495,14 +513,14 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			}
 
 			item = FetchItemDataInternalDate{Time: t}
-		case imap.FetchItemRFC822Size:
+		case "RFC822.SIZE":
 			var size int64
 			if !dec.ExpectSP() || !dec.ExpectNumber64(&size) {
 				return dec.Err()
 			}
 
 			item = FetchItemDataRFC822Size{Size: size}
-		case imap.FetchItemUID:
+		case "UID":
 			if !dec.ExpectSP() || !dec.ExpectNumber(&uid) {
 				return dec.Err()
 			}
@@ -510,7 +528,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			item = FetchItemDataUID{UID: uid}
 		case "BODY", "BINARY":
 			if dec.Special('[') {
-				var section imap.FetchItem
+				var section interface{}
 				switch attName {
 				case "BODY":
 					var err error
@@ -570,7 +588,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 			fallthrough
-		case imap.FetchItemBodyStructure:
+		case "BODYSTRUCTURE":
 			if !dec.ExpectSP() {
 				return dec.Err()
 			}
@@ -582,7 +600,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 			item = FetchItemDataBodyStructure{
 				BodyStructure: bodyStruct,
-				IsExtended:    attName == imap.FetchItemBodyStructure,
+				IsExtended:    attName == "BODYSTRUCTURE",
 			}
 		case "BINARY.SIZE":
 			part, dot := readSectionPart(dec)

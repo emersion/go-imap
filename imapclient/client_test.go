@@ -37,8 +37,8 @@ func ExampleClient() {
 
 	if selectedMbox.NumMessages > 0 {
 		seqSet := imap.SeqSetNum(1)
-		fetchItems := []imap.FetchItem{imap.FetchItemEnvelope}
-		messages, err := c.Fetch(seqSet, fetchItems, nil).Collect()
+		fetchOptions := &imap.FetchOptions{Envelope: true}
+		messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 		if err != nil {
 			log.Fatalf("failed to fetch first message in INBOX: %v", err)
 		}
@@ -54,12 +54,12 @@ func ExampleClient_pipelining() {
 	var c *imapclient.Client
 
 	uid := uint32(42)
-	fetchItems := []imap.FetchItem{imap.FetchItemEnvelope}
+	fetchOptions := &imap.FetchOptions{Envelope: true}
 
 	// Login, select and fetch a message in a single roundtrip
 	loginCmd := c.Login("root", "root")
 	selectCmd := c.Select("INBOX", nil)
-	fetchCmd := c.UIDFetch(imap.SeqSetNum(uid), fetchItems, nil)
+	fetchCmd := c.UIDFetch(imap.SeqSetNum(uid), fetchOptions)
 
 	if err := loginCmd.Wait(); err != nil {
 		log.Fatalf("failed to login: %v", err)
@@ -142,12 +142,14 @@ func ExampleClient_Fetch() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
-	fetchItems := []imap.FetchItem{
-		imap.FetchItemFlags,
-		imap.FetchItemEnvelope,
-		&imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader},
+	fetchOptions := &imap.FetchOptions{
+		Flags:    true,
+		Envelope: true,
+		BodySection: []*imap.FetchItemBodySection{
+			{Specifier: imap.PartSpecifierHeader},
+		},
 	}
-	messages, err := c.Fetch(seqSet, fetchItems, nil).Collect()
+	messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 	if err != nil {
 		log.Fatalf("FETCH command failed: %v", err)
 	}
@@ -168,11 +170,11 @@ func ExampleClient_Fetch_stream() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
-	fetchItems := []imap.FetchItem{
-		imap.FetchItemUID,
-		&imap.FetchItemBodySection{},
+	fetchOptions := &imap.FetchOptions{
+		UID:         true,
+		BodySection: []*imap.FetchItemBodySection{{}},
 	}
-	fetchCmd := c.Fetch(seqSet, fetchItems, nil)
+	fetchCmd := c.Fetch(seqSet, fetchOptions)
 	for {
 		msg := fetchCmd.Next()
 		if msg == nil {

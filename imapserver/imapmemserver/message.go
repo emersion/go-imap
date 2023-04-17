@@ -27,52 +27,41 @@ type message struct {
 	flags map[imap.Flag]struct{}
 }
 
-func (msg *message) fetch(w *imapserver.FetchResponseWriter, items []imap.FetchItem) error {
+func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.FetchOptions) error {
 	w.WriteUID(msg.uid)
 
-	for _, item := range items {
-		if err := msg.fetchItem(w, item); err != nil {
-			return err
-		}
+	if options.Flags {
+		w.WriteFlags(msg.flagList())
+	}
+	if options.InternalDate {
+		w.WriteInternalDate(msg.t)
+	}
+	if options.RFC822Size {
+		w.WriteRFC822Size(int64(len(msg.buf)))
+	}
+	if options.Envelope {
+		w.WriteEnvelope(msg.envelope())
+	}
+	if bs := options.BodyStructure; bs != nil {
+		w.WriteBodyStructure(msg.bodyStructure(bs.Extended))
 	}
 
-	return w.Close()
-}
-
-func (msg *message) fetchItem(w *imapserver.FetchResponseWriter, item imap.FetchItem) error {
-	switch item := item.(type) {
-	case *imap.FetchItemBodySection:
-		buf := msg.bodySection(item)
-		wc := w.WriteBodySection(item, int64(len(buf)))
+	for _, bs := range options.BodySection {
+		buf := msg.bodySection(bs)
+		wc := w.WriteBodySection(bs, int64(len(buf)))
 		_, writeErr := wc.Write(buf)
 		closeErr := wc.Close()
 		if writeErr != nil {
 			return writeErr
 		}
-		return closeErr
-	case *imap.FetchItemBinarySection:
-		panic("TODO")
-	case *imap.FetchItemBinarySectionSize:
-		panic("TODO")
+		if closeErr != nil {
+			return closeErr
+		}
 	}
 
-	switch item {
-	case imap.FetchItemUID:
-		// always included
-	case imap.FetchItemFlags:
-		w.WriteFlags(msg.flagList())
-	case imap.FetchItemInternalDate:
-		w.WriteInternalDate(msg.t)
-	case imap.FetchItemRFC822Size:
-		w.WriteRFC822Size(int64(len(msg.buf)))
-	case imap.FetchItemEnvelope:
-		w.WriteEnvelope(msg.envelope())
-	case imap.FetchItemBodyStructure, imap.FetchItemBody:
-		w.WriteBodyStructure(msg.bodyStructure(item == imap.FetchItemBodyStructure))
-	default:
-		panic(fmt.Errorf("unknown FETCH item: %#v", item))
-	}
-	return nil
+	// TODO: BinarySection, BinarySectionSize
+
+	return w.Close()
 }
 
 func (msg *message) envelope() *imap.Envelope {

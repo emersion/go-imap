@@ -15,44 +15,63 @@ import (
 
 const envelopeDateLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
 
+type fetchWriterOptions struct {
+	bodyStructure struct {
+		extended    bool // BODYSTRUCTURE
+		nonExtended bool // BODY
+	}
+	obsolete map[*imap.FetchItemBodySection]string
+}
+
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	var seqSet imap.SeqSet
 	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 
-	var items []imap.FetchItem
+	var options imap.FetchOptions
+	writerOptions := fetchWriterOptions{obsolete: make(map[*imap.FetchItemBodySection]string)}
 	isList, err := dec.List(func() error {
-		item, err := readFetchAtt(dec)
+		name, err := readFetchAttName(dec)
 		if err != nil {
 			return err
 		}
-		switch item {
-		case imap.FetchItemAll, imap.FetchItemFast, imap.FetchItemFull:
+		switch name {
+		case "ALL", "FAST", "FULL":
 			return newClientBugError("FETCH macros are not allowed in a list")
 		}
-		items = append(items, item)
-		return nil
+		return handleFetchAtt(dec, name, &options, &writerOptions)
 	})
 	if err != nil {
 		return err
 	}
 	if !isList {
-		item, err := readFetchAtt(dec)
+		name, err := readFetchAttName(dec)
 		if err != nil {
 			return err
 		}
 
 		// Handle macros
-		switch item {
-		case imap.FetchItemAll:
-			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size, imap.FetchItemEnvelope)
-		case imap.FetchItemFast:
-			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size)
-		case imap.FetchItemFull:
-			items = append(items, imap.FetchItemFlags, imap.FetchItemInternalDate, imap.FetchItemRFC822Size, imap.FetchItemEnvelope, imap.FetchItemBody)
+		switch name {
+		case "ALL":
+			options.Flags = true
+			options.InternalDate = true
+			options.RFC822Size = true
+			options.Envelope = true
+		case "FAST":
+			options.Flags = true
+			options.InternalDate = true
+			options.RFC822Size = true
+		case "FULL":
+			options.Flags = true
+			options.InternalDate = true
+			options.RFC822Size = true
+			options.Envelope = true
+			handleFetchBodyStructure(&options, &writerOptions, false)
 		default:
-			items = append(items, item)
+			if err := handleFetchAtt(dec, name, &options, &writerOptions); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -64,125 +83,122 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	}
 
-	obsolete := make(map[imap.FetchItem]imap.FetchItemKeyword)
-	for i, item := range items {
-		var repl imap.FetchItem
-		switch item {
-		case internal.FetchItemRFC822:
-			repl = &imap.FetchItemBodySection{}
-		case internal.FetchItemRFC822Header:
-			repl = &imap.FetchItemBodySection{
-				Peek:      true,
-				Specifier: imap.PartSpecifierHeader,
-			}
-		case internal.FetchItemRFC822Text:
-			repl = &imap.FetchItemBodySection{
-				Specifier: imap.PartSpecifierText,
-			}
-		}
-		if repl != nil {
-			items[i] = repl
-			obsolete[repl] = item.(imap.FetchItemKeyword)
-		}
-	}
-
 	if numKind == NumKindUID {
-		itemsWithUID := []imap.FetchItem{imap.FetchItemUID}
-		for _, item := range items {
-			if item != imap.FetchItemUID {
-				itemsWithUID = append(itemsWithUID, item)
-			}
-		}
-		items = itemsWithUID
+		options.UID = true
 	}
 
-	w := &FetchWriter{conn: c, obsolete: obsolete}
-	options := imap.FetchOptions{}
-	if err := c.session.Fetch(w, numKind, seqSet, items, &options); err != nil {
+	w := &FetchWriter{conn: c, options: writerOptions}
+	if err := c.session.Fetch(w, numKind, seqSet, &options); err != nil {
 		return err
 	}
 	return nil
 }
 
-func readFetchAtt(dec *imapwire.Decoder) (imap.FetchItem, error) {
-	var attName string
-	if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
-		return nil, dec.Err()
-	}
-	attName = strings.ToUpper(attName)
-
-	// Keyword fetch items are variables: return the variable so that it can be
-	// compared directly
-	keywords := map[imap.FetchItemKeyword]imap.FetchItem{
-		imap.FetchItemAll.(imap.FetchItemKeyword):              imap.FetchItemAll,
-		imap.FetchItemFast.(imap.FetchItemKeyword):             imap.FetchItemFast,
-		imap.FetchItemFull.(imap.FetchItemKeyword):             imap.FetchItemFull,
-		imap.FetchItemBodyStructure.(imap.FetchItemKeyword):    imap.FetchItemBodyStructure,
-		imap.FetchItemEnvelope.(imap.FetchItemKeyword):         imap.FetchItemEnvelope,
-		imap.FetchItemFlags.(imap.FetchItemKeyword):            imap.FetchItemFlags,
-		imap.FetchItemInternalDate.(imap.FetchItemKeyword):     imap.FetchItemInternalDate,
-		imap.FetchItemRFC822Size.(imap.FetchItemKeyword):       imap.FetchItemRFC822Size,
-		imap.FetchItemUID.(imap.FetchItemKeyword):              imap.FetchItemUID,
-		internal.FetchItemRFC822.(imap.FetchItemKeyword):       internal.FetchItemRFC822,
-		internal.FetchItemRFC822Header.(imap.FetchItemKeyword): internal.FetchItemRFC822Header,
-		internal.FetchItemRFC822Text.(imap.FetchItemKeyword):   internal.FetchItemRFC822Text,
-	}
-	if item, ok := keywords[imap.FetchItemKeyword(attName)]; ok {
-		return item, nil
-	}
-
-	switch attName := imap.FetchItemKeyword(attName); attName {
+func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOptions, writerOptions *fetchWriterOptions) error {
+	switch attName {
+	case "BODYSTRUCTURE":
+		handleFetchBodyStructure(options, writerOptions, true)
+	case "ENVELOPE":
+		options.Envelope = true
+	case "FLAGS":
+		options.Flags = true
+	case "INTERNALDATE":
+		options.InternalDate = true
+	case "RFC822.SIZE":
+		options.RFC822Size = true
+	case "UID":
+		options.UID = true
+	case "RFC822": // equivalent to BODY[]
+		bs := &imap.FetchItemBodySection{}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
+	case "RFC822.HEADER": // equivalent to BODY.PEEK[HEADER]
+		bs := &imap.FetchItemBodySection{
+			Specifier: imap.PartSpecifierHeader,
+			Peek:      true,
+		}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
+	case "RFC822.TEXT": // equivalent to BODY[TEXT]
+		bs := &imap.FetchItemBodySection{
+			Specifier: imap.PartSpecifierText,
+		}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
 	case "BINARY", "BINARY.PEEK":
 		part, err := readSectionBinary(dec)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		partial, err := maybeReadPartial(dec)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return &imap.FetchItemBinarySection{
+		bs := &imap.FetchItemBinarySection{
 			Part:    part,
 			Partial: partial,
 			Peek:    attName == "BINARY.PEEK",
-		}, nil
+		}
+		options.BinarySection = append(options.BinarySection, bs)
 	case "BINARY.SIZE":
 		part, err := readSectionBinary(dec)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return &imap.FetchItemBinarySectionSize{Part: part}, nil
+		bss := &imap.FetchItemBinarySectionSize{Part: part}
+		options.BinarySectionSize = append(options.BinarySectionSize, bss)
 	case "BODY":
 		if !dec.Special('[') {
-			return attName, nil
+			handleFetchBodyStructure(options, writerOptions, false)
+			return nil
 		}
 		section := imap.FetchItemBodySection{}
 		err := readSection(dec, &section)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		section.Partial, err = maybeReadPartial(dec)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return &section, nil
+		options.BodySection = append(options.BodySection, &section)
 	case "BODY.PEEK":
 		if !dec.ExpectSpecial('[') {
-			return nil, dec.Err()
+			return dec.Err()
 		}
 		section := imap.FetchItemBodySection{Peek: true}
 		err := readSection(dec, &section)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		section.Partial, err = maybeReadPartial(dec)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return &section, nil
+		options.BodySection = append(options.BodySection, &section)
 	default:
-		return nil, newClientBugError("Unknown FETCH data item")
+		return newClientBugError("Unknown FETCH data item")
 	}
+	return nil
+}
+
+func handleFetchBodyStructure(options *imap.FetchOptions, writerOptions *fetchWriterOptions, extended bool) {
+	if options.BodyStructure == nil || extended {
+		options.BodyStructure = &imap.FetchItemBodyStructure{Extended: extended}
+	}
+	if extended {
+		writerOptions.bodyStructure.extended = true
+	} else {
+		writerOptions.bodyStructure.nonExtended = true
+	}
+}
+
+func readFetchAttName(dec *imapwire.Decoder) (string, error) {
+	var attName string
+	if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
+		return "", dec.Err()
+	}
+	return strings.ToUpper(attName), nil
 }
 
 func isMsgAttNameChar(ch byte) bool {
@@ -304,8 +320,8 @@ func maybeReadPartial(dec *imapwire.Decoder) (*imap.SectionPartial, error) {
 
 // FetchWriter writes FETCH responses.
 type FetchWriter struct {
-	conn     *Conn
-	obsolete map[imap.FetchItem]imap.FetchItemKeyword
+	conn    *Conn
+	options fetchWriterOptions
 }
 
 // CreateMessage writes a FETCH response for a message.
@@ -314,14 +330,15 @@ type FetchWriter struct {
 func (cmd *FetchWriter) CreateMessage(seqNum uint32) *FetchResponseWriter {
 	enc := newResponseEncoder(cmd.conn)
 	enc.Atom("*").SP().Number(seqNum).SP().Atom("FETCH").SP().Special('(')
-	return &FetchResponseWriter{enc: enc, obsolete: cmd.obsolete}
+	return &FetchResponseWriter{enc: enc, options: cmd.options}
 }
 
 // FetchResponseWriter writes a single FETCH response for a message.
 type FetchResponseWriter struct {
-	enc      *responseEncoder
-	hasItem  bool
-	obsolete map[imap.FetchItem]imap.FetchItemKeyword
+	enc     *responseEncoder
+	options fetchWriterOptions
+
+	hasItem bool
 }
 
 func (w *FetchResponseWriter) writeItemSep() {
@@ -365,8 +382,8 @@ func (w *FetchResponseWriter) WriteBodySection(section *imap.FetchItemBodySectio
 	w.writeItemSep()
 	enc := w.enc.Encoder
 
-	if obs, ok := w.obsolete[section]; ok {
-		enc.Atom(string(obs))
+	if obs, ok := w.options.obsolete[section]; ok {
+		enc.Atom(obs)
 	} else {
 		writeItemBodySection(enc, section)
 	}
@@ -442,14 +459,27 @@ func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 // WriteBodyStructure writes the message's body structure (either BODYSTRUCTURE
 // or BODY).
 func (w *FetchResponseWriter) WriteBodyStructure(bs imap.BodyStructure) {
-	var extended bool
-	switch bs := bs.(type) {
-	case *imap.BodyStructureSinglePart:
-		extended = bs.Extended != nil
-	case *imap.BodyStructureMultiPart:
-		extended = bs.Extended != nil
+	if w.options.bodyStructure.nonExtended {
+		w.writeBodyStructure(bs, false)
 	}
 
+	if w.options.bodyStructure.extended {
+		var isExtended bool
+		switch bs := bs.(type) {
+		case *imap.BodyStructureSinglePart:
+			isExtended = bs.Extended != nil
+		case *imap.BodyStructureMultiPart:
+			isExtended = bs.Extended != nil
+		}
+		if !isExtended {
+			panic("imapserver: client requested extended body structure but a non-extended one is written back")
+		}
+
+		w.writeBodyStructure(bs, true)
+	}
+}
+
+func (w *FetchResponseWriter) writeBodyStructure(bs imap.BodyStructure, extended bool) {
 	item := "BODY"
 	if extended {
 		item = "BODYSTRUCTURE"

@@ -7,39 +7,22 @@ import (
 )
 
 // FetchOptions contains options for the FETCH command.
-type FetchOptions struct{}
-
-// FetchItem is a message data item which can be requested by a FETCH command.
-type FetchItem interface {
-	fetchItem()
+type FetchOptions struct {
+	// Fields to fetch
+	BodyStructure     *FetchItemBodyStructure
+	Envelope          bool
+	Flags             bool
+	InternalDate      bool
+	RFC822Size        bool
+	UID               bool
+	BodySection       []*FetchItemBodySection
+	BinarySection     []*FetchItemBinarySection     // requires IMAP4rev2 or BINARY
+	BinarySectionSize []*FetchItemBinarySectionSize // requires IMAP4rev2 or BINARY
 }
 
-var (
-	_ FetchItem = FetchItemKeyword("")
-	_ FetchItem = (*FetchItemBodySection)(nil)
-	_ FetchItem = (*FetchItemBinarySection)(nil)
-	_ FetchItem = (*FetchItemBinarySectionSize)(nil)
-)
-
-// FetchItemKeyword is a FETCH item described by a single keyword.
-type FetchItemKeyword string
-
-func (FetchItemKeyword) fetchItem() {}
-
-var (
-	// Macros
-	FetchItemAll  FetchItem = FetchItemKeyword("ALL")
-	FetchItemFast FetchItem = FetchItemKeyword("FAST")
-	FetchItemFull FetchItem = FetchItemKeyword("FULL")
-
-	FetchItemBody          FetchItem = FetchItemKeyword("BODY")
-	FetchItemBodyStructure FetchItem = FetchItemKeyword("BODYSTRUCTURE")
-	FetchItemEnvelope      FetchItem = FetchItemKeyword("ENVELOPE")
-	FetchItemFlags         FetchItem = FetchItemKeyword("FLAGS")
-	FetchItemInternalDate  FetchItem = FetchItemKeyword("INTERNALDATE")
-	FetchItemRFC822Size    FetchItem = FetchItemKeyword("RFC822.SIZE")
-	FetchItemUID           FetchItem = FetchItemKeyword("UID")
-)
+type FetchItemBodyStructure struct {
+	Extended bool
+}
 
 type PartSpecifier string
 
@@ -64,8 +47,6 @@ type FetchItemBodySection struct {
 	Peek            bool
 }
 
-func (*FetchItemBodySection) fetchItem() {}
-
 // FetchItemBinarySection is a FETCH BINARY[] data item.
 type FetchItemBinarySection struct {
 	Part    []int
@@ -73,14 +54,10 @@ type FetchItemBinarySection struct {
 	Peek    bool
 }
 
-func (*FetchItemBinarySection) fetchItem() {}
-
 // FetchItemBinarySectionSize is a FETCH BINARY.SIZE[] data item.
 type FetchItemBinarySectionSize struct {
 	Part []int
 }
-
-func (*FetchItemBinarySectionSize) fetchItem() {}
 
 // Envelope is the envelope structure of a message.
 type Envelope struct {
