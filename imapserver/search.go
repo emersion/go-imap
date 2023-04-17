@@ -20,9 +20,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		extended bool
 	)
 	if maybeReadSearchKeyAtom(dec, &atom) && strings.EqualFold(atom, "RETURN") {
-		var err error
-		options.Return, err = readSearchReturnOpts(dec)
-		if err != nil {
+		if err := readSearchReturnOpts(dec, &options); err != nil {
 			return fmt.Errorf("in search-return-opts: %w", err)
 		}
 		if !dec.ExpectSP() {
@@ -77,6 +75,11 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		return err
 	}
 
+	// If no return option is specified, ALL is assumed
+	if !options.ReturnMin && !options.ReturnMax && !options.ReturnAll && !options.ReturnCount {
+		options.ReturnAll = true
+	}
+
 	data, err := c.session.Search(numKind, &criteria, &options)
 	if err != nil {
 		return err
@@ -93,11 +96,6 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
-	returnOpts := make(map[imap.SearchReturnOption]bool)
-	for _, opt := range options.Return {
-		returnOpts[opt] = true
-	}
-
 	enc.Atom("*").SP().Atom("ESEARCH")
 	if tag != "" {
 		enc.SP().Special('(').Atom("TAG").SP().Atom(tag).Special(')')
@@ -105,16 +103,16 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if data.UID {
 		enc.SP().Atom("UID")
 	}
-	if (returnOpts[imap.SearchReturnAll] || len(options.Return) == 0) && len(data.All) > 0 {
+	if options.ReturnAll && len(data.All) > 0 {
 		enc.SP().Atom("ALL").SP().SeqSet(data.All)
 	}
-	if returnOpts[imap.SearchReturnMin] && data.Min > 0 {
+	if options.ReturnMin && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
 	}
-	if returnOpts[imap.SearchReturnMax] && data.Max > 0 {
+	if options.ReturnMax && data.Max > 0 {
 		enc.SP().Atom("MAX").SP().Number(data.Max)
 	}
-	if returnOpts[imap.SearchReturnCount] {
+	if options.ReturnCount {
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
 	}
 	return enc.CRLF()
@@ -136,25 +134,29 @@ func (c *Conn) writeSearch(seqSet imap.SeqSet) error {
 	return enc.CRLF()
 }
 
-func readSearchReturnOpts(dec *imapwire.Decoder) ([]imap.SearchReturnOption, error) {
+func readSearchReturnOpts(dec *imapwire.Decoder, options *imap.SearchOptions) error {
 	if !dec.ExpectSP() {
-		return nil, dec.Err()
+		return dec.Err()
 	}
-	var l []imap.SearchReturnOption
-	err := dec.ExpectList(func() error {
+	return dec.ExpectList(func() error {
 		var name string
 		if !dec.ExpectAtom(&name) {
 			return dec.Err()
 		}
-		switch opt := imap.SearchReturnOption(strings.ToUpper(name)); opt {
-		case imap.SearchReturnMin, imap.SearchReturnMax, imap.SearchReturnAll, imap.SearchReturnCount:
-			l = append(l, opt)
+		switch strings.ToUpper(name) {
+		case "MIN":
+			options.ReturnMin = true
+		case "MAX":
+			options.ReturnMax = true
+		case "ALL":
+			options.ReturnAll = true
+		case "COUNT":
+			options.ReturnCount = true
 		default:
 			return newClientBugError("unknown SEARCH RETURN option")
 		}
 		return nil
 	})
-	return l, err
 }
 
 func maybeReadSearchKeyAtom(dec *imapwire.Decoder, ptr *string) bool {

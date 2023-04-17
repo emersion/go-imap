@@ -11,6 +11,27 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
+func returnSearchOptions(options *imap.SearchOptions) []string {
+	if options == nil {
+		return nil
+	}
+
+	m := map[string]bool{
+		"MIN":   options.ReturnMin,
+		"MAX":   options.ReturnMax,
+		"ALL":   options.ReturnAll,
+		"COUNT": options.ReturnCount,
+	}
+
+	var l []string
+	for k, ret := range m {
+		if ret {
+			l = append(l, k)
+		}
+	}
+	return l
+}
+
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	// TODO: add support for SEARCHRES
 
@@ -29,9 +50,9 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.S
 
 	cmd := &SearchCommand{}
 	enc := c.beginCommand(uidCmdName("SEARCH", uid), cmd)
-	if options != nil && len(options.Return) > 0 {
-		enc.SP().Atom("RETURN").SP().List(len(options.Return), func(i int) {
-			enc.Atom(string(options.Return[i]))
+	if returnOpts := returnSearchOptions(options); len(returnOpts) > 0 {
+		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
+			enc.Atom(returnOpts[i])
 		})
 	}
 	enc.SP()
@@ -233,24 +254,24 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 		}
 	}
 	for {
-		switch returnOpt := imap.SearchReturnOption(name); returnOpt {
-		case imap.SearchReturnMin:
+		switch strings.ToUpper(name) {
+		case "MIN":
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()
 			}
 			data.Min = num
-		case imap.SearchReturnMax:
+		case "MAX":
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()
 			}
 			data.Max = num
-		case imap.SearchReturnAll:
+		case "ALL":
 			if !dec.ExpectSeqSet(&data.All) {
 				return "", nil, dec.Err()
 			}
-		case imap.SearchReturnCount:
+		case "COUNT":
 			var num uint32
 			if !dec.ExpectNumber(&num) {
 				return "", nil, dec.Err()

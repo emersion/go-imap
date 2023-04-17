@@ -4,20 +4,13 @@ import (
 	"time"
 )
 
-// SearchReturnOption indicates what kind of results to return from a SEARCH
-// command.
-type SearchReturnOption string
-
-const (
-	SearchReturnMin   SearchReturnOption = "MIN"
-	SearchReturnMax   SearchReturnOption = "MAX"
-	SearchReturnAll   SearchReturnOption = "ALL"
-	SearchReturnCount SearchReturnOption = "COUNT"
-)
-
 // SearchOptions contains options for the SEARCH command.
 type SearchOptions struct {
-	Return []SearchReturnOption // requires IMAP4rev2 or ESEARCH
+	// Requires IMAP4rev2 or ESEARCH
+	ReturnMin   bool
+	ReturnMax   bool
+	ReturnAll   bool
+	ReturnCount bool
 }
 
 // SearchCriteria is a criteria for the SEARCH command.
