@@ -35,7 +35,7 @@ func main() {
 
 	var tlsConfig *tls.Config
 	if tlsCert != "" || tlsKey != "" {
-		cert, err := tls.LoadX509KeyPair("../tlstunnel/cert.pem", "../tlstunnel/key.pem")
+		cert, err := tls.LoadX509KeyPair(tlsCert, tlsKey)
 		if err != nil {
 			log.Fatalf("Failed to load TLS key pair: %v", err)
 		}
