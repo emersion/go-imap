@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	netmail "net/mail"
 	"strings"
 	"time"
 
@@ -362,8 +363,9 @@ func matchBytes(buf []byte, patterns []string) bool {
 }
 
 func getEnvelope(h textproto.Header) *imap.Envelope {
+	date, _ := netmail.ParseDate(h.Get("Date"))
 	return &imap.Envelope{
-		Date:      h.Get("Date"),
+		Date:      date,
 		Subject:   h.Get("Subject"),
 		From:      parseAddressList(h.Get("From")),
 		Sender:    parseAddressList(h.Get("Sender")),

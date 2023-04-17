@@ -3,6 +3,7 @@ package imap
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // FetchOptions contains options for the FETCH command.
@@ -83,7 +84,7 @@ func (*FetchItemBinarySectionSize) fetchItem() {}
 
 // Envelope is the envelope structure of a message.
 type Envelope struct {
-	Date      string // see net/mail.ParseDate
+	Date      time.Time
 	Subject   string
 	From      []Address
 	Sender    []Address

@@ -3,6 +3,7 @@ package imapclient
 import (
 	"fmt"
 	"io"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -632,11 +633,12 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, erro
 		return nil, dec.Err()
 	}
 
-	var subject string
-	if !dec.ExpectNString(&envelope.Date) || !dec.ExpectSP() || !dec.ExpectNString(&subject) || !dec.ExpectSP() {
+	var date, subject string
+	if !dec.ExpectNString(&date) || !dec.ExpectSP() || !dec.ExpectNString(&subject) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
 	// TODO: handle error
+	envelope.Date, _ = mail.ParseDate(date)
 	envelope.Subject, _ = options.decodeText(subject)
 
 	addrLists := []struct {

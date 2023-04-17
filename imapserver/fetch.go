@@ -13,6 +13,8 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
+const envelopeDateLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
+
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	var seqSet imap.SeqSet
 	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
@@ -485,7 +487,11 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 	}
 
 	enc.Special('(')
-	writeNString(enc, envelope.Date)
+	if envelope.Date.IsZero() {
+		enc.NIL()
+	} else {
+		enc.String(envelope.Date.Format(envelopeDateLayout))
+	}
 	enc.SP()
 	writeNString(enc, mime.QEncoding.Encode("utf-8", envelope.Subject))
 	addrs := [][]imap.Address{
