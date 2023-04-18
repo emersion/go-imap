@@ -19,7 +19,7 @@ import (
 // chained.
 type Encoder struct {
 	// QuotedUTF8 allows non-ASCII strings to be encoded as quoted strings.
-	// This requires IMAP4rev2 or UTF8=ACCEPT.
+	// This requires IMAP4rev2.
 	QuotedUTF8 bool
 	// LiteralMinus enables non-synchronizing literals for short payloads.
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
