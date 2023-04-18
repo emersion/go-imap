@@ -77,6 +77,7 @@ func (c *Conn) availableCaps() []imap.Cap {
 		}
 		addAvailableCaps(&caps, available, []imap.Cap{
 			imap.CapCreateSpecialUse,
+			imap.CapLiteralPlus,
 		})
 	}
 	return caps

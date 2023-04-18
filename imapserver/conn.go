@@ -385,7 +385,7 @@ func (c *Conn) checkBufferedLiteral(size int64, nonSync bool) error {
 }
 
 func (c *Conn) acceptLiteral(size int64, nonSync bool) error {
-	if nonSync && size > 4096 {
+	if nonSync && size > 4096 && !c.server.options.caps().Has(imap.CapLiteralPlus) {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Non-synchronizing literals are limited to 4096 bytes",
