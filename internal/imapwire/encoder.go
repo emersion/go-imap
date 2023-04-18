@@ -25,6 +25,9 @@ type Encoder struct {
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
 	// clients.
 	LiteralMinus bool
+	// LiteralPlus enables non-synchronizing literals for all payloads. This
+	// requires LITERAL+. This is only meaningful for clients.
+	LiteralPlus bool
 	// NewContinuationRequest creates a new continuation request. This is only
 	// meaningful for clients.
 	NewContinuationRequest func() *ContinuationRequest
@@ -127,7 +130,7 @@ func (enc *Encoder) validQuoted(s string) bool {
 
 func (enc *Encoder) stringLiteral(s string) {
 	var sync *ContinuationRequest
-	if enc.side == ConnSideClient && (!enc.LiteralMinus || len(s) > 4096) {
+	if enc.side == ConnSideClient && (!enc.LiteralMinus || len(s) > 4096) && !enc.LiteralPlus {
 		if enc.NewContinuationRequest != nil {
 			sync = enc.NewContinuationRequest()
 		}

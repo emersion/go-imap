@@ -312,6 +312,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	c.pendingCmds = append(c.pendingCmds, cmd)
 	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2)
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
+	literalPlus := c.caps.Has(imap.CapLiteralPlus)
 	c.mutex.Unlock()
 
 	c.setWriteTimeout(cmdWriteTimeout)
@@ -319,6 +320,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
 	wireEnc.QuotedUTF8 = quotedUTF8
 	wireEnc.LiteralMinus = literalMinus
+	wireEnc.LiteralPlus = literalPlus
 	wireEnc.NewContinuationRequest = func() *imapwire.ContinuationRequest {
 		return c.registerContReq(cmd)
 	}
