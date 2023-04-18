@@ -50,6 +50,12 @@ type Options struct {
 	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
+	// Timeout options
+	IdleReadTimeout     *time.Duration
+	RespReadTimeout     *time.Duration
+	LiteralReadTimeout  *time.Duration
+	CmdWriteTimeout     *time.Duration
+	LiteralWriteTimeout *time.Duration
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -82,6 +88,28 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 		return &UnilateralDataHandler{}
 	}
 	return options.UnilateralDataHandler
+}
+
+func initTimeOut(options *Options) *Options {
+	if options == nil {
+		options = &Options{}
+	}
+	if options.IdleReadTimeout == nil {
+		options.IdleReadTimeout = PtrT(idleReadTimeout)
+	}
+	if options.CmdWriteTimeout == nil {
+		options.CmdWriteTimeout = PtrT(cmdWriteTimeout)
+	}
+	if options.RespReadTimeout == nil {
+		options.RespReadTimeout = PtrT(respReadTimeout)
+	}
+	if options.LiteralReadTimeout == nil {
+		options.LiteralReadTimeout = PtrT(literalReadTimeout)
+	}
+	if options.LiteralWriteTimeout == nil {
+		options.LiteralWriteTimeout = PtrT(literalWriteTimeout)
+	}
+	return options
 }
 
 // Client is an IMAP client.
@@ -158,6 +186,8 @@ func DialTLS(address string, options *Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	options = initTimeOut(options)
 	return New(conn, options), nil
 }
 
@@ -173,6 +203,7 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
+	options = initTimeOut(options)
 	client := New(conn, options)
 	if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
 		conn.Close()
@@ -315,7 +346,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	literalPlus := c.caps.Has(imap.CapLiteralPlus)
 	c.mutex.Unlock()
 
-	c.setWriteTimeout(cmdWriteTimeout)
+	c.setWriteTimeout(*c.options.CmdWriteTimeout)
 
 	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
 	wireEnc.QuotedUTF8 = quotedUTF8
@@ -489,7 +520,7 @@ func (c *Client) read() {
 		}
 	}()
 
-	c.setReadTimeout(idleReadTimeout)
+	c.setReadTimeout(*c.options.IdleReadTimeout)
 	for {
 		if c.dec.EOF() {
 			break
@@ -505,8 +536,8 @@ func (c *Client) read() {
 }
 
 func (c *Client) readResponse() error {
-	c.setReadTimeout(respReadTimeout)
-	defer c.setReadTimeout(idleReadTimeout)
+	c.setReadTimeout(*c.options.RespReadTimeout)
+	defer c.setReadTimeout(*c.options.IdleReadTimeout)
 
 	if c.dec.Special('+') {
 		if err := c.readContinueReq(); err != nil {
@@ -978,7 +1009,7 @@ func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
 	if size > 4096 || !hasCapLiteralMinus {
 		contReq = ce.client.registerContReq(ce.cmd)
 	}
-	ce.client.setWriteTimeout(literalWriteTimeout)
+	ce.client.setWriteTimeout(*ce.client.options.LiteralWriteTimeout)
 	return literalWriter{
 		WriteCloser: ce.Encoder.Literal(size, contReq),
 		client:      ce.client,
@@ -991,7 +1022,7 @@ type literalWriter struct {
 }
 
 func (lw literalWriter) Close() error {
-	lw.client.setWriteTimeout(cmdWriteTimeout)
+	lw.client.setWriteTimeout(*lw.client.options.CmdWriteTimeout)
 	return lw.WriteCloser.Close()
 }
 
@@ -1061,4 +1092,9 @@ type loginCommand struct {
 // logoutCommand is a LOGOUT command.
 type logoutCommand struct {
 	cmd
+}
+
+// PtrT Get a pointer to any type
+func PtrT[T any](arg T) *T {
+	return &arg
 }
