@@ -111,15 +111,15 @@ type Client struct {
 	decCh  chan struct{}
 	decErr error
 
-	mutex         sync.Mutex
-	state         imap.ConnState
-	caps          imap.CapSet
-	pendingCapCmd *CapabilityCommand
-	mailbox       *SelectedMailbox
-	cmdTag        uint64
-	pendingCmds   []command
-	contReqs      []continuationRequest
-	closed        bool
+	mutex        sync.Mutex
+	state        imap.ConnState
+	caps         imap.CapSet
+	pendingCapCh chan struct{}
+	mailbox      *SelectedMailbox
+	cmdTag       uint64
+	pendingCmds  []command
+	contReqs     []continuationRequest
+	closed       bool
 }
 
 // New creates a new IMAP client.
@@ -232,35 +232,51 @@ func (c *Client) Caps() imap.CapSet {
 
 	c.mutex.Lock()
 	caps := c.caps
-	capCmd := c.pendingCapCmd
+	capCh := c.pendingCapCh
 	c.mutex.Unlock()
 
 	if caps != nil {
 		return caps
 	}
 
-	if capCmd == nil {
-		capCmd = c.Capability()
+	if capCh == nil {
+		capCmd := c.Capability()
+		capCh := make(chan struct{})
+		go func() {
+			capCmd.Wait()
+			close(capCh)
+		}()
 		c.mutex.Lock()
-		c.pendingCapCmd = capCmd
+		c.pendingCapCh = capCh
 		c.mutex.Unlock()
 	}
 
-	caps, _ = capCmd.Wait()
-	return caps
+	<-capCh
+
+	// TODO: this is racy if caps are reset before we get the reply
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.caps
 }
 
 func (c *Client) setCaps(caps imap.CapSet) {
 	// If the capabilities are being reset, request the updated capabilities
 	// from the server
-	var capCmd *CapabilityCommand
+	var capCh chan struct{}
 	if caps == nil {
-		capCmd = c.Capability()
+		capCh = make(chan struct{})
+
+		// We need to send the CAPABILITY command in a separate goroutine:
+		// setCaps might be called with Client.encMutex locked
+		go func() {
+			c.Capability().Wait()
+			close(capCh)
+		}()
 	}
 
 	c.mutex.Lock()
 	c.caps = caps
-	c.pendingCapCmd = capCmd
+	c.pendingCapCh = capCh
 	c.mutex.Unlock()
 }
 
