@@ -38,9 +38,10 @@ type Conn struct {
 	bw       *bufio.Writer
 	encMutex sync.Mutex
 
-	mutex   sync.Mutex
-	conn    net.Conn
-	enabled imap.CapSet
+	mutex       sync.Mutex
+	conn        net.Conn
+	enabled     imap.CapSet
+	numMessages uint32
 
 	state   imap.ConnState
 	session Session
@@ -574,6 +575,20 @@ func (w *UpdateWriter) WriteExpunge(seqNum uint32) error {
 
 // WriteNumMessages writes an EXISTS response.
 func (w *UpdateWriter) WriteNumMessages(n uint32) error {
+	var err error
+	w.conn.mutex.Lock()
+	if w.conn.state != imap.ConnStateSelected {
+		err = fmt.Errorf("imapserver: attempted to write EXISTS with %v messages but the connection is in the %v state", n, w.conn.state)
+	} else if n < w.conn.numMessages {
+		err = fmt.Errorf("imapserver: attempted to write EXISTS with %v messages but the selected mailbox has %v messages", n, w.conn.numMessages)
+	} else {
+		w.conn.numMessages = n
+	}
+	w.conn.mutex.Unlock()
+	if err != nil {
+		return err
+	}
+
 	return w.conn.writeExists(n)
 }
 

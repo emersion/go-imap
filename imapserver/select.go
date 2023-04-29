@@ -64,6 +64,10 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
+	c.mutex.Lock()
+	c.numMessages = data.NumMessages
+	c.mutex.Unlock()
+
 	c.state = imap.ConnStateSelected
 	// TODO: forbid write commands in read-only mode
 
@@ -104,6 +108,10 @@ func (c *Conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 	if err := c.session.Unselect(); err != nil {
 		return err
 	}
+
+	c.mutex.Lock()
+	c.numMessages = 0
+	c.mutex.Unlock()
 
 	c.state = imap.ConnStateAuthenticated
 	return nil

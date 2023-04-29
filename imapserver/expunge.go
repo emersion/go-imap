@@ -1,6 +1,8 @@
 package imapserver
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -29,6 +31,20 @@ func (c *Conn) expunge(uids *imap.SeqSet) error {
 }
 
 func (c *Conn) writeExpunge(seqNum uint32) error {
+	var err error
+	c.mutex.Lock()
+	if c.state != imap.ConnStateSelected {
+		err = fmt.Errorf("imapserver: attempted to write EXPUNGE for sequence number %v but the connection is in the %v state", seqNum, c.state)
+	} else if c.numMessages == 0 {
+		err = fmt.Errorf("imapserver: attempted to write EXPUNGE for sequence number %v but the selected mailbox is empty", seqNum)
+	} else {
+		c.numMessages--
+	}
+	c.mutex.Unlock()
+	if err != nil {
+		return err
+	}
+
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Number(seqNum).SP().Atom("EXPUNGE")
