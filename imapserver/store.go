@@ -67,6 +67,9 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
+	if err := c.staticSeqSet(seqSet, numKind); err != nil {
+		return err
+	}
 
 	w := &FetchWriter{conn: c}
 	options := imap.StoreOptions{}

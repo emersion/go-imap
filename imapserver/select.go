@@ -66,6 +66,7 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 
 	c.mutex.Lock()
 	c.numMessages = data.NumMessages
+	c.uidNext = data.UIDNext
 	c.mutex.Unlock()
 
 	c.state = imap.ConnStateSelected

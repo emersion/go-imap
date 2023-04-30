@@ -63,6 +63,8 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
+	if err := c.staticSeqSet(seqSet, numKind); err != nil {
+	}
 
 	obsolete := make(map[imap.FetchItem]imap.FetchItemKeyword)
 	for i, item := range items {

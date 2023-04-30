@@ -19,6 +19,9 @@ func (c *Conn) handleUIDExpunge(dec *imapwire.Decoder) error {
 	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectCRLF() {
 		return dec.Err()
 	}
+	if err := c.staticSeqSet(seqSet, NumKindUID); err != nil {
+		return err
+	}
 	return c.expunge(&seqSet)
 }
 

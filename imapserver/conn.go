@@ -42,6 +42,7 @@ type Conn struct {
 	conn        net.Conn
 	enabled     imap.CapSet
 	numMessages uint32
+	uidNext     uint32
 
 	state   imap.ConnState
 	session Session
@@ -470,6 +471,51 @@ func (c *Conn) poll(cmd string) error {
 	return c.session.Poll(w, allowExpunge)
 }
 
+// staticSeqSet converts a dynamic sequence set into a static one.
+//
+// This is necessary to properly handle the special symbol "*", which
+// represents the maximum sequence number.
+func (c *Conn) staticSeqSet(seqSet imap.SeqSet, numKind NumKind) error {
+	var max uint32
+	switch numKind {
+	case NumKindSeq:
+		c.mutex.Lock()
+		max = c.numMessages
+		c.mutex.Unlock()
+	case NumKindUID:
+		// '*' is disallowed for UID sets in IMAP4rev2
+		if seqSet.Dynamic() && c.enabled.Has(imap.CapIMAP4rev2) {
+			return newClientBugError("UID set cannot contain '*' with IMAP4rev2")
+		}
+		c.mutex.Lock()
+		max = c.uidNext - 1
+		c.mutex.Unlock()
+	default:
+		panic(fmt.Errorf("imapserver: unknown NumKind: %v", numKind))
+	}
+
+	if max == 0 {
+		return nil
+	}
+
+	for i := range seqSet {
+		seq := &seqSet[i]
+		dyn := false
+		if seq.Start == 0 {
+			seq.Start = max
+			dyn = true
+		}
+		if seq.Stop == 0 {
+			seq.Stop = max
+			dyn = true
+		}
+		if dyn && seq.Start > seq.Stop {
+			seq.Start, seq.Stop = seq.Stop, seq.Start
+		}
+	}
+	return nil
+}
+
 type responseEncoder struct {
 	*imapwire.Encoder
 	conn *Conn
@@ -582,6 +628,7 @@ func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	} else if n < w.conn.numMessages {
 		err = fmt.Errorf("imapserver: attempted to write EXISTS with %v messages but the selected mailbox has %v messages", n, w.conn.numMessages)
 	} else {
+		w.conn.uidNext += n - w.conn.numMessages
 		w.conn.numMessages = n
 	}
 	w.conn.mutex.Unlock()

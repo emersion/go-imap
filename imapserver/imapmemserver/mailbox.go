@@ -312,9 +312,6 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 
-	mbox.staticSeqSet(criteria.SeqNum, imapserver.NumKindSeq)
-	mbox.staticSeqSet(criteria.UID, imapserver.NumKindUID)
-
 	data := imap.SearchData{
 		UID: numKind == imapserver.NumKindUID,
 	}
@@ -377,8 +374,6 @@ func (mbox *MailboxView) forEach(numKind imapserver.NumKind, seqSet imap.SeqSet,
 func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.SeqSet, f func(seqNum uint32, msg *message)) {
 	// TODO: optimize
 
-	mbox.staticSeqSet(seqSet, numKind)
-
 	for i, msg := range mbox.l {
 		seqNum := uint32(i) + 1
 
@@ -394,35 +389,5 @@ func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.S
 		}
 
 		f(seqNum, msg)
-	}
-}
-
-// staticSeqSet converts a dynamic sequence set into a static one.
-//
-// This is necessary to properly handle the special symbol "*", which
-// represents the maximum sequence number or UID in the mailbox.
-func (mbox *MailboxView) staticSeqSet(seqSet imap.SeqSet, numKind imapserver.NumKind) {
-	var max uint32
-	switch numKind {
-	case imapserver.NumKindSeq:
-		max = uint32(len(mbox.l))
-	case imapserver.NumKindUID:
-		max = mbox.uidNext - 1
-	}
-
-	for i := range seqSet {
-		seq := &seqSet[i]
-		dyn := false
-		if seq.Start == 0 {
-			seq.Start = max
-			dyn = true
-		}
-		if seq.Stop == 0 {
-			seq.Stop = max
-			dyn = true
-		}
-		if dyn && seq.Start > seq.Stop {
-			seq.Start, seq.Stop = seq.Stop, seq.Start
-		}
 	}
 }

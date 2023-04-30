@@ -74,6 +74,12 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
+	if err := c.staticSeqSet(criteria.SeqNum, NumKindSeq); err != nil {
+		return err
+	}
+	if err := c.staticSeqSet(criteria.UID, NumKindUID); err != nil {
+		return err
+	}
 
 	// If no return option is specified, ALL is assumed
 	if !options.ReturnMin && !options.ReturnMax && !options.ReturnAll && !options.ReturnCount {

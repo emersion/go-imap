@@ -13,6 +13,9 @@ func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
+	if err := c.staticSeqSet(seqSet, numKind); err != nil {
+		return err
+	}
 	data, err := c.session.Copy(numKind, seqSet, dest)
 	if err != nil {
 		return err
