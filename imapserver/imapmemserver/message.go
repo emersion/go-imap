@@ -250,11 +250,15 @@ func (msg *message) store(store *imap.StoreFlags) {
 }
 
 func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
-	if criteria.SeqNum != nil && (seqNum == 0 || !criteria.SeqNum.Contains(seqNum)) {
-		return false
+	for _, seqSet := range criteria.SeqNum {
+		if seqNum == 0 || !seqSet.Contains(seqNum) {
+			return false
+		}
 	}
-	if criteria.UID != nil && !criteria.UID.Contains(msg.uid) {
-		return false
+	for _, seqSet := range criteria.UID {
+		if !seqSet.Contains(msg.uid) {
+			return false
+		}
 	}
 	if !matchDate(msg.t, criteria.Since, criteria.Before) {
 		return false

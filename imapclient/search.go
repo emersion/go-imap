@@ -136,11 +136,11 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 		return enc.Atom(s)
 	}
 
-	if len(criteria.SeqNum) > 0 {
-		encodeItem(criteria.SeqNum.String())
+	for _, seqSet := range criteria.SeqNum {
+		encodeItem(seqSet.String())
 	}
-	if len(criteria.UID) > 0 {
-		encodeItem("UID").SP().SeqSet(criteria.UID)
+	for _, seqSet := range criteria.UID {
+		encodeItem("UID").SP().SeqSet(seqSet)
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
