@@ -18,8 +18,8 @@ type SearchOptions struct {
 // When multiple fields are populated, the result is the intersection ("and"
 // function) of all messages that match the fields.
 type SearchCriteria struct {
-	SeqNum SeqSet
-	UID    SeqSet
+	SeqNum []SeqSet
+	UID    []SeqSet
 
 	// Only the date is used, the time and timezone are ignored
 	Since      time.Time

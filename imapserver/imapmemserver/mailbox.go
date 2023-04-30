@@ -312,8 +312,12 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 
-	mbox.staticSeqSet(criteria.SeqNum, imapserver.NumKindSeq)
-	mbox.staticSeqSet(criteria.UID, imapserver.NumKindUID)
+	for _, seqSet := range criteria.SeqNum {
+		mbox.staticSeqSet(seqSet, imapserver.NumKindSeq)
+	}
+	for _, seqSet := range criteria.UID {
+		mbox.staticSeqSet(seqSet, imapserver.NumKindUID)
+	}
 
 	data := imap.SearchData{
 		UID: numKind == imapserver.NumKindUID,

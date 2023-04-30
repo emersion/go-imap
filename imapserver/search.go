@@ -185,7 +185,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) {
 			return dec.Err()
 		}
-		criteria.UID = seqSet // TODO: intersect
+		criteria.UID = append(criteria.UID, seqSet)
 	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":
 		criteria.Flag = append(criteria.Flag, searchKeyFlag(key))
 	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
@@ -308,7 +308,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		if err != nil {
 			return err
 		}
-		criteria.SeqNum = seqSet // TODO: intersect
+		criteria.SeqNum = append(criteria.SeqNum, seqSet)
 	}
 	return nil
 }
