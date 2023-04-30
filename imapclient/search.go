@@ -128,87 +128,87 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 	enc.Special('(')
 
 	firstItem := true
-	encodeItem := func(s string) *imapwire.Encoder {
+	encodeItem := func() *imapwire.Encoder {
 		if !firstItem {
 			enc.SP()
 		}
 		firstItem = false
-		return enc.Atom(s)
+		return enc
 	}
 
 	for _, seqSet := range criteria.SeqNum {
-		encodeItem(seqSet.String())
+		encodeItem().SeqSet(seqSet)
 	}
 	for _, seqSet := range criteria.UID {
-		encodeItem("UID").SP().SeqSet(seqSet)
+		encodeItem().Atom("UID").SP().SeqSet(seqSet)
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
-		encodeItem("ON").SP().String(criteria.Since.Format(internal.DateLayout))
+		encodeItem().Atom("ON").SP().String(criteria.Since.Format(internal.DateLayout))
 	} else {
 		if !criteria.Since.IsZero() {
-			encodeItem("SINCE").SP().String(criteria.Since.Format(internal.DateLayout))
+			encodeItem().Atom("SINCE").SP().String(criteria.Since.Format(internal.DateLayout))
 		}
 		if !criteria.Before.IsZero() {
-			encodeItem("BEFORE").SP().String(criteria.Before.Format(internal.DateLayout))
+			encodeItem().Atom("BEFORE").SP().String(criteria.Before.Format(internal.DateLayout))
 		}
 	}
 	if !criteria.SentSince.IsZero() && !criteria.SentBefore.IsZero() && criteria.SentBefore.Sub(criteria.SentSince) == 24*time.Hour {
-		encodeItem("SENTON").SP().String(criteria.SentSince.Format(internal.DateLayout))
+		encodeItem().Atom("SENTON").SP().String(criteria.SentSince.Format(internal.DateLayout))
 	} else {
 		if !criteria.SentSince.IsZero() {
-			encodeItem("SENTSINCE").SP().String(criteria.SentSince.Format(internal.DateLayout))
+			encodeItem().Atom("SENTSINCE").SP().String(criteria.SentSince.Format(internal.DateLayout))
 		}
 		if !criteria.SentBefore.IsZero() {
-			encodeItem("SENTBEFORE").SP().String(criteria.SentBefore.Format(internal.DateLayout))
+			encodeItem().Atom("SENTBEFORE").SP().String(criteria.SentBefore.Format(internal.DateLayout))
 		}
 	}
 
 	for _, kv := range criteria.Header {
 		switch k := strings.ToUpper(kv.Key); k {
 		case "BCC", "CC", "FROM", "SUBJECT", "TO":
-			encodeItem(k)
+			encodeItem().Atom(k)
 		default:
-			encodeItem("HEADER").SP().String(kv.Key)
+			encodeItem().Atom("HEADER").SP().String(kv.Key)
 		}
 		enc.SP().String(kv.Value)
 	}
 
 	for _, s := range criteria.Body {
-		encodeItem("BODY").SP().String(s)
+		encodeItem().Atom("BODY").SP().String(s)
 	}
 	for _, s := range criteria.Text {
-		encodeItem("TEXT").SP().String(s)
+		encodeItem().Atom("TEXT").SP().String(s)
 	}
 
 	for _, flag := range criteria.Flag {
 		if k := flagSearchKey(flag); k != "" {
-			encodeItem(k)
+			encodeItem().Atom(k)
 		} else {
-			encodeItem("KEYWORD").SP().Flag(flag)
+			encodeItem().Atom("KEYWORD").SP().Flag(flag)
 		}
 	}
 	for _, flag := range criteria.NotFlag {
 		if k := flagSearchKey(flag); k != "" {
-			encodeItem("UN" + k)
+			encodeItem().Atom("UN" + k)
 		} else {
-			encodeItem("UNKEYWORD").SP().Flag(flag)
+			encodeItem().Atom("UNKEYWORD").SP().Flag(flag)
 		}
 	}
 
 	if criteria.Larger > 0 {
-		encodeItem("LARGER").SP().Number64(criteria.Larger)
+		encodeItem().Atom("LARGER").SP().Number64(criteria.Larger)
 	}
 	if criteria.Smaller > 0 {
-		encodeItem("SMALLER").SP().Number64(criteria.Smaller)
+		encodeItem().Atom("SMALLER").SP().Number64(criteria.Smaller)
 	}
 
 	for _, not := range criteria.Not {
-		encodeItem("NOT").SP()
+		encodeItem().Atom("NOT").SP()
 		writeSearchKey(enc, &not)
 	}
 	for _, or := range criteria.Or {
-		encodeItem("OR").SP()
+		encodeItem().Atom("OR").SP()
 		writeSearchKey(enc, &or[0])
 		enc.SP()
 		writeSearchKey(enc, &or[1])
