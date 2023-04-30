@@ -13,7 +13,7 @@ type SearchOptions struct {
 	ReturnAll   bool
 	ReturnCount bool
 	// Requires IMAP4rev2 or SEARCHRES
-	ReturnSave  bool
+	ReturnSave bool
 }
 
 // SearchCriteria is a criteria for the SEARCH command.
