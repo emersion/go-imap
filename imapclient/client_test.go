@@ -3,6 +3,7 @@ package imapclient_test
 import (
 	"io"
 	"log"
+	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -211,4 +212,46 @@ func ExampleClient_Search() {
 		log.Fatalf("UID SEARCH command failed: %v", err)
 	}
 	log.Fatalf("UIDs matching the search criteria: %v", data.AllNums())
+}
+
+func ExampleClient_Idle() {
+	options := imapclient.Options{
+		UnilateralDataHandler: &imapclient.UnilateralDataHandler{
+			Expunge: func(seqNum uint32) {
+				log.Printf("message %v has been expunged", seqNum)
+			},
+			Mailbox: func(data *imapclient.UnilateralDataMailbox) {
+				if data.NumMessages != nil {
+					log.Printf("a new message has been received")
+				}
+			},
+		},
+	}
+
+	c, err := imapclient.DialTLS("mail.example.org:993", &options)
+	if err != nil {
+		log.Fatalf("failed to dial IMAP server: %v", err)
+	}
+	defer c.Close()
+
+	if err := c.Login("root", "asdf").Wait(); err != nil {
+		log.Fatalf("failed to login: %v", err)
+	}
+	if err := c.Select("INBOX", nil); err != nil {
+		log.Fatalf("failed to select INBOX: %v", err)
+	}
+
+	// Start idling
+	idleCmd, err := c.Idle()
+	if err != nil {
+		log.Fatalf("IDLE command failed: %v", err)
+	}
+
+	// Wait for 30s to receive updates from the server
+	time.Sleep(30 * time.Second)
+
+	// Stop idling
+	if err := idleCmd.Close(); err != nil {
+		log.Fatalf("failed to stop idling: %v", err)
+	}
 }
