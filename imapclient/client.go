@@ -1,4 +1,22 @@
 // Package imapclient implements an IMAP client.
+//
+// # Charset decoding
+//
+// By default, only basic charset decoding is performed. For non-UTF-8 decoding
+// of message subjects and e-mail address names, users can set
+// Options.WordDecoder. For instance, to use go-message's collection of
+// charsets:
+//
+//	import (
+//		"mime"
+//
+//		_ "github.com/emersion/go-message/charset"
+//	)
+//
+//	options := &imapclient.Options{
+//		WordDecoder: &mime.WordDecoder{CharsetReader: message.CharsetReader},
+//	}
+//	client, err := imapclient.DialTLS("imap.example.org:993", options)
 package imapclient
 
 import (
