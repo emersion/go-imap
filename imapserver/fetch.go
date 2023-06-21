@@ -458,7 +458,7 @@ func (w *FetchResponseWriter) WriteBodyStructure(bs imap.BodyStructure) {
 	w.writeItemSep()
 	enc := w.enc.Encoder
 	enc.Atom(item).SP()
-	writeBodyStructure(enc, bs)
+	writeBodyStructure(enc, bs, extended)
 }
 
 // Close closes the FETCH message writer.
@@ -551,20 +551,20 @@ func writeSectionPart(enc *imapwire.Encoder, part []int) {
 	enc.Atom(strings.Join(l, "."))
 }
 
-func writeBodyStructure(enc *imapwire.Encoder, bs imap.BodyStructure) {
+func writeBodyStructure(enc *imapwire.Encoder, bs imap.BodyStructure, extended bool) {
 	enc.Special('(')
 	switch bs := bs.(type) {
 	case *imap.BodyStructureSinglePart:
-		writeBodyType1part(enc, bs)
+		writeBodyType1part(enc, bs, extended)
 	case *imap.BodyStructureMultiPart:
-		writeBodyTypeMpart(enc, bs)
+		writeBodyTypeMpart(enc, bs, extended)
 	default:
 		panic(fmt.Errorf("unknown body structure type %T", bs))
 	}
 	enc.Special(')')
 }
 
-func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart) {
+func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart, extended bool) {
 	enc.String(bs.Type).SP().String(bs.Subtype).SP()
 	writeBodyFldParam(enc, bs.Params)
 	enc.SP()
@@ -583,16 +583,16 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart)
 		enc.SP()
 		writeEnvelope(enc, msg.Envelope)
 		enc.SP()
-		writeBodyStructure(enc, msg.BodyStructure)
+		writeBodyStructure(enc, msg.BodyStructure, extended)
 		enc.SP().Number64(msg.NumLines)
 	} else if text := bs.Text; text != nil {
 		enc.SP().Number64(text.NumLines)
 	}
 
-	ext := bs.Extended
-	if ext == nil {
+	if !extended {
 		return
 	}
+	ext := bs.Extended
 
 	enc.SP()
 	enc.NIL() // MD5
@@ -604,7 +604,7 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart)
 	writeNString(enc, ext.Location)
 }
 
-func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart) {
+func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, extended bool) {
 	if len(bs.Children) == 0 {
 		panic("imapserver: imap.BodyStructureMultiPart must have at least one child")
 	}
@@ -612,15 +612,15 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart) 
 		if i > 0 {
 			enc.SP()
 		}
-		writeBodyStructure(enc, child)
+		writeBodyStructure(enc, child, extended)
 	}
 
 	enc.SP().String(bs.Subtype)
 
-	ext := bs.Extended
-	if ext == nil {
+	if !extended {
 		return
 	}
+	ext := bs.Extended
 
 	enc.SP()
 	writeBodyFldParam(enc, ext.Params)
