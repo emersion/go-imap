@@ -20,10 +20,12 @@ type FetchOptions struct {
 	BinarySectionSize []*FetchItemBinarySectionSize // requires IMAP4rev2 or BINARY
 }
 
+// FetchItemBodyStructure contains FETCH options for the body structure.
 type FetchItemBodyStructure struct {
 	Extended bool
 }
 
+// PartSpecifier describes whether to fetch a part's header, body, or both.
 type PartSpecifier string
 
 const (
@@ -33,6 +35,7 @@ const (
 	PartSpecifierText   PartSpecifier = "TEXT"
 )
 
+// SectionPartial describes a byte range when fetching a message's payload.
 type SectionPartial struct {
 	Offset, Size int64
 }
@@ -167,16 +170,22 @@ func (bs *BodyStructureSinglePart) Filename() string {
 
 func (*BodyStructureSinglePart) bodyStructure() {}
 
+// BodyStructureMessageRFC822 contains metadata specific to RFC 822 parts for
+// BodyStructureSinglePart.
 type BodyStructureMessageRFC822 struct {
 	Envelope      *Envelope
 	BodyStructure BodyStructure
 	NumLines      int64
 }
 
+// BodyStructureText contains metadata specific to text parts for
+// BodyStructureSinglePart.
 type BodyStructureText struct {
 	NumLines int64
 }
 
+// BodyStructureSinglePartExt contains extended body structure data for
+// BodyStructureSinglePart.
 type BodyStructureSinglePartExt struct {
 	Disposition *BodyStructureDisposition
 	Language    []string
@@ -230,6 +239,8 @@ func (bs *BodyStructureMultiPart) Disposition() *BodyStructureDisposition {
 
 func (*BodyStructureMultiPart) bodyStructure() {}
 
+// BodyStructureMultiPartExt contains extended body structure data for
+// BodyStructureMultiPart.
 type BodyStructureMultiPartExt struct {
 	Params      map[string]string
 	Disposition *BodyStructureDisposition
@@ -237,6 +248,8 @@ type BodyStructureMultiPartExt struct {
 	Location    string
 }
 
+// BodyStructureDisposition describes the content disposition of a part
+// (specified in the Content-Disposition header field).
 type BodyStructureDisposition struct {
 	Value  string
 	Params map[string]string
