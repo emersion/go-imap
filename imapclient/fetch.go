@@ -74,6 +74,8 @@ func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions
 	for _, bss := range options.BinarySectionSize {
 		writeFetchItemBinarySectionSize(listEnc.Item(), bss)
 	}
+
+	listEnc.End()
 }
 
 func writeFetchItemBodySection(enc *imapwire.Encoder, item *imap.FetchItemBodySection) {
