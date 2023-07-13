@@ -568,12 +568,6 @@ func (c *Client) readResponse() error {
 	if tag != "" {
 		token = "response-tagged"
 		startTLS, err = c.readResponseTagged(tag, typ)
-	} else if typ == "BYE" {
-		token = "resp-cond-bye"
-		var text string
-		if !c.dec.ExpectText(&text) {
-			return fmt.Errorf("in resp-text: %v", c.dec.Err())
-		}
 	} else {
 		token = "response-data"
 		err = c.readResponseData(typ)
