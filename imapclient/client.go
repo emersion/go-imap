@@ -627,11 +627,12 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 		}
 	}()
 
-	if !c.dec.ExpectSP() {
-		return nil, c.dec.Err()
-	}
+	// Some servers don't provide a text even if the RFC requires it,
+	// see #500 and #502
+	hasSP := c.dec.SP()
+
 	var code string
-	if c.dec.Special('[') { // resp-text-code
+	if hasSP && c.dec.Special('[') { // resp-text-code
 		if !c.dec.ExpectAtom(&code) {
 			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
@@ -670,12 +671,13 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				c.dec.DiscardUntilByte(']')
 			}
 		}
-		if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
+		if !c.dec.ExpectSpecial(']') {
 			return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
+		hasSP = c.dec.SP()
 	}
 	var text string
-	if !c.dec.ExpectText(&text) {
+	if hasSP && !c.dec.ExpectText(&text) {
 		return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 	}
 
