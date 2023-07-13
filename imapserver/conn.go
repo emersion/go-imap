@@ -141,6 +141,9 @@ func (c *Conn) serve() {
 	if _, ok := c.session.(SessionMove); !ok && caps.Has(imap.CapMove) {
 		panic("imapserver: server advertises MOVE but session doesn't support it")
 	}
+	if _, ok := c.session.(SessionUnauthenticate); !ok && caps.Has(imap.CapUnauthenticate) {
+		panic("imapserver: server advertises UNAUTHENTICATE but session doesn't support it")
+	}
 
 	c.state = imap.ConnStateNotAuthenticated
 	statusType := imap.StatusResponseTypeOK
@@ -213,6 +216,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "AUTHENTICATE":
 		err = c.handleAuthenticate(tag, dec)
 		sendOK = false
+	case "UNAUTHENTICATE":
+		err = c.handleUnauthenticate(dec)
 	case "LOGIN":
 		err = c.handleLogin(tag, dec)
 		sendOK = false

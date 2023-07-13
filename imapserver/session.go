@@ -101,3 +101,11 @@ type SessionSASL interface {
 	AuthenticateMechanisms() []string
 	Authenticate(mech string) (sasl.Server, error)
 }
+
+// SessionUnauthenticate is an IMAP session which supports UNAUTHENTICATE.
+type SessionUnauthenticate interface {
+	Session
+
+	// Authenticated state
+	Unauthenticate() error
+}

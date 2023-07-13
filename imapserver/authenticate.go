@@ -125,3 +125,24 @@ func decodeSASL(s string) ([]byte, error) {
 	}
 	return b, nil
 }
+
+func (c *Conn) handleUnauthenticate(dec *imapwire.Decoder) error {
+	if !dec.ExpectCRLF() {
+		return dec.Err()
+	}
+	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
+		return err
+	}
+	session, ok := c.session.(SessionUnauthenticate)
+	if !ok {
+		return newClientBugError("UNAUTHENTICATE is not supported")
+	}
+	if err := session.Unauthenticate(); err != nil {
+		return err
+	}
+	c.state = imap.ConnStateNotAuthenticated
+	c.mutex.Lock()
+	c.enabled = make(imap.CapSet)
+	c.mutex.Unlock()
+	return nil
+}
