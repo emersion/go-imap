@@ -613,11 +613,19 @@ func (c *Client) readContinueReq() error {
 	return nil
 }
 
-func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
+func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand, err error) {
 	cmd := c.deletePendingCmdByTag(tag)
 	if cmd == nil {
 		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
+
+	// We've removed the command from the pending queue above. Make sure we
+	// don't stall it on error.
+	defer func() {
+		if err != nil {
+			c.completeCommand(cmd, err)
+		}
+	}()
 
 	if !c.dec.ExpectSP() {
 		return nil, c.dec.Err()
@@ -687,7 +695,6 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 
 	c.completeCommand(cmd, cmdErr)
 
-	var startTLS *startTLSCommand
 	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
 		startTLS = cmd
 	}
