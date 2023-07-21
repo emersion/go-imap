@@ -3,6 +3,7 @@ package memory
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -53,4 +54,23 @@ func New() *Backend {
 	return &Backend{
 		users: map[string]*User{user.username: user},
 	}
+}
+
+// NewUser adds a user to the backend.
+func (be *Backend) NewUser(username, password string) (*User, error) {
+	_, ok := be.users[username]
+	if ok {
+		return nil, fmt.Errorf("user %s is already defined.", username)
+	}
+	return &User{username: username, password: password}, nil
+}
+
+// DeleteUser removes a user
+func (be *Backend) DeleteUser(username string) error {
+	_, ok := be.users[username]
+	if !ok {
+		return fmt.Errorf("user %s is already defined.", username)
+	}
+	delete(be.users, username)
+	return nil
 }
