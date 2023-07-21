@@ -65,11 +65,11 @@ func (be *Backend) NewUser(username, password string) (*User, error) {
 	return &User{username: username, password: password}, nil
 }
 
-// DeleteUser removes a user
+// DeleteUser removes a user from the backend.
 func (be *Backend) DeleteUser(username string) error {
 	_, ok := be.users[username]
 	if !ok {
-		return fmt.Errorf("user %s is already defined.", username)
+		return fmt.Errorf("user %s is not defined.", username)
 	}
 	delete(be.users, username)
 	return nil
