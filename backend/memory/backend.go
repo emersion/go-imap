@@ -62,7 +62,7 @@ func (be *Backend) NewUser(username, password string) (*User, error) {
 	if ok {
 		return nil, fmt.Errorf("user %s is already defined.", username)
 	}
-	return &User{username: username, password: password}, nil
+	return &User{username: username, password: password, mailboxes: make(map[string]*Mailbox)}, nil
 }
 
 // DeleteUser removes a user from the backend.
