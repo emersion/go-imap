@@ -25,6 +25,9 @@ func getSelectOpts(options *imap.ListOptions) []string {
 	if options.SelectRecursiveMatch {
 		l = append(l, "RECURSIVEMATCH")
 	}
+	if options.SelectSpecialUse {
+		l = append(l, "SPECIAL-USE")
+	}
 	return l
 }
 
@@ -42,6 +45,9 @@ func getReturnOpts(options *imap.ListOptions) []string {
 	}
 	if options.ReturnStatus != nil {
 		l = append(l, "STATUS")
+	}
+	if options.ReturnSpecialUse {
+		l = append(l, "SPECIAL-USE")
 	}
 	return l
 }
