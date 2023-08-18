@@ -147,6 +147,7 @@ func (dec *Decoder) ExpectSP() bool {
 }
 
 func (dec *Decoder) CRLF() bool {
+	dec.acceptByte(' ')  // https://github.com/emersion/go-imap/issues/540
 	dec.acceptByte('\r') // be liberal in what we receive and accept lone LF
 	if !dec.acceptByte('\n') {
 		return false
