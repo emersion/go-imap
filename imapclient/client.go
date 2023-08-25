@@ -10,6 +10,7 @@
 //	import (
 //		"mime"
 //
+//		"github.com/emersion/go-message"
 //		_ "github.com/emersion/go-message/charset"
 //	)
 //
