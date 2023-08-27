@@ -10,12 +10,11 @@
 //	import (
 //		"mime"
 //
-//		"github.com/emersion/go-message"
-//		_ "github.com/emersion/go-message/charset"
+//		"github.com/emersion/go-message/charset"
 //	)
 //
 //	options := &imapclient.Options{
-//		WordDecoder: &mime.WordDecoder{CharsetReader: message.CharsetReader},
+//		WordDecoder: &mime.WordDecoder{CharsetReader: charset.Reader},
 //	}
 //	client, err := imapclient.DialTLS("imap.example.org:993", options)
 package imapclient
