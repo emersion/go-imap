@@ -484,17 +484,6 @@ func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
 	return contReq
 }
 
-func (c *Client) unregisterContReq(contReq *imapwire.ContinuationRequest) {
-	c.mutex.Lock()
-	for i := range c.contReqs {
-		if c.contReqs[i].ContinuationRequest == contReq {
-			c.contReqs = append(c.contReqs[:i], c.contReqs[i+1:]...)
-			break
-		}
-	}
-	c.mutex.Unlock()
-}
-
 // read continuously reads data coming from the server.
 //
 // All the data is decoded in the read goroutine, then dispatched via channels
