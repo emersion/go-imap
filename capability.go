@@ -91,6 +91,11 @@ var imap4rev2Caps = CapSet{
 	CapStatusSize:   {},
 }
 
+// AuthCap returns the capability name for an SASL authentication mechanism.
+func AuthCap(mechanism string) Cap {
+	return Cap("AUTH=" + mechanism)
+}
+
 // CapSet is a set of capabilities.
 type CapSet map[Cap]struct{}
 
