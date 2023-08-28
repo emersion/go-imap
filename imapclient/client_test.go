@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/emersion/go-sasl"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 )
@@ -255,5 +257,25 @@ func ExampleClient_Idle() {
 	// Stop idling
 	if err := idleCmd.Close(); err != nil {
 		log.Fatalf("failed to stop idling: %v", err)
+	}
+}
+
+func ExampleClient_Authenticate_oauth() {
+	var (
+		c        *imapclient.Client
+		username string
+		token    string
+	)
+
+	if !c.Caps().Has(imap.AuthCap(sasl.OAuthBearer)) {
+		log.Fatal("OAUTHBEARER not supported by the server")
+	}
+
+	saslClient := sasl.NewOAuthBearerClient(&sasl.OAuthBearerOptions{
+		Username: username,
+		Token:    token,
+	})
+	if err := c.Authenticate(saslClient); err != nil {
+		log.Fatalf("authentication failed: %v", err)
 	}
 }
