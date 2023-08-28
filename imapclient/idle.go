@@ -2,7 +2,11 @@ package imapclient
 
 import (
 	"fmt"
+	"sync/atomic"
+	"time"
 )
+
+const idleRestartInterval = 28 * time.Minute
 
 // Idle sends an IDLE command.
 //
@@ -11,9 +15,99 @@ import (
 // The caller must invoke IdleCommand.Close to stop IDLE and unblock the
 // client.
 //
-// This command requires support for IMAP4rev2 or the IDLE extension.
+// This command requires support for IMAP4rev2 or the IDLE extension. The IDLE
+// command is restarted automatically to avoid getting disconnected due to
+// inactivity timeouts.
 func (c *Client) Idle() (*IdleCommand, error) {
-	cmd := &IdleCommand{}
+	child, err := c.idle()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := &IdleCommand{
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
+	}
+	go cmd.run(c, child)
+	return cmd, nil
+}
+
+// IdleCommand is an IDLE command.
+//
+// Initially, the IDLE command is running. The server may send unilateral
+// data. The client cannot send any command while IDLE is running.
+//
+// Close must be called to stop the IDLE command.
+type IdleCommand struct {
+	stopped atomic.Bool
+	stop    chan struct{}
+	done    chan struct{}
+
+	err       error
+	lastChild *idleCommand
+}
+
+func (cmd *IdleCommand) run(c *Client, child *idleCommand) {
+	defer close(cmd.done)
+
+	timer := time.NewTimer(idleRestartInterval)
+	defer timer.Stop()
+
+	defer func() {
+		if child != nil {
+			if err := child.Close(); err != nil && cmd.err == nil {
+				cmd.err = err
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-timer.C:
+			timer.Reset(idleRestartInterval)
+
+			if cmd.err = child.Close(); cmd.err != nil {
+				return
+			}
+			if child, cmd.err = c.idle(); cmd.err != nil {
+				return
+			}
+		case <-cmd.stop:
+			cmd.lastChild = child
+			return
+		}
+	}
+}
+
+// Close stops the IDLE command.
+//
+// This method blocks until the command to stop IDLE is written, but doesn't
+// wait for the server to respond. Callers can use Wait for this purpose.
+func (cmd *IdleCommand) Close() error {
+	if cmd.stopped.Swap(true) {
+		return fmt.Errorf("imapclient: IDLE already closed")
+	}
+	close(cmd.stop)
+	<-cmd.done
+	return cmd.err
+}
+
+// Wait blocks until the IDLE command has completed.
+//
+// Wait can only be called after Close.
+func (cmd *IdleCommand) Wait() error {
+	if !cmd.stopped.Load() {
+		return fmt.Errorf("imapclient: IdleCommand.Close must be called before Wait")
+	}
+	<-cmd.done
+	if cmd.err != nil {
+		return cmd.err
+	}
+	return cmd.lastChild.Wait()
+}
+
+func (c *Client) idle() (*idleCommand, error) {
+	cmd := &idleCommand{}
 	contReq := c.registerContReq(cmd)
 	cmd.enc = c.beginCommand("IDLE", cmd)
 	cmd.enc.flush()
@@ -27,13 +121,8 @@ func (c *Client) Idle() (*IdleCommand, error) {
 	return cmd, nil
 }
 
-// IdleCommand is an IDLE command.
-//
-// Initially, the IDLE command is running. The server may send unilateral
-// data. The client cannot send any command while IDLE is running.
-//
-// Close must be called to stop the IDLE command.
-type IdleCommand struct {
+// idleCommand represents a singular IDLE command, without the restart logic.
+type idleCommand struct {
 	cmd
 	enc *commandEncoder
 }
@@ -42,7 +131,7 @@ type IdleCommand struct {
 //
 // This method blocks until the command to stop IDLE is written, but doesn't
 // wait for the server to respond. Callers can use Wait for this purpose.
-func (cmd *IdleCommand) Close() error {
+func (cmd *idleCommand) Close() error {
 	if cmd.err != nil {
 		return cmd.err
 	}
@@ -62,9 +151,9 @@ func (cmd *IdleCommand) Close() error {
 // Wait blocks until the IDLE command has completed.
 //
 // Wait can only be called after Close.
-func (cmd *IdleCommand) Wait() error {
+func (cmd *idleCommand) Wait() error {
 	if cmd.enc != nil {
-		return fmt.Errorf("imapclient: IdleCommand.Close must be called before Wait")
+		panic("imapclient: idleCommand.Close must be called before Wait")
 	}
 	return cmd.cmd.Wait()
 }
