@@ -274,7 +274,8 @@ func (mbox *Mailbox) NewView() *MailboxView {
 // selected state.
 type MailboxView struct {
 	*Mailbox
-	tracker *imapserver.SessionTracker
+	tracker   *imapserver.SessionTracker
+	searchRes imap.UIDSet
 }
 
 // Close releases the resources allocated for the mailbox view.
@@ -327,6 +328,9 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 			continue
 		}
 
+		// Always populate the UID set, since it may be saved later for SEARCHRES
+		uidSet.AddNum(msg.uid)
+
 		var num uint32
 		switch numKind {
 		case imapserver.NumKindSeq:
@@ -336,7 +340,6 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 			seqSet.AddNum(seqNum)
 			num = seqNum
 		case imapserver.NumKindUID:
-			uidSet.AddNum(msg.uid)
 			num = uint32(msg.uid)
 		}
 		if data.Min == 0 || num < data.Min {
@@ -355,15 +358,28 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 		data.All = uidSet
 	}
 
+	if options.ReturnSave {
+		mbox.searchRes = uidSet
+	}
+
 	return &data, nil
 }
 
 func (mbox *MailboxView) staticSearchCriteria(criteria *imap.SearchCriteria) {
+	seqNums := make([]imap.SeqSet, 0, len(criteria.SeqNum))
 	for _, seqSet := range criteria.SeqNum {
-		mbox.staticNumSet(seqSet)
+		numSet := mbox.staticNumSet(seqSet)
+		switch numSet := numSet.(type) {
+		case imap.SeqSet:
+			seqNums = append(seqNums, numSet)
+		case imap.UIDSet: // can happen with SEARCHRES
+			criteria.UID = append(criteria.UID, numSet)
+		}
 	}
-	for _, uidSet := range criteria.UID {
-		mbox.staticNumSet(uidSet)
+	criteria.SeqNum = seqNums
+
+	for i, uidSet := range criteria.UID {
+		criteria.UID[i] = mbox.staticNumSet(uidSet).(imap.UIDSet)
 	}
 
 	for i := range criteria.Not {
@@ -404,7 +420,7 @@ func (mbox *MailboxView) forEach(numSet imap.NumSet, f func(seqNum uint32, msg *
 func (mbox *MailboxView) forEachLocked(numSet imap.NumSet, f func(seqNum uint32, msg *message)) {
 	// TODO: optimize
 
-	mbox.staticNumSet(numSet)
+	numSet = mbox.staticNumSet(numSet)
 
 	for i, msg := range mbox.l {
 		seqNum := uint32(i) + 1
@@ -429,7 +445,13 @@ func (mbox *MailboxView) forEachLocked(numSet imap.NumSet, f func(seqNum uint32,
 //
 // This is necessary to properly handle the special symbol "*", which
 // represents the maximum sequence number or UID in the mailbox.
-func (mbox *MailboxView) staticNumSet(numSet imap.NumSet) {
+//
+// This function also handles the special SEARCHRES marker "$".
+func (mbox *MailboxView) staticNumSet(numSet imap.NumSet) imap.NumSet {
+	if imap.IsSearchRes(numSet) {
+		return mbox.searchRes
+	}
+
 	switch numSet := numSet.(type) {
 	case imap.SeqSet:
 		max := uint32(len(mbox.l))
@@ -444,6 +466,8 @@ func (mbox *MailboxView) staticNumSet(numSet imap.NumSet) {
 			staticNumRange((*uint32)(&r.Start), (*uint32)(&r.Stop), max)
 		}
 	}
+
+	return numSet
 }
 
 func staticNumRange(start, stop *uint32, max uint32) {
