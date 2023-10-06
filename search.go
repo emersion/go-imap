@@ -20,6 +20,21 @@ type SearchOptions struct {
 //
 // When multiple fields are populated, the result is the intersection ("and"
 // function) of all messages that match the fields.
+//
+// And, Not and Or can be used to combine multiple criteria together. For
+// instance, the following criteria matches messages not containing "hello":
+//
+//	SearchCriteria{Not: []SearchCriteria{{
+//		Body: []string{"hello"},
+//	}}}
+//
+// The following criteria matches messages containing either "hello" or
+// "world":
+//
+//	SearchCriteria{Or: [][2]SearchCriteria{{
+//		{Body: []string{"hello"}},
+//		{Body: []string{"world"}},
+//	}}}
 type SearchCriteria struct {
 	SeqNum []SeqSet
 	UID    []SeqSet
