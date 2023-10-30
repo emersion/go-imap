@@ -23,10 +23,10 @@ type fetchWriterOptions struct {
 	obsolete map[*imap.FetchItemBodySection]string
 }
 
-func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) (*command, error) {
 	var seqSet imap.SeqSet
 	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
-		return dec.Err()
+		return nil, dec.Err()
 	}
 
 	var options imap.FetchOptions
@@ -43,12 +43,12 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		return handleFetchAtt(dec, name, &options, &writerOptions)
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !isList {
 		name, err := readFetchAttName(dec)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Handle macros
@@ -70,17 +70,17 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 			handleFetchBodyStructure(&options, &writerOptions, false)
 		default:
 			if err := handleFetchAtt(dec, name, &options, &writerOptions); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	if !dec.ExpectCRLF() {
-		return dec.Err()
+		return nil, dec.Err()
 	}
 
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
-		return err
+		return nil, err
 	}
 
 	if numKind == NumKindUID {
@@ -88,10 +88,9 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c, options: writerOptions}
-	if err := c.session.Fetch(w, numKind, seqSet, &options); err != nil {
-		return err
-	}
-	return nil
+	return newCommand(func() error {
+		return c.session.Fetch(w, numKind, seqSet, &options)
+	}), nil
 }
 
 func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOptions, writerOptions *fetchWriterOptions) error {

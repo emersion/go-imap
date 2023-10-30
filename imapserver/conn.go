@@ -202,7 +202,10 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 
 	// TODO: handle multiple commands concurrently
 	sendOK := true
-	var err error
+	var (
+		err error
+		cmd *command
+	)
 	switch name {
 	case "NOOP", "CHECK":
 		err = c.handleNoop(dec)
@@ -252,7 +255,7 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleAppend(tag, dec)
 		sendOK = false
 	case "FETCH", "UID FETCH":
-		err = c.handleFetch(dec, numKind)
+		cmd, err = c.handleFetch(dec, numKind)
 	case "EXPUNGE":
 		err = c.handleExpunge(dec)
 	case "UID EXPUNGE":
@@ -281,6 +284,10 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	}
 
 	dec.DiscardLine()
+
+	if err == nil && cmd != nil {
+		err = cmd.Wait()
+	}
 
 	var (
 		resp    *imap.StatusResponse
@@ -472,6 +479,32 @@ func (c *Conn) poll(cmd string) error {
 
 	w := &UpdateWriter{conn: c, allowExpunge: allowExpunge}
 	return c.session.Poll(w, allowExpunge)
+}
+
+type command struct {
+	done chan struct{}
+	err  error
+}
+
+func newCommand(f func() error) *command {
+	cmd := &command{done: make(chan struct{})}
+	go func() {
+		var err error
+		defer func() {
+			if v := recover(); v != nil {
+				err = fmt.Errorf("panic handling command: %v\n%s", v, debug.Stack())
+			}
+			cmd.err = err
+			close(cmd.done)
+		}()
+		err = f()
+	}()
+	return cmd
+}
+
+func (cmd *command) Wait() error {
+	<-cmd.done
+	return cmd.err
 }
 
 type responseEncoder struct {
