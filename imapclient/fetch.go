@@ -347,7 +347,7 @@ func (FetchItemDataRFC822Size) fetchItemData() {}
 
 // FetchItemDataUID holds data returned by FETCH UID.
 type FetchItemDataUID struct {
-	UID uint32
+	UID imap.UID
 }
 
 func (FetchItemDataUID) fetchItemData() {}
@@ -387,7 +387,7 @@ type FetchMessageBuffer struct {
 	Envelope          *imap.Envelope
 	InternalDate      time.Time
 	RFC822Size        int64
-	UID               uint32
+	UID               imap.UID
 	BodyStructure     imap.BodyStructure
 	BodySection       map[*imap.FetchItemBodySection][]byte
 	BinarySection     map[*imap.FetchItemBinarySection][]byte
@@ -548,7 +548,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 
-			item = FetchItemDataUID{UID: uid}
+			item = FetchItemDataUID{UID: imap.UID(uid)}
 		case "BODY", "BINARY":
 			if dec.Special('[') {
 				var section interface{}

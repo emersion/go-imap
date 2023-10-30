@@ -22,7 +22,7 @@ type Mailbox struct {
 	name       string
 	subscribed bool
 	l          []*message
-	uidNext    uint32
+	uidNext    imap.UID
 }
 
 // NewMailbox creates a new mailbox.
@@ -207,7 +207,7 @@ func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.SeqSet) err
 	expunged := make(map[*message]struct{})
 	mbox.mutex.Lock()
 	for _, msg := range mbox.l {
-		if uids != nil && !uids.Contains(msg.uid) {
+		if uids != nil && !uids.Contains(uint32(msg.uid)) {
 			continue
 		}
 		if _, ok := msg.flags[canonicalFlag(imap.FlagDeleted)]; ok {
@@ -335,7 +335,7 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 		case imapserver.NumKindSeq:
 			num = seqNum
 		case imapserver.NumKindUID:
-			num = msg.uid
+			num = uint32(msg.uid)
 		}
 		if num == 0 {
 			continue
@@ -391,7 +391,7 @@ func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.S
 		case imapserver.NumKindSeq:
 			num = mbox.tracker.EncodeSeqNum(seqNum)
 		case imapserver.NumKindUID:
-			num = msg.uid
+			num = uint32(msg.uid)
 		}
 		if num == 0 || !seqSet.Contains(num) {
 			continue
@@ -411,7 +411,7 @@ func (mbox *MailboxView) staticSeqSet(seqSet imap.SeqSet, numKind imapserver.Num
 	case imapserver.NumKindSeq:
 		max = uint32(len(mbox.l))
 	case imapserver.NumKindUID:
-		max = mbox.uidNext - 1
+		max = uint32(mbox.uidNext) - 1
 	}
 
 	for i := range seqSet {

@@ -21,7 +21,7 @@ type StatusData struct {
 	Mailbox string
 
 	NumMessages *uint32
-	UIDNext     uint32
+	UIDNext     UID
 	UIDValidity uint32
 	NumUnseen   *uint32
 	NumDeleted  *uint32

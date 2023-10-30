@@ -68,8 +68,8 @@ func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, de
 	var sourceUIDs, destUIDs imap.SeqSet
 	sess.mailbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
 		appendData := dest.copyMsg(msg)
-		sourceUIDs.AddNum(msg.uid)
-		destUIDs.AddNum(appendData.UID)
+		sourceUIDs.AddNum(uint32(msg.uid))
+		destUIDs.AddNum(uint32(appendData.UID))
 	})
 
 	return &imap.CopyData{
@@ -101,8 +101,8 @@ func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKi
 	expunged := make(map[*message]struct{})
 	sess.mailbox.forEachLocked(numKind, seqSet, func(seqNum uint32, msg *message) {
 		appendData := dest.copyMsg(msg)
-		sourceUIDs.AddNum(msg.uid)
-		destUIDs.AddNum(appendData.UID)
+		sourceUIDs.AddNum(uint32(msg.uid))
+		destUIDs.AddNum(uint32(appendData.UID))
 		expunged[msg] = struct{}{}
 	})
 	seqNums := sess.mailbox.expungeLocked(expunged)

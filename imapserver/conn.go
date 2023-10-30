@@ -588,7 +588,7 @@ func (w *UpdateWriter) WriteMailboxFlags(flags []imap.Flag) error {
 }
 
 // WriteMessageFlags writes a FETCH response with FLAGS.
-func (w *UpdateWriter) WriteMessageFlags(seqNum, uid uint32, flags []imap.Flag) error {
+func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag) error {
 	fetchWriter := &FetchWriter{conn: w.conn}
 	respWriter := fetchWriter.CreateMessage(seqNum)
 	if uid != 0 {

@@ -100,3 +100,6 @@ type LiteralReader interface {
 	io.Reader
 	Size() int64
 }
+
+// UID is a message unique identifier.
+type UID uint32
