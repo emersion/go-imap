@@ -349,9 +349,9 @@ func (w *FetchResponseWriter) writeItemSep() {
 }
 
 // WriteUID writes the message's UID.
-func (w *FetchResponseWriter) WriteUID(uid uint32) {
+func (w *FetchResponseWriter) WriteUID(uid imap.UID) {
 	w.writeItemSep()
-	w.enc.Atom("UID").SP().Number(uid)
+	w.enc.Atom("UID").SP().Number(uint32(uid))
 }
 
 // WriteFlags writes the message's flags.

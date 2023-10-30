@@ -16,7 +16,7 @@ type SelectData struct {
 	PermanentFlags []Flag
 	// Number of messages in this mailbox (aka. "EXISTS")
 	NumMessages uint32
-	UIDNext     uint32
+	UIDNext     UID
 	UIDValidity uint32
 
 	List *ListData // requires IMAP4rev2

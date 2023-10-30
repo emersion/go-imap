@@ -12,5 +12,7 @@ type AppendOptions struct {
 
 // AppendData is the data returned by an APPEND command.
 type AppendData struct {
-	UID, UIDValidity uint32 // requires UIDPLUS or IMAP4rev2
+	// requires UIDPLUS or IMAP4rev2
+	UID         UID
+	UIDValidity uint32
 }

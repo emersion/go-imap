@@ -130,11 +130,11 @@ func (c *Conn) writeUIDValidity(uidValidity uint32) error {
 	return enc.CRLF()
 }
 
-func (c *Conn) writeUIDNext(uidNext uint32) error {
+func (c *Conn) writeUIDNext(uidNext imap.UID) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()
-	enc.Special('[').Atom("UIDNEXT").SP().Number(uidNext).Special(']')
+	enc.Special('[').Atom("UIDNEXT").SP().Number(uint32(uidNext)).Special(']')
 	enc.SP().Text("Predicted next UID")
 	return enc.CRLF()
 }
