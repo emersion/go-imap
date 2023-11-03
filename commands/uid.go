@@ -26,7 +26,7 @@ func (cmd *Uid) Command() *imap.Command {
 }
 
 func (cmd *Uid) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
+	if len(fields) < 1 {
 		return errors.New("No command name specified")
 	}
 
