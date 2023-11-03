@@ -38,7 +38,7 @@ func formatFields(fields []interface{}) (string, error) {
 	w := NewWriter(b)
 
 	if err := w.writeList(fields); err != nil {
-		return "", fmt.Errorf("Cannot format \n%+v\n got error: \n%v", fields, err)
+		return "", fmt.Errorf("Cannot format \n%+v\n got error: \n%w", fields, err)
 	}
 
 	return b.String(), nil

@@ -11,6 +11,11 @@ import (
 	"github.com/emersion/go-sasl"
 )
 
+const (
+	argLenAuthenticateMin = 1
+	argLenAuthenticate    = 2
+)
+
 // AuthenticateConn is a connection that supports IMAP authentication.
 type AuthenticateConn interface {
 	io.Reader
@@ -47,7 +52,7 @@ func (cmd *Authenticate) Command() *imap.Command {
 }
 
 func (cmd *Authenticate) Parse(fields []interface{}) error {
-	if len(fields) < 1 {
+	if len(fields) < argLenAuthenticateMin {
 		return errors.New("Not enough arguments")
 	}
 
@@ -57,7 +62,7 @@ func (cmd *Authenticate) Parse(fields []interface{}) error {
 	}
 	cmd.Mechanism = strings.ToUpper(cmd.Mechanism)
 
-	if len(fields) != 2 {
+	if len(fields) != argLenAuthenticate {
 		return nil
 	}
 

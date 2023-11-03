@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenCopy = 2
+)
+
 // Copy is a COPY command, as defined in RFC 3501 section 6.4.7.
 type Copy struct {
 	SeqSet  *imap.SeqSet
@@ -23,7 +27,7 @@ func (cmd *Copy) Command() *imap.Command {
 }
 
 func (cmd *Copy) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenCopy {
 		return errors.New("No enough arguments")
 	}
 

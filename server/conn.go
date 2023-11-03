@@ -318,7 +318,7 @@ func (c *conn) serve(conn Conn) (err error) {
 		var up Upgrader
 
 		fields, err := c.ReadLine()
-		if err == io.EOF || c.ctx.State == imap.LogoutState {
+		if err == io.EOF || c.ctx.State == imap.LogoutState { //nolint:errorlint
 			return nil
 		}
 		c.setDeadline()
@@ -395,7 +395,8 @@ func (c *conn) handleCommand(cmd *imap.Command) (res *imap.StatusResp, up Upgrad
 	}
 
 	hdlrErr := hdlr.Handle(c.conn)
-	if statusErr, ok := hdlrErr.(*imap.ErrStatusResp); ok {
+	statusErr := &imap.ErrStatusResp{}
+	if errors.As(hdlrErr, &statusErr) {
 		res = statusErr.Resp
 	} else if hdlrErr != nil {
 		res = &imap.StatusResp{

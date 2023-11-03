@@ -26,11 +26,8 @@ const (
 	nilAtom = "NIL"
 )
 
-// TODO: add CTL to atomSpecials
 var (
 	quotedSpecials = string([]rune{dquote, '\\'})
-	respSpecials   = string([]rune{respCodeEnd})
-	atomSpecials   = string([]rune{listStart, listEnd, literalStart, sp, '%', '*'}) + quotedSpecials + respSpecials
 )
 
 type parseError struct {
@@ -44,8 +41,8 @@ func newParseError(text string) error {
 // IsParseError returns true if the provided error is a parse error produced by
 // Reader.
 func IsParseError(err error) bool {
-	_, ok := err.(*parseError)
-	return ok
+	parseErr := &parseError{}
+	return errors.As(err, &parseErr)
 }
 
 // A string reader.
@@ -127,7 +124,7 @@ func ParseStringList(f interface{}) ([]string, error) {
 	return list, nil
 }
 
-func trimSuffix(str string, suffix rune) string {
+func trimSuffix(str string) string {
 	return str[:len(str)-1]
 }
 
@@ -236,11 +233,11 @@ func (r *Reader) ReadLiteral() (Literal, error) {
 	if err != nil {
 		return nil, err
 	}
-	lstr = trimSuffix(lstr, literalEnd)
+	lstr = trimSuffix(lstr)
 
 	nonSync := strings.HasSuffix(lstr, "+")
 	if nonSync {
-		lstr = trimSuffix(lstr, '+')
+		lstr = trimSuffix(lstr)
 	}
 
 	n, err := strconv.ParseUint(lstr, 10, 32)

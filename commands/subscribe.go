@@ -7,6 +7,11 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenSubscribe   = 1
+	argLenUnsubscribe = 1
+)
+
 // Subscribe is a SUBSCRIBE command, as defined in RFC 3501 section 6.3.6.
 type Subscribe struct {
 	Mailbox string
@@ -22,7 +27,7 @@ func (cmd *Subscribe) Command() *imap.Command {
 }
 
 func (cmd *Subscribe) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
+	if len(fields) < argLenSubscribe {
 		return errors.New("No enough arguments")
 	}
 
@@ -50,7 +55,7 @@ func (cmd *Unsubscribe) Command() *imap.Command {
 }
 
 func (cmd *Unsubscribe) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
+	if len(fields) < argLenUnsubscribe {
 		return errors.New("No enogh arguments")
 	}
 

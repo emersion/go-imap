@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenRename = 2
+)
+
 // Rename is a RENAME command, as defined in RFC 3501 section 6.3.5.
 type Rename struct {
 	Existing string
@@ -25,7 +29,7 @@ func (cmd *Rename) Command() *imap.Command {
 }
 
 func (cmd *Rename) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenRename {
 		return errors.New("No enough arguments")
 	}
 

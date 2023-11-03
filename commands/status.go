@@ -8,6 +8,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenStatus = 2
+)
+
 // Status is a STATUS command, as defined in RFC 3501 section 6.3.10.
 type Status struct {
 	Mailbox string
@@ -29,7 +33,7 @@ func (cmd *Status) Command() *imap.Command {
 }
 
 func (cmd *Status) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenStatus {
 		return errors.New("No enough arguments")
 	}
 

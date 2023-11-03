@@ -3,6 +3,7 @@ package backendutil
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -27,7 +28,7 @@ func (r *countReader) Read(b []byte) (int, error) {
 		r.endsWithLF = b[n-1] == '\n'
 	}
 	// If the stream does not end with a newline - count missing newline.
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		if !r.endsWithLF {
 			r.newlines++
 		}
@@ -60,7 +61,7 @@ func FetchBodyStructure(header textproto.Header, body io.Reader, extended bool) 
 		var parts []*imap.BodyStructure
 		for {
 			p, err := mr.NextPart()
-			if err == io.EOF {
+			if err == io.EOF { //nolint:errorlint
 				break
 			} else if err != nil {
 				return nil, err

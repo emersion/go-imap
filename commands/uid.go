@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const (
+	argLenUid = 1
+)
+
 // Uid is a UID command, as defined in RFC 3501 section 6.4.8. It wraps another
 // command (e.g. wrapping a Fetch command will result in a UID FETCH).
 type Uid struct {
@@ -26,7 +30,7 @@ func (cmd *Uid) Command() *imap.Command {
 }
 
 func (cmd *Uid) Parse(fields []interface{}) error {
-	if len(fields) < 0 {
+	if len(fields) < argLenUid {
 		return errors.New("No command name specified")
 	}
 

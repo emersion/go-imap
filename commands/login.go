@@ -6,6 +6,10 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const (
+	argLenLogin = 2
+)
+
 // Login is a LOGIN command, as defined in RFC 3501 section 6.2.2.
 type Login struct {
 	Username string
@@ -20,7 +24,7 @@ func (cmd *Login) Command() *imap.Command {
 }
 
 func (cmd *Login) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenLogin {
 		return errors.New("Not enough arguments")
 	}
 

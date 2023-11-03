@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const (
+	argLenFetch = 2
+)
+
 // Fetch is a FETCH command, as defined in RFC 3501 section 6.4.5.
 type Fetch struct {
 	SeqSet *imap.SeqSet
@@ -34,7 +38,7 @@ func (cmd *Fetch) Command() *imap.Command {
 }
 
 func (cmd *Fetch) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenFetch {
 		return errors.New("No enough arguments")
 	}
 

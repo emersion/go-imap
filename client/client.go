@@ -7,6 +7,7 @@ package client
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -121,8 +122,8 @@ func (c *Client) registerHandler(h responses.Handler) {
 func (c *Client) handle(resp imap.Resp) error {
 	c.handlersLocker.Lock()
 	for i := len(c.handlers) - 1; i >= 0; i-- {
-		if err := c.handlers[i].Handle(resp); err != responses.ErrUnhandled {
-			if err == errUnregisterHandler {
+		if err := c.handlers[i].Handle(resp); !errors.Is(err, responses.ErrUnhandled) {
+			if errors.Is(err, errUnregisterHandler) {
 				c.handlers = append(c.handlers[:i], c.handlers[i+1:]...)
 				err = nil
 			}
@@ -154,7 +155,7 @@ func (c *Client) readOnce() (bool, error) {
 	}
 
 	resp, err := imap.ReadResp(c.conn.Reader)
-	if err == io.EOF || c.State() == imap.LogoutState {
+	if errors.Is(err, io.EOF) || c.State() == imap.LogoutState {
 		return false, nil
 	} else if err != nil {
 		if imap.IsParseError(err) {
@@ -164,7 +165,7 @@ func (c *Client) readOnce() (bool, error) {
 		}
 	}
 
-	if err := c.handle(resp); err != nil && err != responses.ErrUnhandled {
+	if err := c.handle(resp); err != nil && !errors.Is(err, responses.ErrUnhandled) {
 		c.ErrorLog.Println("cannot handle response ", resp, err)
 	}
 	return true, nil
@@ -216,7 +217,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 	c.registerHandler(responses.HandlerFunc(func(resp imap.Resp) error {
 		select {
 		case <-unregister:
-			// If an error occured while sending the command, abort
+			// If an error occurred while sending the command, abort
 			return errUnregisterHandler
 		default:
 		}
@@ -240,7 +241,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 
 		if h != nil {
 			// Pass the response to the response handler
-			if err := h.Handle(resp); err != nil && err != responses.ErrUnhandled {
+			if err := h.Handle(resp); err != nil && !errors.Is(err, responses.ErrUnhandled) {
 				// If the response handler returns an error, abort
 				doneHandle <- handleResult{nil, err}
 				return errUnregisterHandler
@@ -256,7 +257,9 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 		// Error while sending the command
 		close(unregister)
 
-		if err, ok := err.(imap.LiteralLengthErr); ok {
+		literalErr := imap.LiteralLengthErr{}
+
+		if errors.As(err, &literalErr) {
 			// Expected > Actual
 			//  The server is waiting for us to write
 			//  more bytes, we don't have them. Run.
@@ -264,7 +267,7 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 			//  We are about to send a potentially truncated message, we don't
 			//  want this (ths terminating CRLF is not sent at this point).
 			c.conn.Close()
-			return nil, err
+			return nil, literalErr
 		}
 
 		return nil, err
@@ -665,7 +668,7 @@ func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Clie
 
 	serverName, _, _ := net.SplitHostPort(addr)
 	if tlsConfig == nil {
-		tlsConfig = &tls.Config{}
+		tlsConfig = &tls.Config{} // #nosec G402 -- TLS MinVersion too low
 	}
 	if tlsConfig.ServerName == "" {
 		tlsConfig = tlsConfig.Clone()

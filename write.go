@@ -165,7 +165,7 @@ func (w *Writer) writeLiteral(l Literal) error {
 
 	n, err := io.CopyN(w, l, literalLen)
 	if err != nil {
-		if err == io.EOF && n != literalLen {
+		if err == io.EOF && n != literalLen { //nolint:errorlint
 			return LiteralLengthErr{int(n), l.Len()}
 		}
 		return err

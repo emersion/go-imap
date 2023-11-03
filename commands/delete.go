@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenDelete = 1
+)
+
 // Delete is a DELETE command, as defined in RFC 3501 section 6.3.3.
 type Delete struct {
 	Mailbox string
@@ -22,7 +26,7 @@ func (cmd *Delete) Command() *imap.Command {
 }
 
 func (cmd *Delete) Parse(fields []interface{}) error {
-	if len(fields) < 1 {
+	if len(fields) < argLenDelete {
 		return errors.New("No enough arguments")
 	}
 

@@ -46,7 +46,7 @@ func FetchBodySection(header textproto.Header, body io.Reader, section *imap.Bod
 
 		for j := 1; j <= n; j++ {
 			p, err := mr.NextPart()
-			if err == io.EOF {
+			if err == io.EOF { //nolint:errorlint
 				return nil, errNoSuchPart
 			} else if err != nil {
 				return nil, err

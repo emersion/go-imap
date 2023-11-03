@@ -8,6 +8,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenAppendMin = 2
+)
+
 // Append is an APPEND command, as defined in RFC 3501 section 6.3.11.
 type Append struct {
 	Mailbox string
@@ -43,7 +47,7 @@ func (cmd *Append) Command() *imap.Command {
 }
 
 func (cmd *Append) Parse(fields []interface{}) (err error) {
-	if len(fields) < 2 {
+	if len(fields) < argLenAppendMin {
 		return errors.New("No enough arguments")
 	}
 

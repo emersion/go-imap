@@ -244,7 +244,7 @@ func (cmd *Append) Handle(conn Conn) error {
 	}
 
 	mbox, err := ctx.User.GetMailbox(cmd.Mailbox)
-	if err == backend.ErrNoSuchMailbox {
+	if errors.Is(err, backend.ErrNoSuchMailbox) {
 		return ErrStatusResp(&imap.StatusResp{
 			Type: imap.StatusRespNo,
 			Code: imap.CodeTryCreate,
@@ -255,7 +255,7 @@ func (cmd *Append) Handle(conn Conn) error {
 	}
 
 	if err := mbox.CreateMessage(cmd.Flags, cmd.Date, cmd.Message); err != nil {
-		if err == backend.ErrTooBig {
+		if errors.Is(err, backend.ErrTooBig) {
 			return ErrStatusResp(&imap.StatusResp{
 				Type: imap.StatusRespNo,
 				Code: "TOOBIG",

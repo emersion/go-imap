@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenCreate = 1
+)
+
 // Create is a CREATE command, as defined in RFC 3501 section 6.3.3.
 type Create struct {
 	Mailbox string
@@ -22,7 +26,7 @@ func (cmd *Create) Command() *imap.Command {
 }
 
 func (cmd *Create) Parse(fields []interface{}) error {
-	if len(fields) < 1 {
+	if len(fields) < argLenCreate {
 		return errors.New("No enough arguments")
 	}
 

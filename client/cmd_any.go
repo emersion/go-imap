@@ -76,7 +76,7 @@ func (c *Client) Logout() error {
 
 	cmd := new(commands.Logout)
 
-	if status, err := c.execute(cmd, nil); err == errClosed {
+	if status, err := c.execute(cmd, nil); errors.Is(err, errClosed) {
 		// Server closed connection, that's what we want anyway
 		return nil
 	} else if err != nil {

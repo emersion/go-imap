@@ -9,6 +9,10 @@ import (
 	"github.com/emersion/go-imap/responses"
 )
 
+const (
+	defaultLogoutTimeout = 25 * time.Minute
+)
+
 // ErrNotLoggedIn is returned if a function that requires the client to be
 // logged in is called then the client isn't.
 var ErrNotLoggedIn = errors.New("Not logged in")
@@ -315,7 +319,7 @@ func (c *Client) Idle(stop <-chan struct{}, opts *IdleOptions) error {
 		return c.idleFallback(stop, opts)
 	}
 
-	logoutTimeout := 25 * time.Minute
+	logoutTimeout := defaultLogoutTimeout
 	if opts != nil {
 		if opts.LogoutTimeout > 0 {
 			logoutTimeout = opts.LogoutTimeout

@@ -176,7 +176,7 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					Uid: &imap.SeqSet{Set: []imap.Seq{{Start: 69, Stop: 69}}},
 					Not: []*imap.SearchCriteria{{SeqNum: new(imap.SeqSet)}},
 				},
 				{
@@ -192,9 +192,9 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					Uid: &imap.SeqSet{Set: []imap.Seq{{Start: 69, Stop: 69}}},
 					Not: []*imap.SearchCriteria{{
-						SeqNum: &imap.SeqSet{Set: []imap.Seq{imap.Seq{42, 42}}},
+						SeqNum: &imap.SeqSet{Set: []imap.Seq{{Start: 42, Stop: 42}}},
 					}},
 				},
 				{
@@ -210,13 +210,13 @@ var matchTests = []struct {
 		criteria: &imap.SearchCriteria{
 			Or: [][2]*imap.SearchCriteria{{
 				{
-					Uid: &imap.SeqSet{Set: []imap.Seq{{69, 69}}},
+					Uid: &imap.SeqSet{Set: []imap.Seq{{Start: 69, Stop: 69}}},
 					Not: []*imap.SearchCriteria{{
-						SeqNum: &imap.SeqSet{Set: []imap.Seq{{42, 42}}},
+						SeqNum: &imap.SeqSet{Set: []imap.Seq{{Start: 42, Stop: 42}}},
 					}},
 				},
 				{
-					SeqNum: &imap.SeqSet{Set: []imap.Seq{{42, 42}}},
+					SeqNum: &imap.SeqSet{Set: []imap.Seq{{Start: 42, Stop: 42}}},
 				},
 			}},
 		},

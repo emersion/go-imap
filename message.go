@@ -122,7 +122,7 @@ func encodeHeader(s string) string {
 	return mime.QEncoding.Encode("utf-8", s)
 }
 
-func stringLowered(i interface{}) (string, bool) {
+func stringLowered(i interface{}) (string, bool) { //nolint:unparam
 	s, ok := i.(string)
 	return strings.ToLower(s), ok
 }
@@ -955,7 +955,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		if len(fields) > end {
 			location, _ := fields[end].([]interface{})
 			bs.Location, _ = ParseStringList(location)
-			end++
+			end++ //nolint:ineffassign
 		}
 	case string: // A non-multipart body part
 		if len(fields) < 7 {
@@ -1038,7 +1038,7 @@ func (bs *BodyStructure) Parse(fields []interface{}) error {
 		if len(fields) > end {
 			location, _ := fields[end].([]interface{})
 			bs.Location, _ = ParseStringList(location)
-			end++
+			end++ //nolint:ineffassign
 		}
 	}
 

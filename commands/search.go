@@ -34,7 +34,7 @@ func (cmd *Search) Parse(fields []interface{}) error {
 
 	// Parse charset
 	if f, ok := fields[0].(string); ok && strings.EqualFold(f, "CHARSET") {
-		if len(fields) < 2 {
+		if len(fields) < 2 { //nolint:gomnd
 			return errors.New("Missing CHARSET value")
 		}
 		if cmd.Charset, ok = fields[1].(string); !ok {

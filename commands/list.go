@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenList = 2
+)
+
 // List is a LIST command, as defined in RFC 3501 section 6.3.8. If Subscribed
 // is set to true, LSUB will be used instead.
 type List struct {
@@ -33,7 +37,7 @@ func (cmd *List) Command() *imap.Command {
 }
 
 func (cmd *List) Parse(fields []interface{}) error {
-	if len(fields) < 2 {
+	if len(fields) < argLenList {
 		return errors.New("No enough arguments")
 	}
 

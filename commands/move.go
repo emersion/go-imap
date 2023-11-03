@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap/utf7"
 )
 
+const (
+	argLenMove = 2
+)
+
 // A MOVE command.
 // See RFC 6851 section 3.1.
 type Move struct {
@@ -24,7 +28,7 @@ func (cmd *Move) Command() *imap.Command {
 }
 
 func (cmd *Move) Parse(fields []interface{}) (err error) {
-	if len(fields) < 2 {
+	if len(fields) < argLenMove {
 		return errors.New("No enough arguments")
 	}
 

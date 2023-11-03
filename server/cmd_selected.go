@@ -166,7 +166,7 @@ func (cmd *Fetch) handle(uid bool, conn Conn) error {
 	go (func() {
 		done <- conn.WriteResp(res)
 		// Make sure to drain the message channel.
-		for _ = range ch {
+		for range ch {
 		}
 	})()
 

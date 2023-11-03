@@ -7,6 +7,10 @@ import (
 	"github.com/emersion/go-imap"
 )
 
+const (
+	argLenStore = 3
+)
+
 // Store is a STORE command, as defined in RFC 3501 section 6.4.6.
 type Store struct {
 	SeqSet *imap.SeqSet
@@ -22,7 +26,7 @@ func (cmd *Store) Command() *imap.Command {
 }
 
 func (cmd *Store) Parse(fields []interface{}) error {
-	if len(fields) < 3 {
+	if len(fields) < argLenStore {
 		return errors.New("No enough arguments")
 	}
 

@@ -72,7 +72,7 @@ type ConnExtension interface {
 //
 // To disable the default status response, use imap.ErrStatusResp{nil} instead.
 func ErrStatusResp(res *imap.StatusResp) error {
-	return &imap.ErrStatusResp{res}
+	return &imap.ErrStatusResp{Resp: res}
 }
 
 // ErrNoStatusResp can be returned by a Handler to prevent the default status
@@ -80,7 +80,7 @@ func ErrStatusResp(res *imap.StatusResp) error {
 //
 // Deprecated: Use imap.ErrStatusResp{nil} instead
 func ErrNoStatusResp() error {
-	return &imap.ErrStatusResp{nil}
+	return &imap.ErrStatusResp{Resp: nil}
 }
 
 // An IMAP server.
