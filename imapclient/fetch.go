@@ -805,12 +805,15 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	// TODO: handle errors
 	bs.Description, _ = options.decodeText(description)
 
+	// Some servers don't include the extra fields for message and text
+	// (see https://github.com/emersion/go-imap/issues/557)
+	hasSP := dec.SP()
+	if !hasSP {
+		return &bs, nil
+	}
+
 	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
 		var msg imap.BodyStructureMessageRFC822
-
-		if !dec.ExpectSP() {
-			return nil, dec.Err()
-		}
 
 		msg.Envelope, err = readEnvelope(dec, options)
 		if err != nil {
@@ -831,17 +834,22 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 		}
 
 		bs.MessageRFC822 = &msg
+		hasSP = false
 	} else if strings.EqualFold(bs.Type, "text") {
 		var text imap.BodyStructureText
 
-		if !dec.ExpectSP() || !dec.ExpectNumber64(&text.NumLines) {
+		if !dec.ExpectNumber64(&text.NumLines) {
 			return nil, dec.Err()
 		}
 
 		bs.Text = &text
+		hasSP = false
 	}
 
-	if dec.SP() {
+	if !hasSP {
+		hasSP = dec.SP()
+	}
+	if hasSP {
 		bs.Extended, err = readBodyExt1part(dec, options)
 		if err != nil {
 			return nil, fmt.Errorf("in body-ext-1part: %v", err)
