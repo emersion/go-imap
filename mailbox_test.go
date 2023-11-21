@@ -189,3 +189,48 @@ func TestMailboxStatus_Format(t *testing.T) {
 		}
 	}
 }
+
+func TestMailboxStatus_DeepCopy(t *testing.T) {
+	source := imap.NewMailboxStatus("INBOX", []imap.StatusItem{imap.StatusUidNext})
+	source.ReadOnly = true
+	source.Flags = []string{imap.AnsweredFlag, imap.FlaggedFlag}
+	source.PermanentFlags = []string{imap.AnsweredFlag}
+	source.UnseenSeqNum = 1
+	source.Messages = 42
+	source.Recent = 5
+	source.Unseen = 10
+	source.UidNext = 43
+	source.UidValidity = 1
+
+	copy := source.DeepCopy()
+	if !reflect.DeepEqual(source, copy) {
+		t.Errorf("deepCopy() didn't produce an exact copy for %T: got \n%+v\nbut expected \n%+v", source, copy, source)
+	}
+
+	copy.Name = "Trash"
+	copy.Items[imap.StatusUidNext] = 10
+	copy.ReadOnly = false
+	copy.Flags[0] = imap.DeletedFlag
+	copy.PermanentFlags[0] = imap.DeletedFlag
+	copy.UnseenSeqNum = 2
+	copy.Messages = 43
+	copy.Recent = 6
+	copy.Unseen = 11
+	copy.UidNext = 44
+	copy.UidValidity = 2
+
+	if source.Name == copy.Name ||
+		reflect.DeepEqual(source.Items, copy.Items) ||
+		source.ReadOnly == copy.ReadOnly ||
+		&(source.ItemsLocker) == &(copy.ItemsLocker) ||
+		reflect.DeepEqual(source.Flags, copy.Flags) ||
+		reflect.DeepEqual(source.PermanentFlags, copy.PermanentFlags) ||
+		source.UnseenSeqNum == copy.UnseenSeqNum ||
+		source.Messages == copy.Messages ||
+		source.Recent == copy.Recent ||
+		source.Unseen == copy.Unseen ||
+		source.UidNext == copy.UidNext ||
+		source.UidValidity == copy.UidValidity {
+		t.Errorf("Expected all fields to be different, got source: %+v, copy: %+v", source, copy)
+	}
+}

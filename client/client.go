@@ -309,11 +309,13 @@ func (c *Client) State() imap.ConnState {
 
 // Mailbox returns the selected mailbox. It returns nil if there isn't one.
 func (c *Client) Mailbox() *imap.MailboxStatus {
-	// c.Mailbox fields are not supposed to change, so we can return the pointer.
 	c.locker.Lock()
-	mbox := c.mailbox
-	c.locker.Unlock()
-	return mbox
+	defer c.locker.Unlock()
+	if c.mailbox != nil {
+		return c.mailbox.DeepCopy()
+	}
+
+	return nil
 }
 
 // SetState sets this connection's internal state.

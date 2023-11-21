@@ -305,6 +305,26 @@ func (status *MailboxStatus) Format() []interface{} {
 	return fields
 }
 
+func (status *MailboxStatus) DeepCopy() *MailboxStatus {
+	copy := MailboxStatus{}
+	copy.Name = status.Name
+	copy.ReadOnly = status.ReadOnly
+	copy.Items = map[StatusItem]interface{}{}
+	for index, element := range status.Items {
+		copy.Items[index] = element
+	}
+
+	copy.Flags = append([]string(nil), status.Flags...)
+	copy.PermanentFlags = append([]string(nil), status.PermanentFlags...)
+	copy.UnseenSeqNum = status.UnseenSeqNum
+	copy.Messages = status.Messages
+	copy.Recent = status.Recent
+	copy.Unseen = status.Unseen
+	copy.UidNext = status.UidNext
+	copy.UidValidity = status.UidValidity
+
+	return &copy
+}
 func FormatMailboxName(name string) interface{} {
 	// Some e-mails servers don't handle quoted INBOX names correctly so we special-case it.
 	if strings.EqualFold(name, "INBOX") {
