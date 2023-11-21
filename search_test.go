@@ -66,6 +66,26 @@ var searchCriteriaTests = []struct {
 		},
 	},
 	{
+		expected: `((X-GM-THRID) (X-GM-RAW "has:attachment") (X-GM-MSGID))`,
+		criteria: &SearchCriteria{
+			Raw: []Raw{
+				{"X-GM-THRID", nil},
+				{"X-GM-RAW", "has:attachment"},
+				{"X-GM-MSGID", nil},
+			},
+		},
+	},
+	{
+		expected: `((X-GM-THRID) (X-GM-MSGID) (X-GM-RAW "has:attachment"))`,
+		criteria: &SearchCriteria{
+			Raw: []Raw{
+				{"X-GM-THRID", nil},
+				{"X-GM-MSGID", nil},
+				{"X-GM-RAW", "has:attachment"},
+			},
+		},
+	},
+	{
 		expected: "(ALL)",
 		criteria: &SearchCriteria{},
 	},

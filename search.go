@@ -56,6 +56,25 @@ func popSearchField(fields []interface{}) (interface{}, []interface{}, error) {
 	return fields[0], fields[1:], nil
 }
 
+func parseRawField(fields []interface{}) (interface{}, []interface{}) {
+	// Fields is empty. This means this isn't a raw field value but rather another raw key
+	if len(fields) == 0 {
+		return nil, fields
+	}
+
+	// First element in fields is an array of interfaces, this means this field doesn't have a value and is nil
+	if _, ok := fields[0].([]interface{}); ok {
+		return nil, fields
+	}
+
+	return fields[0], fields[1:]
+}
+
+type Raw struct {
+	Key   string
+	Value interface{}
+}
+
 // SearchCriteria is a search criteria. A message matches the criteria if and
 // only if it matches each one of its fields.
 type SearchCriteria struct {
@@ -80,6 +99,8 @@ type SearchCriteria struct {
 
 	Not []*SearchCriteria    // Each criteria doesn't match
 	Or  [][2]*SearchCriteria // Each criteria pair has at least one match of two
+
+	Raw []Raw // Raw keys and values to be added to the search
 }
 
 // NewSearchCriteria creates a new search criteria.
@@ -249,9 +270,14 @@ func (c *SearchCriteria) parseField(fields []interface{}, charsetReader func(io.
 		} else {
 			c.WithoutFlags = append(c.WithoutFlags, CanonicalFlag(maybeString(f)))
 		}
-	default: // Try to parse a sequence set
-		if c.SeqNum, err = ParseSeqSet(key); err != nil {
-			return nil, err
+	default: // Try to parse a sequence set, otherwise assume we have raw fields
+		if seqNum, err := ParseSeqSet(key); err == nil {
+			c.SeqNum = seqNum
+		} else {
+			// If ParseSeqSet fails, assume we have raw fields
+			var rawValue interface{}
+			rawValue, fields = parseRawField(fields)
+			c.Raw = append(c.Raw, Raw{Key: key, Value: rawValue})
 		}
 	}
 
@@ -360,6 +386,14 @@ func (c *SearchCriteria) Format() []interface{} {
 
 	for _, or := range c.Or {
 		fields = append(fields, RawString("OR"), or[0].Format(), or[1].Format())
+	}
+
+	for _, raw := range c.Raw {
+		field := []interface{}{RawString(raw.Key)}
+		if raw.Value != nil {
+			field = append(field, raw.Value)
+		}
+		fields = append(fields, field)
 	}
 
 	// Not a single criteria given, add ALL criteria as fallback
