@@ -60,13 +60,14 @@ const (
 	MailboxAttrRemote        MailboxAttr = "\\Remote"
 
 	// Role (aka. "special-use") attributes
-	MailboxAttrAll     MailboxAttr = "\\All"
-	MailboxAttrArchive MailboxAttr = "\\Archive"
-	MailboxAttrDrafts  MailboxAttr = "\\Drafts"
-	MailboxAttrFlagged MailboxAttr = "\\Flagged"
-	MailboxAttrJunk    MailboxAttr = "\\Junk"
-	MailboxAttrSent    MailboxAttr = "\\Sent"
-	MailboxAttrTrash   MailboxAttr = "\\Trash"
+	MailboxAttrAll       MailboxAttr = "\\All"
+	MailboxAttrArchive   MailboxAttr = "\\Archive"
+	MailboxAttrDrafts    MailboxAttr = "\\Drafts"
+	MailboxAttrFlagged   MailboxAttr = "\\Flagged"
+	MailboxAttrJunk      MailboxAttr = "\\Junk"
+	MailboxAttrSent      MailboxAttr = "\\Sent"
+	MailboxAttrTrash     MailboxAttr = "\\Trash"
+	MailboxAttrImportant MailboxAttr = "\\Important" // RFC 8457
 )
 
 // Flag is a message flag.
