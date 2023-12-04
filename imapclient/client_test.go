@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/emersion/go-imap/v2/imapserver"
 	"github.com/emersion/go-imap/v2/imapserver/imapmemserver"
@@ -15,7 +16,7 @@ const (
 	testPassword = "test-password"
 )
 
-func newClientServerPair(t *testing.T) (*imapclient.Client, io.Closer) {
+func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient.Client, io.Closer) {
 	memServer := imapmemserver.New()
 
 	user := imapmemserver.NewUser(testUsername, testPassword)
@@ -46,15 +47,42 @@ func newClientServerPair(t *testing.T) (*imapclient.Client, io.Closer) {
 	}
 
 	client := imapclient.New(conn, nil)
+
+	if initialState >= imap.ConnStateAuthenticated {
+		if err := client.Login(testUsername, testPassword).Wait(); err != nil {
+			t.Fatalf("Login().Wait() = %v", err)
+		}
+	}
+	if initialState >= imap.ConnStateSelected {
+		if _, err := client.Select("INBOX", nil).Wait(); err != nil {
+			t.Fatalf("Select().Wait() = %v", err)
+		}
+	}
+
 	return client, server
 }
 
 func TestLogin(t *testing.T) {
-	client, server := newClientServerPair(t)
+	client, server := newClientServerPair(t, imap.ConnStateNotAuthenticated)
 	defer client.Close()
 	defer server.Close()
 
 	if err := client.Login(testUsername, testPassword).Wait(); err != nil {
 		t.Errorf("Login().Wait() = %v", err)
+	}
+}
+
+func TestIdle(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateSelected)
+	defer client.Close()
+	defer server.Close()
+
+	idleCmd, err := client.Idle()
+	if err != nil {
+		t.Fatalf("Idle() = %v", err)
+	}
+	// TODO: test unilateral updates
+	if err := idleCmd.Close(); err != nil {
+		t.Errorf("Close() = %v", err)
 	}
 }
