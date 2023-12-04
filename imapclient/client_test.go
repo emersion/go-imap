@@ -86,3 +86,15 @@ func TestIdle(t *testing.T) {
 		t.Errorf("Close() = %v", err)
 	}
 }
+
+// https://github.com/emersion/go-imap/issues/562
+func TestFetch_invalid(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateSelected)
+	defer client.Close()
+	defer server.Close()
+
+	_, err := client.UIDFetch(imap.SeqSetNum(), nil).Collect()
+	if err == nil {
+		t.Fatalf("UIDFetch().Collect() = %v", err)
+	}
+}
