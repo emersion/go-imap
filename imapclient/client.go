@@ -484,6 +484,20 @@ func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
 	return contReq
 }
 
+func (c *Client) closeWithError(err error) {
+	c.conn.Close()
+
+	c.mutex.Lock()
+	c.state = imap.ConnStateLogout
+	pendingCmds := c.pendingCmds
+	c.pendingCmds = nil
+	c.mutex.Unlock()
+
+	for _, cmd := range pendingCmds {
+		c.completeCommand(cmd, err)
+	}
+}
+
 // read continuously reads data coming from the server.
 //
 // All the data is decoded in the read goroutine, then dispatched via channels
@@ -495,21 +509,11 @@ func (c *Client) read() {
 			c.decErr = fmt.Errorf("imapclient: panic reading response: %v\n%s", v, debug.Stack())
 		}
 
-		c.conn.Close()
-
-		c.mutex.Lock()
-		c.state = imap.ConnStateLogout
-		pendingCmds := c.pendingCmds
-		c.pendingCmds = nil
-		c.mutex.Unlock()
-
 		cmdErr := c.decErr
 		if cmdErr == nil {
 			cmdErr = io.ErrUnexpectedEOF
 		}
-		for _, cmd := range pendingCmds {
-			c.completeCommand(cmd, cmdErr)
-		}
+		c.closeWithError(cmdErr)
 	}()
 
 	c.setReadTimeout(idleReadTimeout)
@@ -997,7 +1001,9 @@ func (ce *commandEncoder) end() {
 // commandEncoder.end to release the lock.
 func (ce *commandEncoder) flush() {
 	if err := ce.Encoder.CRLF(); err != nil {
-		ce.cmd.err = err
+		// TODO: consider stashing the error in Client to return it in future
+		// calls
+		ce.client.closeWithError(err)
 	}
 	ce.Encoder = nil
 }
