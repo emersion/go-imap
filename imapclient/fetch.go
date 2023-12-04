@@ -13,6 +13,10 @@ import (
 )
 
 func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+	if options == nil {
+		options = new(imap.FetchOptions)
+	}
+
 	cmd := &FetchCommand{
 		uid:    uid,
 		seqSet: seqSet,
@@ -21,7 +25,7 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions)
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
 	enc.SP().SeqSet(seqSet).SP()
 	writeFetchItems(enc.Encoder, uid, options)
-	if options != nil && options.ChangedSince != 0 {
+	if options.ChangedSince != 0 {
 		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
 	}
 	enc.end()
