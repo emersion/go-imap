@@ -72,6 +72,18 @@ func TestLogin(t *testing.T) {
 	}
 }
 
+func TestLogout(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
+	defer server.Close()
+
+	if err := client.Logout().Wait(); err != nil {
+		t.Errorf("Logout().Wait() = %v", err)
+	}
+	if err := client.Close(); err != nil {
+		t.Errorf("Close() = %v", err)
+	}
+}
+
 func TestIdle(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateSelected)
 	defer client.Close()
