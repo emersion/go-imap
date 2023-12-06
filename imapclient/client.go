@@ -22,6 +22,7 @@ package imapclient
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -317,12 +318,12 @@ func (c *Client) Close() error {
 	c.mutex.Unlock()
 
 	// Ignore net.ErrClosed here, because we also call conn.Close in c.read
-	if err := c.conn.Close(); err != nil && err != net.ErrClosed {
+	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 		return err
 	}
 
 	<-c.decCh
-	if err := c.decErr; err != nil {
+	if err := c.decErr; err != nil && !errors.Is(err, net.ErrClosed) {
 		return err
 	}
 
