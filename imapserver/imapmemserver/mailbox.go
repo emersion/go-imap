@@ -81,7 +81,7 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 	}
 	if options.NumDeleted {
 		num := mbox.countByFlagLocked(imap.FlagDeleted)
-		data.NumUnseen = &num
+		data.NumDeleted = &num
 	}
 	if options.Size {
 		size := mbox.sizeLocked()
