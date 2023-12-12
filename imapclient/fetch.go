@@ -175,7 +175,8 @@ func (cmd *FetchCommand) Next() *FetchMessageData {
 	if cmd.prev != nil {
 		cmd.prev.discard()
 	}
-	return <-cmd.msgs
+	cmd.prev = <-cmd.msgs
+	return cmd.prev
 }
 
 // Close releases the command.

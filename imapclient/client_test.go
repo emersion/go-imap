@@ -3,6 +3,7 @@ package imapclient_test
 import (
 	"io"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap/v2"
@@ -16,11 +17,24 @@ const (
 	testPassword = "test-password"
 )
 
+const simpleRawMessage = `MIME-Version: 1.0
+Message-Id: <191101702316132@example.com>
+Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=utf-8
+
+This is my letter!`
+
 func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient.Client, io.Closer) {
 	memServer := imapmemserver.New()
 
 	user := imapmemserver.NewUser(testUsername, testPassword)
 	user.Create("INBOX", nil)
+
+	_, err := user.Append("INBOX", strings.NewReader(simpleRawMessage), &imap.AppendOptions{})
+	if err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+
 	memServer.AddUser(user)
 
 	server := imapserver.New(&imapserver.Options{
@@ -96,5 +110,23 @@ func TestFetch_invalid(t *testing.T) {
 	_, err := client.UIDFetch(imap.SeqSetNum(), nil).Collect()
 	if err == nil {
 		t.Fatalf("UIDFetch().Collect() = %v", err)
+	}
+}
+
+func TestFetch_closeUnreadBody(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateSelected)
+	defer client.Close()
+	defer server.Close()
+
+	fetchCmd := client.UIDFetch(imap.SeqSetNum(1), &imap.FetchOptions{
+		BodySection: []*imap.FetchItemBodySection{
+			{
+				Specifier: imap.PartSpecifierNone,
+				Peek:      true,
+			},
+		},
+	})
+	if err := fetchCmd.Close(); err != nil {
+		t.Fatalf("UIDFetch().Close() = %v", err)
 	}
 }
