@@ -36,8 +36,8 @@ type SearchOptions struct {
 //		{Body: []string{"world"}},
 //	}}}
 type SearchCriteria struct {
-	SeqNum []SeqSet
-	UID    []SeqSet
+	SeqNum []NumSet
+	UID    []NumSet
 
 	// Only the date is used, the time and timezone are ignored
 	Since      time.Time
@@ -135,7 +135,7 @@ const (
 
 // SearchData is the data returned by a SEARCH command.
 type SearchData struct {
-	All SeqSet
+	All NumSet
 
 	// requires IMAP4rev2 or ESEARCH
 	UID   bool
@@ -154,23 +154,23 @@ func (data *SearchData) AllNums() []uint32 {
 	return nums
 }
 
-// searchRes is a special empty SeqSet which can be used as a marker. It has
+// searchRes is a special empty NumSet which can be used as a marker. It has
 // a non-zero cap so that its data pointer is non-nil and can be compared.
 var (
-	searchRes     = make(SeqSet, 0, 1)
+	searchRes     = make(NumSet, 0, 1)
 	searchResAddr = reflect.ValueOf(searchRes).Pointer()
 )
 
-// SearchRes returns a special marker which can be used instead of a SeqSet to
+// SearchRes returns a special marker which can be used instead of a NumSet to
 // reference the last SEARCH result. On the wire, it's encoded as '$'.
 //
 // It requires IMAP4rev2 or the SEARCHRES extension.
-func SearchRes() SeqSet {
+func SearchRes() NumSet {
 	return searchRes
 }
 
 // IsSearchRes checks whether a sequence set is a reference to the last SEARCH
 // result. See SearchRes.
-func IsSearchRes(seqSet SeqSet) bool {
+func IsSearchRes(seqSet NumSet) bool {
 	return reflect.ValueOf(seqSet).Pointer() == searchResAddr
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 )
 
-func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand {
+func (c *Client) move(uid bool, seqSet imap.NumSet, mailbox string) *MoveCommand {
 	// If the server doesn't support MOVE, fallback to [UID] COPY,
 	// [UID] STORE +FLAGS.SILENT \Deleted and [UID] EXPUNGE
 	cmdName := "MOVE"
@@ -14,7 +14,7 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 
 	cmd := &MoveCommand{}
 	enc := c.beginCommand(uidCmdName(cmdName, uid), cmd)
-	enc.SP().SeqSet(seqSet).SP().Mailbox(mailbox)
+	enc.SP().NumSet(seqSet).SP().Mailbox(mailbox)
 	enc.end()
 
 	if cmdName == "COPY" {
@@ -37,14 +37,14 @@ func (c *Client) move(uid bool, seqSet imap.SeqSet, mailbox string) *MoveCommand
 //
 // If the server doesn't support IMAP4rev2 nor the MOVE extension, a fallback
 // with COPY + STORE + EXPUNGE commands is used.
-func (c *Client) Move(seqSet imap.SeqSet, mailbox string) *MoveCommand {
+func (c *Client) Move(seqSet imap.NumSet, mailbox string) *MoveCommand {
 	return c.move(false, seqSet, mailbox)
 }
 
 // UIDMove sends a UID MOVE command.
 //
 // See Move.
-func (c *Client) UIDMove(seqSet imap.SeqSet, mailbox string) *MoveCommand {
+func (c *Client) UIDMove(seqSet imap.NumSet, mailbox string) *MoveCommand {
 	return c.move(true, seqSet, mailbox)
 }
 
@@ -79,6 +79,6 @@ func (cmd *MoveCommand) Wait() (*MoveData, error) {
 type MoveData struct {
 	// requires UIDPLUS or IMAP4rev2
 	UIDValidity uint32
-	SourceUIDs  imap.SeqSet
-	DestUIDs    imap.SeqSet
+	SourceUIDs  imap.NumSet
+	DestUIDs    imap.NumSet
 }

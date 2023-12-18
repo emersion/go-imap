@@ -203,7 +203,7 @@ func (mbox *Mailbox) flagsLocked() []imap.Flag {
 	return l
 }
 
-func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.SeqSet) error {
+func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.NumSet) error {
 	expunged := make(map[*message]struct{})
 	mbox.mutex.Lock()
 	for _, msg := range mbox.l {
@@ -282,7 +282,7 @@ func (mbox *MailboxView) Close() {
 	mbox.tracker.Close()
 }
 
-func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, options *imap.FetchOptions) error {
+func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.NumSet, options *imap.FetchOptions) error {
 	markSeen := false
 	for _, bs := range options.BodySection {
 		if !bs.Peek {
@@ -313,10 +313,10 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	defer mbox.mutex.Unlock()
 
 	for _, seqSet := range criteria.SeqNum {
-		mbox.staticSeqSet(seqSet, imapserver.NumKindSeq)
+		mbox.staticNumSet(seqSet, imapserver.NumKindSeq)
 	}
 	for _, seqSet := range criteria.UID {
-		mbox.staticSeqSet(seqSet, imapserver.NumKindUID)
+		mbox.staticNumSet(seqSet, imapserver.NumKindUID)
 	}
 
 	data := imap.SearchData{
@@ -353,7 +353,7 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	return &data, nil
 }
 
-func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
+func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
 	mbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
 		msg.store(flags)
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
@@ -372,16 +372,16 @@ func (mbox *MailboxView) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 	return mbox.tracker.Idle(w, stop)
 }
 
-func (mbox *MailboxView) forEach(numKind imapserver.NumKind, seqSet imap.SeqSet, f func(seqNum uint32, msg *message)) {
+func (mbox *MailboxView) forEach(numKind imapserver.NumKind, seqSet imap.NumSet, f func(seqNum uint32, msg *message)) {
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 	mbox.forEachLocked(numKind, seqSet, f)
 }
 
-func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.SeqSet, f func(seqNum uint32, msg *message)) {
+func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.NumSet, f func(seqNum uint32, msg *message)) {
 	// TODO: optimize
 
-	mbox.staticSeqSet(seqSet, numKind)
+	mbox.staticNumSet(seqSet, numKind)
 
 	for i, msg := range mbox.l {
 		seqNum := uint32(i) + 1
@@ -401,11 +401,11 @@ func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.S
 	}
 }
 
-// staticSeqSet converts a dynamic sequence set into a static one.
+// staticNumSet converts a dynamic sequence set into a static one.
 //
 // This is necessary to properly handle the special symbol "*", which
 // represents the maximum sequence number or UID in the mailbox.
-func (mbox *MailboxView) staticSeqSet(seqSet imap.SeqSet, numKind imapserver.NumKind) {
+func (mbox *MailboxView) staticNumSet(seqSet imap.NumSet, numKind imapserver.NumKind) {
 	var max uint32
 	switch numKind {
 	case imapserver.NumKindSeq:

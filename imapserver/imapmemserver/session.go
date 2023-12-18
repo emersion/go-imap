@@ -50,7 +50,7 @@ func (sess *UserSession) Unselect() error {
 	return nil
 }
 
-func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, destName string) (*imap.CopyData, error) {
+func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.NumSet, destName string) (*imap.CopyData, error) {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
 		return nil, &imap.Error{
@@ -65,7 +65,7 @@ func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, de
 		}
 	}
 
-	var sourceUIDs, destUIDs imap.SeqSet
+	var sourceUIDs, destUIDs imap.NumSet
 	sess.mailbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
 		appendData := dest.copyMsg(msg)
 		sourceUIDs.AddNum(uint32(msg.uid))
@@ -79,7 +79,7 @@ func (sess *UserSession) Copy(numKind imapserver.NumKind, seqSet imap.SeqSet, de
 	}, nil
 }
 
-func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKind, seqSet imap.SeqSet, destName string) error {
+func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKind, seqSet imap.NumSet, destName string) error {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
 		return &imap.Error{
@@ -97,7 +97,7 @@ func (sess *UserSession) Move(w *imapserver.MoveWriter, numKind imapserver.NumKi
 	sess.mailbox.mutex.Lock()
 	defer sess.mailbox.mutex.Unlock()
 
-	var sourceUIDs, destUIDs imap.SeqSet
+	var sourceUIDs, destUIDs imap.NumSet
 	expunged := make(map[*message]struct{})
 	sess.mailbox.forEachLocked(numKind, seqSet, func(seqNum uint32, msg *message) {
 		appendData := dest.copyMsg(msg)

@@ -14,10 +14,10 @@ func (c *Client) Expunge() *ExpungeCommand {
 // UIDExpunge sends a UID EXPUNGE command.
 //
 // This command requires support for IMAP4rev2 or the UIDPLUS extension.
-func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
+func (c *Client) UIDExpunge(uids imap.NumSet) *ExpungeCommand {
 	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
 	enc := c.beginCommand("UID EXPUNGE", cmd)
-	enc.SP().SeqSet(uids)
+	enc.SP().NumSet(uids)
 	enc.end()
 	return cmd
 }

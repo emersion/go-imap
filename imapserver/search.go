@@ -104,7 +104,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 		enc.SP().Atom("UID")
 	}
 	if options.ReturnAll && len(data.All) > 0 {
-		enc.SP().Atom("ALL").SP().SeqSet(data.All)
+		enc.SP().Atom("ALL").SP().NumSet(data.All)
 	}
 	if options.ReturnMin && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
@@ -118,7 +118,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	return enc.CRLF()
 }
 
-func (c *Conn) writeSearch(seqSet imap.SeqSet) error {
+func (c *Conn) writeSearch(seqSet imap.NumSet) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -181,8 +181,8 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 	case "ALL":
 		// nothing to do
 	case "UID":
-		var seqSet imap.SeqSet
-		if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) {
+		var seqSet imap.NumSet
+		if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) {
 			return dec.Err()
 		}
 		criteria.UID = append(criteria.UID, seqSet)
@@ -302,7 +302,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		criteria.Or = append(criteria.Or, or)
 	default:
-		seqSet, err := imap.ParseSeqSet(key)
+		seqSet, err := imap.ParseNumSet(key)
 		if err != nil {
 			return err
 		}

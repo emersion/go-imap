@@ -107,7 +107,7 @@ func TestFetch_invalid(t *testing.T) {
 	defer client.Close()
 	defer server.Close()
 
-	_, err := client.UIDFetch(imap.SeqSetNum(), nil).Collect()
+	_, err := client.UIDFetch(imap.NumSetNum(), nil).Collect()
 	if err == nil {
 		t.Fatalf("UIDFetch().Collect() = %v", err)
 	}
@@ -118,7 +118,7 @@ func TestFetch_closeUnreadBody(t *testing.T) {
 	defer client.Close()
 	defer server.Close()
 
-	fetchCmd := client.UIDFetch(imap.SeqSetNum(1), &imap.FetchOptions{
+	fetchCmd := client.UIDFetch(imap.NumSetNum(1), &imap.FetchOptions{
 		BodySection: []*imap.FetchItemBodySection{
 			{
 				Specifier: imap.PartSpecifierNone,

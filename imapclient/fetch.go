@@ -12,7 +12,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+func (c *Client) fetch(uid bool, seqSet imap.NumSet, options *imap.FetchOptions) *FetchCommand {
 	if options == nil {
 		options = new(imap.FetchOptions)
 	}
@@ -23,7 +23,7 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions)
 		msgs:   make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
-	enc.SP().SeqSet(seqSet).SP()
+	enc.SP().NumSet(seqSet).SP()
 	writeFetchItems(enc.Encoder, uid, options)
 	if options.ChangedSince != 0 {
 		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
@@ -38,14 +38,14 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions)
 // defer a call to FetchCommand.Close.
 //
 // A nil options pointer is equivalent to a zero options value.
-func (c *Client) Fetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+func (c *Client) Fetch(seqSet imap.NumSet, options *imap.FetchOptions) *FetchCommand {
 	return c.fetch(false, seqSet, options)
 }
 
 // UIDFetch sends a UID FETCH command.
 //
 // See Fetch.
-func (c *Client) UIDFetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
+func (c *Client) UIDFetch(seqSet imap.NumSet, options *imap.FetchOptions) *FetchCommand {
 	return c.fetch(true, seqSet, options)
 }
 
@@ -160,8 +160,8 @@ type FetchCommand struct {
 	cmd
 
 	uid        bool
-	seqSet     imap.SeqSet
-	recvSeqSet imap.SeqSet
+	seqSet     imap.NumSet
+	recvNumSet imap.NumSet
 
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
@@ -470,10 +470,10 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			} else {
 				num = seqNum
 			}
-			if num == 0 || !cmd.seqSet.Contains(num) || cmd.recvSeqSet.Contains(num) {
+			if num == 0 || !cmd.seqSet.Contains(num) || cmd.recvNumSet.Contains(num) {
 				return false
 			}
-			cmd.recvSeqSet.AddNum(num)
+			cmd.recvNumSet.AddNum(num)
 
 			return true
 		})

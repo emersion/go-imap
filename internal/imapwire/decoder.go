@@ -487,24 +487,24 @@ func (dec *Decoder) ExpectUID(ptr *imap.UID) bool {
 	return true
 }
 
-func (dec *Decoder) ExpectSeqSet(ptr *imap.SeqSet) bool {
+func (dec *Decoder) ExpectNumSet(ptr *imap.NumSet) bool {
 	if dec.Special('$') {
 		*ptr = imap.SearchRes()
 		return true
 	}
 
 	var s string
-	if !dec.Expect(dec.Func(&s, isSeqSetChar), "sequence-set") {
+	if !dec.Expect(dec.Func(&s, isNumSetChar), "sequence-set") {
 		return false
 	}
-	seqSet, err := imap.ParseSeqSet(s)
+	seqSet, err := imap.ParseNumSet(s)
 	if err == nil {
 		*ptr = seqSet
 	}
 	return dec.returnErr(err)
 }
 
-func isSeqSetChar(ch byte) bool {
+func isNumSetChar(ch byte) bool {
 	return ch == '*' || IsAtomChar(ch)
 }
 

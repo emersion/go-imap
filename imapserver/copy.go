@@ -40,15 +40,15 @@ func (c *Conn) writeCopyOK(tag string, data *imap.CopyData) error {
 	enc.Atom(tag).SP().Atom("OK").SP()
 	if data != nil {
 		enc.Special('[')
-		enc.Atom("COPYUID").SP().Number(data.UIDValidity).SP().SeqSet(data.SourceUIDs).SP().SeqSet(data.DestUIDs)
+		enc.Atom("COPYUID").SP().Number(data.UIDValidity).SP().NumSet(data.SourceUIDs).SP().NumSet(data.DestUIDs)
 		enc.Special(']').SP()
 	}
 	enc.Text("COPY completed")
 	return enc.CRLF()
 }
 
-func readCopy(dec *imapwire.Decoder) (seqSet imap.SeqSet, dest string, err error) {
-	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
+func readCopy(dec *imapwire.Decoder) (seqSet imap.NumSet, dest string, err error) {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
 		return nil, "", dec.Err()
 	}
 	return seqSet, dest, nil

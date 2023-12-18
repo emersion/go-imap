@@ -366,31 +366,31 @@ func TestSeqMerge(T *testing.T) {
 	}
 }
 
-func checkSeqSet(s SeqSet, t *testing.T) {
+func checkNumSet(s NumSet, t *testing.T) {
 	n := len(s)
 	for i, v := range s {
 		if v.Start == 0 {
 			if v.Stop != 0 {
-				t.Errorf(`SeqSet(%q) index %d: "*:n" range`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "*:n" range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`SeqSet(%q) index %d: "*" not at the end`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "*" not at the end`, s, i)
 			}
 			continue
 		}
 		if i > 0 && s[i-1].Stop >= v.Start-1 {
-			t.Errorf(`SeqSet(%q) index %d: overlap`, s, i)
+			t.Errorf(`NumSet(%q) index %d: overlap`, s, i)
 		}
 		if v.Stop < v.Start {
 			if v.Stop != 0 {
-				t.Errorf(`SeqSet(%q) index %d: reversed range`, s, i)
+				t.Errorf(`NumSet(%q) index %d: reversed range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`SeqSet(%q) index %d: "n:*" not at the end`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "n:*" not at the end`, s, i)
 			}
 		}
 	}
 }
 
-func TestSeqSetInfo(t *testing.T) {
+func TestNumSetInfo(t *testing.T) {
 	tests := []struct {
 		s        string
 		q        uint32
@@ -531,8 +531,8 @@ func TestSeqSetInfo(t *testing.T) {
 		{"1,3:5,7,9,42,60:70,100:*", max, true},
 	}
 	for _, test := range tests {
-		s, _ := ParseSeqSet(test.s)
-		checkSeqSet(s, t)
+		s, _ := ParseNumSet(test.s)
+		checkNumSet(s, t)
 		if s.Contains(test.q) != test.contains {
 			t.Errorf("%q.Contains(%v) expected %v", test.s, test.q, test.contains)
 		}
@@ -550,7 +550,7 @@ func TestSeqSetInfo(t *testing.T) {
 	}
 }
 
-func TestParseSeqSet(t *testing.T) {
+func TestParseNumSet(t *testing.T) {
 	tests := []struct {
 		in  string
 		out string
@@ -673,12 +673,12 @@ func TestParseSeqSet(t *testing.T) {
 	}
 	for _, test := range tests {
 		for i := 0; i < 100 && test.in != ""; i++ {
-			s, err := ParseSeqSet(test.in)
+			s, err := ParseNumSet(test.in)
 			if err != nil {
 				t.Errorf("Add(%q) unexpected error; %v", test.in, err)
 				i = 100
 			}
-			checkSeqSet(s, t)
+			checkNumSet(s, t)
 			if out := s.String(); out != test.out {
 				t.Errorf("%q.String() expected %q; got %q", test.in, test.out, out)
 				i = 100
@@ -688,7 +688,7 @@ func TestParseSeqSet(t *testing.T) {
 	}
 }
 
-func TestSeqSetAddNumRangeSet(t *testing.T) {
+func TestNumSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
@@ -707,15 +707,15 @@ func TestSeqSetAddNumRangeSet(t *testing.T) {
 		{num{5, 1, 7, 3, 9, 0, 11}, Seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
-		other, _ := ParseSeqSet(test.set)
+		other, _ := ParseNumSet(test.set)
 
-		var s SeqSet
+		var s NumSet
 		s.AddNum(test.num...)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 		s.AddRange(test.rng.Start, test.rng.Stop)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 		s.AddSet(other)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 
 		if out := s.String(); out != test.out {
 			t.Errorf("(%v + %v + %q).String() expected %q; got %q", test.num, test.rng, test.set, test.out, out)

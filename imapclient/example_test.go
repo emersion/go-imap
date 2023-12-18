@@ -38,7 +38,7 @@ func ExampleClient() {
 	log.Printf("INBOX contains %v messages", selectedMbox.NumMessages)
 
 	if selectedMbox.NumMessages > 0 {
-		seqSet := imap.SeqSetNum(1)
+		seqSet := imap.NumSetNum(1)
 		fetchOptions := &imap.FetchOptions{Envelope: true}
 		messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 		if err != nil {
@@ -61,7 +61,7 @@ func ExampleClient_pipelining() {
 	// Login, select and fetch a message in a single roundtrip
 	loginCmd := c.Login("root", "root")
 	selectCmd := c.Select("INBOX", nil)
-	fetchCmd := c.UIDFetch(imap.SeqSetNum(uid), fetchOptions)
+	fetchCmd := c.UIDFetch(imap.NumSetNum(uid), fetchOptions)
 
 	if err := loginCmd.Wait(); err != nil {
 		log.Fatalf("failed to login: %v", err)
@@ -129,7 +129,7 @@ func ExampleClient_List_stream() {
 func ExampleClient_Store() {
 	var c *imapclient.Client
 
-	seqSet := imap.SeqSetNum(1)
+	seqSet := imap.NumSetNum(1)
 	storeFlags := imap.StoreFlags{
 		Op:     imap.StoreFlagsAdd,
 		Flags:  []imap.Flag{imap.FlagFlagged},
@@ -143,7 +143,7 @@ func ExampleClient_Store() {
 func ExampleClient_Fetch() {
 	var c *imapclient.Client
 
-	seqSet := imap.SeqSetNum(1)
+	seqSet := imap.NumSetNum(1)
 	fetchOptions := &imap.FetchOptions{
 		Flags:    true,
 		Envelope: true,
@@ -171,7 +171,7 @@ func ExampleClient_Fetch() {
 func ExampleClient_Fetch_stream() {
 	var c *imapclient.Client
 
-	seqSet := imap.SeqSetNum(1)
+	seqSet := imap.NumSetNum(1)
 	fetchOptions := &imap.FetchOptions{
 		UID:         true,
 		BodySection: []*imap.FetchItemBodySection{{}},

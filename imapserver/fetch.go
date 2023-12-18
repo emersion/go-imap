@@ -24,8 +24,8 @@ type fetchWriterOptions struct {
 }
 
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
-	var seqSet imap.SeqSet
-	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
+	var seqSet imap.NumSet
+	if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 

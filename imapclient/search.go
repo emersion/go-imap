@@ -154,10 +154,10 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 	}
 
 	for _, seqSet := range criteria.SeqNum {
-		encodeItem().SeqSet(seqSet)
+		encodeItem().NumSet(seqSet)
 	}
 	for _, seqSet := range criteria.UID {
-		encodeItem().Atom("UID").SP().SeqSet(seqSet)
+		encodeItem().Atom("UID").SP().NumSet(seqSet)
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
@@ -298,7 +298,7 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			}
 			data.Max = num
 		case "ALL":
-			if !dec.ExpectSeqSet(&data.All) {
+			if !dec.ExpectNumSet(&data.All) {
 				return "", nil, dec.Err()
 			}
 		case "COUNT":

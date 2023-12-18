@@ -6,12 +6,12 @@ import (
 	"strings"
 )
 
-// errBadSeqSet is used to report problems with the format of a sequence set
+// errBadNumSet is used to report problems with the format of a number set
 // value.
-type errBadSeqSet string
+type errBadNumSet string
 
-func (err errBadSeqSet) Error() string {
-	return fmt.Sprintf("imap: bad sequence set value %q", string(err))
+func (err errBadNumSet) Error() string {
+	return fmt.Sprintf("imap: bad number set value %q", string(err))
 }
 
 // Seq represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
@@ -30,7 +30,7 @@ func parseSeqNum(v string) (uint32, error) {
 	} else if v == "*" {
 		return 0, nil
 	}
-	return 0, errBadSeqSet(v)
+	return 0, errBadNumSet(v)
 }
 
 // parseSeq creates a new seq instance by parsing strings in the format "n" or
@@ -52,7 +52,7 @@ func parseSeq(v string) (Seq, error) {
 			return s, nil
 		}
 	}
-	return s, errBadSeqSet(v)
+	return s, errBadNumSet(v)
 }
 
 // Contains returns true if the seq-number q is contained in sequence value s.
@@ -130,13 +130,13 @@ func (s Seq) append(nums []uint32) (out []uint32, ok bool) {
 	return nums, true
 }
 
-// SeqSet is used to represent a set of message sequence numbers or UIDs (see
+// NumSet is used to represent a set of message sequence numbers or UIDs (see
 // sequence-set ABNF rule). The zero value is an empty set.
-type SeqSet []Seq
+type NumSet []Seq
 
-// ParseSeqSet returns a new SeqSet after parsing the set string.
-func ParseSeqSet(set string) (SeqSet, error) {
-	var s SeqSet
+// ParseNumSet returns a new NumSet after parsing the set string.
+func ParseNumSet(set string) (NumSet, error) {
+	var s NumSet
 	for _, sv := range strings.Split(set, ",") {
 		v, err := parseSeq(sv)
 		if err != nil {
@@ -147,29 +147,29 @@ func ParseSeqSet(set string) (SeqSet, error) {
 	return s, nil
 }
 
-// SeqSetNum returns a new SeqSet containing the sequence numbers.
-func SeqSetNum(q ...uint32) SeqSet {
-	var s SeqSet
+// NumSetNum returns a new NumSet containing the specified numbers.
+func NumSetNum(q ...uint32) NumSet {
+	var s NumSet
 	s.AddNum(q...)
 	return s
 }
 
-// SeqSetRange returns a new SeqSet containing the sequence range.
-func SeqSetRange(start, stop uint32) SeqSet {
-	var s SeqSet
+// NumSetRange returns a new NumSet containing the specified range.
+func NumSetRange(start, stop uint32) NumSet {
+	var s NumSet
 	s.AddRange(start, stop)
 	return s
 }
 
-// AddNum inserts new sequence numbers into the set. The value 0 represents "*".
-func (s *SeqSet) AddNum(q ...uint32) {
+// AddNum inserts new numbers into the set. The value 0 represents "*".
+func (s *NumSet) AddNum(q ...uint32) {
 	for _, v := range q {
 		s.insert(Seq{v, v})
 	}
 }
 
-// AddRange inserts a new sequence range into the set.
-func (s *SeqSet) AddRange(start, stop uint32) {
+// AddRange inserts a new range into the set.
+func (s *NumSet) AddRange(start, stop uint32) {
 	if (stop < start && stop != 0) || start == 0 {
 		s.insert(Seq{stop, start})
 	} else {
@@ -178,14 +178,14 @@ func (s *SeqSet) AddRange(start, stop uint32) {
 }
 
 // AddSet inserts all values from t into s.
-func (s *SeqSet) AddSet(t SeqSet) {
+func (s *NumSet) AddSet(t NumSet) {
 	for _, v := range t {
 		s.insert(v)
 	}
 }
 
 // Dynamic returns true if the set contains "*" or "n:*" values.
-func (s SeqSet) Dynamic() bool {
+func (s NumSet) Dynamic() bool {
 	return len(s) > 0 && s[len(s)-1].Stop == 0
 }
 
@@ -194,15 +194,15 @@ func (s SeqSet) Dynamic() bool {
 // responsibility to handle the special case where q is the maximum UID in the
 // mailbox and q < n (i.e. the set cannot match UIDs against "*:n" or "*" since
 // it doesn't know what the maximum value is).
-func (s SeqSet) Contains(q uint32) bool {
+func (s NumSet) Contains(q uint32) bool {
 	if _, ok := s.search(q); ok {
 		return q != 0
 	}
 	return false
 }
 
-// Nums returns a slice of all numbers contained in the sequence set.
-func (s SeqSet) Nums() (nums []uint32, ok bool) {
+// Nums returns a slice of all numbers contained in the set.
+func (s NumSet) Nums() (nums []uint32, ok bool) {
 	for _, v := range s {
 		nums, ok = v.append(nums)
 		if !ok {
@@ -212,8 +212,8 @@ func (s SeqSet) Nums() (nums []uint32, ok bool) {
 	return nums, true
 }
 
-// String returns a sorted representation of all contained sequence values.
-func (s SeqSet) String() string {
+// String returns a sorted representation of all contained number values.
+func (s NumSet) String() string {
 	if IsSearchRes(s) {
 		return "$"
 	}
@@ -240,7 +240,7 @@ func (s SeqSet) String() string {
 }
 
 // insert adds sequence value v to the set.
-func (ptr *SeqSet) insert(v Seq) {
+func (ptr *NumSet) insert(v Seq) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -279,7 +279,7 @@ func (ptr *SeqSet) insert(v Seq) {
 }
 
 // insertAt inserts a new sequence value v at index i, resizing s.Set as needed.
-func (ptr *SeqSet) insertAt(i int, v Seq) {
+func (ptr *NumSet) insertAt(i int, v Seq) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -306,7 +306,7 @@ func (ptr *SeqSet) insertAt(i int, v Seq) {
 // search attempts to find the index of the sequence set value that contains q.
 // If no values contain q, the returned index is the position where q should be
 // inserted and ok is set to false.
-func (s SeqSet) search(q uint32) (i int, ok bool) {
+func (s NumSet) search(q uint32) (i int, ok bool) {
 	min, max := 0, len(s)-1
 	for min < max {
 		if mid := (min + max) >> 1; s[mid].Less(q) {
