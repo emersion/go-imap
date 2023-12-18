@@ -150,14 +150,14 @@ type SearchData struct {
 // AllNums returns All as a slice of numbers.
 func (data *SearchData) AllNums() []uint32 {
 	// Note: a dynamic sequence set would be a server bug
-	nums, _ := data.All.Nums()
+	nums, _ := data.All.numSet().Nums()
 	return nums
 }
 
 // searchRes is a special empty NumSet which can be used as a marker. It has
 // a non-zero cap so that its data pointer is non-nil and can be compared.
 var (
-	searchRes     = make(NumSet, 0, 1)
+	searchRes     = make(SeqSet, 0, 1)
 	searchResAddr = reflect.ValueOf(searchRes).Pointer()
 )
 

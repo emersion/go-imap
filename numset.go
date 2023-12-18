@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 // errBadNumSet is used to report problems with the format of a number set
@@ -24,20 +25,20 @@ func parseNum(v string) (uint32, error) {
 	return 0, errBadNumSet(v)
 }
 
-// NumRange represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
+// numRange represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
 // may be static (e.g. "1", "2:4") or dynamic (e.g. "*", "1:*"). A seq-number is
 // represented by setting Start = Stop. Zero is used to represent "*", which is
 // safe because seq-number uses nz-number rule. The order of values is always
 // Start <= Stop, except when representing "n:*", where Start = n and Stop = 0.
-type NumRange struct {
+type numRange struct {
 	Start, Stop uint32
 }
 
 // parseSeq creates a new seq instance by parsing strings in the format "n" or
 // "n:m", where n and/or m may be "*". An error is returned for invalid values.
-func parseNumRange(v string) (NumRange, error) {
+func parseNumRange(v string) (numRange, error) {
 	var (
-		s   NumRange
+		s   numRange
 		err error
 	)
 	if sep := strings.IndexRune(v, ':'); sep < 0 {
@@ -58,7 +59,7 @@ func parseNumRange(v string) (NumRange, error) {
 // Contains returns true if the seq-number q is contained in range value s.
 // The dynamic value "*" contains only other "*" values, the dynamic range "n:*"
 // contains "*" and all numbers >= n.
-func (s NumRange) Contains(q uint32) bool {
+func (s numRange) Contains(q uint32) bool {
 	if q == 0 {
 		return s.Stop == 0 // "*" is contained only in "*" and "n:*"
 	}
@@ -66,7 +67,7 @@ func (s NumRange) Contains(q uint32) bool {
 }
 
 // Less returns true if s precedes and does not contain seq-number q.
-func (s NumRange) Less(q uint32) bool {
+func (s numRange) Less(q uint32) bool {
 	return (s.Stop < q || q == 0) && s.Stop != 0
 }
 
@@ -74,7 +75,7 @@ func (s NumRange) Less(q uint32) bool {
 // intersect or one is a superset of the other. The order of s and t does not
 // matter. If the values cannot be merged, s is returned unmodified and ok is
 // set to false.
-func (s NumRange) Merge(t NumRange) (union NumRange, ok bool) {
+func (s numRange) Merge(t numRange) (union numRange, ok bool) {
 	union = s
 	if s == t {
 		return s, true
@@ -90,7 +91,7 @@ func (s NumRange) Merge(t NumRange) (union NumRange, ok bool) {
 		}
 		// s is "n" or "n:m", if m == ^uint32(0) then t is "n:*"
 		if s.Stop+1 >= t.Start || s.Stop == ^uint32(0) {
-			return NumRange{s.Start, t.Stop}, true // s intersects or touches t
+			return numRange{s.Start, t.Stop}, true // s intersects or touches t
 		}
 		return union, false
 	}
@@ -106,7 +107,7 @@ func (s NumRange) Merge(t NumRange) (union NumRange, ok bool) {
 }
 
 // String returns range value s as a seq-number or seq-range string.
-func (s NumRange) String() string {
+func (s numRange) String() string {
 	if s.Start == s.Stop {
 		if s.Start == 0 {
 			return "*"
@@ -120,7 +121,7 @@ func (s NumRange) String() string {
 	return string(strconv.AppendUint(append(b, ':'), uint64(s.Stop), 10))
 }
 
-func (s NumRange) append(nums []uint32) (out []uint32, ok bool) {
+func (s numRange) append(nums []uint32) (out []uint32, ok bool) {
 	if s.Start == 0 || s.Stop == 0 {
 		return nil, false
 	}
@@ -130,13 +131,13 @@ func (s NumRange) append(nums []uint32) (out []uint32, ok bool) {
 	return nums, true
 }
 
-// NumSet is used to represent a set of message sequence numbers or UIDs (see
+// numSet is used to represent a set of message sequence numbers or UIDs (see
 // sequence-set ABNF rule). The zero value is an empty set.
-type NumSet []NumRange
+type numSet []numRange
 
-// ParseNumSet returns a new NumSet after parsing the set string.
-func ParseNumSet(set string) (NumSet, error) {
-	var s NumSet
+// ParseNumSet returns a new numSet after parsing the set string.
+func parseNumSet(set string) (numSet, error) {
+	var s numSet
 	for _, sv := range strings.Split(set, ",") {
 		v, err := parseNumRange(sv)
 		if err != nil {
@@ -147,45 +148,45 @@ func ParseNumSet(set string) (NumSet, error) {
 	return s, nil
 }
 
-// NumSetNum returns a new NumSet containing the specified numbers.
-func NumSetNum(q ...uint32) NumSet {
-	var s NumSet
+// NumSetNum returns a new numSet containing the specified numbers.
+func numSetNum(q ...uint32) numSet {
+	var s numSet
 	s.AddNum(q...)
 	return s
 }
 
-// NumSetRange returns a new NumSet containing the specified range.
-func NumSetRange(start, stop uint32) NumSet {
-	var s NumSet
+// NumSetRange returns a new numSet containing the specified range.
+func numSetRange(start, stop uint32) numSet {
+	var s numSet
 	s.AddRange(start, stop)
 	return s
 }
 
 // AddNum inserts new numbers into the set. The value 0 represents "*".
-func (s *NumSet) AddNum(q ...uint32) {
+func (s *numSet) AddNum(q ...uint32) {
 	for _, v := range q {
-		s.insert(NumRange{v, v})
+		s.insert(numRange{v, v})
 	}
 }
 
 // AddRange inserts a new range into the set.
-func (s *NumSet) AddRange(start, stop uint32) {
+func (s *numSet) AddRange(start, stop uint32) {
 	if (stop < start && stop != 0) || start == 0 {
-		s.insert(NumRange{stop, start})
+		s.insert(numRange{stop, start})
 	} else {
-		s.insert(NumRange{start, stop})
+		s.insert(numRange{start, stop})
 	}
 }
 
 // AddSet inserts all values from t into s.
-func (s *NumSet) AddSet(t NumSet) {
+func (s *numSet) AddSet(t numSet) {
 	for _, v := range t {
 		s.insert(v)
 	}
 }
 
 // Dynamic returns true if the set contains "*" or "n:*" values.
-func (s NumSet) Dynamic() bool {
+func (s numSet) Dynamic() bool {
 	return len(s) > 0 && s[len(s)-1].Stop == 0
 }
 
@@ -194,7 +195,7 @@ func (s NumSet) Dynamic() bool {
 // responsibility to handle the special case where q is the maximum UID in the
 // mailbox and q < n (i.e. the set cannot match UIDs against "*:n" or "*" since
 // it doesn't know what the maximum value is).
-func (s NumSet) Contains(q uint32) bool {
+func (s numSet) Contains(q uint32) bool {
 	if _, ok := s.search(q); ok {
 		return q != 0
 	}
@@ -202,7 +203,7 @@ func (s NumSet) Contains(q uint32) bool {
 }
 
 // Nums returns a slice of all numbers contained in the set.
-func (s NumSet) Nums() (nums []uint32, ok bool) {
+func (s numSet) Nums() (nums []uint32, ok bool) {
 	for _, v := range s {
 		nums, ok = v.append(nums)
 		if !ok {
@@ -213,8 +214,8 @@ func (s NumSet) Nums() (nums []uint32, ok bool) {
 }
 
 // String returns a sorted representation of all contained number values.
-func (s NumSet) String() string {
-	if IsSearchRes(s) {
+func (s numSet) String() string {
+	if IsSearchRes(s.seqSet()) {
 		return "$"
 	}
 	if len(s) == 0 {
@@ -240,7 +241,7 @@ func (s NumSet) String() string {
 }
 
 // insert adds range value v to the set.
-func (ptr *NumSet) insert(v NumRange) {
+func (ptr *numSet) insert(v numRange) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -279,7 +280,7 @@ func (ptr *NumSet) insert(v NumRange) {
 }
 
 // insertAt inserts a new range value v at index i, resizing s.Set as needed.
-func (ptr *NumSet) insertAt(i int, v NumRange) {
+func (ptr *numSet) insertAt(i int, v numRange) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -295,7 +296,7 @@ func (ptr *NumSet) insertAt(i int, v NumRange) {
 		copy(s[i+1:], s[i:])
 	} else {
 		// allocate new slice and copy everything, n is at least 1
-		set := make([]NumRange, n+1, n*2)
+		set := make([]numRange, n+1, n*2)
 		copy(set, s[:i])
 		copy(set[i+1:], s[i:])
 		s = set
@@ -306,7 +307,7 @@ func (ptr *NumSet) insertAt(i int, v NumRange) {
 // search attempts to find the index of the range set value that contains q.
 // If no values contain q, the returned index is the position where q should be
 // inserted and ok is set to false.
-func (s NumSet) search(q uint32) (i int, ok bool) {
+func (s numSet) search(q uint32) (i int, ok bool) {
 	min, max := 0, len(s)-1
 	for min < max {
 		if mid := (min + max) >> 1; s[mid].Less(q) {
@@ -319,4 +320,36 @@ func (s NumSet) search(q uint32) (i int, ok bool) {
 		return len(s), false // q is the new largest value
 	}
 	return min, s[min].Contains(q)
+}
+
+func (s numSet) seqSet() SeqSet {
+	return *(*SeqSet)(unsafe.Pointer(&s))
+}
+
+func (s numSet) uidSet() UIDSet {
+	return *(*UIDSet)(unsafe.Pointer(&s))
+}
+
+type NumSet interface {
+	numSet() numSet
+}
+
+type SeqSet []SeqRange
+
+func (s SeqSet) numSet() numSet {
+	return *(*numSet)(unsafe.Pointer(&s))
+}
+
+type SeqRange struct {
+	Start, Stop uint32
+}
+
+type UIDSet []UIDRange
+
+func (s UIDSet) numSet() numSet {
+	return *(*numSet)(unsafe.Pointer(&s))
+}
+
+type UIDRange struct {
+	Start, Stop UID
 }

@@ -11,73 +11,73 @@ const max = ^uint32(0)
 func TestParseNumRange(t *testing.T) {
 	tests := []struct {
 		in  string
-		out NumRange
+		out numRange
 		ok  bool
 	}{
 		// Invalid number
-		{"", NumRange{}, false},
-		{" ", NumRange{}, false},
-		{"A", NumRange{}, false},
-		{"0", NumRange{}, false},
-		{" 1", NumRange{}, false},
-		{"1 ", NumRange{}, false},
-		{"*1", NumRange{}, false},
-		{"1*", NumRange{}, false},
-		{"-1", NumRange{}, false},
-		{"01", NumRange{}, false},
-		{"0x1", NumRange{}, false},
-		{"1 2", NumRange{}, false},
-		{"1,2", NumRange{}, false},
-		{"1.2", NumRange{}, false},
-		{"4294967296", NumRange{}, false},
+		{"", numRange{}, false},
+		{" ", numRange{}, false},
+		{"A", numRange{}, false},
+		{"0", numRange{}, false},
+		{" 1", numRange{}, false},
+		{"1 ", numRange{}, false},
+		{"*1", numRange{}, false},
+		{"1*", numRange{}, false},
+		{"-1", numRange{}, false},
+		{"01", numRange{}, false},
+		{"0x1", numRange{}, false},
+		{"1 2", numRange{}, false},
+		{"1,2", numRange{}, false},
+		{"1.2", numRange{}, false},
+		{"4294967296", numRange{}, false},
 
 		// Valid number
-		{"*", NumRange{0, 0}, true},
-		{"1", NumRange{1, 1}, true},
-		{"42", NumRange{42, 42}, true},
-		{"1000", NumRange{1000, 1000}, true},
-		{"4294967295", NumRange{max, max}, true},
+		{"*", numRange{0, 0}, true},
+		{"1", numRange{1, 1}, true},
+		{"42", numRange{42, 42}, true},
+		{"1000", numRange{1000, 1000}, true},
+		{"4294967295", numRange{max, max}, true},
 
 		// Invalid range
-		{":", NumRange{}, false},
-		{"*:", NumRange{}, false},
-		{":*", NumRange{}, false},
-		{"1:", NumRange{}, false},
-		{":1", NumRange{}, false},
-		{"0:0", NumRange{}, false},
-		{"0:*", NumRange{}, false},
-		{"0:1", NumRange{}, false},
-		{"1:0", NumRange{}, false},
-		{"1:2 ", NumRange{}, false},
-		{"1: 2", NumRange{}, false},
-		{"1:2:", NumRange{}, false},
-		{"1:2,", NumRange{}, false},
-		{"1:2:3", NumRange{}, false},
-		{"1:2,3", NumRange{}, false},
-		{"*:4294967296", NumRange{}, false},
-		{"0:4294967295", NumRange{}, false},
-		{"1:4294967296", NumRange{}, false},
-		{"4294967296:*", NumRange{}, false},
-		{"4294967295:0", NumRange{}, false},
-		{"4294967296:1", NumRange{}, false},
-		{"4294967295:4294967296", NumRange{}, false},
+		{":", numRange{}, false},
+		{"*:", numRange{}, false},
+		{":*", numRange{}, false},
+		{"1:", numRange{}, false},
+		{":1", numRange{}, false},
+		{"0:0", numRange{}, false},
+		{"0:*", numRange{}, false},
+		{"0:1", numRange{}, false},
+		{"1:0", numRange{}, false},
+		{"1:2 ", numRange{}, false},
+		{"1: 2", numRange{}, false},
+		{"1:2:", numRange{}, false},
+		{"1:2,", numRange{}, false},
+		{"1:2:3", numRange{}, false},
+		{"1:2,3", numRange{}, false},
+		{"*:4294967296", numRange{}, false},
+		{"0:4294967295", numRange{}, false},
+		{"1:4294967296", numRange{}, false},
+		{"4294967296:*", numRange{}, false},
+		{"4294967295:0", numRange{}, false},
+		{"4294967296:1", numRange{}, false},
+		{"4294967295:4294967296", numRange{}, false},
 
 		// Valid range
-		{"*:*", NumRange{0, 0}, true},
-		{"1:*", NumRange{1, 0}, true},
-		{"*:1", NumRange{1, 0}, true},
-		{"2:2", NumRange{2, 2}, true},
-		{"2:42", NumRange{2, 42}, true},
-		{"42:2", NumRange{2, 42}, true},
-		{"*:4294967294", NumRange{max - 1, 0}, true},
-		{"*:4294967295", NumRange{max, 0}, true},
-		{"4294967294:*", NumRange{max - 1, 0}, true},
-		{"4294967295:*", NumRange{max, 0}, true},
-		{"1:4294967294", NumRange{1, max - 1}, true},
-		{"1:4294967295", NumRange{1, max}, true},
-		{"4294967295:1000", NumRange{1000, max}, true},
-		{"4294967294:4294967295", NumRange{max - 1, max}, true},
-		{"4294967295:4294967295", NumRange{max, max}, true},
+		{"*:*", numRange{0, 0}, true},
+		{"1:*", numRange{1, 0}, true},
+		{"*:1", numRange{1, 0}, true},
+		{"2:2", numRange{2, 2}, true},
+		{"2:42", numRange{2, 42}, true},
+		{"42:2", numRange{2, 42}, true},
+		{"*:4294967294", numRange{max - 1, 0}, true},
+		{"*:4294967295", numRange{max, 0}, true},
+		{"4294967294:*", numRange{max - 1, 0}, true},
+		{"4294967295:*", numRange{max, 0}, true},
+		{"1:4294967294", numRange{1, max - 1}, true},
+		{"1:4294967295", numRange{1, max}, true},
+		{"4294967295:1000", numRange{1000, max}, true},
+		{"4294967294:4294967295", numRange{max - 1, max}, true},
+		{"4294967295:4294967295", numRange{max, max}, true},
 	}
 	for _, test := range tests {
 		out, err := parseNumRange(test.in)
@@ -186,7 +186,7 @@ func TestNumRangeMerge(T *testing.T) {
 		{"*", "4294967295", ""},
 		{"*", "*", "*"},
 
-		// NumRange with number
+		// numRange with number
 		{"1:3", "1", "1:3"},
 		{"1:3", "2", "1:3"},
 		{"1:3", "3", "1:3"},
@@ -252,7 +252,7 @@ func TestNumRangeMerge(T *testing.T) {
 		{"1:*", "4294967295", "1:*"},
 		{"1:*", "*", "1:*"},
 
-		// NumRange with range
+		// numRange with range
 		{"5:8", "1:2", ""},
 		{"5:8", "1:3", ""},
 		{"5:8", "1:4", "1:8"},
@@ -366,31 +366,31 @@ func TestNumRangeMerge(T *testing.T) {
 	}
 }
 
-func checkNumSet(s NumSet, t *testing.T) {
+func checknumSet(s numSet, t *testing.T) {
 	n := len(s)
 	for i, v := range s {
 		if v.Start == 0 {
 			if v.Stop != 0 {
-				t.Errorf(`NumSet(%q) index %d: "*:n" range`, s, i)
+				t.Errorf(`numSet(%q) index %d: "*:n" range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`NumSet(%q) index %d: "*" not at the end`, s, i)
+				t.Errorf(`numSet(%q) index %d: "*" not at the end`, s, i)
 			}
 			continue
 		}
 		if i > 0 && s[i-1].Stop >= v.Start-1 {
-			t.Errorf(`NumSet(%q) index %d: overlap`, s, i)
+			t.Errorf(`numSet(%q) index %d: overlap`, s, i)
 		}
 		if v.Stop < v.Start {
 			if v.Stop != 0 {
-				t.Errorf(`NumSet(%q) index %d: reversed range`, s, i)
+				t.Errorf(`numSet(%q) index %d: reversed range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`NumSet(%q) index %d: "n:*" not at the end`, s, i)
+				t.Errorf(`numSet(%q) index %d: "n:*" not at the end`, s, i)
 			}
 		}
 	}
 }
 
-func TestNumSetInfo(t *testing.T) {
+func TestnumSetInfo(t *testing.T) {
 	tests := []struct {
 		s        string
 		q        uint32
@@ -531,8 +531,8 @@ func TestNumSetInfo(t *testing.T) {
 		{"1,3:5,7,9,42,60:70,100:*", max, true},
 	}
 	for _, test := range tests {
-		s, _ := ParseNumSet(test.s)
-		checkNumSet(s, t)
+		s, _ := parseNumSet(test.s)
+		checknumSet(s, t)
 		if s.Contains(test.q) != test.contains {
 			t.Errorf("%q.Contains(%v) expected %v", test.s, test.q, test.contains)
 		}
@@ -550,7 +550,7 @@ func TestNumSetInfo(t *testing.T) {
 	}
 }
 
-func TestParseNumSet(t *testing.T) {
+func TestParsenumSet(t *testing.T) {
 	tests := []struct {
 		in  string
 		out string
@@ -673,12 +673,12 @@ func TestParseNumSet(t *testing.T) {
 	}
 	for _, test := range tests {
 		for i := 0; i < 100 && test.in != ""; i++ {
-			s, err := ParseNumSet(test.in)
+			s, err := parseNumSet(test.in)
 			if err != nil {
 				t.Errorf("Add(%q) unexpected error; %v", test.in, err)
 				i = 100
 			}
-			checkNumSet(s, t)
+			checknumSet(s, t)
 			if out := s.String(); out != test.out {
 				t.Errorf("%q.String() expected %q; got %q", test.in, test.out, out)
 				i = 100
@@ -688,34 +688,34 @@ func TestParseNumSet(t *testing.T) {
 	}
 }
 
-func TestNumSetAddNumRangeSet(t *testing.T) {
+func TestnumSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
-		rng NumRange
+		rng numRange
 		set string
 		out string
 	}{
-		{num{5}, NumRange{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5}, NumRange{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, numRange{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, numRange{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
 
-		{num{15}, NumRange{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
-		{num{15}, NumRange{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, numRange{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, numRange{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
 
-		{num{1, 3, 5, 7, 9, 11, 0}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{1, 3, 5, 7, 9, 11, 0}, numRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, numRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, numRange{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
-		other, _ := ParseNumSet(test.set)
+		other, _ := parseNumSet(test.set)
 
-		var s NumSet
+		var s numSet
 		s.AddNum(test.num...)
-		checkNumSet(s, t)
+		checknumSet(s, t)
 		s.AddRange(test.rng.Start, test.rng.Stop)
-		checkNumSet(s, t)
+		checknumSet(s, t)
 		s.AddSet(other)
-		checkNumSet(s, t)
+		checknumSet(s, t)
 
 		if out := s.String(); out != test.out {
 			t.Errorf("(%v + %v + %q).String() expected %q; got %q", test.num, test.rng, test.set, test.out, out)
