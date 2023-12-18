@@ -14,17 +14,8 @@ func (err errBadNumSet) Error() string {
 	return fmt.Sprintf("imap: bad number set value %q", string(err))
 }
 
-// Seq represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
-// may be static (e.g. "1", "2:4") or dynamic (e.g. "*", "1:*"). A seq-number is
-// represented by setting Start = Stop. Zero is used to represent "*", which is
-// safe because seq-number uses nz-number rule. The order of values is always
-// Start <= Stop, except when representing "n:*", where Start = n and Stop = 0.
-type Seq struct {
-	Start, Stop uint32
-}
-
-// parseSeqNum parses a single seq-number value (non-zero uint32 or "*").
-func parseSeqNum(v string) (uint32, error) {
+// parseNum parses a single seq-number value (non-zero uint32 or "*").
+func parseNum(v string) (uint32, error) {
 	if n, err := strconv.ParseUint(v, 10, 32); err == nil && v[0] != '0' {
 		return uint32(n), nil
 	} else if v == "*" {
@@ -33,19 +24,28 @@ func parseSeqNum(v string) (uint32, error) {
 	return 0, errBadNumSet(v)
 }
 
+// NumRange represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
+// may be static (e.g. "1", "2:4") or dynamic (e.g. "*", "1:*"). A seq-number is
+// represented by setting Start = Stop. Zero is used to represent "*", which is
+// safe because seq-number uses nz-number rule. The order of values is always
+// Start <= Stop, except when representing "n:*", where Start = n and Stop = 0.
+type NumRange struct {
+	Start, Stop uint32
+}
+
 // parseSeq creates a new seq instance by parsing strings in the format "n" or
 // "n:m", where n and/or m may be "*". An error is returned for invalid values.
-func parseSeq(v string) (Seq, error) {
+func parseNumRange(v string) (NumRange, error) {
 	var (
-		s   Seq
+		s   NumRange
 		err error
 	)
 	if sep := strings.IndexRune(v, ':'); sep < 0 {
-		s.Start, err = parseSeqNum(v)
+		s.Start, err = parseNum(v)
 		s.Stop = s.Start
 		return s, err
-	} else if s.Start, err = parseSeqNum(v[:sep]); err == nil {
-		if s.Stop, err = parseSeqNum(v[sep+1:]); err == nil {
+	} else if s.Start, err = parseNum(v[:sep]); err == nil {
+		if s.Stop, err = parseNum(v[sep+1:]); err == nil {
 			if (s.Stop < s.Start && s.Stop != 0) || s.Start == 0 {
 				s.Start, s.Stop = s.Stop, s.Start
 			}
@@ -55,10 +55,10 @@ func parseSeq(v string) (Seq, error) {
 	return s, errBadNumSet(v)
 }
 
-// Contains returns true if the seq-number q is contained in sequence value s.
+// Contains returns true if the seq-number q is contained in range value s.
 // The dynamic value "*" contains only other "*" values, the dynamic range "n:*"
 // contains "*" and all numbers >= n.
-func (s Seq) Contains(q uint32) bool {
+func (s NumRange) Contains(q uint32) bool {
 	if q == 0 {
 		return s.Stop == 0 // "*" is contained only in "*" and "n:*"
 	}
@@ -66,15 +66,15 @@ func (s Seq) Contains(q uint32) bool {
 }
 
 // Less returns true if s precedes and does not contain seq-number q.
-func (s Seq) Less(q uint32) bool {
+func (s NumRange) Less(q uint32) bool {
 	return (s.Stop < q || q == 0) && s.Stop != 0
 }
 
-// Merge combines sequence values s and t into a single union if the two
+// Merge combines range values s and t into a single union if the two
 // intersect or one is a superset of the other. The order of s and t does not
 // matter. If the values cannot be merged, s is returned unmodified and ok is
 // set to false.
-func (s Seq) Merge(t Seq) (union Seq, ok bool) {
+func (s NumRange) Merge(t NumRange) (union NumRange, ok bool) {
 	union = s
 	if s == t {
 		return s, true
@@ -90,7 +90,7 @@ func (s Seq) Merge(t Seq) (union Seq, ok bool) {
 		}
 		// s is "n" or "n:m", if m == ^uint32(0) then t is "n:*"
 		if s.Stop+1 >= t.Start || s.Stop == ^uint32(0) {
-			return Seq{s.Start, t.Stop}, true // s intersects or touches t
+			return NumRange{s.Start, t.Stop}, true // s intersects or touches t
 		}
 		return union, false
 	}
@@ -105,8 +105,8 @@ func (s Seq) Merge(t Seq) (union Seq, ok bool) {
 	return union, false
 }
 
-// String returns sequence value s as a seq-number or seq-range string.
-func (s Seq) String() string {
+// String returns range value s as a seq-number or seq-range string.
+func (s NumRange) String() string {
 	if s.Start == s.Stop {
 		if s.Start == 0 {
 			return "*"
@@ -120,7 +120,7 @@ func (s Seq) String() string {
 	return string(strconv.AppendUint(append(b, ':'), uint64(s.Stop), 10))
 }
 
-func (s Seq) append(nums []uint32) (out []uint32, ok bool) {
+func (s NumRange) append(nums []uint32) (out []uint32, ok bool) {
 	if s.Start == 0 || s.Stop == 0 {
 		return nil, false
 	}
@@ -132,13 +132,13 @@ func (s Seq) append(nums []uint32) (out []uint32, ok bool) {
 
 // NumSet is used to represent a set of message sequence numbers or UIDs (see
 // sequence-set ABNF rule). The zero value is an empty set.
-type NumSet []Seq
+type NumSet []NumRange
 
 // ParseNumSet returns a new NumSet after parsing the set string.
 func ParseNumSet(set string) (NumSet, error) {
 	var s NumSet
 	for _, sv := range strings.Split(set, ",") {
-		v, err := parseSeq(sv)
+		v, err := parseNumRange(sv)
 		if err != nil {
 			return s, err
 		}
@@ -164,16 +164,16 @@ func NumSetRange(start, stop uint32) NumSet {
 // AddNum inserts new numbers into the set. The value 0 represents "*".
 func (s *NumSet) AddNum(q ...uint32) {
 	for _, v := range q {
-		s.insert(Seq{v, v})
+		s.insert(NumRange{v, v})
 	}
 }
 
 // AddRange inserts a new range into the set.
 func (s *NumSet) AddRange(start, stop uint32) {
 	if (stop < start && stop != 0) || start == 0 {
-		s.insert(Seq{stop, start})
+		s.insert(NumRange{stop, start})
 	} else {
-		s.insert(Seq{start, stop})
+		s.insert(NumRange{start, stop})
 	}
 }
 
@@ -239,8 +239,8 @@ func (s NumSet) String() string {
 	return string(b[1:])
 }
 
-// insert adds sequence value v to the set.
-func (ptr *NumSet) insert(v Seq) {
+// insert adds range value v to the set.
+func (ptr *NumSet) insert(v NumRange) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -278,8 +278,8 @@ func (ptr *NumSet) insert(v Seq) {
 	s = s[:i+1]
 }
 
-// insertAt inserts a new sequence value v at index i, resizing s.Set as needed.
-func (ptr *NumSet) insertAt(i int, v Seq) {
+// insertAt inserts a new range value v at index i, resizing s.Set as needed.
+func (ptr *NumSet) insertAt(i int, v NumRange) {
 	s := *ptr
 	defer func() {
 		*ptr = s
@@ -295,7 +295,7 @@ func (ptr *NumSet) insertAt(i int, v Seq) {
 		copy(s[i+1:], s[i:])
 	} else {
 		// allocate new slice and copy everything, n is at least 1
-		set := make([]Seq, n+1, n*2)
+		set := make([]NumRange, n+1, n*2)
 		copy(set, s[:i])
 		copy(set[i+1:], s[i:])
 		s = set
@@ -303,7 +303,7 @@ func (ptr *NumSet) insertAt(i int, v Seq) {
 	s[i] = v
 }
 
-// search attempts to find the index of the sequence set value that contains q.
+// search attempts to find the index of the range set value that contains q.
 // If no values contain q, the returned index is the position where q should be
 // inserted and ok is set to false.
 func (s NumSet) search(q uint32) (i int, ok bool) {

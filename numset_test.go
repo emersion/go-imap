@@ -8,79 +8,79 @@ import (
 
 const max = ^uint32(0)
 
-func TestParseSeq(t *testing.T) {
+func TestParseNumRange(t *testing.T) {
 	tests := []struct {
 		in  string
-		out Seq
+		out NumRange
 		ok  bool
 	}{
 		// Invalid number
-		{"", Seq{}, false},
-		{" ", Seq{}, false},
-		{"A", Seq{}, false},
-		{"0", Seq{}, false},
-		{" 1", Seq{}, false},
-		{"1 ", Seq{}, false},
-		{"*1", Seq{}, false},
-		{"1*", Seq{}, false},
-		{"-1", Seq{}, false},
-		{"01", Seq{}, false},
-		{"0x1", Seq{}, false},
-		{"1 2", Seq{}, false},
-		{"1,2", Seq{}, false},
-		{"1.2", Seq{}, false},
-		{"4294967296", Seq{}, false},
+		{"", NumRange{}, false},
+		{" ", NumRange{}, false},
+		{"A", NumRange{}, false},
+		{"0", NumRange{}, false},
+		{" 1", NumRange{}, false},
+		{"1 ", NumRange{}, false},
+		{"*1", NumRange{}, false},
+		{"1*", NumRange{}, false},
+		{"-1", NumRange{}, false},
+		{"01", NumRange{}, false},
+		{"0x1", NumRange{}, false},
+		{"1 2", NumRange{}, false},
+		{"1,2", NumRange{}, false},
+		{"1.2", NumRange{}, false},
+		{"4294967296", NumRange{}, false},
 
 		// Valid number
-		{"*", Seq{0, 0}, true},
-		{"1", Seq{1, 1}, true},
-		{"42", Seq{42, 42}, true},
-		{"1000", Seq{1000, 1000}, true},
-		{"4294967295", Seq{max, max}, true},
+		{"*", NumRange{0, 0}, true},
+		{"1", NumRange{1, 1}, true},
+		{"42", NumRange{42, 42}, true},
+		{"1000", NumRange{1000, 1000}, true},
+		{"4294967295", NumRange{max, max}, true},
 
 		// Invalid range
-		{":", Seq{}, false},
-		{"*:", Seq{}, false},
-		{":*", Seq{}, false},
-		{"1:", Seq{}, false},
-		{":1", Seq{}, false},
-		{"0:0", Seq{}, false},
-		{"0:*", Seq{}, false},
-		{"0:1", Seq{}, false},
-		{"1:0", Seq{}, false},
-		{"1:2 ", Seq{}, false},
-		{"1: 2", Seq{}, false},
-		{"1:2:", Seq{}, false},
-		{"1:2,", Seq{}, false},
-		{"1:2:3", Seq{}, false},
-		{"1:2,3", Seq{}, false},
-		{"*:4294967296", Seq{}, false},
-		{"0:4294967295", Seq{}, false},
-		{"1:4294967296", Seq{}, false},
-		{"4294967296:*", Seq{}, false},
-		{"4294967295:0", Seq{}, false},
-		{"4294967296:1", Seq{}, false},
-		{"4294967295:4294967296", Seq{}, false},
+		{":", NumRange{}, false},
+		{"*:", NumRange{}, false},
+		{":*", NumRange{}, false},
+		{"1:", NumRange{}, false},
+		{":1", NumRange{}, false},
+		{"0:0", NumRange{}, false},
+		{"0:*", NumRange{}, false},
+		{"0:1", NumRange{}, false},
+		{"1:0", NumRange{}, false},
+		{"1:2 ", NumRange{}, false},
+		{"1: 2", NumRange{}, false},
+		{"1:2:", NumRange{}, false},
+		{"1:2,", NumRange{}, false},
+		{"1:2:3", NumRange{}, false},
+		{"1:2,3", NumRange{}, false},
+		{"*:4294967296", NumRange{}, false},
+		{"0:4294967295", NumRange{}, false},
+		{"1:4294967296", NumRange{}, false},
+		{"4294967296:*", NumRange{}, false},
+		{"4294967295:0", NumRange{}, false},
+		{"4294967296:1", NumRange{}, false},
+		{"4294967295:4294967296", NumRange{}, false},
 
 		// Valid range
-		{"*:*", Seq{0, 0}, true},
-		{"1:*", Seq{1, 0}, true},
-		{"*:1", Seq{1, 0}, true},
-		{"2:2", Seq{2, 2}, true},
-		{"2:42", Seq{2, 42}, true},
-		{"42:2", Seq{2, 42}, true},
-		{"*:4294967294", Seq{max - 1, 0}, true},
-		{"*:4294967295", Seq{max, 0}, true},
-		{"4294967294:*", Seq{max - 1, 0}, true},
-		{"4294967295:*", Seq{max, 0}, true},
-		{"1:4294967294", Seq{1, max - 1}, true},
-		{"1:4294967295", Seq{1, max}, true},
-		{"4294967295:1000", Seq{1000, max}, true},
-		{"4294967294:4294967295", Seq{max - 1, max}, true},
-		{"4294967295:4294967295", Seq{max, max}, true},
+		{"*:*", NumRange{0, 0}, true},
+		{"1:*", NumRange{1, 0}, true},
+		{"*:1", NumRange{1, 0}, true},
+		{"2:2", NumRange{2, 2}, true},
+		{"2:42", NumRange{2, 42}, true},
+		{"42:2", NumRange{2, 42}, true},
+		{"*:4294967294", NumRange{max - 1, 0}, true},
+		{"*:4294967295", NumRange{max, 0}, true},
+		{"4294967294:*", NumRange{max - 1, 0}, true},
+		{"4294967295:*", NumRange{max, 0}, true},
+		{"1:4294967294", NumRange{1, max - 1}, true},
+		{"1:4294967295", NumRange{1, max}, true},
+		{"4294967295:1000", NumRange{1000, max}, true},
+		{"4294967294:4294967295", NumRange{max - 1, max}, true},
+		{"4294967295:4294967295", NumRange{max, max}, true},
 	}
 	for _, test := range tests {
-		out, err := parseSeq(test.in)
+		out, err := parseNumRange(test.in)
 		if !test.ok {
 			if err == nil {
 				t.Errorf("parseSeq(%q) expected error; got %q", test.in, out)
@@ -93,7 +93,7 @@ func TestParseSeq(t *testing.T) {
 	}
 }
 
-func TestSeqContainsLess(t *testing.T) {
+func TestNumRangeContainsLess(t *testing.T) {
 	tests := []struct {
 		s        string
 		q        uint32
@@ -143,7 +143,7 @@ func TestSeqContainsLess(t *testing.T) {
 		{"4:*", max, true, false},
 	}
 	for _, test := range tests {
-		s, err := parseSeq(test.s)
+		s, err := parseNumRange(test.s)
 		if err != nil {
 			t.Errorf("parseSeq(%q) unexpected error; %v", test.s, err)
 			continue
@@ -157,7 +157,7 @@ func TestSeqContainsLess(t *testing.T) {
 	}
 }
 
-func TestSeqMerge(T *testing.T) {
+func TestNumRangeMerge(T *testing.T) {
 	tests := []struct {
 		s, t, out string
 	}{
@@ -186,7 +186,7 @@ func TestSeqMerge(T *testing.T) {
 		{"*", "4294967295", ""},
 		{"*", "*", "*"},
 
-		// Range with number
+		// NumRange with number
 		{"1:3", "1", "1:3"},
 		{"1:3", "2", "1:3"},
 		{"1:3", "3", "1:3"},
@@ -252,7 +252,7 @@ func TestSeqMerge(T *testing.T) {
 		{"1:*", "4294967295", "1:*"},
 		{"1:*", "*", "1:*"},
 
-		// Range with range
+		// NumRange with range
 		{"5:8", "1:2", ""},
 		{"5:8", "1:3", ""},
 		{"5:8", "1:4", "1:8"},
@@ -340,12 +340,12 @@ func TestSeqMerge(T *testing.T) {
 		{"1:4294967295", "2:*", "1:*"},
 	}
 	for _, test := range tests {
-		s, err := parseSeq(test.s)
+		s, err := parseNumRange(test.s)
 		if err != nil {
 			T.Errorf("parseSeq(%q) unexpected error; %v", test.s, err)
 			continue
 		}
-		t, err := parseSeq(test.t)
+		t, err := parseNumRange(test.t)
 		if err != nil {
 			T.Errorf("parseSeq(%q) unexpected error; %v", test.t, err)
 			continue
@@ -692,19 +692,19 @@ func TestNumSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
-		rng Seq
+		rng NumRange
 		set string
 		out string
 	}{
-		{num{5}, Seq{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5}, Seq{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, NumRange{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, NumRange{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
 
-		{num{15}, Seq{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
-		{num{15}, Seq{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, NumRange{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, NumRange{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
 
-		{num{1, 3, 5, 7, 9, 11, 0}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, Seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{1, 3, 5, 7, 9, 11, 0}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
 		other, _ := ParseNumSet(test.set)
