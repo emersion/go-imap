@@ -478,6 +478,15 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 	return dec.returnErr(err)
 }
 
+func (dec *Decoder) ExpectUID(ptr *imap.UID) bool {
+	var num uint32
+	if !dec.ExpectNumber(&num) {
+		return false
+	}
+	*ptr = imap.UID(num)
+	return true
+}
+
 func (dec *Decoder) ExpectSeqSet(ptr *imap.SeqSet) bool {
 	if dec.Special('$') {
 		*ptr = imap.SearchRes()

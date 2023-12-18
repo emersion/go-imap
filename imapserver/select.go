@@ -134,7 +134,7 @@ func (c *Conn) writeUIDNext(uidNext imap.UID) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	enc.Atom("*").SP().Atom("OK").SP()
-	enc.Special('[').Atom("UIDNEXT").SP().Number(uint32(uidNext)).Special(']')
+	enc.Special('[').Atom("UIDNEXT").SP().UID(uidNext).Special(']')
 	enc.SP().Text("Predicted next UID")
 	return enc.CRLF()
 }

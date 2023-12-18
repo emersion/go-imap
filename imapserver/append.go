@@ -94,7 +94,7 @@ func (c *Conn) writeAppendOK(tag string, data *imap.AppendData) error {
 	enc.Atom(tag).SP().Atom("OK").SP()
 	if data != nil {
 		enc.Special('[')
-		enc.Atom("APPENDUID").SP().Number(data.UIDValidity).SP().Number(uint32(data.UID))
+		enc.Atom("APPENDUID").SP().Number(data.UIDValidity).SP().UID(data.UID)
 		enc.Special(']').SP()
 	}
 	enc.Text("APPEND completed")

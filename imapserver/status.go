@@ -54,7 +54,7 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions, r
 		listEnc.Item().Atom("MESSAGES").SP().Number(*data.NumMessages)
 	}
 	if options.UIDNext {
-		listEnc.Item().Atom("UIDNEXT").SP().Number(uint32(data.UIDNext))
+		listEnc.Item().Atom("UIDNEXT").SP().UID(data.UIDNext)
 	}
 	if options.UIDValidity {
 		listEnc.Item().Atom("UIDVALIDITY").SP().Number(data.UIDValidity)

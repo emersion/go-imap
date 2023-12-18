@@ -241,6 +241,10 @@ func (enc *Encoder) Text(s string) *Encoder {
 	return enc.writeString(s)
 }
 
+func (enc *Encoder) UID(uid imap.UID) *Encoder {
+	return enc.Number(uint32(uid))
+}
+
 // Literal writes a literal.
 //
 // The caller must write exactly size bytes to the returned writer.

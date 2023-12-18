@@ -111,9 +111,9 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 		ok = dec.ExpectNumber(&num)
 		data.NumMessages = &num
 	case "UIDNEXT":
-		var uidNext uint32
-		ok = dec.ExpectNumber(&uidNext)
-		data.UIDNext = imap.UID(uidNext)
+		var uidNext imap.UID
+		ok = dec.ExpectUID(&uidNext)
+		data.UIDNext = uidNext
 	case "UIDVALIDITY":
 		ok = dec.ExpectNumber(&data.UIDValidity)
 	case "UNSEEN":

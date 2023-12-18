@@ -638,12 +638,15 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			}
 			c.setCaps(caps)
 		case "APPENDUID":
-			var uidValidity, uid uint32
-			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uid) {
+			var (
+				uidValidity uint32
+				uid         imap.UID
+			)
+			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUID(&uid) {
 				return nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
 			}
 			if cmd, ok := cmd.(*AppendCommand); ok {
-				cmd.data.UID = imap.UID(uid)
+				cmd.data.UID = uid
 				cmd.data.UIDValidity = uidValidity
 			}
 		case "COPYUID":
@@ -760,12 +763,12 @@ func (c *Client) readResponseData(typ string) error {
 					handler(&UnilateralDataMailbox{PermanentFlags: flags})
 				}
 			case "UIDNEXT":
-				var uidNext uint32
-				if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidNext) {
+				var uidNext imap.UID
+				if !c.dec.ExpectSP() || !c.dec.ExpectUID(&uidNext) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
-					cmd.data.UIDNext = imap.UID(uidNext)
+					cmd.data.UIDNext = uidNext
 				}
 			case "UIDVALIDITY":
 				var uidValidity uint32

@@ -450,7 +450,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 	// the response data. But the response data comes in in a streaming
 	// fashion: it can contain literals. Assume that the UID will be returned
 	// before any literal.
-	var uid uint32
+	var uid imap.UID
 	handled := false
 	handleMsg := func() {
 		if handled {
@@ -466,7 +466,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			// Skip if we haven't requested or already handled this message
 			var num uint32
 			if cmd.uid {
-				num = uid
+				num = uint32(uid)
 			} else {
 				num = seqNum
 			}
@@ -544,11 +544,11 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 			item = FetchItemDataRFC822Size{Size: size}
 		case "UID":
-			if !dec.ExpectSP() || !dec.ExpectNumber(&uid) {
+			if !dec.ExpectSP() || !dec.ExpectUID(&uid) {
 				return dec.Err()
 			}
 
-			item = FetchItemDataUID{UID: imap.UID(uid)}
+			item = FetchItemDataUID{UID: uid}
 		case "BODY", "BINARY":
 			if dec.Special('[') {
 				var section interface{}
