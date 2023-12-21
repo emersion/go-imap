@@ -1,6 +1,10 @@
 image: alpine/latest
 packages:
   - go
+  # for imaptest
+  - curl
+  - gcc
+  - netcat-openbsd
 sources:
   - https://github.com/emersion/go-imap#v2
 tasks:
@@ -10,3 +14,25 @@ tasks:
   - test: |
       cd go-imap
       go test -race ./...
+  - imaptest: |
+      curl https://dovecot.org/nightly/dovecot-latest.tar.gz | tar -xz
+      mv dovecot-0.0.0-* dovecot
+      cd dovecot
+      ./configure
+      make -j$(nproc)
+      cd -
+      curl https://dovecot.org/nightly/imaptest/imaptest-latest.tar.gz | tar -xz
+      mv dovecot-0.0-imaptest-0.0.0-* imaptest
+      cd imaptest
+      ./configure --with-dovecot=../dovecot
+      make -j$(nproc)
+      curl -O https://dovecot.org/tmp/dovecot-crlf
+      (cd ../go-imap && go run -race ./cmd/imapmemserver -listen localhost:1143 -insecure-auth) &
+      for _ in $(seq 1 20); do
+        if nc -z localhost 1143; then
+          break
+        fi
+        sleep 1
+      done
+      src/imaptest user=user pass=user port=1143 mbox=dovecot-crlf test=src/tests || true
+      pkill imapmemserver
