@@ -804,9 +804,16 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	}
 
 	var description string
-	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectNumber(&bs.Size) {
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectNumber(&bs.Size) {
 		return nil, dec.Err()
 	}
+
+	// Content-Transfer-Encoding should always be set, but some non-standard
+	// servers leave it NIL. Default to 7BIT.
+	if bs.Encoding == "" {
+		bs.Encoding = "7BIT"
+	}
+
 	// TODO: handle errors
 	bs.Description, _ = options.decodeText(description)
 
