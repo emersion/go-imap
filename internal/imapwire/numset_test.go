@@ -1,9 +1,11 @@
-package imap
+package imapwire
 
 import (
 	"math/rand"
 	"strings"
 	"testing"
+
+	"github.com/emersion/go-imap/v2"
 )
 
 const max = ^uint32(0)
@@ -11,73 +13,73 @@ const max = ^uint32(0)
 func TestParseNumRange(t *testing.T) {
 	tests := []struct {
 		in  string
-		out NumRange
+		out imap.NumRange
 		ok  bool
 	}{
 		// Invalid number
-		{"", NumRange{}, false},
-		{" ", NumRange{}, false},
-		{"A", NumRange{}, false},
-		{"0", NumRange{}, false},
-		{" 1", NumRange{}, false},
-		{"1 ", NumRange{}, false},
-		{"*1", NumRange{}, false},
-		{"1*", NumRange{}, false},
-		{"-1", NumRange{}, false},
-		{"01", NumRange{}, false},
-		{"0x1", NumRange{}, false},
-		{"1 2", NumRange{}, false},
-		{"1,2", NumRange{}, false},
-		{"1.2", NumRange{}, false},
-		{"4294967296", NumRange{}, false},
+		{"", imap.NumRange{}, false},
+		{" ", imap.NumRange{}, false},
+		{"A", imap.NumRange{}, false},
+		{"0", imap.NumRange{}, false},
+		{" 1", imap.NumRange{}, false},
+		{"1 ", imap.NumRange{}, false},
+		{"*1", imap.NumRange{}, false},
+		{"1*", imap.NumRange{}, false},
+		{"-1", imap.NumRange{}, false},
+		{"01", imap.NumRange{}, false},
+		{"0x1", imap.NumRange{}, false},
+		{"1 2", imap.NumRange{}, false},
+		{"1,2", imap.NumRange{}, false},
+		{"1.2", imap.NumRange{}, false},
+		{"4294967296", imap.NumRange{}, false},
 
 		// Valid number
-		{"*", NumRange{0, 0}, true},
-		{"1", NumRange{1, 1}, true},
-		{"42", NumRange{42, 42}, true},
-		{"1000", NumRange{1000, 1000}, true},
-		{"4294967295", NumRange{max, max}, true},
+		{"*", imap.NumRange{0, 0}, true},
+		{"1", imap.NumRange{1, 1}, true},
+		{"42", imap.NumRange{42, 42}, true},
+		{"1000", imap.NumRange{1000, 1000}, true},
+		{"4294967295", imap.NumRange{max, max}, true},
 
 		// Invalid range
-		{":", NumRange{}, false},
-		{"*:", NumRange{}, false},
-		{":*", NumRange{}, false},
-		{"1:", NumRange{}, false},
-		{":1", NumRange{}, false},
-		{"0:0", NumRange{}, false},
-		{"0:*", NumRange{}, false},
-		{"0:1", NumRange{}, false},
-		{"1:0", NumRange{}, false},
-		{"1:2 ", NumRange{}, false},
-		{"1: 2", NumRange{}, false},
-		{"1:2:", NumRange{}, false},
-		{"1:2,", NumRange{}, false},
-		{"1:2:3", NumRange{}, false},
-		{"1:2,3", NumRange{}, false},
-		{"*:4294967296", NumRange{}, false},
-		{"0:4294967295", NumRange{}, false},
-		{"1:4294967296", NumRange{}, false},
-		{"4294967296:*", NumRange{}, false},
-		{"4294967295:0", NumRange{}, false},
-		{"4294967296:1", NumRange{}, false},
-		{"4294967295:4294967296", NumRange{}, false},
+		{":", imap.NumRange{}, false},
+		{"*:", imap.NumRange{}, false},
+		{":*", imap.NumRange{}, false},
+		{"1:", imap.NumRange{}, false},
+		{":1", imap.NumRange{}, false},
+		{"0:0", imap.NumRange{}, false},
+		{"0:*", imap.NumRange{}, false},
+		{"0:1", imap.NumRange{}, false},
+		{"1:0", imap.NumRange{}, false},
+		{"1:2 ", imap.NumRange{}, false},
+		{"1: 2", imap.NumRange{}, false},
+		{"1:2:", imap.NumRange{}, false},
+		{"1:2,", imap.NumRange{}, false},
+		{"1:2:3", imap.NumRange{}, false},
+		{"1:2,3", imap.NumRange{}, false},
+		{"*:4294967296", imap.NumRange{}, false},
+		{"0:4294967295", imap.NumRange{}, false},
+		{"1:4294967296", imap.NumRange{}, false},
+		{"4294967296:*", imap.NumRange{}, false},
+		{"4294967295:0", imap.NumRange{}, false},
+		{"4294967296:1", imap.NumRange{}, false},
+		{"4294967295:4294967296", imap.NumRange{}, false},
 
 		// Valid range
-		{"*:*", NumRange{0, 0}, true},
-		{"1:*", NumRange{1, 0}, true},
-		{"*:1", NumRange{1, 0}, true},
-		{"2:2", NumRange{2, 2}, true},
-		{"2:42", NumRange{2, 42}, true},
-		{"42:2", NumRange{2, 42}, true},
-		{"*:4294967294", NumRange{max - 1, 0}, true},
-		{"*:4294967295", NumRange{max, 0}, true},
-		{"4294967294:*", NumRange{max - 1, 0}, true},
-		{"4294967295:*", NumRange{max, 0}, true},
-		{"1:4294967294", NumRange{1, max - 1}, true},
-		{"1:4294967295", NumRange{1, max}, true},
-		{"4294967295:1000", NumRange{1000, max}, true},
-		{"4294967294:4294967295", NumRange{max - 1, max}, true},
-		{"4294967295:4294967295", NumRange{max, max}, true},
+		{"*:*", imap.NumRange{0, 0}, true},
+		{"1:*", imap.NumRange{1, 0}, true},
+		{"*:1", imap.NumRange{1, 0}, true},
+		{"2:2", imap.NumRange{2, 2}, true},
+		{"2:42", imap.NumRange{2, 42}, true},
+		{"42:2", imap.NumRange{2, 42}, true},
+		{"*:4294967294", imap.NumRange{max - 1, 0}, true},
+		{"*:4294967295", imap.NumRange{max, 0}, true},
+		{"4294967294:*", imap.NumRange{max - 1, 0}, true},
+		{"4294967295:*", imap.NumRange{max, 0}, true},
+		{"1:4294967294", imap.NumRange{1, max - 1}, true},
+		{"1:4294967295", imap.NumRange{1, max}, true},
+		{"4294967295:1000", imap.NumRange{1000, max}, true},
+		{"4294967294:4294967295", imap.NumRange{max - 1, max}, true},
+		{"4294967295:4294967295", imap.NumRange{max, max}, true},
 	}
 	for _, test := range tests {
 		out, err := parseNumRange(test.in)
@@ -366,7 +368,7 @@ func TestNumRangeMerge(T *testing.T) {
 	}
 }
 
-func checkNumSet(s NumSet, t *testing.T) {
+func checkNumSet(s imap.NumSet, t *testing.T) {
 	n := len(s)
 	for i, v := range s {
 		if v.Start == 0 {
@@ -692,24 +694,24 @@ func TestNumSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
-		rng NumRange
+		rng imap.NumRange
 		set string
 		out string
 	}{
-		{num{5}, NumRange{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5}, NumRange{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, imap.NumRange{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, imap.NumRange{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
 
-		{num{15}, NumRange{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
-		{num{15}, NumRange{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, imap.NumRange{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, imap.NumRange{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
 
-		{num{1, 3, 5, 7, 9, 11, 0}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, NumRange{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{1, 3, 5, 7, 9, 11, 0}, imap.NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, imap.NumRange{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, imap.NumRange{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
 		other, _ := ParseNumSet(test.set)
 
-		var s NumSet
+		var s imap.NumSet
 		s.AddNum(test.num...)
 		checkNumSet(s, t)
 		s.AddRange(test.rng.Start, test.rng.Stop)

@@ -497,7 +497,7 @@ func (dec *Decoder) ExpectNumSet(ptr *imap.NumSet) bool {
 	if !dec.Expect(dec.Func(&s, isNumSetChar), "sequence-set") {
 		return false
 	}
-	seqSet, err := imap.ParseNumSet(s)
+	seqSet, err := ParseNumSet(s)
 	if err == nil {
 		*ptr = seqSet
 	}

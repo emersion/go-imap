@@ -1,28 +1,8 @@
 package imap
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 )
-
-// errBadNumSet is used to report problems with the format of a number set
-// value.
-type errBadNumSet string
-
-func (err errBadNumSet) Error() string {
-	return fmt.Sprintf("imap: bad number set value %q", string(err))
-}
-
-// parseNum parses a single seq-number value (non-zero uint32 or "*").
-func parseNum(v string) (uint32, error) {
-	if n, err := strconv.ParseUint(v, 10, 32); err == nil && v[0] != '0' {
-		return uint32(n), nil
-	} else if v == "*" {
-		return 0, nil
-	}
-	return 0, errBadNumSet(v)
-}
 
 // NumRange represents a single seq-number or seq-range value (RFC 3501 ABNF). Values
 // may be static (e.g. "1", "2:4") or dynamic (e.g. "*", "1:*"). A seq-number is
@@ -31,29 +11,6 @@ func parseNum(v string) (uint32, error) {
 // Start <= Stop, except when representing "n:*", where Start = n and Stop = 0.
 type NumRange struct {
 	Start, Stop uint32
-}
-
-// parseNumRange creates a new seq instance by parsing strings in the format
-// "n" or "n:m", where n and/or m may be "*". An error is returned for invalid
-// values.
-func parseNumRange(v string) (NumRange, error) {
-	var (
-		s   NumRange
-		err error
-	)
-	if sep := strings.IndexRune(v, ':'); sep < 0 {
-		s.Start, err = parseNum(v)
-		s.Stop = s.Start
-		return s, err
-	} else if s.Start, err = parseNum(v[:sep]); err == nil {
-		if s.Stop, err = parseNum(v[sep+1:]); err == nil {
-			if (s.Stop < s.Start && s.Stop != 0) || s.Start == 0 {
-				s.Start, s.Stop = s.Stop, s.Start
-			}
-			return s, nil
-		}
-	}
-	return s, errBadNumSet(v)
 }
 
 // Contains returns true if the seq-number q is contained in range value s.
@@ -134,19 +91,6 @@ func (s NumRange) append(nums []uint32) (out []uint32, ok bool) {
 // NumSet is used to represent a set of message sequence numbers or UIDs (see
 // sequence-set ABNF rule). The zero value is an empty set.
 type NumSet []NumRange
-
-// ParseNumSet returns a new NumSet after parsing the set string.
-func ParseNumSet(set string) (NumSet, error) {
-	var s NumSet
-	for _, sv := range strings.Split(set, ",") {
-		v, err := parseNumRange(sv)
-		if err != nil {
-			return s, err
-		}
-		s.insert(v)
-	}
-	return s, nil
-}
 
 // NumSetNum returns a new NumSet containing the specified numbers.
 func NumSetNum(q ...uint32) NumSet {

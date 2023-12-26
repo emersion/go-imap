@@ -302,7 +302,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		criteria.Or = append(criteria.Or, or)
 	default:
-		seqSet, err := imap.ParseNumSet(key)
+		seqSet, err := imapwire.ParseNumSet(key)
 		if err != nil {
 			return err
 		}
