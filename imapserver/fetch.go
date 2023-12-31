@@ -24,8 +24,8 @@ type fetchWriterOptions struct {
 }
 
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
-	var seqSet imap.NumSet
-	if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) || !dec.ExpectSP() {
+	var numSet imap.NumSet
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 
@@ -88,7 +88,7 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c, options: writerOptions}
-	if err := c.session.Fetch(w, numKind, seqSet, &options); err != nil {
+	if err := c.session.Fetch(w, numSet, &options); err != nil {
 		return err
 	}
 	return nil

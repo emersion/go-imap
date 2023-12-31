@@ -13,9 +13,9 @@ type ThreadOptions struct {
 	SearchCriteria *imap.SearchCriteria
 }
 
-func (c *Client) thread(uid bool, options *ThreadOptions) *ThreadCommand {
+func (c *Client) thread(numKind imapwire.NumKind, options *ThreadOptions) *ThreadCommand {
 	cmd := &ThreadCommand{}
-	enc := c.beginCommand(uidCmdName("THREAD", uid), cmd)
+	enc := c.beginCommand(uidCmdName("THREAD", numKind), cmd)
 	enc.SP().Atom(string(options.Algorithm)).SP().Atom("UTF-8").SP()
 	writeSearchKey(enc.Encoder, options.SearchCriteria)
 	enc.end()
@@ -26,14 +26,14 @@ func (c *Client) thread(uid bool, options *ThreadOptions) *ThreadCommand {
 //
 // This command requires support for the THREAD extension.
 func (c *Client) Thread(options *ThreadOptions) *ThreadCommand {
-	return c.thread(false, options)
+	return c.thread(imapwire.NumKindSeq, options)
 }
 
 // UIDThread sends a UID THREAD command.
 //
 // See Thread.
 func (c *Client) UIDThread(options *ThreadOptions) *ThreadCommand {
-	return c.thread(true, options)
+	return c.thread(imapwire.NumKindUID, options)
 }
 
 func (c *Client) handleThread() error {

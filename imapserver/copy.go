@@ -6,14 +6,14 @@ import (
 )
 
 func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) error {
-	seqSet, dest, err := readCopy(dec)
+	numSet, dest, err := readCopy(numKind, dec)
 	if err != nil {
 		return err
 	}
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
-	data, err := c.session.Copy(numKind, seqSet, dest)
+	data, err := c.session.Copy(numSet, dest)
 	if err != nil {
 		return err
 	}
@@ -47,9 +47,9 @@ func (c *Conn) writeCopyOK(tag string, data *imap.CopyData) error {
 	return enc.CRLF()
 }
 
-func readCopy(dec *imapwire.Decoder) (seqSet imap.NumSet, dest string, err error) {
-	if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
+func readCopy(numKind NumKind, dec *imapwire.Decoder) (numSet imap.NumSet, dest string, err error) {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() || !dec.ExpectMailbox(&dest) || !dec.ExpectCRLF() {
 		return nil, "", dec.Err()
 	}
-	return seqSet, dest, nil
+	return numSet, dest, nil
 }

@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 type SortKey string
@@ -27,9 +28,9 @@ type SortOptions struct {
 	SortCriteria   []SortCriterion
 }
 
-func (c *Client) sort(uid bool, options *SortOptions) *SortCommand {
+func (c *Client) sort(numKind imapwire.NumKind, options *SortOptions) *SortCommand {
 	cmd := &SortCommand{}
-	enc := c.beginCommand(uidCmdName("SORT", uid), cmd)
+	enc := c.beginCommand(uidCmdName("SORT", numKind), cmd)
 	enc.SP().List(len(options.SortCriteria), func(i int) {
 		criterion := options.SortCriteria[i]
 		if criterion.Reverse {
@@ -61,14 +62,14 @@ func (c *Client) handleSort() error {
 //
 // This command requires support for the SORT extension.
 func (c *Client) Sort(options *SortOptions) *SortCommand {
-	return c.sort(false, options)
+	return c.sort(imapwire.NumKindSeq, options)
 }
 
 // UIDSort sends a UID SORT command.
 //
 // See Sort.
 func (c *Client) UIDSort(options *SortOptions) *SortCommand {
-	return c.sort(true, options)
+	return c.sort(imapwire.NumKindUID, options)
 }
 
 // SortCommand is a SORT command.

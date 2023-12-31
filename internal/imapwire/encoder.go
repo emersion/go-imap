@@ -158,8 +158,8 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	}
 }
 
-func (enc *Encoder) NumSet(seqSet imap.NumSet) *Encoder {
-	s := seqSet.String()
+func (enc *Encoder) NumSet(numSet imap.NumSet) *Encoder {
+	s := numSet.String()
 	if s == "" {
 		enc.setErr(fmt.Errorf("imapwire: cannot encode empty sequence set"))
 		return enc

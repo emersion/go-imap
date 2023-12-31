@@ -103,7 +103,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if data.UID {
 		enc.SP().Atom("UID")
 	}
-	if options.ReturnAll && len(data.All) > 0 {
+	if options.ReturnAll && data.All != nil {
 		enc.SP().Atom("ALL").SP().NumSet(data.All)
 	}
 	if options.ReturnMin && data.Min > 0 {
@@ -118,18 +118,28 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	return enc.CRLF()
 }
 
-func (c *Conn) writeSearch(seqSet imap.NumSet) error {
+func (c *Conn) writeSearch(numSet imap.NumSet) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
-	nums, ok := seqSet.Nums()
+	enc.Atom("*").SP().Atom("SEARCH")
+	var ok bool
+	switch numSet := numSet.(type) {
+	case imap.SeqSet:
+		var nums []uint32
+		nums, ok = numSet.Nums()
+		for _, num := range nums {
+			enc.SP().Number(num)
+		}
+	case imap.UIDSet:
+		var uids []imap.UID
+		uids, ok = numSet.Nums()
+		for _, uid := range uids {
+			enc.SP().UID(uid)
+		}
+	}
 	if !ok {
 		return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response")
-	}
-
-	enc.Atom("*").SP().Atom("SEARCH")
-	for _, num := range nums {
-		enc.SP().Number(num)
 	}
 	return enc.CRLF()
 }
@@ -181,11 +191,11 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 	case "ALL":
 		// nothing to do
 	case "UID":
-		var seqSet imap.NumSet
-		if !dec.ExpectSP() || !dec.ExpectNumSet(&seqSet) {
+		var uidSet imap.UIDSet
+		if !dec.ExpectSP() || !dec.ExpectUIDSet(&uidSet) {
 			return dec.Err()
 		}
-		criteria.UID = append(criteria.UID, seqSet)
+		criteria.UID = append(criteria.UID, uidSet)
 	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":
 		criteria.Flag = append(criteria.Flag, searchKeyFlag(key))
 	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
@@ -302,7 +312,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		criteria.Or = append(criteria.Or, or)
 	default:
-		seqSet, err := imapwire.ParseNumSet(key)
+		seqSet, err := imapwire.ParseSeqSet(key)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapnum"
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
@@ -487,7 +488,7 @@ func (dec *Decoder) ExpectUID(ptr *imap.UID) bool {
 	return true
 }
 
-func (dec *Decoder) ExpectNumSet(ptr *imap.NumSet) bool {
+func (dec *Decoder) ExpectNumSet(kind NumKind, ptr *imap.NumSet) bool {
 	if dec.Special('$') {
 		*ptr = imap.SearchRes()
 		return true
@@ -497,11 +498,27 @@ func (dec *Decoder) ExpectNumSet(ptr *imap.NumSet) bool {
 	if !dec.Expect(dec.Func(&s, isNumSetChar), "sequence-set") {
 		return false
 	}
-	seqSet, err := ParseNumSet(s)
-	if err == nil {
-		*ptr = seqSet
+	numSet, err := imapnum.ParseSet(s)
+	if err != nil {
+		return dec.returnErr(err)
 	}
-	return dec.returnErr(err)
+
+	switch kind {
+	case NumKindSeq:
+		*ptr = seqSetFromNumSet(numSet)
+	case NumKindUID:
+		*ptr = uidSetFromNumSet(numSet)
+	}
+	return true
+}
+
+func (dec *Decoder) ExpectUIDSet(ptr *imap.UIDSet) bool {
+	var numSet imap.NumSet
+	ok := dec.ExpectNumSet(NumKindUID, &numSet)
+	if ok {
+		*ptr = numSet.(imap.UIDSet)
+	}
+	return ok
 }
 
 func isNumSetChar(ch byte) bool {

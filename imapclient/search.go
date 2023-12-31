@@ -32,7 +32,7 @@ func returnSearchOptions(options *imap.SearchOptions) []string {
 	return l
 }
 
-func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
+func (c *Client) search(numKind imapwire.NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
 	// The IMAP4rev2 SEARCH charset defaults to UTF-8. For IMAP4rev1 the
 	// default is undefined and only US-ASCII support is required. What's more,
 	// some servers completely reject the CHARSET keyword. So, let's check if
@@ -46,8 +46,17 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.S
 		charset = "UTF-8"
 	}
 
+	var all imap.NumSet
+	switch numKind {
+	case imapwire.NumKindSeq:
+		all = imap.SeqSet(nil)
+	case imapwire.NumKindUID:
+		all = imap.UIDSet(nil)
+	}
+
 	cmd := &SearchCommand{}
-	enc := c.beginCommand(uidCmdName("SEARCH", uid), cmd)
+	cmd.data.All = all
+	enc := c.beginCommand(uidCmdName("SEARCH", numKind), cmd)
 	if returnOpts := returnSearchOptions(options); len(returnOpts) > 0 {
 		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
 			enc.Atom(returnOpts[i])
@@ -64,12 +73,12 @@ func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.S
 
 // Search sends a SEARCH command.
 func (c *Client) Search(criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
-	return c.search(false, criteria, options)
+	return c.search(imapwire.NumKindSeq, criteria, options)
 }
 
 // UIDSearch sends a UID SEARCH command.
 func (c *Client) UIDSearch(criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
-	return c.search(true, criteria, options)
+	return c.search(imapwire.NumKindUID, criteria, options)
 }
 
 func (c *Client) handleSearch() error {
@@ -97,7 +106,14 @@ func (c *Client) handleSearch() error {
 			return c.dec.Err()
 		}
 		if cmd != nil {
-			cmd.data.All.AddNum(num)
+			switch all := cmd.data.All.(type) {
+			case imap.SeqSet:
+				all.AddNum(num)
+				cmd.data.All = all
+			case imap.UIDSet:
+				all.AddNum(imap.UID(num))
+				cmd.data.All = all
+			}
 		}
 	}
 	return nil
@@ -154,8 +170,8 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 	for _, seqSet := range criteria.SeqNum {
 		encodeItem().NumSet(seqSet)
 	}
-	for _, seqSet := range criteria.UID {
-		encodeItem().Atom("UID").SP().NumSet(seqSet)
+	for _, uidSet := range criteria.UID {
+		encodeItem().Atom("UID").SP().NumSet(uidSet)
 	}
 
 	if !criteria.Since.IsZero() && !criteria.Before.IsZero() && criteria.Before.Sub(criteria.Since) == 24*time.Hour {
@@ -296,7 +312,11 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			}
 			data.Max = num
 		case "ALL":
-			if !dec.ExpectNumSet(&data.All) {
+			numKind := imapwire.NumKindSeq
+			if data.UID {
+				numKind = imapwire.NumKindUID
+			}
+			if !dec.ExpectNumSet(numKind, &data.All) {
 				return "", nil, dec.Err()
 			}
 			if data.All.Dynamic() {
