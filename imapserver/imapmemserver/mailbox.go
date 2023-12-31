@@ -203,11 +203,11 @@ func (mbox *Mailbox) flagsLocked() []imap.Flag {
 	return l
 }
 
-func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.NumSet) error {
+func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error {
 	expunged := make(map[*message]struct{})
 	mbox.mutex.Lock()
 	for _, msg := range mbox.l {
-		if uids != nil && !uids.Contains(uint32(msg.uid)) {
+		if uids != nil && !uids.Contains(msg.uid) {
 			continue
 		}
 		if _, ok := msg.flags[canonicalFlag(imap.FlagDeleted)]; ok {
@@ -282,7 +282,7 @@ func (mbox *MailboxView) Close() {
 	mbox.tracker.Close()
 }
 
-func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.NumSet, options *imap.FetchOptions) error {
+func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error {
 	markSeen := false
 	for _, bs := range options.BodySection {
 		if !bs.Peek {
@@ -292,7 +292,7 @@ func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numKind imapserver.Num
 	}
 
 	var err error
-	mbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
+	mbox.forEach(numSet, func(seqNum uint32, msg *message) {
 		if err != nil {
 			return
 		}
@@ -313,16 +313,18 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	defer mbox.mutex.Unlock()
 
 	for _, seqSet := range criteria.SeqNum {
-		mbox.staticNumSet(seqSet, imapserver.NumKindSeq)
+		mbox.staticNumSet(seqSet)
 	}
-	for _, seqSet := range criteria.UID {
-		mbox.staticNumSet(seqSet, imapserver.NumKindUID)
-	}
-
-	data := imap.SearchData{
-		UID: numKind == imapserver.NumKindUID,
+	for _, uidSet := range criteria.UID {
+		mbox.staticNumSet(uidSet)
 	}
 
+	data := imap.SearchData{UID: numKind == imapserver.NumKindUID}
+
+	var (
+		seqSet imap.SeqSet
+		uidSet imap.UIDSet
+	)
 	for i, msg := range mbox.l {
 		seqNum := mbox.tracker.EncodeSeqNum(uint32(i) + 1)
 
@@ -333,14 +335,15 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 		var num uint32
 		switch numKind {
 		case imapserver.NumKindSeq:
+			if seqNum == 0 {
+				continue
+			}
+			seqSet.AddNum(seqNum)
 			num = seqNum
 		case imapserver.NumKindUID:
+			uidSet.AddNum(msg.uid)
 			num = uint32(msg.uid)
 		}
-		if num == 0 {
-			continue
-		}
-		data.All.AddNum(num)
 		if data.Min == 0 || num < data.Min {
 			data.Min = num
 		}
@@ -350,16 +353,23 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 		data.Count++
 	}
 
+	switch numKind {
+	case imapserver.NumKindSeq:
+		data.All = seqSet
+	case imapserver.NumKindUID:
+		data.All = uidSet
+	}
+
 	return &data, nil
 }
 
-func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numKind imapserver.NumKind, seqSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	mbox.forEach(numKind, seqSet, func(seqNum uint32, msg *message) {
+func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
+	mbox.forEach(numSet, func(seqNum uint32, msg *message) {
 		msg.store(flags)
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
 	})
 	if !flags.Silent {
-		return mbox.Fetch(w, numKind, seqSet, &imap.FetchOptions{Flags: true})
+		return mbox.Fetch(w, numSet, &imap.FetchOptions{Flags: true})
 	}
 	return nil
 }
@@ -372,28 +382,29 @@ func (mbox *MailboxView) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 	return mbox.tracker.Idle(w, stop)
 }
 
-func (mbox *MailboxView) forEach(numKind imapserver.NumKind, seqSet imap.NumSet, f func(seqNum uint32, msg *message)) {
+func (mbox *MailboxView) forEach(numSet imap.NumSet, f func(seqNum uint32, msg *message)) {
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
-	mbox.forEachLocked(numKind, seqSet, f)
+	mbox.forEachLocked(numSet, f)
 }
 
-func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.NumSet, f func(seqNum uint32, msg *message)) {
+func (mbox *MailboxView) forEachLocked(numSet imap.NumSet, f func(seqNum uint32, msg *message)) {
 	// TODO: optimize
 
-	mbox.staticNumSet(seqSet, numKind)
+	mbox.staticNumSet(numSet)
 
 	for i, msg := range mbox.l {
 		seqNum := uint32(i) + 1
 
-		var num uint32
-		switch numKind {
-		case imapserver.NumKindSeq:
-			num = mbox.tracker.EncodeSeqNum(seqNum)
-		case imapserver.NumKindUID:
-			num = uint32(msg.uid)
+		var contains bool
+		switch numSet := numSet.(type) {
+		case imap.SeqSet:
+			seqNum := mbox.tracker.EncodeSeqNum(seqNum)
+			contains = seqNum != 0 && numSet.Contains(seqNum)
+		case imap.UIDSet:
+			contains = numSet.Contains(msg.uid)
 		}
-		if num == 0 || !seqSet.Contains(num) {
+		if !contains {
 			continue
 		}
 
@@ -405,28 +416,34 @@ func (mbox *MailboxView) forEachLocked(numKind imapserver.NumKind, seqSet imap.N
 //
 // This is necessary to properly handle the special symbol "*", which
 // represents the maximum sequence number or UID in the mailbox.
-func (mbox *MailboxView) staticNumSet(seqSet imap.NumSet, numKind imapserver.NumKind) {
-	var max uint32
-	switch numKind {
-	case imapserver.NumKindSeq:
-		max = uint32(len(mbox.l))
-	case imapserver.NumKindUID:
-		max = uint32(mbox.uidNext) - 1
+func (mbox *MailboxView) staticNumSet(numSet imap.NumSet) {
+	switch numSet := numSet.(type) {
+	case imap.SeqSet:
+		max := uint32(len(mbox.l))
+		for i := range numSet {
+			r := &numSet[i]
+			staticNumRange(&r.Start, &r.Stop, max)
+		}
+	case imap.UIDSet:
+		max := uint32(mbox.uidNext) - 1
+		for i := range numSet {
+			r := &numSet[i]
+			staticNumRange((*uint32)(&r.Start), (*uint32)(&r.Stop), max)
+		}
 	}
+}
 
-	for i := range seqSet {
-		seq := &seqSet[i]
-		dyn := false
-		if seq.Start == 0 {
-			seq.Start = max
-			dyn = true
-		}
-		if seq.Stop == 0 {
-			seq.Stop = max
-			dyn = true
-		}
-		if dyn && seq.Start > seq.Stop {
-			seq.Start, seq.Stop = seq.Stop, seq.Start
-		}
+func staticNumRange(start, stop *uint32, max uint32) {
+	dyn := false
+	if *start == 0 {
+		*start = max
+		dyn = true
+	}
+	if *stop == 0 {
+		*stop = max
+		dyn = true
+	}
+	if dyn && *start > *stop {
+		*start, *stop = *stop, *start
 	}
 }

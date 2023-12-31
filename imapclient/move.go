@@ -2,9 +2,14 @@ package imapclient
 
 import (
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Client) move(uid bool, seqSet imap.NumSet, mailbox string) *MoveCommand {
+// Move sends a MOVE command.
+//
+// If the server doesn't support IMAP4rev2 nor the MOVE extension, a fallback
+// with COPY + STORE + EXPUNGE commands is used.
+func (c *Client) Move(numSet imap.NumSet, mailbox string) *MoveCommand {
 	// If the server doesn't support MOVE, fallback to [UID] COPY,
 	// [UID] STORE +FLAGS.SILENT \Deleted and [UID] EXPUNGE
 	cmdName := "MOVE"
@@ -13,39 +18,24 @@ func (c *Client) move(uid bool, seqSet imap.NumSet, mailbox string) *MoveCommand
 	}
 
 	cmd := &MoveCommand{}
-	enc := c.beginCommand(uidCmdName(cmdName, uid), cmd)
-	enc.SP().NumSet(seqSet).SP().Mailbox(mailbox)
+	enc := c.beginCommand(uidCmdName(cmdName, imapwire.NumSetKind(numSet)), cmd)
+	enc.SP().NumSet(numSet).SP().Mailbox(mailbox)
 	enc.end()
 
 	if cmdName == "COPY" {
-		cmd.store = c.store(uid, seqSet, &imap.StoreFlags{
+		cmd.store = c.Store(numSet, &imap.StoreFlags{
 			Op:     imap.StoreFlagsAdd,
 			Silent: true,
 			Flags:  []imap.Flag{imap.FlagDeleted},
 		}, nil)
-		if uid && c.Caps().Has(imap.CapUIDPlus) {
-			cmd.expunge = c.UIDExpunge(seqSet)
+		if uidSet, ok := numSet.(imap.UIDSet); ok && c.Caps().Has(imap.CapUIDPlus) {
+			cmd.expunge = c.UIDExpunge(uidSet)
 		} else {
 			cmd.expunge = c.Expunge()
 		}
 	}
 
 	return cmd
-}
-
-// Move sends a MOVE command.
-//
-// If the server doesn't support IMAP4rev2 nor the MOVE extension, a fallback
-// with COPY + STORE + EXPUNGE commands is used.
-func (c *Client) Move(seqSet imap.NumSet, mailbox string) *MoveCommand {
-	return c.move(false, seqSet, mailbox)
-}
-
-// UIDMove sends a UID MOVE command.
-//
-// See Move.
-func (c *Client) UIDMove(seqSet imap.NumSet, mailbox string) *MoveCommand {
-	return c.move(true, seqSet, mailbox)
 }
 
 // MoveCommand is a MOVE command.

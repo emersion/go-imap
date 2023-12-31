@@ -11,7 +11,7 @@ func TestStore(t *testing.T) {
 	defer client.Close()
 	defer server.Close()
 
-	seqSet := imap.NumSetNum(1)
+	seqSet := imap.SeqSetNum(1)
 	storeFlags := imap.StoreFlags{
 		Op:    imap.StoreFlagsAdd,
 		Flags: []imap.Flag{imap.FlagDeleted},

@@ -244,8 +244,8 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 			return false
 		}
 	}
-	for _, seqSet := range criteria.UID {
-		if !seqSet.Contains(uint32(msg.uid)) {
+	for _, uidSet := range criteria.UID {
+		if !uidSet.Contains(msg.uid) {
 			return false
 		}
 	}

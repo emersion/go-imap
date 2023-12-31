@@ -975,11 +975,14 @@ func (c *Client) Unsubscribe(mailbox string) *Command {
 	return cmd
 }
 
-func uidCmdName(name string, uid bool) string {
-	if uid {
-		return "UID " + name
-	} else {
+func uidCmdName(name string, kind imapwire.NumKind) string {
+	switch kind {
+	case imapwire.NumKindSeq:
 		return name
+	case imapwire.NumKindUID:
+		return "UID " + name
+	default:
+		panic("imapclient: invalid imapwire.NumKind")
 	}
 }
 

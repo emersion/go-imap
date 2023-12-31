@@ -39,7 +39,7 @@ func ExampleClient() {
 	log.Printf("INBOX contains %v messages", selectedMbox.NumMessages)
 
 	if selectedMbox.NumMessages > 0 {
-		seqSet := imap.NumSetNum(1)
+		seqSet := imap.SeqSetNum(1)
 		fetchOptions := &imap.FetchOptions{Envelope: true}
 		messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 		if err != nil {
@@ -56,13 +56,13 @@ func ExampleClient() {
 func ExampleClient_pipelining() {
 	var c *imapclient.Client
 
-	uid := uint32(42)
+	uid := imap.UID(42)
 	fetchOptions := &imap.FetchOptions{Envelope: true}
 
 	// Login, select and fetch a message in a single roundtrip
 	loginCmd := c.Login("root", "root")
 	selectCmd := c.Select("INBOX", nil)
-	fetchCmd := c.UIDFetch(imap.NumSetNum(uid), fetchOptions)
+	fetchCmd := c.Fetch(imap.UIDSetNum(uid), fetchOptions)
 
 	if err := loginCmd.Wait(); err != nil {
 		log.Fatalf("failed to login: %v", err)
@@ -130,7 +130,7 @@ func ExampleClient_List_stream() {
 func ExampleClient_Store() {
 	var c *imapclient.Client
 
-	seqSet := imap.NumSetNum(1)
+	seqSet := imap.SeqSetNum(1)
 	storeFlags := imap.StoreFlags{
 		Op:     imap.StoreFlagsAdd,
 		Flags:  []imap.Flag{imap.FlagFlagged},
@@ -144,7 +144,7 @@ func ExampleClient_Store() {
 func ExampleClient_Fetch() {
 	var c *imapclient.Client
 
-	seqSet := imap.NumSetNum(1)
+	seqSet := imap.SeqSetNum(1)
 	fetchOptions := &imap.FetchOptions{
 		Flags:    true,
 		Envelope: true,
@@ -172,7 +172,7 @@ func ExampleClient_Fetch() {
 func ExampleClient_Fetch_streamBody() {
 	var c *imapclient.Client
 
-	seqSet := imap.NumSetNum(1)
+	seqSet := imap.SeqSetNum(1)
 	fetchOptions := &imap.FetchOptions{
 		UID:         true,
 		BodySection: []*imap.FetchItemBodySection{{}},
@@ -214,7 +214,7 @@ func ExampleClient_Fetch_parseBody() {
 	var c *imapclient.Client
 
 	// Send a FETCH command to fetch the message body
-	seqSet := imap.NumSetNum(1)
+	seqSet := imap.SeqSetNum(1)
 	fetchOptions := &imap.FetchOptions{
 		BodySection: []*imap.FetchItemBodySection{{}},
 	}
@@ -302,7 +302,7 @@ func ExampleClient_Search() {
 	if err != nil {
 		log.Fatalf("UID SEARCH command failed: %v", err)
 	}
-	log.Fatalf("UIDs matching the search criteria: %v", data.AllNums())
+	log.Fatalf("UIDs matching the search criteria: %v", data.AllUIDs())
 }
 
 func ExampleClient_Idle() {
