@@ -7,7 +7,11 @@ import (
 )
 
 func (c *Client) store(uid bool, seqSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
-	cmd := &FetchCommand{msgs: make(chan *FetchMessageData, 128)}
+	cmd := &FetchCommand{
+		uid:    uid,
+		seqSet: seqSet,
+		msgs:   make(chan *FetchMessageData, 128),
+	}
 	enc := c.beginCommand(uidCmdName("STORE", uid), cmd)
 	enc.SP().NumSet(seqSet).SP()
 	if options != nil && options.UnchangedSince != 0 {
