@@ -29,6 +29,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -115,12 +116,16 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 // pipelining (see above). Additionally, some commands (e.g. StartTLS,
 // Authenticate, Idle) block the client during their execution.
 type Client struct {
-	conn     net.Conn
-	options  Options
-	br       *bufio.Reader
-	bw       *bufio.Writer
-	dec      *imapwire.Decoder
-	encMutex sync.Mutex
+	conn net.Conn
+	// isClosing indicates that conn is or is about to close
+	isClosing atomic.Bool
+	// closeComplete indicates that close of conn has completed
+	closeComplete chan struct{}
+	options       Options
+	br            *bufio.Reader
+	bw            *bufio.Writer
+	dec           *imapwire.Decoder
+	encMutex      sync.Mutex
 
 	greetingCh   chan struct{}
 	greetingRecv bool
@@ -149,20 +154,20 @@ func New(conn net.Conn, options *Options) *Client {
 	if options == nil {
 		options = &Options{}
 	}
-
 	rw := options.wrapReadWriter(conn)
 	br := bufio.NewReader(rw)
 	bw := bufio.NewWriter(rw)
 
 	client := &Client{
-		conn:       conn,
-		options:    *options,
-		br:         br,
-		bw:         bw,
-		dec:        imapwire.NewDecoder(br, imapwire.ConnSideClient),
-		greetingCh: make(chan struct{}),
-		decCh:      make(chan struct{}),
-		state:      imap.ConnStateNone,
+		conn:          conn,
+		closeComplete: make(chan struct{}),
+		options:       *options,
+		br:            br,
+		bw:            bw,
+		dec:           imapwire.NewDecoder(br, imapwire.ConnSideClient),
+		greetingCh:    make(chan struct{}),
+		decCh:         make(chan struct{}),
+		state:         imap.ConnStateNone,
 	}
 	go client.read()
 	return client
@@ -317,7 +322,7 @@ func (c *Client) Close() error {
 	c.mutex.Unlock()
 
 	// Ignore net.ErrClosed here, because we also call conn.Close in c.read
-	if err := c.conn.Close(); err != nil && err != net.ErrClosed {
+	if err := c.criticalSectionClose(); err != nil && err != net.ErrClosed {
 		return err
 	}
 
@@ -330,6 +335,33 @@ func (c *Client) Close() error {
 		return net.ErrClosed
 	}
 	return nil
+}
+
+// criticalSectionClose ensures that Client.conn.Close is only executed once
+//   - the first arriving thread closes the channel
+//   - no invocation returns before Client.conn is closed
+//   - only the first invocation gets any error returned by conn.Close
+//   - c.isClosing.Load() indicates that Client.conn is or is about to close
+//   - —
+//   - closing thread is selected using atomic.Bool
+//   - wait mechanic is closing channel
+//   - conn.Close is invoked by:
+//   - — Client.read thread
+//   - — Client.closeWithError by any failing command
+//   - — [Client.Close]
+func (c *Client) criticalSectionClose() (err error) {
+
+	// select winner thread to close
+	if !c.isClosing.CompareAndSwap(false, true) {
+		// loser threads wait
+		<-c.closeComplete
+		return // loser thread return on close complete, no error
+	}
+	defer close(c.closeComplete)
+
+	err = c.conn.Close()
+
+	return // closing thread return on close complete, possible error
 }
 
 // beginCommand starts sending a command to the server.
@@ -485,7 +517,8 @@ func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
 }
 
 func (c *Client) closeWithError(err error) {
-	c.conn.Close()
+	// ignore close errors
+	_ = c.criticalSectionClose()
 
 	c.mutex.Lock()
 	c.state = imap.ConnStateLogout
