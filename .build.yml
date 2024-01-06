@@ -10,3 +10,6 @@ tasks:
   - test: |
       cd go-imap
       go test -race ./...
+  - gofmt: |
+      cd go-imap
+      test -z $(gofmt -l .)
