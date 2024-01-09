@@ -323,7 +323,7 @@ func (c *Client) Close() error {
 	}
 
 	<-c.decCh
-	if err := c.decErr; err != nil && !errors.Is(err, net.ErrClosed) {
+	if err := c.decErr; err != nil {
 		return err
 	}
 
@@ -519,7 +519,8 @@ func (c *Client) read() {
 
 	c.setReadTimeout(idleReadTimeout)
 	for {
-		if c.dec.EOF() {
+		// Ignore net.ErrClosed here, because we also call conn.Close in c.Close
+		if c.dec.EOF() || errors.Is(c.dec.Err(), net.ErrClosed) {
 			break
 		}
 		if err := c.readResponse(); err != nil {
