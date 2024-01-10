@@ -1,6 +1,8 @@
 package imapclient
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -35,9 +37,12 @@ func (cmd *CopyCommand) Wait() (*imap.CopyData, error) {
 	return &cmd.data, cmd.cmd.Wait()
 }
 
-func readRespCodeCopy(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.NumSet, err error) {
+func readRespCodeCopyUID(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, dstUIDs imap.NumSet, err error) {
 	if !dec.ExpectNumber(&uidValidity) || !dec.ExpectSP() || !dec.ExpectNumSet(&srcUIDs) || !dec.ExpectSP() || !dec.ExpectNumSet(&dstUIDs) {
-		return 0, imap.NumSet{}, imap.NumSet{}, dec.Err()
+		return 0, nil, nil, dec.Err()
+	}
+	if srcUIDs.Dynamic() || dstUIDs.Dynamic() {
+		return 0, nil, nil, fmt.Errorf("imapclient: server returned dynamic number set in COPYUID response")
 	}
 	return uidValidity, srcUIDs, dstUIDs, nil
 }

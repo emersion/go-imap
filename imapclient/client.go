@@ -655,7 +655,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			if !c.dec.ExpectSP() {
 				return nil, c.dec.Err()
 			}
-			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 			if err != nil {
 				return nil, fmt.Errorf("in resp-code-copy: %v", err)
 			}
@@ -784,7 +784,7 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 				if err != nil {
 					return fmt.Errorf("in resp-code-copy: %v", err)
 				}
