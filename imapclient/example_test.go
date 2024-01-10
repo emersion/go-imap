@@ -210,7 +210,7 @@ func ExampleClient_Fetch_streamBody() {
 	}
 }
 
-func ExampleClent_Fetch_parseBody() {
+func ExampleClient_Fetch_parseBody() {
 	var c *imapclient.Client
 
 	// Send a FETCH command to fetch the message body
