@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/emersion/go-message/mail"
 	"github.com/emersion/go-sasl"
 
 	"github.com/emersion/go-imap/v2"
@@ -168,7 +169,7 @@ func ExampleClient_Fetch() {
 	log.Printf("Header:\n%v", string(header))
 }
 
-func ExampleClient_Fetch_stream() {
+func ExampleClient_Fetch_streamBody() {
 	var c *imapclient.Client
 
 	seqSet := imap.NumSetNum(1)
@@ -177,6 +178,8 @@ func ExampleClient_Fetch_stream() {
 		BodySection: []*imap.FetchItemBodySection{{}},
 	}
 	fetchCmd := c.Fetch(seqSet, fetchOptions)
+	defer fetchCmd.Close()
+
 	for {
 		msg := fetchCmd.Next()
 		if msg == nil {
@@ -201,6 +204,90 @@ func ExampleClient_Fetch_stream() {
 			}
 		}
 	}
+
+	if err := fetchCmd.Close(); err != nil {
+		log.Fatalf("FETCH command failed: %v", err)
+	}
+}
+
+func ExampleClent_Fetch_parseBody() {
+	var c *imapclient.Client
+
+	// Send a FETCH command to fetch the message body
+	seqSet := imap.NumSetNum(1)
+	fetchOptions := &imap.FetchOptions{
+		BodySection: []*imap.FetchItemBodySection{{}},
+	}
+	fetchCmd := c.Fetch(seqSet, fetchOptions)
+	defer fetchCmd.Close()
+
+	msg := fetchCmd.Next()
+	if msg == nil {
+		log.Fatalf("FETCH command did not return any message")
+	}
+
+	// Find the body section in the response
+	var bodySection imapclient.FetchItemDataBodySection
+	ok := false
+	for {
+		item := msg.Next()
+		if item == nil {
+			break
+		}
+		bodySection, ok = item.(imapclient.FetchItemDataBodySection)
+		if ok {
+			break
+		}
+	}
+	if !ok {
+		log.Fatalf("FETCH command did not return body section")
+	}
+
+	// Read the message via the go-message library
+	mr, err := mail.CreateReader(bodySection.Literal)
+	if err != nil {
+		log.Fatalf("failed to create mail reader: %v", err)
+	}
+
+	// Print a few header fields
+	h := mr.Header
+	if date, err := h.Date(); err != nil {
+		log.Printf("failed to parse Date header field: %v", err)
+	} else {
+		log.Printf("Date: %v", date)
+	}
+	if to, err := h.AddressList("To"); err != nil {
+		log.Printf("failed to parse To header field: %v", err)
+	} else {
+		log.Printf("To: %v", to)
+	}
+	if subject, err := h.Text("Subject"); err != nil {
+		log.Printf("failed to parse Subject header field: %v", err)
+	} else {
+		log.Printf("Subject: %v", subject)
+	}
+
+	// Process the message's parts
+	for {
+		p, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatalf("failed to read message part: %v", err)
+		}
+
+		switch h := p.Header.(type) {
+		case *mail.InlineHeader:
+			// This is the message's text (can be plain-text or HTML)
+			b, _ := io.ReadAll(p.Body)
+			log.Printf("Inline text: %v", string(b))
+		case *mail.AttachmentHeader:
+			// This is an attachment
+			filename, _ := h.Filename()
+			log.Printf("Attachment: %v", filename)
+		}
+	}
+
 	if err := fetchCmd.Close(); err != nil {
 		log.Fatalf("FETCH command failed: %v", err)
 	}
