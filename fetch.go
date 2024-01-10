@@ -44,6 +44,18 @@ type SectionPartial struct {
 }
 
 // FetchItemBodySection is a FETCH BODY[] data item.
+//
+// To fetch the whole body of a message, use the zero FetchItemBodySection:
+//
+//	imap.FetchItemBodySection{}
+//
+// To fetch only a specific part, use the Part field:
+//
+//	imap.FetchItemBodySection{Part: []int{1, 2, 3}}
+//
+// To fetch only the header of the message, use the Specifier field:
+//
+//	imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader}
 type FetchItemBodySection struct {
 	Specifier       PartSpecifier
 	Part            []int
