@@ -150,7 +150,10 @@ type SearchData struct {
 // AllNums returns All as a slice of numbers.
 func (data *SearchData) AllNums() []uint32 {
 	// Note: a dynamic sequence set would be a server bug
-	nums, _ := data.All.Nums()
+	nums, ok := data.All.Nums()
+	if !ok {
+		panic("imap: SearchData.All is a dynamic number set")
+	}
 	return nums
 }
 

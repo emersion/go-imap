@@ -299,6 +299,9 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			if !dec.ExpectNumSet(&data.All) {
 				return "", nil, dec.Err()
 			}
+			if data.All.Dynamic() {
+				return "", nil, fmt.Errorf("imapclient: server returned a dynamic ALL number set in SEARCH response")
+			}
 		case "COUNT":
 			var num uint32
 			if !dec.ExpectNumber(&num) {
