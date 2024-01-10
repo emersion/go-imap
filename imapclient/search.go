@@ -33,8 +33,6 @@ func returnSearchOptions(options *imap.SearchOptions) []string {
 }
 
 func (c *Client) search(uid bool, criteria *imap.SearchCriteria, options *imap.SearchOptions) *SearchCommand {
-	// TODO: add support for SEARCHRES
-
 	// The IMAP4rev2 SEARCH charset defaults to UTF-8. For IMAP4rev1 the
 	// default is undefined and only US-ASCII support is required. What's more,
 	// some servers completely reject the CHARSET keyword. So, let's check if
