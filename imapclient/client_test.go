@@ -142,3 +142,19 @@ func TestFetch_closeUnreadBody(t *testing.T) {
 		t.Fatalf("UIDFetch().Close() = %v", err)
 	}
 }
+
+func TestWaitGreeting_eof(t *testing.T) {
+	// bad server: connected but without greeting
+	clientConn, serverConn := net.Pipe()
+
+	client := imapclient.New(clientConn, nil)
+	defer client.Close()
+
+	if err := serverConn.Close(); err != nil {
+		t.Fatalf("serverConn.Close() = %v", err)
+	}
+
+	if err := client.WaitGreeting(); err == nil {
+		t.Fatalf("WaitGreeting() should fail")
+	}
+}
