@@ -803,15 +803,10 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
-
 	var err error
-	bs.Params, err = readBodyFldParam(dec)
+	bs.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, err
-	}
-	if name, ok := bs.Params["name"]; ok {
-		// TODO: handle error
-		bs.Params["name"], _ = options.decodeText(name)
 	}
 
 	var description string
@@ -950,7 +945,7 @@ func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*imap.BodyStruct
 	var ext imap.BodyStructureMultiPartExt
 
 	var err error
-	ext.Params, err = readBodyFldParam(dec)
+	ext.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, fmt.Errorf("in body-fld-param: %v", err)
 	}
@@ -998,22 +993,17 @@ func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*imap.BodyStructur
 	}
 
 	var err error
-	disp.Params, err = readBodyFldParam(dec)
+	disp.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, err
 	}
-	if filename, ok := disp.Params["filename"]; ok {
-		// TODO: handle error
-		disp.Params["filename"], _ = options.decodeText(filename)
-	}
-
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()
 	}
 	return &disp, nil
 }
 
-func readBodyFldParam(dec *imapwire.Decoder) (map[string]string, error) {
+func readBodyFldParam(dec *imapwire.Decoder, options *Options) (map[string]string, error) {
 	var (
 		params map[string]string
 		k      string
@@ -1030,7 +1020,10 @@ func readBodyFldParam(dec *imapwire.Decoder) (map[string]string, error) {
 			if params == nil {
 				params = make(map[string]string)
 			}
-			params[k] = s
+			decoded, _ := options.decodeText(s)
+			// TODO: handle error
+
+			params[strings.ToLower(k)] = decoded
 			k = ""
 		}
 
