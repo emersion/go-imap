@@ -910,8 +910,15 @@ func (c *Client) readResponseData(typ string) error {
 
 // WaitGreeting waits for the server's initial greeting.
 func (c *Client) WaitGreeting() error {
-	<-c.greetingCh
-	return c.greetingErr
+	select {
+	case <-c.greetingCh:
+		return c.greetingErr
+	case <-c.decCh:
+		if c.decErr != nil {
+			return fmt.Errorf("got error before greeting: %v", c.decErr)
+		}
+		return fmt.Errorf("connection closed before greeting")
+	}
 }
 
 // Noop sends a NOOP command.
