@@ -103,7 +103,9 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if data.UID {
 		enc.SP().Atom("UID")
 	}
-	if options.ReturnAll && data.All != nil {
+	// When there is no result, we need to send an ESEARCH response with no ALL
+	// keyword
+	if options.ReturnAll && !isNumSetEmpty(data.All) {
 		enc.SP().Atom("ALL").SP().NumSet(data.All)
 	}
 	if options.ReturnMin && data.Min > 0 {
@@ -116,6 +118,17 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
 	}
 	return enc.CRLF()
+}
+
+func isNumSetEmpty(numSet imap.NumSet) bool {
+	switch numSet := numSet.(type) {
+	case imap.SeqSet:
+		return len(numSet) == 0
+	case imap.UIDSet:
+		return len(numSet) == 0
+	default:
+		panic("unknown imap.NumSet type")
+	}
 }
 
 func (c *Conn) writeSearch(numSet imap.NumSet) error {
