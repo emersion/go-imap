@@ -312,12 +312,7 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 
-	for _, seqSet := range criteria.SeqNum {
-		mbox.staticNumSet(seqSet)
-	}
-	for _, uidSet := range criteria.UID {
-		mbox.staticNumSet(uidSet)
-	}
+	mbox.staticSearchCriteria(criteria)
 
 	data := imap.SearchData{UID: numKind == imapserver.NumKindUID}
 
@@ -361,6 +356,24 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	}
 
 	return &data, nil
+}
+
+func (mbox *MailboxView) staticSearchCriteria(criteria *imap.SearchCriteria) {
+	for _, seqSet := range criteria.SeqNum {
+		mbox.staticNumSet(seqSet)
+	}
+	for _, uidSet := range criteria.UID {
+		mbox.staticNumSet(uidSet)
+	}
+
+	for i := range criteria.Not {
+		mbox.staticSearchCriteria(&criteria.Not[i])
+	}
+	for i := range criteria.Or {
+		for j := range criteria.Or[i] {
+			mbox.staticSearchCriteria(&criteria.Or[i][j])
+		}
+	}
 }
 
 func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
