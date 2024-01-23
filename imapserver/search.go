@@ -175,6 +175,8 @@ func readSearchReturnOpts(dec *imapwire.Decoder, options *imap.SearchOptions) er
 			options.ReturnAll = true
 		case "COUNT":
 			options.ReturnCount = true
+		case "SAVE":
+			options.ReturnSave = true
 		default:
 			return newClientBugError("unknown SEARCH RETURN option")
 		}
@@ -324,6 +326,8 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 			return nil
 		}
 		criteria.Or = append(criteria.Or, or)
+	case "$":
+		criteria.UID = append(criteria.UID, imap.SearchRes())
 	default:
 		seqSet, err := imapwire.ParseSeqSet(key)
 		if err != nil {
