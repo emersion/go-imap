@@ -150,7 +150,7 @@ func (mbox *Mailbox) appendBytes(buf []byte, options *imap.AppendOptions) *imap.
 	mbox.l = append(mbox.l, msg)
 	mbox.tracker.QueueNumMessages(uint32(len(mbox.l)))
 
-	mbox.addFlagsLocked(options.Flags)
+	mbox.addFlagsLocked(options.Flags, nil)
 
 	return &imap.AppendData{
 		UIDValidity: mbox.uidValidity,
@@ -187,7 +187,7 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 	}
 }
 
-func (mbox *Mailbox) addFlagsLocked(flags []imap.Flag) {
+func (mbox *Mailbox) addFlagsLocked(flags []imap.Flag, source *imapserver.SessionTracker) bool {
 	changed := false
 	for _, flag := range flags {
 		if _, ok := mbox.flags[canonicalFlag(flag)]; !ok {
@@ -196,8 +196,9 @@ func (mbox *Mailbox) addFlagsLocked(flags []imap.Flag) {
 		mbox.flags[canonicalFlag(flag)] = struct{}{}
 	}
 	if changed {
-		mbox.tracker.QueueMailboxFlags(flagMapToList(mbox.flags))
+		mbox.tracker.QueueMailboxFlags(flagMapToList(mbox.flags), source)
 	}
+	return changed
 }
 
 func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error {
@@ -390,29 +391,44 @@ func (mbox *MailboxView) staticSearchCriteria(criteria *imap.SearchCriteria) {
 }
 
 func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	mbox.store(numSet, flags)
+	newMailboxFlags := mbox.store(numSet, flags)
 	if !flags.Silent {
+		if newMailboxFlags != nil {
+			if err := w.WriteMailboxFlags(newMailboxFlags); err != nil {
+				return err
+			}
+		}
 		// TODO: this sends message flags updates before mailbox flags update
 		return mbox.Fetch(w, numSet, &imap.FetchOptions{Flags: true})
 	}
 	return nil
 }
 
-func (mbox *MailboxView) store(numSet imap.NumSet, flags *imap.StoreFlags) {
+func (mbox *MailboxView) store(numSet imap.NumSet, flags *imap.StoreFlags) []imap.Flag {
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 
 	// We need to announce the new flags via a FLAGS response before sending
 	// FETCH FLAGS responses
+	var newMailboxFlags []imap.Flag
 	switch flags.Op {
 	case imap.StoreFlagsSet, imap.StoreFlagsAdd:
-		mbox.addFlagsLocked(flags.Flags)
+		var source *imapserver.SessionTracker
+		if !flags.Silent {
+			source = mbox.tracker
+		}
+		changed := mbox.addFlagsLocked(flags.Flags, source)
+		if changed {
+			newMailboxFlags = flagMapToList(mbox.flags)
+		}
 	}
 
 	mbox.forEachLocked(numSet, func(seqNum uint32, msg *message) {
 		msg.store(flags)
 		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
 	})
+
+	return newMailboxFlags
 }
 
 func (mbox *MailboxView) Poll(w *imapserver.UpdateWriter, allowExpunge bool) error {
