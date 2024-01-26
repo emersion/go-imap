@@ -309,6 +309,17 @@ func (dec *Decoder) ExpectNumber(ptr *uint32) bool {
 	return dec.Expect(dec.Number(ptr), "number")
 }
 
+func (dec *Decoder) ExpectBodyFldOctets(ptr *uint32) bool {
+	// Workaround: some servers incorrectly return "-1" for the body structure
+	// size. See:
+	// https://github.com/emersion/go-imap/issues/534
+	if dec.acceptByte('-') {
+		*ptr = 0
+		return dec.Expect(dec.acceptByte('1'), "-1 (body-fld-octets workaround)")
+	}
+	return dec.ExpectNumber(ptr)
+}
+
 func (dec *Decoder) Number64(ptr *int64) bool {
 	s, ok := dec.numberStr()
 	if !ok {
