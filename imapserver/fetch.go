@@ -537,9 +537,17 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 		writeAddressList(enc, l)
 	}
 	enc.SP()
-	writeNString(enc, envelope.InReplyTo)
+	if len(envelope.InReplyTo) > 0 {
+		enc.String("<" + strings.Join(envelope.InReplyTo, "> <") + ">")
+	} else {
+		enc.NIL()
+	}
 	enc.SP()
-	writeNString(enc, envelope.MessageID)
+	if envelope.MessageID != "" {
+		enc.String("<" + envelope.MessageID + ">")
+	} else {
+		enc.NIL()
+	}
 	enc.Special(')')
 }
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"mime"
-	netmail "net/mail"
 	"strings"
 	"time"
 
@@ -356,29 +355,28 @@ func matchBytes(buf []byte, patterns []string) bool {
 }
 
 func getEnvelope(h textproto.Header) *imap.Envelope {
-	date, _ := netmail.ParseDate(h.Get("Date"))
+	mh := mail.Header{gomessage.Header{h}}
+	date, _ := mh.Date()
+	inReplyTo, _ := mh.MsgIDList("In-Reply-To")
+	messageID, _ := mh.MessageID()
 	return &imap.Envelope{
 		Date:      date,
 		Subject:   h.Get("Subject"),
-		From:      parseAddressList(h.Get("From")),
-		Sender:    parseAddressList(h.Get("Sender")),
-		ReplyTo:   parseAddressList(h.Get("Reply-To")),
-		To:        parseAddressList(h.Get("To")),
-		Cc:        parseAddressList(h.Get("Cc")),
-		Bcc:       parseAddressList(h.Get("Bcc")),
-		InReplyTo: h.Get("In-Reply-To"),
-		MessageID: h.Get("message-Id"),
+		From:      parseAddressList(mh, "From"),
+		Sender:    parseAddressList(mh, "Sender"),
+		ReplyTo:   parseAddressList(mh, "Reply-To"),
+		To:        parseAddressList(mh, "To"),
+		Cc:        parseAddressList(mh, "Cc"),
+		Bcc:       parseAddressList(mh, "Bcc"),
+		InReplyTo: inReplyTo,
+		MessageID: messageID,
 	}
 }
 
-func parseAddressList(s string) []imap.Address {
-	if s == "" {
-		return nil
-	}
-
+func parseAddressList(mh mail.Header, k string) []imap.Address {
 	// TODO: leave the quoted words unchanged
 	// TODO: handle groups
-	addrs, _ := mail.ParseAddressList(s)
+	addrs, _ := mh.AddressList(k)
 	var l []imap.Address
 	for _, addr := range addrs {
 		mailbox, host, ok := strings.Cut(addr.Address, "@")

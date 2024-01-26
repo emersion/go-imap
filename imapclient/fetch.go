@@ -3,13 +3,14 @@ package imapclient
 import (
 	"fmt"
 	"io"
-	"net/mail"
+	netmail "net/mail"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-message/mail"
 )
 
 // Fetch sends a FETCH command.
@@ -696,7 +697,7 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, erro
 		return nil, dec.Err()
 	}
 	// TODO: handle error
-	envelope.Date, _ = mail.ParseDate(date)
+	envelope.Date, _ = netmail.ParseDate(date)
 	envelope.Subject, _ = options.decodeText(subject)
 
 	addrLists := []struct {
@@ -720,9 +721,13 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, erro
 		*addrList.out = l
 	}
 
-	if !dec.ExpectNString(&envelope.InReplyTo) || !dec.ExpectSP() || !dec.ExpectNString(&envelope.MessageID) {
+	var inReplyTo, messageID string
+	if !dec.ExpectNString(&inReplyTo) || !dec.ExpectSP() || !dec.ExpectNString(&messageID) {
 		return nil, dec.Err()
 	}
+	// TODO: handle errors
+	envelope.InReplyTo, _ = parseMsgIDList(inReplyTo)
+	envelope.MessageID, _ = parseMsgID(messageID)
 
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()
@@ -760,6 +765,18 @@ func readAddress(dec *imapwire.Decoder, options *Options) (*imap.Address, error)
 	// TODO: handle error
 	addr.Name, _ = options.decodeText(name)
 	return &addr, nil
+}
+
+func parseMsgID(s string) (string, error) {
+	var h mail.Header
+	h.Set("Message-Id", s)
+	return h.MessageID()
+}
+
+func parseMsgIDList(s string) ([]string, error) {
+	var h mail.Header
+	h.Set("In-Reply-To", s)
+	return h.MsgIDList("In-Reply-To")
 }
 
 func readBody(dec *imapwire.Decoder, options *Options) (imap.BodyStructure, error) {

@@ -78,6 +78,10 @@ type FetchItemBinarySectionSize struct {
 }
 
 // Envelope is the envelope structure of a message.
+//
+// The subject and addresses are UTF-8 (ie, not in their encoded form). The
+// In-Reply-To and Message-ID values contain message identifiers without angle
+// brackets.
 type Envelope struct {
 	Date      time.Time
 	Subject   string
@@ -87,7 +91,7 @@ type Envelope struct {
 	To        []Address
 	Cc        []Address
 	Bcc       []Address
-	InReplyTo string
+	InReplyTo []string
 	MessageID string
 }
 
