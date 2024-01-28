@@ -13,6 +13,9 @@ import (
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
 
+// This limits the max list nesting depth to prevent stack overflow.
+const maxListDepth = 1000
+
 // IsAtomChar returns true if ch is an ATOM-CHAR.
 func IsAtomChar(ch byte) bool {
 	switch ch {
@@ -45,11 +48,12 @@ type Decoder struct {
 	// and needs to be fully buffered in memory.
 	CheckBufferedLiteralFunc func(size int64, nonSync bool) error
 
-	r       *bufio.Reader
-	side    ConnSide
-	err     error
-	literal bool
-	crlf    bool
+	r         *bufio.Reader
+	side      ConnSide
+	err       error
+	literal   bool
+	crlf      bool
+	listDepth int
 }
 
 // NewDecoder creates a new decoder.
@@ -438,6 +442,15 @@ func (dec *Decoder) List(f func() error) (isList bool, err error) {
 	}
 	if dec.Special(')') {
 		return true, nil
+	}
+
+	dec.listDepth++
+	defer func() {
+		dec.listDepth--
+	}()
+
+	if dec.listDepth >= maxListDepth {
+		return false, fmt.Errorf("imapwire: exceeded max depth")
 	}
 
 	for {
