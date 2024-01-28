@@ -58,7 +58,7 @@ type Session interface {
 	Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error)
 	Create(mailbox string, options *imap.CreateOptions) error
 	Delete(mailbox string) error
-	Rename(mailbox, newName string) error
+	Rename(mailbox, newName string, options *imap.RenameOptions) error
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
