@@ -61,6 +61,9 @@ func (mbox *SelectedMailbox) copy() *SelectedMailbox {
 
 // Options contains options for Client.
 type Options struct {
+	// TLS configuration for use by DialTLS and DialStartTLS. If nil, the
+	// default configuration is used.
+	TLSConfig *tls.Config
 	// Raw ingress and egress data will be written to this writer, if any.
 	// Note, this may include sensitive information such as credentials used
 	// during authentication.
@@ -101,6 +104,14 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 		return &UnilateralDataHandler{}
 	}
 	return options.UnilateralDataHandler
+}
+
+func (options *Options) tlsConfig() *tls.Config {
+	if options.TLSConfig != nil {
+		return options.TLSConfig.Clone()
+	} else {
+		return new(tls.Config)
+	}
 }
 
 // Client is an IMAP client.
@@ -171,9 +182,12 @@ func New(conn net.Conn, options *Options) *Client {
 
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
-	conn, err := tls.Dial("tcp", address, &tls.Config{
-		NextProtos: []string{"imap"},
-	})
+	tlsConfig := options.tlsConfig()
+	if tlsConfig.NextProtos == nil {
+		tlsConfig.NextProtos = []string{"imap"}
+	}
+
+	conn, err := tls.Dial("tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -192,8 +206,13 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
+	tlsConfig := options.tlsConfig()
+	if tlsConfig.ServerName == "" {
+		tlsConfig.ServerName = host
+	}
+
 	client := New(conn, options)
-	if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+	if err := client.StartTLS(tlsConfig); err != nil {
 		conn.Close()
 		return nil, err
 	}
