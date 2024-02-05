@@ -107,7 +107,7 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 }
 
 func (options *Options) tlsConfig() *tls.Config {
-	if options.TLSConfig != nil {
+	if options != nil && options.TLSConfig != nil {
 		return options.TLSConfig.Clone()
 	} else {
 		return new(tls.Config)
