@@ -8,10 +8,10 @@ import (
 	"net"
 )
 
-// StartTLS sends a STARTTLS command.
+// startTLS sends a STARTTLS command.
 //
 // Unlike other commands, this method blocks until the command completes.
-func (c *Client) StartTLS(config *tls.Config) error {
+func (c *Client) startTLS(config *tls.Config) error {
 	upgradeDone := make(chan struct{})
 	cmd := &startTLSCommand{
 		tlsConfig:   config,

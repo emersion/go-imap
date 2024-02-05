@@ -212,7 +212,7 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 	}
 
 	client := New(conn, options)
-	if err := client.StartTLS(tlsConfig); err != nil {
+	if err := client.startTLS(tlsConfig); err != nil {
 		conn.Close()
 		return nil, err
 	}
