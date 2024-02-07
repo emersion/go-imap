@@ -112,7 +112,7 @@ func (c *Client) handleMetadata() error {
 		cmd, ok := anyCmd.(*GetMetadataCommand)
 		return ok && cmd.mailbox == data.Mailbox
 	})
-	if cmd != nil && len(data.EntryList) == 0 {
+	if cmd != nil && len(data.EntryValues) > 0 {
 		cmd := cmd.(*GetMetadataCommand)
 		cmd.data.Mailbox = data.Mailbox
 		if cmd.data.Entries == nil {
@@ -123,7 +123,7 @@ func (c *Client) handleMetadata() error {
 		for k, v := range data.EntryValues {
 			cmd.data.Entries[k] = v
 		}
-	} else if handler := c.options.unilateralDataHandler().Metadata; handler != nil {
+	} else if handler := c.options.unilateralDataHandler().Metadata; handler != nil && len(data.EntryList) > 0 {
 		handler(data.Mailbox, data.EntryList)
 	}
 
