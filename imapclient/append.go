@@ -24,6 +24,7 @@ func (c *Client) Append(mailbox string, size int64, options *imap.AppendOptions)
 	if options != nil && !options.Time.IsZero() {
 		cmd.enc.String(options.Time.Format(internal.DateTimeLayout)).SP()
 	}
+	// TODO: literal8 for BINARY
 	// TODO: UTF8 data ext for UTF8=ACCEPT, with literal8
 	cmd.wc = cmd.enc.Literal(size)
 	return cmd
