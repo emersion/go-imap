@@ -123,6 +123,9 @@ func (set CapSet) Has(c Cap) bool {
 	if c == CapCondStore && set.has(CapQResync) {
 		return true
 	}
+	if c == CapUTF8Accept && set.has(CapUTF8Only) {
+		return true
+	}
 	if c == CapAppendLimit {
 		_, ok := set.AppendLimit()
 		return ok
