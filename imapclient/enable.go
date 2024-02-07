@@ -13,10 +13,8 @@ func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
 	// Enabling an extension may change the IMAP syntax, so only allow the
 	// extensions we support here
 	for _, name := range caps {
-		// TODO: add support for METADATA and METADATA-SERVER (ie, expose
-		// unsolicited metadata responses)
 		switch name {
-		case imap.CapUTF8Accept:
+		case imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer:
 			// ok
 		default:
 			done := make(chan error)

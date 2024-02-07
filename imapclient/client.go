@@ -1102,6 +1102,9 @@ type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
+
+	// requires ENABLE METADATA or ENABLE SERVER-METADATA
+	Metadata func(mailbox string, entries []string)
 }
 
 // command is an interface for IMAP commands.

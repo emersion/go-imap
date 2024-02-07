@@ -118,6 +118,8 @@ func (c *Client) handleMetadata() error {
 			Mailbox: data.Mailbox,
 			Entries: data.EntryValues,
 		}
+	} else if handler := c.options.unilateralDataHandler().Metadata; handler != nil {
+		handler(data.Mailbox, data.EntryList)
 	}
 
 	return nil
