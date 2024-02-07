@@ -112,9 +112,12 @@ func (c *Client) handleMetadata() error {
 		cmd, ok := anyCmd.(*GetMetadataCommand)
 		return ok && cmd.mailbox == data.Mailbox
 	})
-	if cmd != nil {
+	if cmd != nil && len(data.EntryList) == 0 {
 		cmd := cmd.(*GetMetadataCommand)
-		cmd.data = *data
+		cmd.data = GetMetadataData{
+			Mailbox: data.Mailbox,
+			Entries: data.EntryValues,
+		}
 	}
 
 	return nil
@@ -133,13 +136,18 @@ func (cmd *GetMetadataCommand) Wait() (*GetMetadataData, error) {
 
 // GetMetadataData is the data returned by the GETMETADATA command.
 type GetMetadataData struct {
+	Mailbox string
+	Entries map[string]*[]byte
+}
+
+type metadataResp struct {
 	Mailbox     string
 	EntryList   []string
 	EntryValues map[string]*[]byte
 }
 
-func readMetadataResp(dec *imapwire.Decoder) (*GetMetadataData, error) {
-	var data GetMetadataData
+func readMetadataResp(dec *imapwire.Decoder) (*metadataResp, error) {
+	var data metadataResp
 
 	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() {
 		return nil, dec.Err()
