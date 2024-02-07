@@ -63,6 +63,7 @@ func (c *Conn) availableCaps() []imap.Cap {
 				imap.CapUnselect,
 				imap.CapEnable,
 				imap.CapIdle,
+				imap.CapUTF8Accept,
 			}...)
 			addAvailableCaps(&caps, available, []imap.Cap{
 				imap.CapNamespace,

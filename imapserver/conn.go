@@ -481,7 +481,7 @@ type responseEncoder struct {
 
 func newResponseEncoder(conn *Conn) *responseEncoder {
 	conn.mutex.Lock()
-	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2)
+	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2) || conn.enabled.Has(imap.CapUTF8Accept)
 	conn.mutex.Unlock()
 
 	wireEnc := imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer)
