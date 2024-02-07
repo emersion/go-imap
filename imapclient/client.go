@@ -144,6 +144,7 @@ type Client struct {
 	mutex        sync.Mutex
 	state        imap.ConnState
 	caps         imap.CapSet
+	enabled      imap.CapSet
 	pendingCapCh chan struct{}
 	mailbox      *SelectedMailbox
 	cmdTag       uint64
@@ -175,6 +176,7 @@ func New(conn net.Conn, options *Options) *Client {
 		greetingCh: make(chan struct{}),
 		decCh:      make(chan struct{}),
 		state:      imap.ConnStateNone,
+		enabled:    make(imap.CapSet),
 	}
 	go client.read()
 	return client
@@ -457,7 +459,11 @@ func (c *Client) completeCommand(cmd command, err error) {
 		}
 	case *unauthenticateCommand:
 		if err == nil {
-			c.setState(imap.ConnStateNotAuthenticated)
+			c.mutex.Lock()
+			c.state = imap.ConnStateNotAuthenticated
+			c.mailbox = nil
+			c.enabled = make(imap.CapSet)
+			c.mutex.Unlock()
 		}
 	case *SelectCommand:
 		if err == nil {

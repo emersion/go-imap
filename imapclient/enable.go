@@ -22,9 +22,17 @@ func (c *Client) handleEnabled() error {
 	if err != nil {
 		return err
 	}
+
+	c.mutex.Lock()
+	for name := range caps {
+		c.enabled[name] = struct{}{}
+	}
+	c.mutex.Unlock()
+
 	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
 		cmd.data.Caps = caps
 	}
+
 	return nil
 }
 
