@@ -182,6 +182,25 @@ func New(conn net.Conn, options *Options) *Client {
 	return client
 }
 
+// NewStartTLS creates a new IMAP client with STARTTLS.
+//
+// A nil options pointer is equivalent to a zero options value.
+func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
+	client := New(conn, options)
+	if err := client.startTLS(options.TLSConfig); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	// Per section 7.1.4, refuse PREAUTH when using STARTTLS
+	if client.State() != imap.ConnStateNotAuthenticated {
+		client.Close()
+		return nil, fmt.Errorf("imapclient: server sent PREAUTH on unencrypted connection")
+	}
+
+	return client, nil
+}
+
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
 	tlsConfig := options.tlsConfig()
@@ -212,20 +231,9 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 	if tlsConfig.ServerName == "" {
 		tlsConfig.ServerName = host
 	}
-
-	client := New(conn, options)
-	if err := client.startTLS(tlsConfig); err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	// Per section 7.1.4, refuse PREAUTH when using STARTTLS
-	if client.State() != imap.ConnStateNotAuthenticated {
-		client.Close()
-		return nil, fmt.Errorf("imapclient: server sent PREAUTH on unencrypted connection")
-	}
-
-	return client, err
+	newOptions := *options
+	newOptions.TLSConfig = tlsConfig
+	return NewStartTLS(conn, &newOptions)
 }
 
 func (c *Client) setReadTimeout(dur time.Duration) {
