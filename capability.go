@@ -120,6 +120,9 @@ func (set CapSet) Has(c Cap) bool {
 	if c == CapLiteralMinus && set.has(CapLiteralPlus) {
 		return true
 	}
+	if c == CapCondStore && set.has(CapQResync) {
+		return true
+	}
 	if c == CapAppendLimit {
 		_, ok := set.AppendLimit()
 		return ok
