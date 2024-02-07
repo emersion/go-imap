@@ -1,6 +1,8 @@
 package imapclient
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 )
 
@@ -8,6 +10,22 @@ import (
 //
 // This command requires support for IMAP4rev2 or the ENABLE extension.
 func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
+	// Enabling an extension may change the IMAP syntax, so only allow the
+	// extensions we support here
+	for _, name := range caps {
+		// TODO: add support for METADATA and METADATA-SERVER (ie, expose
+		// unsolicited metadata responses)
+		switch name {
+		case imap.CapUTF8Accept:
+			// ok
+		default:
+			done := make(chan error)
+			close(done)
+			err := fmt.Errorf("imapclient: cannot enable %q: not supported", name)
+			return &EnableCommand{cmd: Command{done: done, err: err}}
+		}
+	}
+
 	cmd := &EnableCommand{}
 	enc := c.beginCommand("ENABLE", cmd)
 	for _, c := range caps {
