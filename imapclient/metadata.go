@@ -114,9 +114,14 @@ func (c *Client) handleMetadata() error {
 	})
 	if cmd != nil && len(data.EntryList) == 0 {
 		cmd := cmd.(*GetMetadataCommand)
-		cmd.data = GetMetadataData{
-			Mailbox: data.Mailbox,
-			Entries: data.EntryValues,
+		cmd.data.Mailbox = data.Mailbox
+		if cmd.data.Entries == nil {
+			cmd.data.Entries = make(map[string]*[]byte)
+		}
+		// The server might send multiple METADATA responses for a single
+		// METADATA command
+		for k, v := range data.EntryValues {
+			cmd.data.Entries[k] = v
 		}
 	} else if handler := c.options.unilateralDataHandler().Metadata; handler != nil {
 		handler(data.Mailbox, data.EntryList)
