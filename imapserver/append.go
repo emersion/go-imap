@@ -3,6 +3,7 @@ package imapserver
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
@@ -47,10 +48,24 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	}
 	options.Time = t
 
+	var dataExt string
+	if dec.Atom(&dataExt) {
+		switch strings.ToUpper(dataExt) {
+		case "UTF8":
+			// '~' is the literal8 prefix
+			if !dec.ExpectSP() || !dec.ExpectSpecial('(') || !dec.ExpectSpecial('~') {
+				return dec.Err()
+			}
+		default:
+			return newClientBugError("Unknown APPEND data extension")
+		}
+	}
+
 	lit, nonSync, err := dec.ExpectLiteralReader()
 	if err != nil {
 		return err
 	}
+
 	if lit.Size() > appendLimit {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
@@ -74,6 +89,9 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	data, appendErr := c.session.Append(mailbox, lit, &options)
 	if _, discardErr := io.Copy(io.Discard, lit); discardErr != nil {
 		return err
+	}
+	if dataExt != "" && !dec.ExpectSpecial(')') {
+		return dec.Err()
 	}
 	if !dec.ExpectCRLF() {
 		return err
