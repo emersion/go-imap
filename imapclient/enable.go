@@ -14,7 +14,7 @@ func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
 	// extensions we support here
 	for _, name := range caps {
 		switch name {
-		case imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer:
+		case imap.CapIMAP4rev2, imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer:
 			// ok
 		default:
 			done := make(chan error)
