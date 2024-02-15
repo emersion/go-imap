@@ -186,6 +186,10 @@ func New(conn net.Conn, options *Options) *Client {
 //
 // A nil options pointer is equivalent to a zero options value.
 func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
 	client := New(conn, options)
 	if err := client.startTLS(options.TLSConfig); err != nil {
 		conn.Close()
@@ -217,6 +221,10 @@ func DialTLS(address string, options *Options) (*Client, error) {
 
 // DialStartTLS connects to an IMAP server with STARTTLS.
 func DialStartTLS(address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
