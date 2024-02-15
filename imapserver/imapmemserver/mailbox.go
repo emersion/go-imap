@@ -23,6 +23,7 @@ type Mailbox struct {
 	subscribed bool
 	l          []*message
 	uidNext    imap.UID
+	rights     map[imap.RightsIdentifier]imap.RightSet
 }
 
 // NewMailbox creates a new mailbox.
@@ -32,7 +33,26 @@ func NewMailbox(name string, uidValidity uint32) *Mailbox {
 		uidValidity: uidValidity,
 		name:        name,
 		uidNext:     1,
+		rights:      map[imap.RightsIdentifier]imap.RightSet{},
 	}
+}
+
+func (mbox *Mailbox) Rights() map[imap.RightsIdentifier]imap.RightSet {
+	mbox.mutex.Lock()
+	defer mbox.mutex.Unlock()
+
+	rightsCopy := make(map[imap.RightsIdentifier]imap.RightSet, len(mbox.rights))
+	for k, v := range mbox.rights {
+		rightsCopy[k] = v
+	}
+
+	return rightsCopy
+}
+
+func (mbox *Mailbox) SetRights(identifier imap.RightsIdentifier, rights imap.RightSet) {
+	mbox.mutex.Lock()
+	mbox.rights[identifier] = rights
+	mbox.mutex.Unlock()
 }
 
 func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {

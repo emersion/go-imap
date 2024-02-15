@@ -1,7 +1,7 @@
 package imap
 
-// MyrightsData is the data returned by the MYRIGHTS command.
-type MyrightsData struct {
+// MyRightsData is the data returned by the MYRIGHTS command.
+type MyRightsData struct {
 	Mailbox string
-	Rights  string
+	Rights  RightSet
 }

@@ -138,3 +138,57 @@ func (sess *UserSession) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 	}
 	return sess.mailbox.Idle(w, stop)
 }
+
+func (sess *UserSession) MyRights(mailbox string) (*imap.MyRightsData, error) {
+	mbox, err := sess.user.mailbox(mailbox)
+	if err != nil {
+		return nil, err
+	}
+
+	rights, ok := mbox.Rights()[imap.RightsIdentifier(sess.user.username)]
+	if !ok {
+		rights = ""
+	}
+
+	return &imap.MyRightsData{Mailbox: mailbox, Rights: rights}, nil
+}
+
+func (sess *UserSession) SetACL(mailbox string, identifier imap.RightsIdentifier, rights string) error {
+	// TODO: validate rights operations, ex. right 'a' is required to use SetACL
+
+	mbox, err := sess.user.mailbox(mailbox)
+	if err != nil {
+		return err
+	}
+
+	// replace current rights
+	if rights == "" || (rights[0] != '+' && rights[0] != '-') {
+		rightSet, err := imap.NewRightSet(rights)
+		if err != nil {
+			return err
+		}
+
+		mbox.SetRights(identifier, rightSet)
+		return nil
+	}
+
+	subRightSet, err := imap.NewRightSet(rights[1:])
+	if err != nil {
+		return err
+	}
+
+	rightSet, ok := mbox.Rights()[imap.RightsIdentifier(sess.user.username)]
+	if !ok {
+		rightSet = ""
+	}
+
+	if rights[0] == '+' {
+		rightSet = rightSet.Add(subRightSet)
+	} else {
+		rightSet = rightSet.Remove(subRightSet)
+	}
+
+	mbox.SetRights(identifier, rightSet)
+
+	return nil
+}
