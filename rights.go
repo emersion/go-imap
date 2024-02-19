@@ -10,15 +10,15 @@ type RightSet string
 type Right byte
 
 const (
-	RightLookup     = Right('l')
-	RightRead       = Right('r')
-	RightSeen       = Right('s')
-	RightWrite      = Right('w')
-	RightInsert     = Right('i')
-	RightPost       = Right('p')
-	RightCreate     = Right('c')
-	RightDelete     = Right('d')
-	RightAdminister = Right('a')
+	RightLookup     = Right('l') // mailbox is visible to LIST/LSUB commands
+	RightRead       = Right('r') // SELECT the mailbox, perform CHECK, FETCH, PARTIAL, SEARCH, COPY from mailbox
+	RightSeen       = Right('s') // keep seen/unseen information across sessions (STORE SEEN flag)
+	RightWrite      = Right('w') // STORE flags other than SEEN and DELETED
+	RightInsert     = Right('i') // perform APPEND, COPY into mailbox
+	RightPost       = Right('p') // send mail to submission address for mailbox, not enforced by IMAP4 itself
+	RightCreate     = Right('c') // CREATE new sub-mailboxes in any implementation-defined hierarchy
+	RightDelete     = Right('d') // STORE DELETED flag, perform EXPUNGE
+	RightAdminister = Right('a') // perform SETACL
 
 	AllRights = RightSet("lrswipcda")
 )
