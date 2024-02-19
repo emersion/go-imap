@@ -10,15 +10,15 @@ type RightSet string
 type Right byte
 
 const (
-	RightLookup       = Right('l')
-	RightRead         = Right('r')
-	RightSeen         = Right('s')
-	RightWrite        = Right('w')
-	RightInsert       = Right('i')
-	RightPost         = Right('p')
-	RightCreate       = Right('c')
-	RightDelete       = Right('d')
-	RightAdministered = Right('a')
+	RightLookup     = Right('l')
+	RightRead       = Right('r')
+	RightSeen       = Right('s')
+	RightWrite      = Right('w')
+	RightInsert     = Right('i')
+	RightPost       = Right('p')
+	RightCreate     = Right('c')
+	RightDelete     = Right('d')
+	RightAdminister = Right('a')
 
 	AllRights = RightSet("lrswipcda")
 )
