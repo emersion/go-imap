@@ -1,8 +1,8 @@
 package imapserver
 
 import (
-	"github.com/emersion/go-imap/v2"
-	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"github.com/opsxolc/go-imap/v2"
+	"github.com/opsxolc/go-imap/v2/internal/imapwire"
 )
 
 func (c *Conn) handleSetACL(dec *imapwire.Decoder) error {

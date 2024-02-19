@@ -3,7 +3,7 @@ package imap
 import (
 	"unsafe"
 
-	"github.com/emersion/go-imap/v2/internal/imapnum"
+	"github.com/opsxolc/go-imap/v2/internal/imapnum"
 )
 
 // NumSet is a set of numbers identifying messages. NumSet is either a SeqSet

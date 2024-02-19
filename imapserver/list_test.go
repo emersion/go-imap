@@ -3,7 +3,7 @@ package imapserver_test
 import (
 	"testing"
 
-	"github.com/emersion/go-imap/v2/imapserver"
+	"github.com/opsxolc/go-imap/v2/imapserver"
 )
 
 var matchListTests = []struct {

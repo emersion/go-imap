@@ -3,8 +3,8 @@ package imapclient
 import (
 	"fmt"
 
-	"github.com/emersion/go-imap/v2"
-	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"github.com/opsxolc/go-imap/v2"
+	"github.com/opsxolc/go-imap/v2/internal/imapwire"
 )
 
 // Store sends a STORE command.

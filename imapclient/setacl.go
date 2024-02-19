@@ -1,6 +1,6 @@
 package imapclient
 
-import "github.com/emersion/go-imap/v2"
+import "github.com/opsxolc/go-imap/v2"
 
 // SetACL sends a SETACL command.
 func (c *Client) SetACL(mailbox string, identifier imap.RightsIdentifier, rights imap.RightSet) *SetACLCommand {

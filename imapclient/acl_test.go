@@ -3,7 +3,7 @@ package imapclient_test
 import (
 	"testing"
 
-	"github.com/emersion/go-imap/v2"
+	"github.com/opsxolc/go-imap/v2"
 )
 
 // TestACL runs tests on SetACL and MyRights commands (for now).

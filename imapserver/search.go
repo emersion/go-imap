@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emersion/go-imap/v2"
-	"github.com/emersion/go-imap/v2/internal"
-	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"github.com/opsxolc/go-imap/v2"
+	"github.com/opsxolc/go-imap/v2/internal"
+	"github.com/opsxolc/go-imap/v2/internal/imapwire"
 )
 
 func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) error {

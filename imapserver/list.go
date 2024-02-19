@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/emersion/go-imap/v2"
-	"github.com/emersion/go-imap/v2/internal/imapwire"
-	"github.com/emersion/go-imap/v2/internal/utf7"
+	"github.com/opsxolc/go-imap/v2"
+	"github.com/opsxolc/go-imap/v2/internal/imapwire"
+	"github.com/opsxolc/go-imap/v2/internal/utf7"
 )
 
 func (c *Conn) handleList(dec *imapwire.Decoder) error {
