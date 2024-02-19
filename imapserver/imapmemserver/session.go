@@ -1,8 +1,8 @@
 package imapmemserver
 
 import (
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/imapserver"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/imapserver"
 )
 
 type (

@@ -1,7 +1,7 @@
 package imapserver
 
 import (
-	"github.com/opsxolc/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 func (c *Conn) handleMyRights(dec *imapwire.Decoder) error {

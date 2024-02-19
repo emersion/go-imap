@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/imapclient"
-	"github.com/opsxolc/go-imap/v2/imapserver"
-	"github.com/opsxolc/go-imap/v2/imapserver/imapmemserver"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/imapclient"
+	"github.com/emersion/go-imap/v2/imapserver"
+	"github.com/emersion/go-imap/v2/imapserver/imapmemserver"
 )
 
 const (

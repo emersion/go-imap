@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 	"github.com/emersion/go-message/mail"
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/internal"
-	"github.com/opsxolc/go-imap/v2/internal/imapwire"
 )
 
 // Fetch sends a FETCH command.

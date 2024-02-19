@@ -3,7 +3,7 @@ package imapclient_test
 import (
 	"testing"
 
-	"github.com/opsxolc/go-imap/v2"
+	"github.com/emersion/go-imap/v2"
 )
 
 func TestAppend(t *testing.T) {

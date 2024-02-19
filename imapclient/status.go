@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 func statusItems(options *imap.StatusOptions) []string {

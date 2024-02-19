@@ -3,9 +3,9 @@ package imapserver
 import (
 	"strings"
 
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/internal"
-	"github.com/opsxolc/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {

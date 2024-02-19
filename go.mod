@@ -1,4 +1,4 @@
-module github.com/opsxolc/go-imap/v2
+module github.com/emersion/go-imap/v2
 
 go 1.18
 

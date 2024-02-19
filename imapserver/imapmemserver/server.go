@@ -4,7 +4,7 @@ package imapmemserver
 import (
 	"sync"
 
-	"github.com/opsxolc/go-imap/v2/imapserver"
+	"github.com/emersion/go-imap/v2/imapserver"
 )
 
 // Server is a server instance.

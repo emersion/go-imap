@@ -3,7 +3,7 @@ package imapclient
 import (
 	"fmt"
 
-	"github.com/opsxolc/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 type GetMetadataDepth int

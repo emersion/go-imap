@@ -1,8 +1,8 @@
 package imapclient
 
 import (
-	"github.com/opsxolc/go-imap/v2"
-	"github.com/opsxolc/go-imap/v2/internal"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 )
 
 // Select sends a SELECT or EXAMINE command.

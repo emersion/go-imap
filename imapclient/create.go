@@ -1,7 +1,7 @@
 package imapclient
 
 import (
-	"github.com/opsxolc/go-imap/v2"
+	"github.com/emersion/go-imap/v2"
 )
 
 // Create sends a CREATE command.
