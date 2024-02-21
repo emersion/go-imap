@@ -3,6 +3,7 @@ package imapclient_test
 import (
 	"io"
 	"net"
+	"os"
 	"strings"
 	"testing"
 
@@ -60,7 +61,12 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 		t.Fatalf("net.Dial() = %v", err)
 	}
 
-	client := imapclient.New(conn, nil)
+	debugWriter := struct{ io.Writer }{io.Discard}
+	var options imapclient.Options
+	if testing.Verbose() {
+		options.DebugWriter = &debugWriter
+	}
+	client := imapclient.New(conn, &options)
 
 	if initialState >= imap.ConnStateAuthenticated {
 		if err := client.Login(testUsername, testPassword).Wait(); err != nil {
@@ -72,6 +78,8 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 			t.Fatalf("Select().Wait() = %v", err)
 		}
 	}
+
+	debugWriter.Writer = os.Stderr
 
 	return client, server
 }
