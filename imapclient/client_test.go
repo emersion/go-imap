@@ -4,7 +4,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/emersion/go-imap/v2"
@@ -30,11 +29,6 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 
 	user := imapmemserver.NewUser(testUsername, testPassword)
 	user.Create("INBOX", nil)
-
-	_, err := user.Append("INBOX", strings.NewReader(simpleRawMessage), &imap.AppendOptions{})
-	if err != nil {
-		t.Fatalf("Append() = %v", err)
-	}
 
 	memServer.AddUser(user)
 
@@ -71,6 +65,13 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 	if initialState >= imap.ConnStateAuthenticated {
 		if err := client.Login(testUsername, testPassword).Wait(); err != nil {
 			t.Fatalf("Login().Wait() = %v", err)
+		}
+
+		appendCmd := client.Append("INBOX", int64(len(simpleRawMessage)), nil)
+		appendCmd.Write([]byte(simpleRawMessage))
+		appendCmd.Close()
+		if _, err := appendCmd.Wait(); err != nil {
+			t.Fatalf("AppendCommand.Wait() = %v", err)
 		}
 	}
 	if initialState >= imap.ConnStateSelected {
