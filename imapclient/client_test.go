@@ -24,7 +24,7 @@ Content-Type: text/plain; charset=utf-8
 
 This is my letter!`
 
-func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient.Client, io.Closer) {
+func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 	memServer := imapmemserver.New()
 
 	user := imapmemserver.NewUser(testUsername, testPassword)
@@ -55,6 +55,33 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 		t.Fatalf("net.Dial() = %v", err)
 	}
 
+	return conn, server
+}
+
+func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient.Client, io.Closer) {
+	var useDovecot bool
+	switch os.Getenv("GOIMAP_TEST_DOVECOT") {
+	case "0", "":
+		// ok
+	case "1":
+		useDovecot = true
+	default:
+		t.Fatalf("invalid GOIMAP_TEST_DOVECOT env var")
+	}
+
+	var (
+		conn   net.Conn
+		server io.Closer
+	)
+	if useDovecot {
+		if initialState < imap.ConnStateAuthenticated {
+			t.Skip("Dovecot connections are pre-authenticated")
+		}
+		conn, server = newDovecotClientServerPair(t)
+	} else {
+		conn, server = newMemClientServerPair(t)
+	}
+
 	debugWriter := struct{ io.Writer }{io.Discard}
 	var options imapclient.Options
 	if testing.Verbose() {
@@ -63,8 +90,11 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 	client := imapclient.New(conn, &options)
 
 	if initialState >= imap.ConnStateAuthenticated {
-		if err := client.Login(testUsername, testPassword).Wait(); err != nil {
-			t.Fatalf("Login().Wait() = %v", err)
+		// Dovecot connections are pre-authenticated
+		if !useDovecot {
+			if err := client.Login(testUsername, testPassword).Wait(); err != nil {
+				t.Fatalf("Login().Wait() = %v", err)
+			}
 		}
 
 		appendCmd := client.Append("INBOX", int64(len(simpleRawMessage)), nil)
@@ -98,6 +128,10 @@ func TestLogin(t *testing.T) {
 func TestLogout(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
 	defer server.Close()
+
+	if _, ok := server.(*dovecotServer); ok {
+		t.Skip("Dovecot connections don't reply to LOGOUT")
+	}
 
 	if err := client.Logout().Wait(); err != nil {
 		t.Errorf("Logout().Wait() = %v", err)
