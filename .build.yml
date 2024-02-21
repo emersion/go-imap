@@ -1,5 +1,6 @@
 image: alpine/latest
 packages:
+  - dovecot
   - go
 sources:
   - https://github.com/emersion/go-imap#v2
@@ -10,6 +11,9 @@ tasks:
   - test: |
       cd go-imap
       go test -race ./...
+  - test-dovecot: |
+      cd go-imap
+      GOIMAP_TEST_DOVECOT=1 go test -race ./imapclient
   - gofmt: |
       cd go-imap
       test -z $(gofmt -l .)
