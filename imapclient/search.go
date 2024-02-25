@@ -85,6 +85,12 @@ func (c *Client) UIDSearch(criteria *imap.SearchCriteria, options *imap.SearchOp
 func (c *Client) handleSearch() error {
 	cmd := findPendingCmdByType[*SearchCommand](c)
 	for c.dec.SP() {
+		// smtp-n.global-mail.cn responses:
+		// * SEARCH<SP><CRLF>
+		if !c.dec.SkipSP() {
+			break
+		}
+
 		if c.dec.Special('(') {
 			var name string
 			if !c.dec.ExpectAtom(&name) || !c.dec.ExpectSP() {

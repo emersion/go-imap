@@ -108,6 +108,26 @@ func (dec *Decoder) acceptByte(want byte) bool {
 	return true
 }
 
+// SkipSP skips any space in the buffer and returns true if there's still data.
+// It's used to skip over whitespace between elements, usually to be compatible
+// with non-compliant servers.
+func (dec *Decoder) SkipSP() bool {
+	for dec.acceptByte(' ') {
+	}
+	bytes, err := dec.r.Peek(1)
+	if err == io.EOF {
+		return false
+	}
+	if err != nil {
+		// not EOF, but still an error, assume there's still data
+		return true
+	}
+	if bytes[0] == '\r' || bytes[0] == '\n' {
+		return false
+	}
+	return true
+}
+
 // EOF returns true if end-of-file is reached.
 func (dec *Decoder) EOF() bool {
 	_, err := dec.r.ReadByte()
