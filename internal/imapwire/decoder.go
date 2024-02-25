@@ -135,7 +135,13 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 
 func (dec *Decoder) SP() bool {
 	if dec.acceptByte(' ') {
-		return true
+		// https://github.com/emersion/go-imap/issues/571
+		b, ok := dec.readByte()
+		if !ok {
+			return false
+		}
+		dec.mustUnreadByte()
+		return b != '\r' && b != '\n'
 	}
 
 	// Special case: SP is optional if the next field is a parenthesized list
