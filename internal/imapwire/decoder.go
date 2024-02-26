@@ -108,26 +108,6 @@ func (dec *Decoder) acceptByte(want byte) bool {
 	return true
 }
 
-// SkipSP skips any space in the buffer and returns true if there's still data.
-// It's used to skip over whitespace between elements, usually to be compatible
-// with non-compliant servers.
-func (dec *Decoder) SkipSP() bool {
-	for dec.acceptByte(' ') {
-	}
-	bytes, err := dec.r.Peek(1)
-	if err == io.EOF {
-		return false
-	}
-	if err != nil {
-		// not EOF, but still an error, assume there's still data
-		return true
-	}
-	if bytes[0] == '\r' || bytes[0] == '\n' {
-		return false
-	}
-	return true
-}
-
 // EOF returns true if end-of-file is reached.
 func (dec *Decoder) EOF() bool {
 	_, err := dec.r.ReadByte()
@@ -153,9 +133,13 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 	return true
 }
 
+// SP consumes all following spaces and returns true if there followed by more data.
+// Note, it may still consume spaces (trailing ones) even if it returns false.
 func (dec *Decoder) SP() bool {
 	if dec.acceptByte(' ') {
-		return true
+		for dec.acceptByte(' ') {
+		}
+		return !dec.endOfLine()
 	}
 
 	// Special case: SP is optional if the next field is a parenthesized list
@@ -164,7 +148,18 @@ func (dec *Decoder) SP() bool {
 		return false
 	}
 	dec.mustUnreadByte()
+	// sure not end of line
 	return b == '('
+}
+
+// endOfLine returns true if the next bytes are a CR, LF or EOF.
+func (dec *Decoder) endOfLine() bool {
+	got, ok := dec.readByte()
+	if !ok {
+		return false
+	}
+	dec.mustUnreadByte()
+	return got == '\r' || got == '\n'
 }
 
 func (dec *Decoder) ExpectSP() bool {
@@ -172,7 +167,8 @@ func (dec *Decoder) ExpectSP() bool {
 }
 
 func (dec *Decoder) CRLF() bool {
-	dec.acceptByte(' ')  // https://github.com/emersion/go-imap/issues/540
+	for dec.acceptByte(' ') {
+	} // https://github.com/emersion/go-imap/issues/540
 	dec.acceptByte('\r') // be liberal in what we receive and accept lone LF
 	if !dec.acceptByte('\n') {
 		return false
