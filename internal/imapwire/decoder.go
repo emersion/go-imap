@@ -522,16 +522,20 @@ func (dec *Decoder) ExpectNumSet(kind NumKind, ptr *imap.NumSet) bool {
 	if !dec.Expect(dec.Func(&s, isNumSetChar), "sequence-set") {
 		return false
 	}
-	numSet, err := imapnum.ParseSet(s)
-	if err != nil {
-		return dec.returnErr(err)
-	}
 
 	switch kind {
 	case NumKindSeq:
-		*ptr = seqSetFromNumSet(numSet)
+		set, err := imapnum.ParseSet[uint32](s)
+		if err != nil {
+			return dec.returnErr(err)
+		}
+		*ptr = imap.SeqSet(set)
 	case NumKindUID:
-		*ptr = uidSetFromNumSet(numSet)
+		set, err := imapnum.ParseSet[imap.UID](s)
+		if err != nil {
+			return dec.returnErr(err)
+		}
+		*ptr = imap.UIDSet(set)
 	}
 	return true
 }
