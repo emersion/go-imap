@@ -24,5 +24,9 @@ func NumSetKind(numSet imap.NumSet) NumKind {
 }
 
 func ParseSeqSet(s string) (imap.SeqSet, error) {
-	return imapnum.ParseSet[uint32](s)
+	set, err := imapnum.ParseSet[uint32](s)
+	if err != nil {
+		return nil, err
+	}
+	return imap.SeqSet(set), nil
 }
