@@ -89,7 +89,7 @@ type SessionACL interface {
 	Session
 
 	// TODO: support the rest ACL extension methods
-	SetACL(mailbox string, identifier imap.RightsIdentifier, rights string) error
+	SetACL(mailbox string, ri imap.RightsIdentifier, rm imap.RightModification, rs imap.RightSet) error
 	MyRights(mailbox string) (*imap.MyRightsData, error)
 }
 

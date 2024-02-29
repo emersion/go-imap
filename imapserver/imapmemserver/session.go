@@ -1,6 +1,8 @@
 package imapmemserver
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
 )
@@ -20,6 +22,7 @@ type UserSession struct {
 }
 
 var _ imapserver.SessionIMAP4rev2 = (*UserSession)(nil)
+var _ imapserver.SessionACL = (*UserSession)(nil)
 
 // NewUserSession creates a new user session.
 func NewUserSession(user *User) *UserSession {
@@ -145,7 +148,7 @@ func (sess *UserSession) MyRights(mailbox string) (*imap.MyRightsData, error) {
 		return nil, err
 	}
 
-	rights, ok := mbox.Rights()[imap.RightsIdentifier(sess.user.username)]
+	rights, ok := mbox.getRights()[imap.RightsIdentifier(sess.user.username)]
 	if !ok {
 		rights = ""
 	}
@@ -153,42 +156,29 @@ func (sess *UserSession) MyRights(mailbox string) (*imap.MyRightsData, error) {
 	return &imap.MyRightsData{Mailbox: mailbox, Rights: rights}, nil
 }
 
-func (sess *UserSession) SetACL(mailbox string, identifier imap.RightsIdentifier, rights string) error {
+func (sess *UserSession) SetACL(mailbox string, ri imap.RightsIdentifier, rm imap.RightModification, rs imap.RightSet) error {
 	// TODO: validate rights operations, ex. right 'a' is required to use SetACL
-
 	mbox, err := sess.user.mailbox(mailbox)
 	if err != nil {
 		return err
 	}
 
-	// replace current rights
-	if rights == "" || (rights[0] != '+' && rights[0] != '-') {
-		rightSet, err := imap.NewRightSet(rights)
-		if err != nil {
-			return err
-		}
-
-		mbox.SetRights(identifier, rightSet)
+	if rm == imap.RightModificationReplace {
+		mbox.setRights(ri, rs)
 		return nil
 	}
 
-	subRightSet, err := imap.NewRightSet(rights[1:])
-	if err != nil {
-		return err
-	}
-
-	rightSet, ok := mbox.Rights()[imap.RightsIdentifier(sess.user.username)]
+	curRS, ok := mbox.getRights()[ri]
 	if !ok {
-		rightSet = ""
+		return fmt.Errorf("unknown rights identifier '%s'", ri)
 	}
 
-	if rights[0] == '+' {
-		rightSet = rightSet.Add(subRightSet)
-	} else {
-		rightSet = rightSet.Remove(subRightSet)
+	switch rm {
+	case imap.RightModificationAdd:
+		mbox.setRights(ri, curRS.Add(rs))
+	case imap.RightModificationRemove:
+		mbox.setRights(ri, curRS.Remove(rs))
 	}
-
-	mbox.SetRights(identifier, rightSet)
 
 	return nil
 }

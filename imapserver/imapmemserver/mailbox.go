@@ -37,7 +37,7 @@ func NewMailbox(name string, uidValidity uint32) *Mailbox {
 	}
 }
 
-func (mbox *Mailbox) Rights() map[imap.RightsIdentifier]imap.RightSet {
+func (mbox *Mailbox) getRights() map[imap.RightsIdentifier]imap.RightSet {
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 
@@ -49,7 +49,7 @@ func (mbox *Mailbox) Rights() map[imap.RightsIdentifier]imap.RightSet {
 	return rightsCopy
 }
 
-func (mbox *Mailbox) SetRights(identifier imap.RightsIdentifier, rights imap.RightSet) {
+func (mbox *Mailbox) setRights(identifier imap.RightsIdentifier, rights imap.RightSet) {
 	mbox.mutex.Lock()
 	mbox.rights[identifier] = rights
 	mbox.mutex.Unlock()

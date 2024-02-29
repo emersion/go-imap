@@ -946,7 +946,7 @@ func (c *Client) readResponseData(typ string) error {
 		if !c.dec.ExpectSP() {
 			return c.dec.Err()
 		}
-		return c.handleMyrights()
+		return c.handleMyRights()
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}

@@ -16,7 +16,7 @@ func (c *Client) MyRights(mailbox string) *MyRightsCommand {
 	return cmd
 }
 
-func (c *Client) handleMyrights() error {
+func (c *Client) handleMyRights() error {
 	data, err := readMyRights(c.dec)
 	if err != nil {
 		return fmt.Errorf("in myrights-response: %v", err)
@@ -46,12 +46,39 @@ func readMyRights(dec *imapwire.Decoder) (*imap.MyRightsData, error) {
 		return nil, dec.Err()
 	}
 
-	rightSet, err := imap.NewRightSet(rights)
+	_, rs, err := imap.NewRights(rights)
 	if err != nil {
 		return nil, err
 	}
 
-	data.Rights = rightSet
+	data.Rights = rs
 
 	return &data, nil
+}
+
+// SetACL sends a SETACL command.
+func (c *Client) SetACL(
+	mailbox string, ri imap.RightsIdentifier, rm imap.RightModification, rs imap.RightSet,
+) *SetACLCommand {
+	cmd := &SetACLCommand{}
+	enc := c.beginCommand("SETACL", cmd)
+	enc.SP().Mailbox(mailbox).SP().String(string(ri)).SP()
+
+	rightsStr := string(rs)
+	if rm != imap.RightModificationReplace {
+		rightsStr = string(rm) + rightsStr
+	}
+
+	enc.String(rightsStr)
+	enc.end()
+	return cmd
+}
+
+// SetACLCommand is a SETACL command.
+type SetACLCommand struct {
+	cmd
+}
+
+func (cmd *SetACLCommand) Wait() error {
+	return cmd.cmd.Wait()
 }

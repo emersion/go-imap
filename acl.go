@@ -27,15 +27,34 @@ type RightsIdentifier string
 
 const RightsIdentifierAnyone = RightsIdentifier("anyone")
 
-// NewRightSet converts rights string into RightSet with validation
-func NewRightSet(rights string) (RightSet, error) {
+type RightModification byte
+
+const (
+	RightModificationReplace = RightModification(0)
+	RightModificationAdd     = RightModification('+')
+	RightModificationRemove  = RightModification('-')
+)
+
+// NewRights converts rights string into RightModification and RightSet with validation
+func NewRights(rights string) (RightModification, RightSet, error) {
+	rm := RightModificationReplace
+
+	if len(rights) == 0 {
+		return rm, RightSet(rights), nil
+	}
+
+	if rights[0] == byte(RightModificationAdd) || rights[0] == byte(RightModificationRemove) {
+		rm = RightModification(rights[0])
+		rights = rights[1:]
+	}
+
 	for _, r := range rights {
 		if !strings.ContainsRune(string(AllRights), r) {
-			return "", fmt.Errorf("unsupported right: '%v'", string(r))
+			return rm, "", fmt.Errorf("unsupported right: '%v'", string(r))
 		}
 	}
 
-	return RightSet(rights), nil
+	return rm, RightSet(rights), nil
 }
 
 func (r RightSet) Add(rights RightSet) RightSet {
@@ -58,4 +77,10 @@ func (r RightSet) Remove(rights RightSet) RightSet {
 	}
 
 	return newRights
+}
+
+// MyRightsData is the data returned by the MYRIGHTS command.
+type MyRightsData struct {
+	Mailbox string
+	Rights  RightSet
 }
