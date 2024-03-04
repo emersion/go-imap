@@ -182,3 +182,12 @@ func (sess *UserSession) SetACL(mailbox string, ri imap.RightsIdentifier, rm ima
 
 	return nil
 }
+
+func (sess *UserSession) GetACL(mailbox string) (*imap.GetACLData, error) {
+	mbox, err := sess.user.mailbox(mailbox)
+	if err != nil {
+		return nil, err
+	}
+
+	return &imap.GetACLData{Mailbox: mailbox, Rights: mbox.getRights()}, nil
+}

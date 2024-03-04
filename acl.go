@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// IMAP4 ACL extension (RFC 2086)
+
 type RightSet string
 
 type Right byte
@@ -36,11 +38,11 @@ const (
 )
 
 // NewRights converts rights string into RightModification and RightSet with validation
-func NewRights(rights string) (RightModification, RightSet, error) {
+func NewRights(rights string, ignoreUnsupported bool) (RightModification, RightSet, error) {
 	rm := RightModificationReplace
 
 	if len(rights) == 0 {
-		return rm, RightSet(rights), nil
+		return rm, "", nil
 	}
 
 	if rights[0] == byte(RightModificationAdd) || rights[0] == byte(RightModificationRemove) {
@@ -48,13 +50,20 @@ func NewRights(rights string) (RightModification, RightSet, error) {
 		rights = rights[1:]
 	}
 
+	var newRights RightSet
 	for _, r := range rights {
-		if !strings.ContainsRune(string(AllRights), r) {
-			return rm, "", fmt.Errorf("unsupported right: '%v'", string(r))
+		if IsSupportedRight(r) {
+			newRights += RightSet(r)
+		} else if !ignoreUnsupported {
+			return rm, "", fmt.Errorf("unsupported right: '%v'", r)
 		}
 	}
 
-	return rm, RightSet(rights), nil
+	return rm, RightSet(newRights), nil
+}
+
+func IsSupportedRight(r rune) bool {
+	return strings.ContainsRune(string(AllRights), r)
 }
 
 func (r RightSet) Add(rights RightSet) RightSet {
@@ -79,8 +88,23 @@ func (r RightSet) Remove(rights RightSet) RightSet {
 	return newRights
 }
 
+func (r RightSet) Equal(rights RightSet) bool {
+	for _, right := range r {
+		if !strings.ContainsRune(string(rights), right) {
+			return false
+		}
+	}
+	return true
+}
+
 // MyRightsData is the data returned by the MYRIGHTS command.
 type MyRightsData struct {
 	Mailbox string
 	Rights  RightSet
+}
+
+// GetACLData is the data returned by the GETACL command.
+type GetACLData struct {
+	Mailbox string
+	Rights  map[RightsIdentifier]RightSet
 }

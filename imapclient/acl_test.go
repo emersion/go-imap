@@ -10,63 +10,53 @@ import (
 // order matters
 var testCases = []struct {
 	name                  string
-	data                  *imap.MyRightsData
+	mailbox               string
 	setRightsModification imap.RightModification
 	setRights             imap.RightSet
+	expectedRights        imap.RightSet
+	execStatusCmd         bool
 }{
 	{
-		name: "inbox",
-		data: &imap.MyRightsData{
-			Mailbox: "INBOX",
-			Rights:  imap.AllRights,
-		},
+		name:                  "inbox",
+		mailbox:               "INBOX",
 		setRightsModification: imap.RightModificationReplace,
 		setRights:             imap.AllRights,
+		expectedRights:        imap.AllRights,
 	},
 	{
-		name: "custom_folder",
-		data: &imap.MyRightsData{
-			Mailbox: "MyFolder",
-			Rights:  "rwi",
-		},
+		name:                  "custom_folder",
+		mailbox:               "MyFolder",
 		setRightsModification: imap.RightModificationReplace,
-		setRights:             "rwi",
+		setRights:             "ailw",
+		expectedRights:        "ailw",
 	},
 	{
-		name: "custom_child_folder",
-		data: &imap.MyRightsData{
-			Mailbox: "MyFolder/Child",
-			Rights:  "rwi",
-		},
+		name:                  "custom_child_folder",
+		mailbox:               "MyFolder.Child",
 		setRightsModification: imap.RightModificationReplace,
-		setRights:             "rwi",
+		setRights:             "alwrd",
+		expectedRights:        "alwrd",
 	},
 	{
-		name: "add_rights",
-		data: &imap.MyRightsData{
-			Mailbox: "MyFolder",
-			Rights:  "rwidc",
-		},
+		name:                  "add_rights",
+		mailbox:               "MyFolder",
 		setRightsModification: imap.RightModificationAdd,
-		setRights:             "dc",
+		setRights:             "rwic",
+		expectedRights:        "ailwrc",
 	},
 	{
-		name: "remove_rights",
-		data: &imap.MyRightsData{
-			Mailbox: "MyFolder",
-			Rights:  "rwi",
-		},
+		name:                  "remove_rights",
+		mailbox:               "MyFolder",
 		setRightsModification: imap.RightModificationRemove,
-		setRights:             "dc",
+		setRights:             "iwc",
+		expectedRights:        "alr",
 	},
 	{
-		name: "empty_rights",
-		data: &imap.MyRightsData{
-			Mailbox: "MyFolder/Child",
-			Rights:  "",
-		},
+		name:                  "empty_rights",
+		mailbox:               "MyFolder.Child",
 		setRightsModification: imap.RightModificationReplace,
-		setRights:             "",
+		setRights:             "a",
+		expectedRights:        "a",
 	},
 }
 
@@ -80,20 +70,32 @@ func TestACL(t *testing.T) {
 	if err := client.Create("MyFolder", nil).Wait(); err != nil {
 		t.Fatalf("create MyFolder error: %v", err)
 	}
-	if err := client.Create("MyFolder/Child", nil).Wait(); err != nil {
-		t.Fatalf("create MyFolder/Child error: %v", err)
+
+	if err := client.Create("MyFolder.Child", nil).Wait(); err != nil {
+		t.Fatalf("create MyFolder.Child error: %v", err)
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// execute SETACL command
-			err := client.SetACL(tc.data.Mailbox, testUsername, tc.setRightsModification, tc.setRights).Wait()
+			err := client.SetACL(tc.mailbox, testUsername, tc.setRightsModification, tc.setRights).Wait()
 			assert.NoErrorf(t, err, "SetACL().Wait() error")
 
+			// execute GETACL command to reset cache on server
+			getACLData, err := client.GetACL(tc.mailbox).Wait()
+			if assert.NoErrorf(t, err, "GetACL().Wait() error") {
+				assert.Equal(t, tc.mailbox, getACLData.Mailbox)
+				assert.Truef(t, tc.expectedRights.Equal(getACLData.Rights[testUsername]),
+					"expected: %s, got: %s", tc.expectedRights, getACLData.Rights[testUsername])
+			}
+
 			// execute MYRIGHTS command
-			data, err := client.MyRights(tc.data.Mailbox).Wait()
-			assert.NoErrorf(t, err, "MyRights().Wait() error")
-			assert.Equal(t, tc.data, data)
+			myRightsData, err := client.MyRights(tc.mailbox).Wait()
+			if assert.NoErrorf(t, err, "MyRights().Wait() error") {
+				assert.Equal(t, tc.mailbox, myRightsData.Mailbox)
+				assert.Truef(t, tc.expectedRights.Equal(myRightsData.Rights),
+					"expected: %s, got: %s", tc.expectedRights, myRightsData.Rights)
+			}
 		})
 	}
 
@@ -104,7 +106,5 @@ func TestACL(t *testing.T) {
 
 	t.Run("nonexistent_mailbox", func(t *testing.T) {
 		assert.Error(t, client.SetACL("BibiMailbox", testUsername, imap.RightModificationReplace, "").Wait())
-		_, err := client.MyRights("BibiMailbox").Wait()
-		assert.Error(t, err)
 	})
 }

@@ -9,6 +9,10 @@ import (
 )
 
 func statusItems(options *imap.StatusOptions) []string {
+	if options == nil {
+		options = &imap.StatusOptions{}
+	}
+
 	m := map[string]bool{
 		"MESSAGES":        options.NumMessages,
 		"UIDNEXT":         options.UIDNext,

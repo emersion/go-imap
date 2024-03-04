@@ -243,6 +243,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleNamespace(dec)
 	case "SETACL":
 		err = c.handleSetACL(dec)
+	case "GETACL":
+		err = c.handleGetACL(dec)
 	case "MYRIGHTS":
 		err = c.handleMyRights(dec)
 	case "IDLE":

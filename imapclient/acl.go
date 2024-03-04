@@ -9,7 +9,7 @@ import (
 
 // MyRights sends a MYRIGHTS command.
 func (c *Client) MyRights(mailbox string) *MyRightsCommand {
-	cmd := &MyRightsCommand{mailbox: mailbox}
+	cmd := &MyRightsCommand{}
 	enc := c.beginCommand("MYRIGHTS", cmd)
 	enc.SP().Mailbox(mailbox)
 	enc.end()
@@ -30,8 +30,7 @@ func (c *Client) handleMyRights() error {
 // MyRightsCommand is a MYRIGHTS command.
 type MyRightsCommand struct {
 	cmd
-	mailbox string
-	data    imap.MyRightsData
+	data imap.MyRightsData
 }
 
 func (cmd *MyRightsCommand) Wait() (*imap.MyRightsData, error) {
@@ -46,7 +45,7 @@ func readMyRights(dec *imapwire.Decoder) (*imap.MyRightsData, error) {
 		return nil, dec.Err()
 	}
 
-	_, rs, err := imap.NewRights(rights)
+	_, rs, err := imap.NewRights(rights, true)
 	if err != nil {
 		return nil, err
 	}
@@ -81,4 +80,59 @@ type SetACLCommand struct {
 
 func (cmd *SetACLCommand) Wait() error {
 	return cmd.cmd.Wait()
+}
+
+// GetACL sends a GETACL command.
+func (c *Client) GetACL(mailbox string) *GetACLCommand {
+	cmd := &GetACLCommand{}
+	enc := c.beginCommand("GETACL", cmd)
+	enc.SP().Mailbox(mailbox)
+	enc.end()
+	return cmd
+}
+
+func (c *Client) handleGetACL() error {
+	data, err := readGetACL(c.dec)
+	if err != nil {
+		return fmt.Errorf("in getacl-response: %v", err)
+	}
+	if cmd := findPendingCmdByType[*GetACLCommand](c); cmd != nil {
+		cmd.data = *data
+	}
+	return nil
+}
+
+// GetACLCommand is a GETACL command.
+type GetACLCommand struct {
+	cmd
+	data imap.GetACLData
+}
+
+func readGetACL(dec *imapwire.Decoder) (*imap.GetACLData, error) {
+	data := &imap.GetACLData{Rights: make(map[imap.RightsIdentifier]imap.RightSet)}
+
+	if !dec.ExpectMailbox(&data.Mailbox) {
+		return nil, dec.Err()
+	}
+
+	for dec.SP() {
+		var rsStr, riStr string
+
+		if !dec.ExpectAString(&riStr) || !dec.ExpectSP() || !dec.ExpectAString(&rsStr) {
+			return nil, dec.Err()
+		}
+
+		_, rs, err := imap.NewRights(rsStr, true)
+		if err != nil {
+			return nil, err
+		}
+
+		data.Rights[imap.RightsIdentifier(riStr)] = rs
+	}
+
+	return data, nil
+}
+
+func (cmd *GetACLCommand) Wait() (*imap.GetACLData, error) {
+	return &cmd.data, cmd.cmd.Wait()
 }
