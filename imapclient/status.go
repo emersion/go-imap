@@ -31,7 +31,13 @@ func statusItems(options *imap.StatusOptions) []string {
 }
 
 // Status sends a STATUS command.
+//
+// A nil options pointer is equivalent to a zero options value.
 func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusCommand {
+	if options == nil {
+		options = new(imap.StatusOptions)
+	}
+
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
 	enc.SP().Mailbox(mailbox).SP()
