@@ -46,6 +46,10 @@ const (
 	literalWriteTimeout = 5 * time.Minute
 )
 
+var dialer = &net.Dialer{
+	Timeout: 30 * time.Second,
+}
+
 // SelectedMailbox contains metadata for the currently selected mailbox.
 type SelectedMailbox struct {
 	Name           string
@@ -212,7 +216,7 @@ func DialTLS(address string, options *Options) (*Client, error) {
 		tlsConfig.NextProtos = []string{"imap"}
 	}
 
-	conn, err := tls.Dial("tcp", address, tlsConfig)
+	conn, err := tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +234,7 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
-	conn, err := net.Dial("tcp", address)
+	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
