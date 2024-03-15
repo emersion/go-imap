@@ -328,7 +328,7 @@ func ExampleClient_Idle() {
 	if err := c.Login("root", "asdf").Wait(); err != nil {
 		log.Fatalf("failed to login: %v", err)
 	}
-	if err := c.Select("INBOX", nil); err != nil {
+	if _, err := c.Select("INBOX", nil).Wait(); err != nil {
 		log.Fatalf("failed to select INBOX: %v", err)
 	}
 
