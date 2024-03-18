@@ -37,6 +37,10 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 			return memServer.NewSession(), nil, nil
 		},
 		InsecureAuth: true,
+		Caps: imap.CapSet{
+			imap.CapIMAP4rev1: {},
+			imap.CapIMAP4rev2: {},
+		},
 	})
 
 	ln, err := net.Listen("tcp", "localhost:0")
