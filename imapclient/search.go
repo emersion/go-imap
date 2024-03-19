@@ -303,11 +303,11 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 		}
 	}
 
-	if !dec.ExpectSP() {
-		return "", nil, dec.Err()
-	}
-
 	for {
+		if !dec.ExpectSP() {
+			return "", nil, dec.Err()
+		}
+
 		switch strings.ToUpper(name) {
 		case "MIN":
 			var num uint32
