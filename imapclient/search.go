@@ -277,10 +277,9 @@ func flagSearchKey(flag imap.Flag) string {
 
 func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchData, err error) {
 	data = &imap.SearchData{}
-
 	if dec.Special('(') { // search-correlator
 		var correlator string
-		if !dec.ExpectAtom(&correlator) || !dec.ExpectSP() || !dec.ExpectAString(&tag) || !dec.ExpectSpecial(')') || !dec.ExpectSP() {
+		if !dec.ExpectAtom(&correlator) || !dec.ExpectSP() || !dec.ExpectAString(&tag) || !dec.ExpectSpecial(')') {
 			return "", nil, dec.Err()
 		}
 		if correlator != "TAG" {
@@ -289,16 +288,26 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 	}
 
 	var name string
-	if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+	if !dec.SP() {
+		return tag, data, nil
+	} else if !dec.ExpectAtom(&name) {
 		return "", nil, dec.Err()
 	}
 	data.UID = name == "UID"
+
 	if data.UID {
-		if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+		if !dec.SP() {
+			return tag, data, nil
+		} else if !dec.ExpectAtom(&name) {
 			return "", nil, dec.Err()
 		}
 	}
+
 	for {
+		if !dec.ExpectSP() {
+			return "", nil, dec.Err()
+		}
+
 		switch strings.ToUpper(name) {
 		case "MIN":
 			var num uint32
@@ -343,9 +352,7 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 
 		if !dec.SP() {
 			break
-		}
-
-		if !dec.ExpectAtom(&name) || !dec.ExpectSP() {
+		} else if !dec.ExpectAtom(&name) {
 			return "", nil, dec.Err()
 		}
 	}
