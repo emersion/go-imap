@@ -454,7 +454,7 @@ func (mbox *MailboxView) staticNumSet(numSet imap.NumSet) imap.NumSet {
 
 	switch numSet := numSet.(type) {
 	case imap.SeqSet:
-		max := uint32(len(mbox.l))
+		max := mbox.tracker.EncodeNumMessages()
 		for i := range numSet {
 			r := &numSet[i]
 			staticNumRange(&r.Start, &r.Stop, max)
