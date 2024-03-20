@@ -352,7 +352,7 @@ func (c *Conn) handleRename(dec *imapwire.Decoder) error {
 	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
 		return err
 	}
-	return c.session.Rename(oldName, newName)
+	return c.session.Rename(oldName, newName, &imap.RenameOptions{})
 }
 
 func (c *Conn) handleSubscribe(dec *imapwire.Decoder) error {

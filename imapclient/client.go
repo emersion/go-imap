@@ -1001,7 +1001,9 @@ func (c *Client) Delete(mailbox string) *Command {
 }
 
 // Rename sends a RENAME command.
-func (c *Client) Rename(mailbox, newName string) *Command {
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Rename(mailbox, newName string, options *imap.RenameOptions) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("RENAME", cmd)
 	enc.SP().Mailbox(mailbox).SP().Mailbox(newName)
