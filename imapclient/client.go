@@ -209,6 +209,15 @@ func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
 	return client, nil
 }
 
+// Dial connects to an IMAP server without any encryption at all.
+func Dial(address string, options *Options) (*Client, error) {
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return New(conn, options), nil
+}
+
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
 	tlsConfig := options.tlsConfig()
