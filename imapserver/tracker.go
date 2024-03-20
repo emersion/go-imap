@@ -79,11 +79,13 @@ func (t *MailboxTracker) QueueNumMessages(n uint32) {
 }
 
 // QueueMailboxFlags queues a new FLAGS update.
-func (t *MailboxTracker) QueueMailboxFlags(flags []imap.Flag) {
+//
+// If source is not nil, the update won't be dispatched to it.
+func (t *MailboxTracker) QueueMailboxFlags(flags []imap.Flag, source *SessionTracker) {
 	if flags == nil {
 		flags = []imap.Flag{}
 	}
-	t.queueUpdate(&trackerUpdate{mailboxFlags: flags}, nil)
+	t.queueUpdate(&trackerUpdate{mailboxFlags: flags}, source)
 }
 
 // QueueMessageFlags queues a new FETCH FLAGS update.
