@@ -17,13 +17,23 @@ func newDovecotClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 ssl           = no
 mail_home     = "` + tempDir + `/%u"
 mail_location = maildir:~/Mail
+mail_plugins = acl
+protocol imap {
+  mail_plugins = $mail_plugins imap_acl
+}
+plugin {
+  acl = vfile
+}
 `
+
 	if err := os.WriteFile(cfgFilename, []byte(cfg), 0666); err != nil {
 		t.Fatalf("failed to write Dovecot config: %v", err)
 	}
 
 	clientConn, serverConn := net.Pipe()
 
+	// this works for me, while doveadm for some reason don't
+	// cmd := exec.Command("/usr/libexec/dovecot/imap", "-c", cfgFilename)
 	cmd := exec.Command("doveadm", "-c", cfgFilename, "exec", "imap")
 	cmd.Env = []string{"USER=" + testUsername, "PATH=" + os.Getenv("PATH")}
 	cmd.Dir = tempDir

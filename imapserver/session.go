@@ -84,6 +84,16 @@ type SessionNamespace interface {
 	Namespace() (*imap.NamespaceData, error)
 }
 
+// SessionACL is an IMAP session which supports ACL extension methods.
+type SessionACL interface {
+	Session
+
+	// TODO: support the rest ACL extension methods
+	SetACL(mailbox string, ri imap.RightsIdentifier, rm imap.RightModification, rs imap.RightSet) error
+	GetACL(mailbox string) (*imap.GetACLData, error)
+	MyRights(mailbox string) (*imap.MyRightsData, error)
+}
+
 // SessionMove is an IMAP session which supports MOVE.
 type SessionMove interface {
 	Session

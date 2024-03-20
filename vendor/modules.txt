@@ -1,0 +1,28 @@
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/emersion/go-message v0.18.0
+## explicit; go 1.14
+github.com/emersion/go-message
+github.com/emersion/go-message/mail
+github.com/emersion/go-message/textproto
+# github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
+## explicit; go 1.12
+github.com/emersion/go-sasl
+# github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594
+## explicit
+github.com/emersion/go-textwrapper
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.8.4
+## explicit; go 1.20
+github.com/stretchr/testify/assert
+# golang.org/x/text v0.14.0
+## explicit; go 1.18
+golang.org/x/text/encoding
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/transform
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
