@@ -72,7 +72,7 @@ func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListComma
 			enc.Atom(selectOpts[i])
 		})
 	}
-	enc.SP().Mailbox(ref).SP().String(pattern)
+	enc.SP().Mailbox(ref).SP().Mailbox(pattern)
 	if returnOpts := getReturnOpts(options); len(returnOpts) > 0 {
 		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
 			opt := returnOpts[i]
