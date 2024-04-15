@@ -20,7 +20,7 @@ type enc struct{}
 
 func (e enc) NewDecoder() *encoding.Decoder {
 	return &encoding.Decoder{
-		Transformer: &decoder{true},
+		Transformer: &decoder{ascii: true},
 	}
 }
 
