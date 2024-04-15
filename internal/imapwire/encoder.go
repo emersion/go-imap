@@ -18,8 +18,8 @@ import (
 // CRLF is called. These methods return the Encoder so that calls can be
 // chained.
 type Encoder struct {
-	// QuotedUTF8 allows non-ASCII strings to be encoded as quoted strings.
-	// This requires IMAP4rev2 to be available, or UTF8=ACCEPT to be enabled.
+	// QuotedUTF8 allows raw UTF-8 in quoted strings. This requires IMAP4rev2
+	// to be available, or UTF8=ACCEPT to be enabled.
 	QuotedUTF8 bool
 	// LiteralMinus enables non-synchronizing literals for short payloads.
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
@@ -153,7 +153,11 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
 	} else {
-		name, _ = utf7.Encoding.NewEncoder().String(name)
+		utf7Enc := utf7.Encoding
+		if enc.QuotedUTF8 {
+			utf7Enc = utf7.AcceptUTF8Encoding
+		}
+		name, _ = utf7Enc.NewEncoder().String(name)
 		return enc.String(name)
 	}
 }
