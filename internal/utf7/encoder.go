@@ -89,3 +89,32 @@ func encode(s []byte) []byte {
 	b64[n-1] = '-'
 	return b64
 }
+
+type escaper struct{}
+
+func (e *escaper) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	for i := 0; i < len(src); {
+		ch := src[i]
+		i++
+
+		b := []byte{ch}
+		if ch == '&' {
+			b = append(b, '-')
+		}
+
+		if nDst+len(b) > len(dst) {
+			return nDst, nSrc, transform.ErrShortDst
+		}
+
+		nSrc = i
+
+		for _, ch := range b {
+			dst[nDst] = ch
+			nDst++
+		}
+	}
+
+	return nDst, nSrc, nil
+}
+
+func (e *escaper) Reset() {}
