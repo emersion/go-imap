@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/transform"
 )
 
 const (
@@ -20,7 +21,7 @@ type enc struct{}
 
 func (e enc) NewDecoder() *encoding.Decoder {
 	return &encoding.Decoder{
-		Transformer: &decoder{ascii: true},
+		Transformer: transform.Chain(encoding.UTF8Validator, &decoder{ascii: true}),
 	}
 }
 
@@ -31,4 +32,6 @@ func (e enc) NewEncoder() *encoding.Encoder {
 }
 
 // Encoding is the modified UTF-7 encoding.
+//
+// Note, raw UTF-8 is accepted when decoding.
 var Encoding encoding.Encoding = enc{}

@@ -30,8 +30,10 @@ var decode = []struct {
 	{"\x1F", "", false},
 	{"abc\n", "", false},
 	{"abc\x7Fxyz", "", false},
-	{"\uFFFD", "", false},
-	{"\u041C", "", false},
+
+	// Invalid UTF-8
+	{"\xc3\x28", "", false},
+	{"\xe2\x82\x28", "", false},
 
 	// Invalid Base64 alphabet
 	{"&/+8-", "", false},

@@ -19,7 +19,9 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 	for i := 0; i < len(src); i++ {
 		ch := src[i]
 
-		if ch < min || ch > max { // Illegal code point in ASCII mode
+		if ch < min || (ch > max && ch < utf8.RuneSelf) {
+			// Illegal code point in ASCII mode. Note, UTF-8 codepoints are
+			// always allowed.
 			err = ErrInvalidUTF7
 			return
 		}
