@@ -320,7 +320,14 @@ func (c *Client) Caps() imap.CapSet {
 		c.mutex.Unlock()
 	}
 
-	<-capCh
+	timer := time.NewTimer(respReadTimeout)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-capCh:
+		// ok
+	}
 
 	// TODO: this is racy if caps are reset before we get the reply
 	c.mutex.Lock()
