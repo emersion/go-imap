@@ -581,6 +581,11 @@ func (c *Client) SetDebug(w io.Writer) {
 
 // New creates a new client from an existing connection.
 func New(conn net.Conn) (*Client, error) {
+	return NewWithTimeout(conn, 0)
+}
+
+// New creates a new client from an existing connection with a timeout.
+func NewWithTimeout(conn net.Conn, timeout time.Duration) (*Client, error) {
 	continues := make(chan bool)
 	w := imap.NewClientWriter(nil, continues)
 	r := imap.NewReader(nil)
@@ -591,6 +596,7 @@ func New(conn net.Conn) (*Client, error) {
 		continues: continues,
 		state:     imap.ConnectingState,
 		ErrorLog:  log.New(os.Stderr, "imap/client: ", log.LstdFlags),
+		Timeout:   timeout,
 	}
 
 	c.handleContinuationReqs()
@@ -623,6 +629,10 @@ type Dialer interface {
 //
 // Among other uses, this allows to apply a dial timeout.
 func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
+	return DialWithDialerAndTimeout(dialer, addr, 0)
+}
+
+func DialWithDialerAndTimeout(dialer Dialer, addr string, timeout time.Duration) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -632,14 +642,19 @@ func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
 	// there is no way to set the client's Timeout for that action. As a
 	// workaround, if the dialer has a timeout set, use that for the connection's
 	// deadline.
-	if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
-		err := conn.SetDeadline(time.Now().Add(netDialer.Timeout))
+	if timeout == 0 {
+		if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
+			timeout = netDialer.Timeout
+		}
+	}
+	if timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(timeout))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	c, err := New(conn)
+	c, err := NewWithTimeout(conn, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -658,6 +673,10 @@ func DialTLS(addr string, tlsConfig *tls.Config) (*Client, error) {
 //
 // Among other uses, this allows to apply a dial timeout.
 func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Client, error) {
+	return DialWithDialerAndTimeoutTLS(dialer, addr, tlsConfig, 0)
+}
+
+func DialWithDialerAndTimeoutTLS(dialer Dialer, addr string, tlsConfig *tls.Config, timeout time.Duration) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -677,14 +696,19 @@ func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Clie
 	// there is no way to set the client's Timeout for that action. As a
 	// workaround, if the dialer has a timeout set, use that for the connection's
 	// deadline.
-	if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
-		err := tlsConn.SetDeadline(time.Now().Add(netDialer.Timeout))
+	if timeout == 0 {
+		if netDialer, ok := dialer.(*net.Dialer); ok && netDialer.Timeout > 0 {
+			timeout = netDialer.Timeout
+		}
+	}
+	if timeout > 0 {
+		err = conn.SetDeadline(time.Now().Add(timeout))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	c, err := New(tlsConn)
+	c, err := NewWithTimeout(tlsConn, timeout)
 	if err != nil {
 		return nil, err
 	}
