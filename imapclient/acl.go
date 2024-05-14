@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -16,6 +17,27 @@ func (c *Client) MyRights(mailbox string) *MyRightsCommand {
 	enc.SP().Mailbox(mailbox)
 	enc.end()
 	return cmd
+}
+
+// SetACL sends a SETACL command.
+//
+// This command requires support for the ACL extension.
+func (c *Client) SetACL(mailbox string, ri imap.RightsIdentifier, rm imap.RightModification, rs imap.RightSet) *SetACLCommand {
+	cmd := &SetACLCommand{}
+	enc := c.beginCommand("SETACL", cmd)
+	enc.SP().Mailbox(mailbox).SP().String(string(ri)).SP()
+	enc.String(internal.FormatRights(rm, rs))
+	enc.end()
+	return cmd
+}
+
+// SetACLCommand is a SETACL command.
+type SetACLCommand struct {
+	cmd
+}
+
+func (cmd *SetACLCommand) Wait() error {
+	return cmd.cmd.Wait()
 }
 
 func (c *Client) handleMyRights() error {
