@@ -723,7 +723,14 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			if err != nil {
 				return nil, fmt.Errorf("in resp-code-copy: %v", err)
 			}
-			if cmd, ok := cmd.(*CopyCommand); ok {
+			switch cmd := cmd.(type) {
+			case *CopyCommand:
+				cmd.data.UIDValidity = uidValidity
+				cmd.data.SourceUIDs = srcUIDs
+				cmd.data.DestUIDs = dstUIDs
+			case *MoveCommand:
+				// This can happen when Client.Move falls back to COPY +
+				// STORE + EXPUNGE
 				cmd.data.UIDValidity = uidValidity
 				cmd.data.SourceUIDs = srcUIDs
 				cmd.data.DestUIDs = dstUIDs
