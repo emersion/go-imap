@@ -638,6 +638,9 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				IsExtended:    attName == "BODYSTRUCTURE",
 			}
 		case "BINARY.SIZE":
+			if !dec.ExpectSpecial('[') {
+				return dec.Err()
+			}
 			part, dot := readSectionPart(dec)
 			if dot {
 				return fmt.Errorf("in section-binary: expected number after dot")
