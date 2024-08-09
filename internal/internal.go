@@ -57,7 +57,7 @@ func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	err := dec.ExpectList(func() error {
 		flag, err := ExpectFlag(dec)
 		if err != nil {
-			return err
+			return nil
 		}
 		flags = append(flags, flag)
 		return nil
