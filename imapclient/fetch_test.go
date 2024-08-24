@@ -13,8 +13,9 @@ func TestFetch(t *testing.T) {
 	defer server.Close()
 
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
-		BodySection: []*imap.FetchItemBodySection{{}},
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	messages, err := client.Fetch(seqSet, fetchOptions).Collect()
 	if err != nil {
@@ -27,10 +28,11 @@ func TestFetch(t *testing.T) {
 	if len(msg.BodySection) != 1 {
 		t.Fatalf("len(msg.BodySection) = %v, want 1", len(msg.BodySection))
 	}
-	var body string
-	for _, b := range msg.BodySection {
-		body = strings.ReplaceAll(string(b), "\r\n", "\n")
+	b := msg.FindBodySection(bodySection)
+	if b == nil {
+		t.Fatalf("FindBodySection() = nil")
 	}
+	body := strings.ReplaceAll(string(b), "\r\n", "\n")
 	if body != simpleRawMessage {
 		t.Errorf("body mismatch: got \n%v\n but want \n%v", body, simpleRawMessage)
 	}

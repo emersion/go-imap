@@ -145,12 +145,11 @@ func ExampleClient_Fetch() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader}
 	fetchOptions := &imap.FetchOptions{
-		Flags:    true,
-		Envelope: true,
-		BodySection: []*imap.FetchItemBodySection{
-			{Specifier: imap.PartSpecifierHeader},
-		},
+		Flags:       true,
+		Envelope:    true,
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 	if err != nil {
@@ -158,11 +157,7 @@ func ExampleClient_Fetch() {
 	}
 
 	msg := messages[0]
-	var header []byte
-	for _, buf := range msg.BodySection {
-		header = buf
-		break
-	}
+	header := msg.FindBodySection(bodySection)
 
 	log.Printf("Flags: %v", msg.Flags)
 	log.Printf("Subject: %v", msg.Envelope.Subject)
@@ -173,9 +168,10 @@ func ExampleClient_Fetch_streamBody() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
 		UID:         true,
-		BodySection: []*imap.FetchItemBodySection{{}},
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	fetchCmd := c.Fetch(seqSet, fetchOptions)
 	defer fetchCmd.Close()
@@ -215,8 +211,9 @@ func ExampleClient_Fetch_parseBody() {
 
 	// Send a FETCH command to fetch the message body
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
-		BodySection: []*imap.FetchItemBodySection{{}},
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	fetchCmd := c.Fetch(seqSet, fetchOptions)
 	defer fetchCmd.Close()
@@ -227,14 +224,14 @@ func ExampleClient_Fetch_parseBody() {
 	}
 
 	// Find the body section in the response
-	var bodySection imapclient.FetchItemDataBodySection
+	var bodySectionData imapclient.FetchItemDataBodySection
 	ok := false
 	for {
 		item := msg.Next()
 		if item == nil {
 			break
 		}
-		bodySection, ok = item.(imapclient.FetchItemDataBodySection)
+		bodySectionData, ok = item.(imapclient.FetchItemDataBodySection)
 		if ok {
 			break
 		}
@@ -244,7 +241,7 @@ func ExampleClient_Fetch_parseBody() {
 	}
 
 	// Read the message via the go-message library
-	mr, err := mail.CreateReader(bodySection.Literal)
+	mr, err := mail.CreateReader(bodySectionData.Literal)
 	if err != nil {
 		log.Fatalf("failed to create mail reader: %v", err)
 	}
