@@ -26,6 +26,16 @@ func IsAtomChar(ch byte) bool {
 	}
 }
 
+// Is non-empty char
+func IsNonEmptyChar(ch byte) bool {
+	switch ch {
+	case ' ', '\r', '\n':
+		return false
+	default:
+		return !unicode.IsControl(rune(ch))
+	}
+}
+
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
 type DecoderExpectError struct {
 	Message string
@@ -199,6 +209,14 @@ func (dec *Decoder) Atom(ptr *string) bool {
 
 func (dec *Decoder) ExpectAtom(ptr *string) bool {
 	return dec.Expect(dec.Atom(ptr), "atom")
+}
+
+func (dec *Decoder) NonEmpty(ptr *string) bool {
+	return dec.Func(ptr, IsNonEmptyChar)
+}
+
+func (dec *Decoder) ExpectNonEmpty(ptr *string) bool {
+	return dec.Expect(dec.NonEmpty(ptr), "non-empty")
 }
 
 func (dec *Decoder) ExpectNIL() bool {
@@ -401,7 +419,7 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	}
 	// We cannot do dec.Atom(ptr) here because sometimes mailbox names are unquoted,
 	// and they can contain special characters like `]`.
-	return dec.ExpectText(ptr)
+	return dec.ExpectNonEmpty(ptr)
 }
 
 func (dec *Decoder) String(ptr *string) bool {
