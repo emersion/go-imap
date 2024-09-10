@@ -399,8 +399,9 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	if dec.Literal(ptr) {
 		return true
 	}
-	// TODO: accept unquoted resp-specials
-	return dec.ExpectAtom(ptr)
+	// We cannot do dec.Atom(ptr) here because sometimes mailbox names are unquoted,
+	// and they can contain special characters like `]`.
+	return dec.ExpectText(ptr)
 }
 
 func (dec *Decoder) String(ptr *string) bool {
