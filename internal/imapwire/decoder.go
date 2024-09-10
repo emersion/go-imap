@@ -27,9 +27,9 @@ func IsAtomChar(ch byte) bool {
 }
 
 // Is non-empty char
-func IsNonEmptyChar(ch byte) bool {
+func IsNonEmptyOrParenthesisChar(ch byte) bool {
 	switch ch {
-	case ' ', '\r', '\n':
+	case ' ', '\r', '\n', '(', ')':
 		return false
 	default:
 		return !unicode.IsControl(rune(ch))
@@ -211,12 +211,12 @@ func (dec *Decoder) ExpectAtom(ptr *string) bool {
 	return dec.Expect(dec.Atom(ptr), "atom")
 }
 
-func (dec *Decoder) NonEmpty(ptr *string) bool {
-	return dec.Func(ptr, IsNonEmptyChar)
+func (dec *Decoder) NonEmptyOrParenthesis(ptr *string) bool {
+	return dec.Func(ptr, IsNonEmptyOrParenthesisChar)
 }
 
-func (dec *Decoder) ExpectNonEmpty(ptr *string) bool {
-	return dec.Expect(dec.NonEmpty(ptr), "non-empty")
+func (dec *Decoder) ExpectNonEmptyOrParenthesis(ptr *string) bool {
+	return dec.Expect(dec.NonEmptyOrParenthesis(ptr), "non-empty")
 }
 
 func (dec *Decoder) ExpectNIL() bool {
@@ -419,7 +419,7 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	}
 	// We cannot do dec.Atom(ptr) here because sometimes mailbox names are unquoted,
 	// and they can contain special characters like `]`.
-	return dec.ExpectNonEmpty(ptr)
+	return dec.ExpectNonEmptyOrParenthesis(ptr)
 }
 
 func (dec *Decoder) String(ptr *string) bool {
