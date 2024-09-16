@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -27,13 +28,11 @@ func IsAtomChar(ch byte) bool {
 }
 
 // Is non-empty char
-func IsNonEmptyOrParenthesisChar(ch byte) bool {
-	switch ch {
-	case ' ', '\r', '\n', '(', ')':
-		return false
-	default:
-		return !unicode.IsControl(rune(ch))
+func isAStringChar(ch byte) bool {
+	if slices.Contains([]byte{']', '%', '*'}, ch) {
+		return true
 	}
+	return IsAtomChar(ch)
 }
 
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
@@ -209,14 +208,6 @@ func (dec *Decoder) Atom(ptr *string) bool {
 
 func (dec *Decoder) ExpectAtom(ptr *string) bool {
 	return dec.Expect(dec.Atom(ptr), "atom")
-}
-
-func (dec *Decoder) NonEmptyOrParenthesis(ptr *string) bool {
-	return dec.Func(ptr, IsNonEmptyOrParenthesisChar)
-}
-
-func (dec *Decoder) ExpectNonEmptyOrParenthesis(ptr *string) bool {
-	return dec.Expect(dec.NonEmptyOrParenthesis(ptr), "non-empty")
 }
 
 func (dec *Decoder) ExpectNIL() bool {
@@ -419,7 +410,7 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	}
 	// We cannot do dec.Atom(ptr) here because sometimes mailbox names are unquoted,
 	// and they can contain special characters like `]`.
-	return dec.ExpectNonEmptyOrParenthesis(ptr)
+	return dec.Expect(dec.Func(ptr, isAStringChar), "ASTRING-CHAR")
 }
 
 func (dec *Decoder) String(ptr *string) bool {
