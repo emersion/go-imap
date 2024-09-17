@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -29,10 +28,7 @@ func IsAtomChar(ch byte) bool {
 
 // Is non-empty char
 func isAStringChar(ch byte) bool {
-	if slices.Contains([]byte{']', '%', '*'}, ch) {
-		return true
-	}
-	return IsAtomChar(ch)
+	return IsAtomChar(ch) || ch == ']'
 }
 
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
