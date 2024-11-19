@@ -94,17 +94,72 @@ var imap4rev2Caps = CapSet{
 	CapStatusSize:   {},
 }
 
-// AuthCap returns the capability name for an SASL authentication mechanism.
-func AuthCap(mechanism string) Cap {
-	return Cap("AUTH=" + mechanism)
-}
-
 // CapSet is a set of capabilities.
-type CapSet map[Cap]struct{}
+type CapSet struct {
+	IMAP4rev1 bool // RFC 3501
+	IMAP4rev2 bool // RFC 9051
 
-func (set CapSet) has(c Cap) bool {
-	_, ok := set[c]
-	return ok
+	Auth map[string]struct{}
+
+	StartTLS      bool
+	LoginDisabled bool
+
+	// Folded in IMAP4rev2
+	Namespace    bool // RFC 2342
+	Unselect     bool // RFC 3691
+	UIDPlus      bool // RFC 4315
+	ESearch      bool // RFC 4731
+	SearchRes    bool // RFC 5182
+	Enable       bool // RFC 5161
+	Idle         bool // RFC 2177
+	SASLIR       bool // RFC 4959
+	ListExtended bool // RFC 5258
+	ListStatus   bool // RFC 5819
+	Move         bool // RFC 6851
+	LiteralMinus bool // RFC 7888
+	StatusSize   bool // RFC 8438
+
+	ACL              bool // RFC 4314
+	AppendLimit      bool // RFC 7889
+	Binary           bool // RFC 3516
+	Catenate         bool // RFC 4469
+	Children         bool // RFC 3348
+	CondStore        bool // RFC 7162
+	Convert          bool // RFC 5259
+	CreateSpecialUse bool // RFC 6154
+	ESort            bool // RFC 5267
+	Filters          bool // RFC 5466
+	ID               bool // RFC 2971
+	Language         bool // RFC 5255
+	ListMyRights     bool // RFC 8440
+	LiteralPlus      bool // RFC 7888
+	LoginReferrals   bool // RFC 2221
+	MailboxReferrals bool // RFC 2193
+	Metadata         bool // RFC 5464
+	MetadataServer   bool // RFC 5464
+	MultiAppend      bool // RFC 3502
+	MultiSearch      bool // RFC 7377
+	Notify           bool // RFC 5465
+	ObjectID         bool // RFC 8474
+	Preview          bool // RFC 8970
+	QResync          bool // RFC 7162
+	Quota            bool // RFC 9208
+	QuotaSet         bool // RFC 9208
+	Replace          bool // RFC 8508
+	SaveDate         bool // RFC 8514
+	SearchFuzzy      bool // RFC 6203
+	Sort             bool // RFC 5256
+	SortDisplay      bool // RFC 5957
+	SpecialUse       bool // RFC 6154
+	Unauthenticate   bool // RFC 8437
+	URLPartial       bool // RFC 5550
+	URLAuth          bool // RFC 4467
+	UTF8Accept       bool // RFC 6855
+	UTF8Only         bool // RFC 6855
+	Within           bool // RFC 5032
+	UIDOnly          bool // RFC 9586
+	ListMetadata     bool // RFC 9590
+	InProgress       bool // RFC 9585
 }
 
 // Has checks whether a capability is supported.
