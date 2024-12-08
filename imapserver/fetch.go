@@ -112,6 +112,10 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		bs := &imap.FetchItemBodySection{}
 		writerOptions.obsolete[bs] = attName
 		options.BodySection = append(options.BodySection, bs)
+	case "RFC822.PEEK": // obsolete, equivalent to BODY.PEEK[], used by Outlook
+		bs := &imap.FetchItemBodySection{Peek: true}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
 	case "RFC822.HEADER": // equivalent to BODY.PEEK[HEADER]
 		bs := &imap.FetchItemBodySection{
 			Specifier: imap.PartSpecifierHeader,
