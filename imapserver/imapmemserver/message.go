@@ -57,7 +57,23 @@ func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.Fetch
 		}
 	}
 
-	// TODO: BinarySection, BinarySectionSize
+	for _, bs := range options.BinarySection {
+		buf := imapserver.ExtractBinarySection(bytes.NewReader(msg.buf), bs)
+		wc := w.WriteBinarySection(bs, int64(len(buf)))
+		_, writeErr := wc.Write(buf)
+		closeErr := wc.Close()
+		if writeErr != nil {
+			return writeErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+	}
+
+	for _, bss := range options.BinarySectionSize {
+		n := imapserver.ExtractBinarySectionSize(bytes.NewReader(msg.buf), bss)
+		w.WriteBinarySectionSize(bss, n)
+	}
 
 	return w.Close()
 }
