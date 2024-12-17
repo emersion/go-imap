@@ -29,49 +29,9 @@ func ExtractBodySection(r io.Reader, item *imap.FetchItemBodySection) []byte {
 	}
 	body = br
 
-	// First part of non-multipart message refers to the message itself
-	msgHeader := gomessage.Header{header}
-	mediaType, _, _ := msgHeader.ContentType()
-	partPath := item.Part
-	if !strings.HasPrefix(mediaType, "multipart/") && len(partPath) > 0 && partPath[0] == 1 {
-		partPath = partPath[1:]
-	}
-
-	// Find the requested part using the provided path
-	var parentMediaType string
-	for i := 0; i < len(partPath); i++ {
-		partNum := partPath[i]
-
-		header, body = openMessagePart(header, body, parentMediaType)
-
-		msgHeader := gomessage.Header{header}
-		mediaType, typeParams, _ := msgHeader.ContentType()
-		if !strings.HasPrefix(mediaType, "multipart/") {
-			if partNum != 1 {
-				return nil
-			}
-			continue
-		}
-
-		mr := textproto.NewMultipartReader(body, typeParams["boundary"])
-		found := false
-		for j := 1; j <= partNum; j++ {
-			p, err := mr.NextPart()
-			if err != nil {
-				return nil
-			}
-
-			if j == partNum {
-				parentMediaType = mediaType
-				header = p.Header
-				body = p
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil
-		}
+	parentMediaType, header, body := findMessagePart(header, body, item.Part)
+	if body == nil {
+		return nil
 	}
 
 	if len(item.Part) > 0 {
@@ -120,19 +80,54 @@ func ExtractBodySection(r io.Reader, item *imap.FetchItemBodySection) []byte {
 		}
 	}
 
-	// Extract partial if any
-	b := buf.Bytes()
-	if partial := item.Partial; partial != nil {
-		end := partial.Offset + partial.Size
-		if partial.Offset > int64(len(b)) {
-			return nil
-		}
-		if end > int64(len(b)) {
-			end = int64(len(b))
-		}
-		b = b[partial.Offset:end]
+	return extractPartial(buf.Bytes(), item.Partial)
+}
+
+func findMessagePart(header textproto.Header, body io.Reader, partPath []int) (string, textproto.Header, io.Reader) {
+	// First part of non-multipart message refers to the message itself
+	msgHeader := gomessage.Header{header}
+	mediaType, _, _ := msgHeader.ContentType()
+	if !strings.HasPrefix(mediaType, "multipart/") && len(partPath) > 0 && partPath[0] == 1 {
+		partPath = partPath[1:]
 	}
-	return b
+
+	var parentMediaType string
+	for i := 0; i < len(partPath); i++ {
+		partNum := partPath[i]
+
+		header, body = openMessagePart(header, body, parentMediaType)
+
+		msgHeader := gomessage.Header{header}
+		mediaType, typeParams, _ := msgHeader.ContentType()
+		if !strings.HasPrefix(mediaType, "multipart/") {
+			if partNum != 1 {
+				return "", textproto.Header{}, nil
+			}
+			continue
+		}
+
+		mr := textproto.NewMultipartReader(body, typeParams["boundary"])
+		found := false
+		for j := 1; j <= partNum; j++ {
+			p, err := mr.NextPart()
+			if err != nil {
+				return "", textproto.Header{}, nil
+			}
+
+			if j == partNum {
+				parentMediaType = mediaType
+				header = p.Header
+				body = p
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", textproto.Header{}, nil
+		}
+	}
+
+	return parentMediaType, header, body
 }
 
 func openMessagePart(header textproto.Header, body io.Reader, parentMediaType string) (textproto.Header, io.Reader) {
@@ -147,6 +142,66 @@ func openMessagePart(header textproto.Header, body io.Reader, parentMediaType st
 		return header, br
 	}
 	return header, body
+}
+
+func extractPartial(b []byte, partial *imap.SectionPartial) []byte {
+	if partial == nil {
+		return b
+	}
+
+	end := partial.Offset + partial.Size
+	if partial.Offset > int64(len(b)) {
+		return nil
+	}
+	if end > int64(len(b)) {
+		end = int64(len(b))
+	}
+	return b[partial.Offset:end]
+}
+
+func ExtractBinarySection(r io.Reader, item *imap.FetchItemBinarySection) []byte {
+	var (
+		header textproto.Header
+		body   io.Reader
+	)
+
+	br := bufio.NewReader(r)
+	header, err := textproto.ReadHeader(br)
+	if err != nil {
+		return nil
+	}
+	body = br
+
+	_, header, body = findMessagePart(header, body, item.Part)
+	if body == nil {
+		return nil
+	}
+
+	part, err := gomessage.New(gomessage.Header{header}, body)
+	if err != nil {
+		return nil
+	}
+
+	// Write the requested data to a buffer
+	var buf bytes.Buffer
+
+	if len(item.Part) == 0 {
+		if err := textproto.WriteHeader(&buf, part.Header.Header); err != nil {
+			return nil
+		}
+	}
+
+	if _, err := io.Copy(&buf, part.Body); err != nil {
+		return nil
+	}
+
+	return extractPartial(buf.Bytes(), item.Partial)
+}
+
+func ExtractBinarySectionSize(r io.Reader, item *imap.FetchItemBinarySectionSize) uint32 {
+	// TODO: optimize
+	b := ExtractBinarySection(r, &imap.FetchItemBinarySection{Part: item.Part})
+	return uint32(len(b))
 }
 
 // ExtractEnvelope returns a message envelope from its header.
