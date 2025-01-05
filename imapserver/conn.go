@@ -101,6 +101,9 @@ func (c *Conn) serve() {
 		c.server.mutex.Unlock()
 	}()
 
+	c.server.connWaitGroup.Add(1)
+	defer c.server.connWaitGroup.Done()
+
 	var (
 		greetingData *GreetingData
 		err          error
@@ -169,8 +172,25 @@ func (c *Conn) serve() {
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
 
-		if c.state == imap.ConnStateLogout || dec.EOF() {
+		if c.state == imap.ConnStateLogout {
 			break
+		}
+
+		if c.br.Buffered() == 0 {
+			eofCh := make(chan bool, 1)
+			go func() {
+				eofCh <- dec.EOF()
+			}()
+
+			var eof bool
+			select {
+			case <-c.server.shutdownCh:
+				eof = true
+			case eof = <-eofCh:
+			}
+			if eof {
+				break
+			}
 		}
 
 		c.setReadTimeout(cmdReadTimeout)
