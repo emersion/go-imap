@@ -479,6 +479,20 @@ type FetchItemDataModSeq struct {
 
 func (FetchItemDataModSeq) fetchItemData() {}
 
+// FetchBodySectionBuffer is a buffer for the data returned by
+// FetchItemBodySection.
+type FetchBodySectionBuffer struct {
+	Section *imap.FetchItemBodySection
+	Bytes   []byte
+}
+
+// FetchBinarySectionBuffer is a buffer for the data returned by
+// FetchItemBinarySection.
+type FetchBinarySectionBuffer struct {
+	Section *imap.FetchItemBinarySection
+	Bytes   []byte
+}
+
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -490,8 +504,8 @@ type FetchMessageBuffer struct {
 	RFC822Size        int64
 	UID               imap.UID
 	BodyStructure     imap.BodyStructure
-	BodySection       map[*imap.FetchItemBodySection][]byte
-	BinarySection     map[*imap.FetchItemBinarySection][]byte
+	BodySection       []FetchBodySectionBuffer
+	BinarySection     []FetchBinarySectionBuffer
 	BinarySectionSize []FetchItemDataBinarySectionSize
 	ModSeq            uint64 // requires CONDSTORE
 }
@@ -507,10 +521,10 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 				return err
 			}
 		}
-		if buf.BodySection == nil {
-			buf.BodySection = make(map[*imap.FetchItemBodySection][]byte)
-		}
-		buf.BodySection[item.Section] = b
+		buf.BodySection = append(buf.BodySection, FetchBodySectionBuffer{
+			Section: item.Section,
+			Bytes:   b,
+		})
 	case FetchItemDataBinarySection:
 		var b []byte
 		if item.Literal != nil {
@@ -520,10 +534,10 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 				return err
 			}
 		}
-		if buf.BinarySection == nil {
-			buf.BinarySection = make(map[*imap.FetchItemBinarySection][]byte)
-		}
-		buf.BinarySection[item.Section] = b
+		buf.BinarySection = append(buf.BinarySection, FetchBinarySectionBuffer{
+			Section: item.Section,
+			Bytes:   b,
+		})
 	case FetchItemDataFlags:
 		buf.Flags = item.Flags
 	case FetchItemDataEnvelope:
@@ -550,9 +564,9 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 //
 // If the body section is not found, nil is returned.
 func (buf *FetchMessageBuffer) FindBodySection(section *imap.FetchItemBodySection) []byte {
-	for s, b := range buf.BodySection {
-		if matchFetchItemBodySection(section, s) {
-			return b
+	for _, s := range buf.BodySection {
+		if matchFetchItemBodySection(section, s.Section) {
+			return s.Bytes
 		}
 	}
 	return nil
@@ -562,9 +576,9 @@ func (buf *FetchMessageBuffer) FindBodySection(section *imap.FetchItemBodySectio
 //
 // If the binary section is not found, nil is returned.
 func (buf *FetchMessageBuffer) FindBinarySection(section *imap.FetchItemBinarySection) []byte {
-	for s, b := range buf.BinarySection {
-		if matchFetchItemBinarySection(section, s) {
-			return b
+	for _, s := range buf.BinarySection {
+		if matchFetchItemBinarySection(section, s.Section) {
+			return s.Bytes
 		}
 	}
 	return nil
