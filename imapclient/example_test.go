@@ -334,13 +334,28 @@ func ExampleClient_Idle() {
 	if err != nil {
 		log.Fatalf("IDLE command failed: %v", err)
 	}
+	defer idleCmd.Close()
 
-	// Wait for 30s to receive updates from the server
-	time.Sleep(30 * time.Second)
+	done := make(chan error, 1)
+	go func() {
+		done <- idleCmd.Wait()
+	}()
 
-	// Stop idling
-	if err := idleCmd.Close(); err != nil {
-		log.Fatalf("failed to stop idling: %v", err)
+	// Wait for 30s to receive updates from the server, then stop idling
+	t := time.NewTimer(30 * time.Second)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		if err := idleCmd.Close(); err != nil {
+			log.Fatalf("failed to stop idling: %v", err)
+		}
+		if err := <-done; err != nil {
+			log.Fatalf("IDLE command failed: %v", err)
+		}
+	case err := <-done:
+		if err != nil {
+			log.Fatalf("IDLE command failed: %v", err)
+		}
 	}
 }
 
