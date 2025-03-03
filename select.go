@@ -16,6 +16,9 @@ type SelectData struct {
 	PermanentFlags []Flag
 	// Number of messages in this mailbox (aka. "EXISTS")
 	NumMessages uint32
+	// Number of recent messages in this mailbox ("RECENT") (Obsolete, IMAP4rev1 only).
+	// Server-only, not supported in imapclient.
+	NumRecent   uint32
 	UIDNext     UID
 	UIDValidity uint32
 

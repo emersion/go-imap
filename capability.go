@@ -107,6 +107,14 @@ func (set CapSet) has(c Cap) bool {
 	return ok
 }
 
+func (set CapSet) Copy() CapSet {
+	newSet := make(CapSet, len(set))
+	for c := range set {
+		newSet[c] = struct{}{}
+	}
+	return newSet
+}
+
 // Has checks whether a capability is supported.
 //
 // Some capabilities are implied by others, as such Has may return true even if

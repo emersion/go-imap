@@ -37,6 +37,9 @@ func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusComm
 	if options == nil {
 		options = new(imap.StatusOptions)
 	}
+	if options.NumRecent {
+		panic("StatusOptions.NumRecent is not supported in imapclient")
+	}
 
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)

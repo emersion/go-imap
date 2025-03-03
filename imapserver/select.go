@@ -42,7 +42,7 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		return err
 	}
 	if !c.enabled.Has(imap.CapIMAP4rev2) {
-		if err := c.writeObsoleteRecent(); err != nil {
+		if err := c.writeObsoleteRecent(data.NumRecent); err != nil {
 			return err
 		}
 	}
@@ -115,10 +115,10 @@ func (c *Conn) writeExists(numMessages uint32) error {
 	return enc.Atom("*").SP().Number(numMessages).SP().Atom("EXISTS").CRLF()
 }
 
-func (c *Conn) writeObsoleteRecent() error {
+func (c *Conn) writeObsoleteRecent(n uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
-	return enc.Atom("*").SP().Number(0).SP().Atom("RECENT").CRLF()
+	return enc.Atom("*").SP().Number(n).SP().Atom("RECENT").CRLF()
 }
 
 func (c *Conn) writeUIDValidity(uidValidity uint32) error {

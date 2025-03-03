@@ -85,6 +85,13 @@ func (c *Conn) Bye(text string) error {
 	return closeErr
 }
 
+func (c *Conn) EnabledCaps() imap.CapSet {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.enabled.Copy()
+}
+
 func (c *Conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
@@ -583,6 +590,14 @@ func (w *UpdateWriter) WriteExpunge(seqNum uint32) error {
 // WriteNumMessages writes an EXISTS response.
 func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	return w.conn.writeExists(n)
+}
+
+// WriteNumRecent writes an RECENT response (not used in IMAP4rev2, will be ignored).
+func (w *UpdateWriter) WriteNumRecent(n uint32) error {
+	if w.conn.enabled.Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().Has(imap.CapIMAP4rev1) {
+		return nil
+	}
+	return w.conn.writeObsoleteRecent(n)
 }
 
 // WriteMailboxFlags writes a FLAGS response.
