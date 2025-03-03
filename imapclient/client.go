@@ -212,7 +212,7 @@ func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
 
 // DialInsecure connects to an IMAP server without any encryption at all.
 func DialInsecure(address string, options *Options) (*Client, error) {
-	conn, err := net.Dial("tcp", address)
+	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
