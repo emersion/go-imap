@@ -393,7 +393,7 @@ func (c *Client) Close() error {
 
 // beginCommand starts sending a command to the server.
 //
-// The command name and a space are written.
+// The command name is written.
 //
 // The caller must call commandEncoder.end.
 func (c *Client) beginCommand(name string, cmd command) *commandEncoder {

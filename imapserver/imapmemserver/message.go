@@ -154,7 +154,7 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 		return false
 	}
 
-	header := mail.Header{msg.reader().Header}
+	header := mail.Header{Header: msg.reader().Header}
 
 	for _, fieldCriteria := range criteria.Header {
 		if !matchHeaderFields(header.FieldsByKey(fieldCriteria.Key), fieldCriteria.Value) {

@@ -208,7 +208,7 @@ func ExtractBinarySectionSize(r io.Reader, item *imap.FetchItemBinarySectionSize
 //
 // It can be used by server backends to implement Session.Fetch.
 func ExtractEnvelope(h textproto.Header) *imap.Envelope {
-	mh := mail.Header{gomessage.Header{h}}
+	mh := mail.Header{Header: gomessage.Header{Header: h}}
 	date, _ := mh.Date()
 	subject, _ := mh.Subject()
 	inReplyTo, _ := mh.MsgIDList("In-Reply-To")
