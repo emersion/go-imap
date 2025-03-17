@@ -577,7 +577,7 @@ func (dec *Decoder) Literal(ptr *string) bool {
 	}
 	if dec.CheckBufferedLiteralFunc != nil {
 		if err := dec.CheckBufferedLiteralFunc(lit.Size(), nonSync); err != nil {
-			lit.cancel()
+			lit.cancel(nil)
 			return false
 		}
 	}
@@ -607,7 +607,7 @@ func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	lit = &LiteralReader{
 		dec:  dec,
 		size: size,
-		r:    io.LimitReader(dec.r, size),
+		r:    newLimitReader(dec.r, int(size)),
 	}
 	return lit, nonSync, true
 }
@@ -639,15 +639,23 @@ func (lit *LiteralReader) Size() int64 {
 
 func (lit *LiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.r.Read(b)
-	if err == io.EOF {
-		lit.cancel()
+	if err != nil {
+		if err == io.EOF {
+			lit.cancel(nil)
+		} else {
+			lit.cancel(err)
+		}
 	}
 	return n, err
 }
 
-func (lit *LiteralReader) cancel() {
+func (lit *LiteralReader) cancel(err error) {
 	if lit.dec == nil {
 		return
+	}
+
+	if err != nil {
+		lit.dec.err = err
 	}
 	lit.dec.literal = false
 	lit.dec = nil
