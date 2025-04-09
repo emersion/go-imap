@@ -18,7 +18,7 @@ func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 		return newClientBugError("MOVE is not supported")
 	}
 	w := &MoveWriter{conn: c}
-	return session.Move(w, numSet, dest)
+	return session.Move(w, numSet, numKind, dest)
 }
 
 // MoveWriter writes responses for the MOVE command.

@@ -71,9 +71,9 @@ type Session interface {
 	Unselect() error
 	Expunge(w *ExpungeWriter, uids *imap.UIDSet) error
 	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
-	Fetch(w *FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error
-	Store(w *FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error
-	Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error)
+	Fetch(w *FetchWriter, numSet imap.NumSet, numKind NumKind, options *imap.FetchOptions) error
+	Store(w *FetchWriter, numSet imap.NumSet, numKind NumKind, flags *imap.StoreFlags, options *imap.StoreOptions) error
+	Copy(numSet imap.NumSet, numKind NumKind, dest string) (*imap.CopyData, error)
 }
 
 // SessionNamespace is an IMAP session which supports NAMESPACE.
@@ -89,7 +89,7 @@ type SessionMove interface {
 	Session
 
 	// Selected state
-	Move(w *MoveWriter, numSet imap.NumSet, dest string) error
+	Move(w *MoveWriter, numSet imap.NumSet, numKind NumKind, dest string) error
 }
 
 // SessionIMAP4rev2 is an IMAP session which supports IMAP4rev2.

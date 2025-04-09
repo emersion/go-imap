@@ -50,7 +50,7 @@ func (sess *UserSession) Unselect() error {
 	return nil
 }
 
-func (sess *UserSession) Copy(numSet imap.NumSet, destName string) (*imap.CopyData, error) {
+func (sess *UserSession) Copy(numSet imap.NumSet, numKind imapserver.NumKind, destName string) (*imap.CopyData, error) {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
 		return nil, &imap.Error{
@@ -79,7 +79,7 @@ func (sess *UserSession) Copy(numSet imap.NumSet, destName string) (*imap.CopyDa
 	}, nil
 }
 
-func (sess *UserSession) Move(w *imapserver.MoveWriter, numSet imap.NumSet, destName string) error {
+func (sess *UserSession) Move(w *imapserver.MoveWriter, numSet imap.NumSet, numKind imapserver.NumKind, destName string) error {
 	dest, err := sess.user.mailbox(destName)
 	if err != nil {
 		return &imap.Error{

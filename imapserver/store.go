@@ -70,7 +70,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 
 	w := &FetchWriter{conn: c}
 	options := imap.StoreOptions{}
-	return c.session.Store(w, numSet, &imap.StoreFlags{
+	return c.session.Store(w, numSet, numKind, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,

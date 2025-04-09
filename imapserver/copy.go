@@ -13,7 +13,7 @@ func (c *Conn) handleCopy(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}
-	data, err := c.session.Copy(numSet, dest)
+	data, err := c.session.Copy(numSet, numKind, dest)
 	if err != nil {
 		return err
 	}
