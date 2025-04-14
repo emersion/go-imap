@@ -552,7 +552,7 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 }
 
 func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 		return
 	}
@@ -671,7 +671,7 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 }
 
 func writeBodyFldParam(enc *imapwire.Encoder, params map[string]string) {
-	if params == nil {
+	if len(params) == 0 {
 		enc.NIL()
 		return
 	}
@@ -701,7 +701,7 @@ func writeBodyFldDsp(enc *imapwire.Encoder, disp *imap.BodyStructureDisposition)
 }
 
 func writeBodyFldLang(enc *imapwire.Encoder, l []string) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 	} else {
 		enc.List(len(l), func(i int) {
