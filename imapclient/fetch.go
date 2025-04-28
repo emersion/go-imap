@@ -1170,7 +1170,7 @@ func readBodyFldParam(dec *imapwire.Decoder, options *Options) (map[string]strin
 	)
 	err := dec.ExpectNList(func() error {
 		var s string
-		if !dec.ExpectString(&s) {
+		if !dec.ExpectStringWithDoubleQuoteCompat(&s) {
 			return dec.Err()
 		}
 
