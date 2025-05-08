@@ -24,7 +24,7 @@ func DecodeDateTime(dec *imapwire.Decoder) (time.Time, error) {
 	}
 	t, err := time.Parse(DateTimeLayout, s)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("in date-time: %v", err) // TODO: use imapwire.DecodeExpectError?
+		return time.Time{}, fmt.Errorf("in date-time: %w", err) // TODO: use imapwire.DecodeExpectError?
 	}
 	return t, err
 }
@@ -47,7 +47,7 @@ func ExpectDate(dec *imapwire.Decoder) (time.Time, error) {
 	}
 	t, err := time.Parse(DateLayout, s)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("in date: %v", err) // use imapwire.DecodeExpectError?
+		return time.Time{}, fmt.Errorf("in date: %w", err) // use imapwire.DecodeExpectError?
 	}
 	return t, nil
 }

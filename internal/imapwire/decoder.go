@@ -72,7 +72,7 @@ func NewDecoder(r *bufio.Reader, side ConnSide) *Decoder {
 
 func (dec *Decoder) mustUnreadByte() {
 	if err := dec.r.UnreadByte(); err != nil {
-		panic(fmt.Errorf("imapwire: failed to unread byte: %v", err))
+		panic(fmt.Errorf("imapwire: failed to unread byte: %w", err))
 	}
 	dec.readBytes--
 }

@@ -47,7 +47,7 @@ func readCapabilities(dec *imapwire.Decoder) (imap.CapSet, error) {
 
 		var name string
 		if !dec.ExpectAtom(&name) {
-			return caps, fmt.Errorf("in capability-data: %v", dec.Err())
+			return caps, fmt.Errorf("in capability-data: %w", dec.Err())
 		}
 		caps[imap.Cap(name)] = struct{}{}
 	}

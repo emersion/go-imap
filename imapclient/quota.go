@@ -53,7 +53,7 @@ func (c *Client) SetQuota(root string, limits map[imap.QuotaResourceType]int64) 
 func (c *Client) handleQuota() error {
 	data, err := readQuotaResponse(c.dec)
 	if err != nil {
-		return fmt.Errorf("in quota-response: %v", err)
+		return fmt.Errorf("in quota-response: %w", err)
 	}
 
 	cmd := c.findPendingCmdFunc(func(cmd command) bool {
@@ -83,7 +83,7 @@ func (c *Client) handleQuota() error {
 func (c *Client) handleQuotaRoot() error {
 	mailbox, roots, err := readQuotaRoot(c.dec)
 	if err != nil {
-		return fmt.Errorf("in quotaroot-response: %v", err)
+		return fmt.Errorf("in quotaroot-response: %w", err)
 	}
 
 	cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
