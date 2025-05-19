@@ -513,6 +513,12 @@ func (w *FetchResponseWriter) writeBodyStructure(bs imap.BodyStructure, extended
 	writeBodyStructure(enc, bs, extended)
 }
 
+// WriteModSeq writes the message's mod-sequence.
+func (w *FetchResponseWriter) WriteModSeq(modseq uint64) {
+	w.writeItemSep()
+	w.enc.Atom("MODSEQ").SP().Special('(').String(fmt.Sprintf("%d", modseq)).Special(')')
+}
+
 // Close closes the FETCH message writer.
 func (w *FetchResponseWriter) Close() error {
 	if w.enc == nil {
