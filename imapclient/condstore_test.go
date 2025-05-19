@@ -181,3 +181,40 @@ func TestStore_UnchangedSince(t *testing.T) {
 		t.Errorf("Second Store() with UNCHANGEDSINCE returned %d messages, should be 0", len(messages))
 	}
 }
+
+func TestCapability_CondStore(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateNotAuthenticated)
+	defer client.Close()
+	defer server.Close()
+
+	// Check capabilities after connecting
+	capCmd := client.Capability()
+	caps, err := capCmd.Wait()
+	if err != nil {
+		t.Fatalf("Capability() = %v", err)
+	}
+
+	_, hasCondStore := caps[imap.CapCondStore]
+	if hasCondStore {
+		t.Errorf("CapCondStore should not be available before authentication")
+	}
+
+	// Login
+	if err := client.Login(testUsername, testPassword).Wait(); err != nil {
+		t.Fatalf("Login() = %v", err)
+	}
+
+	// Check capabilities after login
+	capCmd = client.Capability()
+	caps, err = capCmd.Wait()
+	if err != nil {
+		t.Fatalf("Capability() after login = %v", err)
+	}
+
+	_, hasCondStore = caps[imap.CapCondStore]
+	if !hasCondStore {
+		t.Errorf("CapCondStore should be available after authentication")
+	} else {
+		t.Logf("CONDSTORE capability correctly announced after authentication")
+	}
+}
