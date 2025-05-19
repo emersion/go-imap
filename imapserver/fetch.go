@@ -75,6 +75,21 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		}
 	}
 
+	if dec.SP() && dec.Special('(') {
+		var param string
+		if !dec.ExpectAtom(&param) {
+			return dec.Err()
+		}
+
+		if strings.ToUpper(param) == "CHANGEDSINCE" {
+			if !dec.ExpectSP() || !dec.ExpectModSeq(&options.ChangedSince) || !dec.ExpectSpecial(')') {
+				return dec.Err()
+			}
+		} else {
+			return fmt.Errorf("unknown FETCH modifier: %v", param)
+		}
+	}
+
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
@@ -108,6 +123,8 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		options.RFC822Size = true
 	case "UID":
 		options.UID = true
+	case "MODSEQ":
+		options.ModSeq = true
 	case "RFC822": // equivalent to BODY[]
 		bs := &imap.FetchItemBodySection{}
 		writerOptions.obsolete[bs] = attName
@@ -456,6 +473,11 @@ func (w *FetchResponseWriter) WriteEnvelope(envelope *imap.Envelope) {
 	writeEnvelope(enc, envelope)
 }
 
+func (w *FetchResponseWriter) WriteModSeq(modSeq uint64) {
+	w.writeItemSep()
+	w.enc.Atom("MODSEQ").SP().Special('(').ModSeq(modSeq).Special(')')
+}
+
 // WriteBodyStructure writes the message's body structure (either BODYSTRUCTURE
 // or BODY).
 func (w *FetchResponseWriter) WriteBodyStructure(bs imap.BodyStructure) {
@@ -558,7 +580,7 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 }
 
 func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 		return
 	}
@@ -677,7 +699,7 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 }
 
 func writeBodyFldParam(enc *imapwire.Encoder, params map[string]string) {
-	if params == nil {
+	if len(params) == 0 {
 		enc.NIL()
 		return
 	}
@@ -707,7 +729,7 @@ func writeBodyFldDsp(enc *imapwire.Encoder, disp *imap.BodyStructureDisposition)
 }
 
 func writeBodyFldLang(enc *imapwire.Encoder, l []string) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 	} else {
 		enc.List(len(l), func(i int) {

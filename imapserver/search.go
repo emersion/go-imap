@@ -86,13 +86,13 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	}
 
 	if c.enabled.Has(imap.CapIMAP4rev2) || extended {
-		return c.writeESearch(tag, data, &options)
+		return c.writeESearch(tag, data, &options, numKind)
 	} else {
 		return c.writeSearch(data.All)
 	}
 }
 
-func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
+func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions, numKind NumKind) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -100,7 +100,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if tag != "" {
 		enc.SP().Special('(').Atom("TAG").SP().Atom(tag).Special(')')
 	}
-	if data.UID {
+	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
 	}
 	// When there is no result, we need to send an ESEARCH response with no ALL
