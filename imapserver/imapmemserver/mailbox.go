@@ -89,6 +89,9 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 		size := mbox.sizeLocked()
 		data.Size = &size
 	}
+	if options.HighestModSeq {
+		data.HighestModSeq = mbox.highestModSeq
+	}
 	return &data
 }
 

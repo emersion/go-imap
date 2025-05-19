@@ -181,6 +181,98 @@ func TestStore_UnchangedSince(t *testing.T) {
 		t.Errorf("Second Store() with UNCHANGEDSINCE returned %d messages, should be 0", len(messages))
 	}
 }
+func TestStatus_HighestModSeq(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
+	defer client.Close()
+	defer server.Close()
+
+	// Test STATUS with HIGHESTMODSEQ parameter
+	options := &imap.StatusOptions{
+		HighestModSeq: true,
+	}
+	data, err := client.Status("INBOX", options).Wait()
+	if err != nil {
+		t.Fatalf("Status() with HIGHESTMODSEQ = %v", err)
+	}
+
+	// Verify that HighestModSeq is returned
+	if data.HighestModSeq == 0 {
+		t.Errorf("StatusData.HighestModSeq is 0, expected non-zero value")
+	}
+	t.Logf("Mailbox HIGHESTMODSEQ from STATUS: %d", data.HighestModSeq)
+}
+
+func TestSearch_ModSeq(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateSelected)
+	defer client.Close()
+	defer server.Close()
+
+	// First, get current ModSeq for our message
+	seqSet := imap.SeqSetNum(1)
+	firstFetch, err := client.Fetch(seqSet, &imap.FetchOptions{
+		ModSeq: true,
+	}).Collect()
+	if err != nil {
+		t.Fatalf("Initial Fetch() = %v", err)
+	}
+	currentModSeq := firstFetch[0].ModSeq
+	t.Logf("Initial ModSeq: %d", currentModSeq)
+
+	// Now search with MODSEQ criterion using a value lower than current
+	// This should find the message
+	searchCriteria := &imap.SearchCriteria{
+		ModSeq: &imap.SearchCriteriaModSeq{
+			ModSeq: currentModSeq - 1,
+		},
+	}
+	searchOptions := &imap.SearchOptions{
+		ReturnCount: true,
+	}
+	results, err := client.Search(searchCriteria, searchOptions).Wait()
+	if err != nil {
+		t.Fatalf("Search with MODSEQ = %v", err)
+	}
+
+	// There should be one message that matches
+	if results.Count != 1 {
+		t.Errorf("Search with MODSEQ < current returned %d messages, want 1", results.Count)
+	}
+
+	// Now search with MODSEQ criterion using current value
+	// This should find the message (since MODSEQ criterion is >= not >)
+	searchCriteria = &imap.SearchCriteria{
+		ModSeq: &imap.SearchCriteriaModSeq{
+			ModSeq: currentModSeq,
+		},
+	}
+	results, err = client.Search(searchCriteria, searchOptions).Wait()
+	if err != nil {
+		t.Fatalf("Search with MODSEQ = %v", err)
+	}
+
+	// There should be one message that matches
+	if results.Count != 1 {
+		t.Errorf("Search with MODSEQ = current returned %d messages, want 1", results.Count)
+	}
+
+	// Now search with MODSEQ criterion using a higher value
+	// This should NOT find the message
+	searchCriteria = &imap.SearchCriteria{
+		ModSeq: &imap.SearchCriteriaModSeq{
+			ModSeq: currentModSeq + 1,
+		},
+	}
+	results, err = client.Search(searchCriteria, searchOptions).Wait()
+	if err != nil {
+		t.Fatalf("Search with MODSEQ = %v", err)
+	}
+
+	// There should be no messages that match
+	if results.Count != 0 {
+		t.Errorf("Search with MODSEQ > current returned %d messages, want 0", results.Count)
+	}
+}
+
 func TestCapability_CondStore(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateNotAuthenticated)
 	defer client.Close()
