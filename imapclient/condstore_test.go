@@ -181,7 +181,6 @@ func TestStore_UnchangedSince(t *testing.T) {
 		t.Errorf("Second Store() with UNCHANGEDSINCE returned %d messages, should be 0", len(messages))
 	}
 }
-
 func TestCapability_CondStore(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateNotAuthenticated)
 	defer client.Close()
