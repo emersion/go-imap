@@ -22,7 +22,8 @@ type message struct {
 	t   time.Time
 
 	// mutable, protected by Mailbox.mutex
-	flags map[imap.Flag]struct{}
+	flags  map[imap.Flag]struct{}
+	modSeq uint64
 }
 
 func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.FetchOptions) error {
@@ -42,6 +43,9 @@ func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.Fetch
 	}
 	if options.BodyStructure != nil {
 		w.WriteBodyStructure(imapserver.ExtractBodyStructure(bytes.NewReader(msg.buf)))
+	}
+	if options.ModSeq {
+		w.WriteModSeq(msg.modSeq)
 	}
 
 	for _, bs := range options.BodySection {
@@ -95,7 +99,12 @@ func (msg *message) flagList() []imap.Flag {
 	return flags
 }
 
-func (msg *message) store(store *imap.StoreFlags) {
+func (msg *message) store(store *imap.StoreFlags) bool {
+	oldFlags := make(map[imap.Flag]struct{}, len(msg.flags))
+	for k, v := range msg.flags {
+		oldFlags[k] = v
+	}
+
 	switch store.Op {
 	case imap.StoreFlagsSet:
 		msg.flags = make(map[imap.Flag]struct{})
@@ -111,6 +120,21 @@ func (msg *message) store(store *imap.StoreFlags) {
 	default:
 		panic(fmt.Errorf("unknown STORE flag operation: %v", store.Op))
 	}
+
+	if len(oldFlags) != len(msg.flags) {
+		return true
+	}
+	for k := range oldFlags {
+		if _, ok := msg.flags[k]; !ok {
+			return true
+		}
+	}
+	for k := range msg.flags {
+		if _, ok := oldFlags[k]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (msg *message) reader() *gomessage.Entity {

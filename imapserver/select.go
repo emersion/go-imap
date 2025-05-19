@@ -9,7 +9,41 @@ import (
 
 func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) error {
 	var mailbox string
-	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectCRLF() {
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) {
+		return dec.Err()
+	}
+
+	options := imap.SelectOptions{ReadOnly: readOnly}
+
+	if dec.SP() {
+		if dec.Special('(') {
+			var param string
+			for {
+				if !dec.ExpectAtom(&param) {
+					return dec.Err()
+				}
+
+				switch param {
+				case "CONDSTORE":
+					options.CondStore = true
+				default:
+					return newClientBugError(fmt.Sprintf("unknown SELECT parameter: %v", param))
+				}
+
+				if !dec.SP() {
+					break
+				}
+			}
+
+			if !dec.ExpectSpecial(')') {
+				return dec.Err()
+			}
+		} else {
+			return dec.Err()
+		}
+	}
+
+	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
 
@@ -32,7 +66,6 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
-	options := imap.SelectOptions{ReadOnly: readOnly}
 	data, err := c.session.Select(mailbox, &options)
 	if err != nil {
 		return err
@@ -60,6 +93,12 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	}
 	if data.List != nil {
 		if err := c.writeList(data.List); err != nil {
+			return err
+		}
+	}
+
+	if data.HighestModSeq > 0 && (options.CondStore || c.enabled.Has(imap.CapCondStore)) {
+		if err := c.writeHighestModSeq(data.HighestModSeq); err != nil {
 			return err
 		}
 	}
@@ -156,5 +195,14 @@ func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 		enc.Flag(flags[i])
 	}).Special(']')
 	enc.SP().Text("Permanent flags")
+	return enc.CRLF()
+}
+
+func (c *Conn) writeHighestModSeq(highestModSeq uint64) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("HIGHESTMODSEQ").SP().ModSeq(highestModSeq).Special(']')
+	enc.SP().Text("Highest modification sequence")
 	return enc.CRLF()
 }
