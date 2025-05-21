@@ -56,9 +56,10 @@ func (t *MailboxTracker) queueUpdate(update *trackerUpdate, source *SessionTrack
 		st.queueUpdate(update)
 	}
 
-	if update.expunge != 0 {
+	switch {
+	case update.expunge != 0:
 		t.numMessages--
-	} else if update.fetch == nil && update.mailboxFlags == nil {
+	case update.numMessages != 0:
 		t.numMessages = update.numMessages
 	}
 }
@@ -172,12 +173,12 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 		switch {
 		case update.expunge != 0:
 			err = w.WriteExpunge(update.expunge)
+		case update.numMessages != 0:
+			err = w.WriteNumMessages(update.numMessages)
 		case update.mailboxFlags != nil:
 			err = w.WriteMailboxFlags(update.mailboxFlags)
 		case update.fetch != nil:
 			err = w.WriteMessageFlags(update.fetch.seqNum, update.fetch.uid, update.fetch.flags)
-		case update.expunge == 0 && update.fetch == nil && update.mailboxFlags == nil:
-			err = w.WriteNumMessages(update.numMessages)
 		default:
 			panic(fmt.Errorf("imapserver: unknown tracker update %#v", update))
 		}
