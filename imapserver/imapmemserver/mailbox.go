@@ -76,6 +76,10 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 		num := uint32(len(mbox.l))
 		data.NumMessages = &num
 	}
+	if options.NumRecent {
+		num := mbox.countByFlagLocked("\\Recent")
+		data.NumRecent = &num
+	}
 	if options.UIDNext {
 		data.UIDNext = mbox.uidNext
 	}
@@ -93,10 +97,6 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 	if options.Size {
 		size := mbox.sizeLocked()
 		data.Size = &size
-	}
-	if options.NumRecent {
-		num := uint32(0)
-		data.NumRecent = &num
 	}
 	return &data
 }
@@ -146,6 +146,7 @@ func (mbox *Mailbox) appendBytes(buf []byte, options *imap.AppendOptions) *imap.
 		msg.t = options.Time
 	}
 
+	msg.flags[canonicalFlag("\\Recent")] = struct{}{}
 	for _, flag := range options.Flags {
 		msg.flags[canonicalFlag(flag)] = struct{}{}
 	}
@@ -188,12 +189,14 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 	// TODO: skip if IMAP4rev1 is disabled by the server, or IMAP4rev2 is
 	// enabled by the client
 	firstUnseenSeqNum := mbox.firstUnseenSeqNumLocked()
+	numRecent := mbox.countByFlagLocked("\\Recent")
 
 	return &imap.SelectData{
 		Flags:             flags,
 		PermanentFlags:    permanentFlags,
 		NumMessages:       uint32(len(mbox.l)),
 		FirstUnseenSeqNum: firstUnseenSeqNum,
+		NumRecent:         numRecent,
 		UIDNext:           mbox.uidNext,
 		UIDValidity:       mbox.uidValidity,
 	}
@@ -283,10 +286,11 @@ func (mbox *Mailbox) expungeLocked(expunged map[*message]struct{}) (seqNums []ui
 // NewView creates a new view into this mailbox.
 //
 // Callers must call MailboxView.Close once they are done with the mailbox view.
-func (mbox *Mailbox) NewView() *MailboxView {
+func (mbox *Mailbox) NewView(options *imap.SelectOptions) *MailboxView {
 	return &MailboxView{
 		Mailbox: mbox,
 		tracker: mbox.tracker.NewSession(),
+		options: *options,
 	}
 }
 
@@ -300,6 +304,7 @@ func (mbox *Mailbox) NewView() *MailboxView {
 // selected state.
 type MailboxView struct {
 	*Mailbox
+	options   imap.SelectOptions // immutable
 	tracker   *imapserver.SessionTracker
 	searchRes imap.UIDSet
 }
@@ -331,6 +336,10 @@ func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, op
 
 		respWriter := w.CreateMessage(mbox.tracker.EncodeSeqNum(seqNum))
 		err = msg.fetch(respWriter, options)
+
+		if !mbox.options.ReadOnly {
+			delete(msg.flags, canonicalFlag("\\Recent"))
+		}
 	})
 	return err
 }

@@ -40,7 +40,7 @@ func (sess *UserSession) Select(name string, options *imap.SelectOptions) (*imap
 	}
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
-	sess.mailbox = mbox.NewView()
+	sess.mailbox = mbox.NewView(options)
 	return mbox.selectDataLocked(), nil
 }
 
