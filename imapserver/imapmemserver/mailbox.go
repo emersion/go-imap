@@ -174,13 +174,28 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 	copy(permanentFlags, flags)
 	permanentFlags = append(permanentFlags, imap.FlagWildcard)
 
+	// TODO: skip if IMAP4rev1 is disabled by the server, or IMAP4rev2 is
+	// enabled by the client
+	firstUnseenSeqNum := mbox.firstUnseenSeqNumLocked()
+
 	return &imap.SelectData{
-		Flags:          flags,
-		PermanentFlags: permanentFlags,
-		NumMessages:    uint32(len(mbox.l)),
-		UIDNext:        mbox.uidNext,
-		UIDValidity:    mbox.uidValidity,
+		Flags:             flags,
+		PermanentFlags:    permanentFlags,
+		NumMessages:       uint32(len(mbox.l)),
+		FirstUnseenSeqNum: firstUnseenSeqNum,
+		UIDNext:           mbox.uidNext,
+		UIDValidity:       mbox.uidValidity,
 	}
+}
+
+func (mbox *Mailbox) firstUnseenSeqNumLocked() uint32 {
+	for i, msg := range mbox.l {
+		seqNum := uint32(i) + 1
+		if _, ok := msg.flags[canonicalFlag(imap.FlagSeen)]; !ok {
+			return seqNum
+		}
+	}
+	return 0
 }
 
 func (mbox *Mailbox) flagsLocked() []imap.Flag {
