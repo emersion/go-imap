@@ -115,7 +115,10 @@ func (enc *Encoder) validQuoted(s string) bool {
 	for i := 0; i < len(s); i++ {
 		ch := s[i]
 
-		// NUL, CR and LF are never valid
+		// NUL, CR and LF are never valid in quoted strings according to IMAP RFCs
+		// Note: This implementation allows NUL (0) in literal strings as a non-standard
+		// extension specifically for Dovecot Proxy compatibility. When NUL characters
+		// are present, a literal string will be used automatically instead of a quoted string.
 		switch ch {
 		case 0, '\r', '\n':
 			return false

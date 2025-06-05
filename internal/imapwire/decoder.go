@@ -28,7 +28,12 @@ func IsAtomChar(ch byte) bool {
 
 // Is non-empty char
 func isAStringChar(ch byte) bool {
-	return IsAtomChar(ch) || ch == ']'
+	// NOTE: This is a non-standard extension to the IMAP protocol.
+	// The IMAP RFCs (3501, 9051) do not allow control characters in ATOM tokens.
+	// However, we specifically allow null character (\x00) for Dovecot Proxy compatibility,
+	// which uses it as a separator between the real username and master username.
+	// This extension is not RFC-compliant but necessary for practical interoperability.
+	return IsAtomChar(ch) || ch == ']' || ch == 0
 }
 
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
