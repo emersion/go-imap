@@ -97,6 +97,7 @@ type SessionIMAP4rev2 interface {
 	Session
 	SessionNamespace
 	SessionMove
+	SessionSort
 }
 
 // SessionSASL is an IMAP session which supports its own set of SASL
@@ -113,4 +114,15 @@ type SessionUnauthenticate interface {
 
 	// Authenticated state
 	Unauthenticate() error
+}
+
+// SessionProxyAuth is an IMAP session which supports proxy authentication.
+// This is used when a client authenticates as one user but wants to act on behalf
+// of another user (the identity).
+type SessionProxyAuth interface {
+	Session
+
+	// ProxyAuth authenticates with a username and password, and if successful,
+	// allows the client to act on behalf of the identity user.
+	ProxyAuth(identity, username, password string) error
 }
