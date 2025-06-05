@@ -154,7 +154,7 @@ func (u *User) Delete(name string) error {
 	return nil
 }
 
-func (u *User) Rename(oldName, newName string) error {
+func (u *User) Rename(oldName, newName string, options *imap.RenameOptions) error {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
 
