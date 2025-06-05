@@ -28,7 +28,12 @@ func IsAtomChar(ch byte) bool {
 
 // Is non-empty char
 func isAStringChar(ch byte) bool {
-	return IsAtomChar(ch) || ch == ']'
+	// NOTE: This is a non-standard extension to the IMAP protocol.
+	// The IMAP RFCs (3501, 9051) do not allow control characters in ATOM tokens.
+	// However, we specifically allow null character (\x00) for Dovecot Proxy compatibility,
+	// which uses it as a separator between the real username and master username.
+	// This extension is not RFC-compliant but necessary for practical interoperability.
+	return IsAtomChar(ch) || ch == ']' || ch == 0
 }
 
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
@@ -150,17 +155,6 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 func (dec *Decoder) SP() bool {
 	if dec.acceptByte(' ') {
 		// https://github.com/emersion/go-imap/issues/571
-		b, ok := dec.readByte()
-		if !ok {
-			return false
-		}
-		dec.mustUnreadByte()
-		return b != '\r' && b != '\n'
-	}
-
-	// Special case for Dovecot Proxy: Accept null character as separator
-	// This is a non-standard extension to the IMAP protocol needed for Dovecot Proxy compatibility
-	if dec.acceptByte(0) {
 		b, ok := dec.readByte()
 		if !ok {
 			return false
