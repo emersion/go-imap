@@ -34,12 +34,12 @@ const (
 	CapMove         Cap = "MOVE"          // RFC 6851
 	CapLiteralMinus Cap = "LITERAL-"      // RFC 7888
 	CapStatusSize   Cap = "STATUS=SIZE"   // RFC 8438
+	CapChildren     Cap = "CHILDREN"      // RFC 3348
 
 	CapACL              Cap = "ACL"                // RFC 4314
 	CapAppendLimit      Cap = "APPENDLIMIT"        // RFC 7889
 	CapBinary           Cap = "BINARY"             // RFC 3516
 	CapCatenate         Cap = "CATENATE"           // RFC 4469
-	CapChildren         Cap = "CHILDREN"           // RFC 3348
 	CapCondStore        Cap = "CONDSTORE"          // RFC 7162
 	CapConvert          Cap = "CONVERT"            // RFC 5259
 	CapCreateSpecialUse Cap = "CREATE-SPECIAL-USE" // RFC 6154
@@ -92,6 +92,7 @@ var imap4rev2Caps = CapSet{
 	CapMove:         {},
 	CapLiteralMinus: {},
 	CapStatusSize:   {},
+	CapChildren:     {},
 }
 
 // AuthCap returns the capability name for an SASL authentication mechanism.
