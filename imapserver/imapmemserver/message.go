@@ -25,11 +25,15 @@ type message struct {
 	flags map[imap.Flag]struct{}
 }
 
-func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.FetchOptions) error {
+func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.FetchOptions, isRecent bool) error {
 	w.WriteUID(msg.uid)
 
 	if options.Flags {
-		w.WriteFlags(msg.flagList())
+		flags := msg.flagList()
+		if isRecent {
+			flags = append(flags, "\\Recent")
+		}
+		w.WriteFlags(flags)
 	}
 	if options.InternalDate {
 		w.WriteInternalDate(msg.t)
@@ -121,7 +125,7 @@ func (msg *message) reader() *gomessage.Entity {
 	return r
 }
 
-func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
+func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria, isRecent bool) bool {
 	for _, seqSet := range criteria.SeqNum {
 		if seqNum == 0 || !seqSet.Contains(seqNum) {
 			return false
@@ -136,13 +140,20 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 		return false
 	}
 
+	hasFlag := func(flag imap.Flag) bool {
+		if isRecent && canonicalFlag(flag) == canonicalFlag("\\Recent") {
+			return true
+		}
+		_, ok := msg.flags[canonicalFlag(flag)]
+		return ok
+	}
 	for _, flag := range criteria.Flag {
-		if _, ok := msg.flags[canonicalFlag(flag)]; !ok {
+		if !hasFlag(flag) {
 			return false
 		}
 	}
 	for _, flag := range criteria.NotFlag {
-		if _, ok := msg.flags[canonicalFlag(flag)]; ok {
+		if hasFlag(flag) {
 			return false
 		}
 	}
@@ -183,12 +194,12 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 	}
 
 	for _, not := range criteria.Not {
-		if msg.search(seqNum, &not) {
+		if msg.search(seqNum, &not, isRecent) {
 			return false
 		}
 	}
 	for _, or := range criteria.Or {
-		if !msg.search(seqNum, &or[0]) && !msg.search(seqNum, &or[1]) {
+		if !msg.search(seqNum, &or[0], isRecent) && !msg.search(seqNum, &or[1], isRecent) {
 			return false
 		}
 	}

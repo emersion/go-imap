@@ -41,7 +41,12 @@ func (sess *UserSession) Select(name string, options *imap.SelectOptions) (*imap
 	mbox.mutex.Lock()
 	defer mbox.mutex.Unlock()
 	sess.mailbox = mbox.NewView(options)
-	return mbox.selectDataLocked(), nil
+	data := mbox.selectDataLocked()
+	if !options.ReadOnly && data.NumRecent > 0 {
+		sess.mailbox.pollRecentLocked()
+		sess.mailbox.prevNumRecent = data.NumRecent
+	}
+	return data, nil
 }
 
 func (sess *UserSession) Unselect() error {
@@ -137,4 +142,21 @@ func (sess *UserSession) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 		return nil // TODO
 	}
 	return sess.mailbox.Idle(w, stop)
+}
+
+func (sess *UserSession) Status(name string, options *imap.StatusOptions) (*imap.StatusData, error) {
+	data, err := sess.user.Status(name, options)
+	if err != nil {
+		return nil, err
+	}
+
+	if mbox := sess.mailbox; mbox != nil && data.NumRecent != nil {
+		mbox.mutex.Lock()
+		if mbox.name == name {
+			*data.NumRecent += uint32(len(mbox.recent))
+		}
+		mbox.mutex.Unlock()
+	}
+
+	return data, nil
 }
