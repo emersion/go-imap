@@ -21,6 +21,7 @@ type Mailbox struct {
 	mutex      sync.Mutex
 	name       string
 	subscribed bool
+	specialUse []imap.MailboxAttr
 	l          []*message
 	uidNext    imap.UID
 }
@@ -42,6 +43,9 @@ func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {
 	if options.SelectSubscribed && !mbox.subscribed {
 		return nil
 	}
+	if options.SelectSpecialUse && len(mbox.specialUse) == 0 {
+		return nil
+	}
 
 	data := imap.ListData{
 		Mailbox: mbox.name,
@@ -49,6 +53,9 @@ func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {
 	}
 	if mbox.subscribed {
 		data.Attrs = append(data.Attrs, imap.MailboxAttrSubscribed)
+	}
+	if (options.ReturnSpecialUse || options.SelectSpecialUse) && len(mbox.specialUse) > 0 {
+		data.Attrs = append(data.Attrs, mbox.specialUse...)
 	}
 	if options.ReturnStatus != nil {
 		data.Status = mbox.statusDataLocked(options.ReturnStatus)
