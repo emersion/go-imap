@@ -18,8 +18,9 @@ dovecot_storage_version = 2.4.0
 
 log_path      = "` + tempDir + `/dovecot.log"
 ssl           = no
-mail_home     = "` + tempDir + `/%u"
-mail_location = maildir:~/Mail
+mail_home     = "` + tempDir + `/%{user}"
+mail_driver   = maildir
+mail_path     = "~/Mail"
 
 namespace inbox {
 	separator = /
