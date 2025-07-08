@@ -13,10 +13,10 @@ func newDovecotClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 	tempDir := t.TempDir()
 
 	cfgFilename := filepath.Join(tempDir, "dovecot.conf")
-	cfg := `log_path      = "` + tempDir + `/dovecot.log"
-dovecot_config_version  = 2.4.0
+	cfg := `dovecot_config_version  = 2.4.0
 dovecot_storage_version = 2.4.0
 
+log_path      = "` + tempDir + `/dovecot.log"
 ssl           = no
 mail_home     = "` + tempDir + `/%u"
 mail_location = maildir:~/Mail
