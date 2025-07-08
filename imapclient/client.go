@@ -45,11 +45,9 @@ const (
 
 	cmdWriteTimeout     = 30 * time.Second
 	literalWriteTimeout = 5 * time.Minute
-)
 
-var dialer = &net.Dialer{
-	Timeout: 30 * time.Second,
-}
+	defaultDialTimeout = 30 * time.Second
+)
 
 // SelectedMailbox contains metadata for the currently selected mailbox.
 type SelectedMailbox struct {
@@ -77,6 +75,9 @@ type Options struct {
 	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
+	// Dialer to use when establishing connections with the Dial* functions.
+	// If nil, a default dialer with a 30 second timeout is used.
+	Dialer *net.Dialer
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -117,6 +118,13 @@ func (options *Options) tlsConfig() *tls.Config {
 	} else {
 		return new(tls.Config)
 	}
+}
+
+func (options *Options) dialer() *net.Dialer {
+	if options.Dialer == nil {
+		return &net.Dialer{Timeout: defaultDialTimeout}
+	}
+	return options.Dialer
 }
 
 // Client is an IMAP client.
@@ -212,7 +220,7 @@ func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
 
 // DialInsecure connects to an IMAP server without any encryption at all.
 func DialInsecure(address string, options *Options) (*Client, error) {
-	conn, err := dialer.Dial("tcp", address)
+	conn, err := options.dialer().Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +234,7 @@ func DialTLS(address string, options *Options) (*Client, error) {
 		tlsConfig.NextProtos = []string{"imap"}
 	}
 
+	dialer := options.dialer()
 	conn, err := tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
@@ -244,7 +253,7 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
-	conn, err := dialer.Dial("tcp", address)
+	conn, err := options.dialer().Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
