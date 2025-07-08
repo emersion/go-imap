@@ -73,8 +73,8 @@ func TestACL(t *testing.T) {
 		t.Fatalf("create MyFolder error: %v", err)
 	}
 
-	if err := client.Create("MyFolder/Child", nil).Wait(); err != nil {
-		t.Fatalf("create MyFolder/Child error: %v", err)
+	if err := client.Create("MyFolder.Child", nil).Wait(); err != nil {
+		t.Fatalf("create MyFolder.Child error: %v", err)
 	}
 
 	for _, tc := range testCases {
