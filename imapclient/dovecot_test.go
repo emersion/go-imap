@@ -28,13 +28,17 @@ namespace inbox {
 	inbox = yes
 }
 
-mail_plugins = $mail_plugins acl
+mail_plugins {
+	acl = yes
+}
+
 protocol imap {
-	mail_plugins = $mail_plugins imap_acl
+	mail_plugins {
+		imap_acl = yes
+	}
 }
-plugin {
-  acl = vfile
-}
+
+acl_driver = vfile
 `
 	if err := os.WriteFile(cfgFilename, []byte(cfg), 0666); err != nil {
 		t.Fatalf("failed to write Dovecot config: %v", err)
