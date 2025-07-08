@@ -82,13 +82,13 @@ func TestACL(t *testing.T) {
 			// execute SETACL command
 			err := client.SetACL(tc.mailbox, testUsername, tc.setRightsModification, tc.setRights).Wait()
 			if err != nil {
-				t.Errorf("SetACL().Wait() error: %v", err)
+				t.Fatalf("SetACL().Wait() error: %v", err)
 			}
 
 			// execute GETACL command to reset cache on server
 			getACLData, err := client.GetACL(tc.mailbox).Wait()
 			if err != nil {
-				t.Errorf("GetACL().Wait() error: %v", err)
+				t.Fatalf("GetACL().Wait() error: %v", err)
 			}
 
 			if !tc.expectedRights.Equal(getACLData.Rights[testUsername]) {
