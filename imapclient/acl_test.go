@@ -31,7 +31,7 @@ var testCases = []struct {
 	},
 	{
 		name:                  "custom_child_folder",
-		mailbox:               "MyFolder.Child",
+		mailbox:               "MyFolder/Child",
 		setRightsModification: imap.RightModificationReplace,
 		setRights:             imap.RightSet("aelrwtd"),
 		expectedRights:        imap.RightSet("aelrwtd"),
@@ -52,7 +52,7 @@ var testCases = []struct {
 	},
 	{
 		name:                  "empty_rights",
-		mailbox:               "MyFolder.Child",
+		mailbox:               "MyFolder/Child",
 		setRightsModification: imap.RightModificationReplace,
 		setRights:             imap.RightSet("a"),
 		expectedRights:        imap.RightSet("a"),
