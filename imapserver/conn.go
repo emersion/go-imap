@@ -337,6 +337,13 @@ func (c *Conn) handleLogout(dec *imapwire.Decoder) error {
 
 	c.state = imap.ConnStateLogout
 
+	session, ok := c.session.(SessionLogout)
+	if ok {
+		if err := session.Logout(); err != nil {
+			return err
+		}
+	}
+
 	return c.writeStatusResp("", &imap.StatusResponse{
 		Type: imap.StatusResponseTypeBye,
 		Text: "Logging out",

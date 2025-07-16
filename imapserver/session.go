@@ -114,3 +114,8 @@ type SessionUnauthenticate interface {
 	// Authenticated state
 	Unauthenticate() error
 }
+
+// SessionLogout is an IMAP session which supports custom LOGOUT.
+type SessionLogout interface {
+	Logout() error
+}
