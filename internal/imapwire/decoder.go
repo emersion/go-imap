@@ -122,6 +122,14 @@ func (dec *Decoder) acceptByte(want byte) bool {
 	return true
 }
 
+func (dec *Decoder) NextByteIs(want byte) bool {
+	if dec.acceptByte(want) {
+		dec.mustUnreadByte()
+		return true
+	}
+	return false
+}
+
 // EOF returns true if end-of-file is reached.
 func (dec *Decoder) EOF() bool {
 	_, err := dec.r.ReadByte()
