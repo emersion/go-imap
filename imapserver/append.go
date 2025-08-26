@@ -10,11 +10,6 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-// appendLimit is the maximum size of an APPEND payload.
-//
-// TODO: make configurable
-const appendLimit = 100 * 1024 * 1024 // 100MiB
-
 func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	var (
 		mailbox string
@@ -66,11 +61,11 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 		return err
 	}
 
-	if lit.Size() > appendLimit {
+	if lit.Size() > c.server.appendLimit() {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
 			Code: imap.ResponseCodeTooBig,
-			Text: fmt.Sprintf("Literals are limited to %v bytes for this command", appendLimit),
+			Text: fmt.Sprintf("Literals are limited to %v bytes for this command", c.server.appendLimit()),
 		}
 	}
 	if err := c.acceptLiteral(lit.Size(), nonSync); err != nil {

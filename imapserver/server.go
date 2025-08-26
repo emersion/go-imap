@@ -53,6 +53,8 @@ type Options struct {
 	// Note, this may include sensitive information such as credentials used
 	// during authentication.
 	DebugWriter io.Writer
+	// AppendLimit is the maximum size of an APPEND payload.
+	AppendLimit int64
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -104,6 +106,14 @@ func (s *Server) logger() Logger {
 		return log.Default()
 	}
 	return s.options.Logger
+}
+
+func (s *Server) appendLimit() int64 {
+	if s.options.AppendLimit <= 0 {
+		return 100 * 1024 * 1024 // 100MiB
+	}
+
+	return s.options.AppendLimit
 }
 
 // Serve accepts incoming connections on the listener ln.
