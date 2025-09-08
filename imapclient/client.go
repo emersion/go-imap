@@ -21,6 +21,7 @@ package imapclient
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -62,6 +63,11 @@ func (mbox *SelectedMailbox) copy() *SelectedMailbox {
 	return &copy
 }
 
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // Options contains options for Client.
 type Options struct {
 	// TLS configuration for use by DialTLS and DialStartTLS. If nil, the
@@ -77,7 +83,7 @@ type Options struct {
 	WordDecoder *mime.WordDecoder
 	// Dialer to use when establishing connections with the Dial* functions.
 	// If nil, a default dialer with a 30 second timeout is used.
-	Dialer *net.Dialer
+	Dialer Dialer
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -120,7 +126,7 @@ func (options *Options) tlsConfig() *tls.Config {
 	}
 }
 
-func (options *Options) dialer() *net.Dialer {
+func (options *Options) dialer() Dialer {
 	if options.Dialer == nil {
 		return &net.Dialer{Timeout: defaultDialTimeout}
 	}
@@ -230,9 +236,24 @@ func DialInsecure(address string, options *Options) (*Client, error) {
 	}
 	return New(conn, options), nil
 }
+func DialInsecureContext(ctx context.Context, address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
+	conn, err := options.dialer().DialContext(ctx, "tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return New(conn, options), nil
+}
 
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
+	ctx := context.Background()
+	return DialTLSContext(ctx, address, options)
+}
+func DialTLSContext(ctx context.Context, address string, options *Options) (*Client, error) {
 	if options == nil {
 		options = &Options{}
 	}
@@ -243,7 +264,8 @@ func DialTLS(address string, options *Options) (*Client, error) {
 	}
 
 	dialer := options.dialer()
-	conn, err := tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
+
+	conn, err := dialTLSWithCustomDialer(ctx, dialer, "tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +296,71 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 	newOptions.TLSConfig = tlsConfig
 	return NewStartTLS(conn, &newOptions)
 }
+func DialStartTLSContext(ctx context.Context, address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
 
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := options.dialer().DialContext(ctx, "tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := options.tlsConfig()
+	if tlsConfig.ServerName == "" {
+		tlsConfig.ServerName = host
+	}
+	newOptions := *options
+	newOptions.TLSConfig = tlsConfig
+	return NewStartTLS(conn, &newOptions)
+}
+
+// dialTLSWithCustomDialer is a faithful implementation of tls.DialWithDialer for usage with an interface Dialer instead of
+// the standard *net.Dialer.
+
+func dialTLSWithCustomDialer(ctx context.Context, netDialer Dialer, network, addr string, config *tls.Config) (*tls.Conn, error) {
+
+	rawConn, err := netDialer.DialContext(ctx, network, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	colonPos := strings.LastIndex(addr, ":")
+	if colonPos == -1 {
+		colonPos = len(addr)
+	}
+	hostname := addr[:colonPos]
+
+	if config == nil {
+		config = defaultConfig()
+	}
+	// If no ServerName is set, infer the ServerName
+	// from the hostname we're connecting to.
+	if config.ServerName == "" {
+		// Make a copy to avoid polluting argument or default.
+		c := config.Clone()
+		c.ServerName = hostname
+		config = c
+	}
+
+	conn := tls.Client(rawConn, config)
+	if err := conn.HandshakeContext(ctx); err != nil {
+		rawConn.Close()
+		return nil, err
+	}
+	return conn, nil
+}
+
+var emptyConfig tls.Config
+
+func defaultConfig() *tls.Config {
+	return &emptyConfig
+}
 func (c *Client) setReadTimeout(dur time.Duration) {
 	if dur > 0 {
 		c.conn.SetReadDeadline(time.Now().Add(dur))
