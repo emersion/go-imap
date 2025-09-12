@@ -652,7 +652,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 		var (
 			item FetchItemData
-			done chan struct{}
+			done chan error
 		)
 		switch attName {
 		case "FLAGS":
@@ -738,7 +738,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 				var fetchLit imap.LiteralReader
 				if lit != nil {
-					done = make(chan struct{})
+					done = make(chan error)
 					fetchLit = &fetchLiteralReader{
 						LiteralReader: lit,
 						ch:            done,
@@ -817,7 +817,9 @@ func (c *Client) handleFetch(seqNum uint32) error {
 		}
 		items <- item
 		if done != nil {
-			<-done
+			if err := <-done; err != nil {
+				return err
+			}
 			c.setReadTimeout(respReadTimeout)
 		}
 		return nil
@@ -1313,12 +1315,18 @@ func readSectionPart(dec *imapwire.Decoder) (part []int, dot bool) {
 
 type fetchLiteralReader struct {
 	*imapwire.LiteralReader
-	ch chan<- struct{}
+	ch chan<- error
 }
 
 func (lit *fetchLiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.LiteralReader.Read(b)
-	if err == io.EOF && lit.ch != nil {
+	if err == nil {
+		return n, nil
+	}
+	if lit.ch != nil {
+		if err != io.EOF {
+			lit.ch <- err
+		}
 		close(lit.ch)
 		lit.ch = nil
 	}
