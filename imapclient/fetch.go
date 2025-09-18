@@ -1318,7 +1318,7 @@ type fetchLiteralReader struct {
 
 func (lit *fetchLiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.LiteralReader.Read(b)
-	if err == io.EOF && lit.ch != nil {
+	if err != nil && lit.ch != nil {
 		close(lit.ch)
 		lit.ch = nil
 	}
