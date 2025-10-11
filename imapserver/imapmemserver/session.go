@@ -138,3 +138,20 @@ func (sess *UserSession) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 	}
 	return sess.mailbox.Idle(w, stop)
 }
+
+func (sess *UserSession) Notify(w *imapserver.UpdateWriter, options *imap.NotifyOptions) error {
+	// Refuse the NOTIFY request with NO [NOTIFICATIONOVERFLOW] to indicate
+	// the server is unable/unwilling to deliver notifications.
+	//
+	// Per RFC 5465 Section 3.1 (lines 327-330):
+	// "If the notification would be prohibitively expensive for the server
+	// (e.g., "notify me of all flag changes in all mailboxes"), the server
+	// MAY refuse the command with a tagged NO [NOTIFICATIONOVERFLOW] response."
+	//
+	// This is a simple RFC-compliant stub. Implementing full NOTIFY support is pending.
+	return &imap.Error{
+		Type: imap.StatusResponseTypeNo,
+		Code: imap.ResponseCodeNotificationOverflow,
+		Text: "Request not implemented",
+	}
+}
