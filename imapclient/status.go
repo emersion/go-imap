@@ -68,6 +68,13 @@ func (c *Client) handleStatus() error {
 			return false
 		}
 	})
+	if cmd == nil {
+		// Unsolicited STATUS response (e.g., from NOTIFY)
+		if handler := c.options.unilateralDataHandler().Status; handler != nil {
+			handler(data)
+		}
+		return nil
+	}
 	switch cmd := cmd.(type) {
 	case *StatusCommand:
 		cmd.data = *data
