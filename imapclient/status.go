@@ -75,6 +75,11 @@ func (c *Client) handleStatus() error {
 		cmd.pendingData.Status = data
 		cmd.mailboxes <- cmd.pendingData
 		cmd.pendingData = nil
+	default:
+		// Unsolicited STATUS response (e.g., from NOTIFY)
+		if handler := c.options.unilateralDataHandler().Status; handler != nil {
+			handler(data)
+		}
 	}
 
 	return nil
