@@ -34,7 +34,11 @@ func (c *Client) Fetch(numSet imap.NumSet, options *imap.FetchOptions) *FetchCom
 	enc.SP().NumSet(numSet).SP()
 	writeFetchItems(enc.Encoder, numKind, options)
 	if options.ChangedSince != 0 {
-		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
+		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince)
+		if options.Vanished {
+			enc.SP().Atom("VANISHED")
+		}
+		enc.Special(')')
 	}
 	enc.end()
 	return cmd

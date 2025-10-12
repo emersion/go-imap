@@ -4,6 +4,23 @@ package imap
 type SelectOptions struct {
 	ReadOnly  bool
 	CondStore bool // requires CONDSTORE
+
+	// QRESYNC parameters (requires QRESYNC extension, RFC 5162)
+	QResync *SelectQResyncOptions
+}
+
+// SelectQResyncOptions contains QRESYNC parameters for SELECT.
+type SelectQResyncOptions struct {
+	UIDValidity uint32
+	ModSeq      uint64
+	KnownUIDs   *UIDSet // optional
+	SeqMatchData *SelectSeqMatchData // optional
+}
+
+// SelectSeqMatchData contains sequence match data for QRESYNC.
+type SelectSeqMatchData struct {
+	KnownSeqSet SeqSet
+	KnownUIDSet UIDSet
 }
 
 // SelectData is the data returned by a SELECT command.
@@ -28,4 +45,8 @@ type SelectData struct {
 	List *ListData // requires IMAP4rev2
 
 	HighestModSeq uint64 // requires CONDSTORE
+
+	// UIDs of messages that were expunged.
+	// Requires QRESYNC extension (RFC 4551/7162).
+	VanishedUIDs UIDSet // requires QRESYNC
 }
