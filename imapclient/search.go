@@ -328,8 +328,16 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			if isUID {
 				numKind = imapwire.NumKindUID
 			}
-			if !dec.ExpectNumSet(numKind, &data.All) {
-				return "", nil, dec.Err()
+			if dec.SP() {
+				if !dec.ExpectNumSet(numKind, &data.All) {
+					return "", nil, dec.Err()
+				}
+			} else {
+				if isUID {
+					data.All = imap.UIDSet{}
+				} else {
+					data.All = imap.SeqSet{}
+				}
 			}
 			if data.All.Dynamic() {
 				return "", nil, fmt.Errorf("imapclient: server returned a dynamic ALL number set in SEARCH response")

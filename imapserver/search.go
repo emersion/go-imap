@@ -120,12 +120,10 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
 	}
-	// When there is no result, we need to send an ESEARCH response with no sequence set after ALL.
-	if options.ReturnAll {
+
+	if options.ReturnAll && data.All != nil && !isNumSetEmpty(data.All) {
 		enc.SP().Atom("ALL")
-		if data.All != nil && !isNumSetEmpty(data.All) {
-			enc.SP().NumSet(data.All)
-		}
+		enc.SP().NumSet(data.All)
 	}
 	if options.ReturnMin && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
