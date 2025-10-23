@@ -124,3 +124,14 @@ type SessionAppendLimit interface {
 	// this server in an APPEND command.
 	AppendLimit() uint32
 }
+
+// SessionCapabilities is an IMAP session which can provide its current
+// capabilities for capability filtering.
+type SessionCapabilities interface {
+	Session
+
+	// GetCapabilities returns the session-specific capabilities.
+	// This allows sessions to filter capabilities based on client behavior
+	// or other session-specific factors.
+	GetCapabilities() imap.CapSet
+}
