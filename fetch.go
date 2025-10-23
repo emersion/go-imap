@@ -21,6 +21,7 @@ type FetchOptions struct {
 	ModSeq            bool                          // requires CONDSTORE
 
 	ChangedSince uint64 // requires CONDSTORE
+	Vanished     bool   // requires QRESYNC, only valid for UID FETCH
 }
 
 // FetchItemBodyStructure contains FETCH options for the body structure.

@@ -17,9 +17,27 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
-	if options != nil && options.CondStore {
-		enc.SP().Special('(').Atom("CONDSTORE").Special(')')
+
+	if options != nil {
+		if options.CondStore {
+			enc.SP().Special('(').Atom("CONDSTORE").Special(')')
+		} else if options.QResync != nil {
+			enc.SP().Special('(').Atom("QRESYNC").SP().Special('(')
+			enc.Number(options.QResync.UIDValidity)
+			enc.SP().ModSeq(options.QResync.ModSeq)
+			if len(options.QResync.KnownUIDs) > 0 {
+				enc.SP().NumSet(options.QResync.KnownUIDs)
+				if options.QResync.SeqMatch != nil {
+					enc.SP().Special('(')
+					enc.NumSet(options.QResync.SeqMatch.SeqNums)
+					enc.SP().NumSet(options.QResync.SeqMatch.UIDs)
+					enc.Special(')')
+				}
+			}
+			enc.Special(')').Special(')')
+		}
 	}
+
 	enc.end()
 	return cmd
 }

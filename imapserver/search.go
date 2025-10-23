@@ -8,6 +8,8 @@ import (
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) error {
@@ -103,10 +105,12 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
 	}
-	// When there is no result, we need to send an ESEARCH response with no ALL
-	// keyword
-	if options.ReturnAll && !isNumSetEmpty(data.All) {
-		enc.SP().Atom("ALL").SP().NumSet(data.All)
+	// When there is no result, we need to send an ESEARCH response with no sequence set after ALL.
+	if options.ReturnAll {
+		enc.SP().Atom("ALL")
+		if data.All != nil && !isNumSetEmpty(data.All) {
+			enc.SP().NumSet(data.All)
+		}
 	}
 	if options.ReturnMin && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
@@ -116,6 +120,9 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	}
 	if options.ReturnCount {
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
+	}
+	if data.ModSeq > 0 {
+		enc.SP().Special('(').Atom("MODSEQ").SP().ModSeq(data.ModSeq).Special(')')
 	}
 	return enc.CRLF()
 }
@@ -136,24 +143,28 @@ func (c *Conn) writeSearch(numSet imap.NumSet) error {
 	defer enc.end()
 
 	enc.Atom("*").SP().Atom("SEARCH")
-	var ok bool
-	switch numSet := numSet.(type) {
-	case imap.SeqSet:
-		var nums []uint32
-		nums, ok = numSet.Nums()
-		for _, num := range nums {
-			enc.SP().Number(num)
+
+	if numSet != nil {
+		var ok bool
+		switch numSet := numSet.(type) {
+		case imap.SeqSet:
+			var nums []uint32
+			nums, ok = numSet.Nums()
+			for _, num := range nums {
+				enc.SP().Number(num)
+			}
+		case imap.UIDSet:
+			var uids []imap.UID
+			uids, ok = numSet.Nums()
+			for _, uid := range uids {
+				enc.SP().UID(uid)
+			}
 		}
-	case imap.UIDSet:
-		var uids []imap.UID
-		uids, ok = numSet.Nums()
-		for _, uid := range uids {
-			enc.SP().UID(uid)
+		if !ok {
+			return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response (dynamic set?)")
 		}
 	}
-	if !ok {
-		return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response")
-	}
+
 	return enc.CRLF()
 }
 
@@ -178,7 +189,7 @@ func readSearchReturnOpts(dec *imapwire.Decoder, options *imap.SearchOptions) er
 		case "SAVE":
 			options.ReturnSave = true
 		default:
-			return newClientBugError("unknown SEARCH RETURN option")
+			// RFC 4731: A server MUST ignore any unrecognized return options.
 		}
 		return nil
 	})
@@ -196,7 +207,15 @@ func readSearchKey(criteria *imap.SearchCriteria, dec *imapwire.Decoder) error {
 		return readSearchKeyWithAtom(criteria, dec, key)
 	}
 	return dec.ExpectList(func() error {
-		return readSearchKey(criteria, dec)
+		for {
+			if err := readSearchKey(criteria, dec); err != nil {
+				return err
+			}
+			if !dec.SP() {
+				break
+			}
+		}
+		return nil
 	})
 }
 
@@ -241,7 +260,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 			return dec.Err()
 		}
 		criteria.Header = append(criteria.Header, imap.SearchCriteriaHeaderField{
-			Key:   strings.Title(strings.ToLower(key)),
+			Key:   cases.Title(language.English).String(strings.ToLower(key)),
 			Value: value,
 		})
 	case "HEADER":
@@ -328,6 +347,33 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		criteria.Or = append(criteria.Or, or)
 	case "$":
 		criteria.UID = append(criteria.UID, imap.SearchRes())
+	case "MODSEQ":
+		if !dec.ExpectSP() {
+			return dec.Err()
+		}
+		var name string
+		var metadataType imap.SearchCriteriaMetadataType
+		if dec.Quoted(&name) {
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+			var typeName string
+			if !dec.ExpectAtom(&typeName) || !dec.ExpectSP() {
+				return dec.Err()
+			}
+			metadataType = imap.SearchCriteriaMetadataType(strings.ToLower(typeName))
+		}
+
+		var modSeq uint64
+		if !dec.ExpectModSeq(&modSeq) {
+			return dec.Err()
+		}
+
+		criteria.ModSeq = &imap.SearchCriteriaModSeq{
+			ModSeq:       modSeq,
+			MetadataName: name,
+			MetadataType: metadataType,
+		}
 	default:
 		seqSet, err := imapwire.ParseSeqSet(key)
 		if err != nil {
@@ -339,5 +385,5 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 }
 
 func searchKeyFlag(key string) imap.Flag {
-	return imap.Flag("\\" + strings.Title(strings.ToLower(key)))
+	return imap.Flag("\\" + cases.Title(language.English).String(strings.ToLower(key)))
 }

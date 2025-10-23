@@ -1,6 +1,7 @@
 package imapserver
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/emersion/go-imap/v2"
@@ -13,7 +14,30 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		numSet imap.NumSet
 		item   string
 	)
-	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() {
+		return dec.Err()
+	}
+
+	options := imap.StoreOptions{}
+	if dec.Special('(') {
+		var param string
+		if !dec.ExpectAtom(&param) {
+			return dec.Err()
+		}
+
+		if strings.ToUpper(param) == "UNCHANGEDSINCE" {
+			if !dec.ExpectSP() || !dec.ExpectModSeq(&options.UnchangedSince) {
+				return dec.Err()
+			}
+		} else {
+			return newClientBugError(fmt.Sprintf("unknown STORE modifier: %v", param))
+		}
+		if !dec.ExpectSpecial(')') || !dec.ExpectSP() {
+			return dec.Err()
+		}
+	}
+
+	if !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 	var flags []imap.Flag
@@ -69,7 +93,6 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c}
-	options := imap.StoreOptions{}
 	return c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,

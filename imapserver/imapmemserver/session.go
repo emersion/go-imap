@@ -38,10 +38,11 @@ func (sess *UserSession) Select(name string, options *imap.SelectOptions) (*imap
 	if err != nil {
 		return nil, err
 	}
-	mbox.mutex.Lock()
-	defer mbox.mutex.Unlock()
+	if sess.mailbox != nil {
+		sess.mailbox.Close()
+	}
 	sess.mailbox = mbox.NewView()
-	return mbox.selectDataLocked(), nil
+	return sess.mailbox.selectData(options)
 }
 
 func (sess *UserSession) Unselect() error {

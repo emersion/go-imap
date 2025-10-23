@@ -179,6 +179,15 @@ func (c *Conn) serve() {
 		dec.MaxSize = maxCommandSize
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
 
+		c.mutex.Lock()
+		// IMAP4rev2 is automatically enabled when advertised in capabilities
+		// UTF8=ACCEPT must be explicitly enabled
+		imap4rev2Available := c.server.options.caps().Has(imap.CapIMAP4rev2)
+		utf8AcceptEnabled := c.enabled.Has(imap.CapUTF8Accept)
+		quotedUTF8 := imap4rev2Available || utf8AcceptEnabled
+		c.mutex.Unlock()
+		dec.QuotedUTF8 = quotedUTF8
+
 		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break
 		}
@@ -194,6 +203,17 @@ func (c *Conn) serve() {
 }
 
 func (c *Conn) readCommand(dec *imapwire.Decoder) error {
+	for {
+		if dec.EOF() {
+			return nil
+		}
+
+		if dec.ExpectCRLF() {
+			continue
+		}
+		break
+	}
+
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
 		return fmt.Errorf("in command: %w", dec.Err())
@@ -220,6 +240,9 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogout(dec)
 	case "CAPABILITY":
 		err = c.handleCapability(dec)
+	case "ID":
+		err = c.handleID(tag, dec)
+		sendOK = false
 	case "STARTTLS":
 		err = c.handleStartTLS(tag, dec)
 		sendOK = false
@@ -276,6 +299,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleMove(dec, numKind)
 	case "SEARCH", "UID SEARCH":
 		err = c.handleSearch(tag, dec, numKind)
+	case "SORT", "UID SORT":
+		err = c.handleSort(tag, dec, numKind)
 	default:
 		if c.state == imap.ConnStateNotAuthenticated {
 			// Don't allow a single unknown command before authentication to
@@ -492,7 +517,11 @@ type responseEncoder struct {
 
 func newResponseEncoder(conn *Conn) *responseEncoder {
 	conn.mutex.Lock()
-	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2) || conn.enabled.Has(imap.CapUTF8Accept)
+	// IMAP4rev2 is automatically enabled when advertised in capabilities
+	// UTF8=ACCEPT must be explicitly enabled
+	imap4rev2Available := conn.server.options.caps().Has(imap.CapIMAP4rev2)
+	utf8AcceptEnabled := conn.enabled.Has(imap.CapUTF8Accept)
+	quotedUTF8 := imap4rev2Available || utf8AcceptEnabled
 	conn.mutex.Unlock()
 
 	wireEnc := imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer)
@@ -572,6 +601,26 @@ func newClientBugError(text string) error {
 		Code: imap.ResponseCodeClientBug,
 		Text: text,
 	}
+}
+
+func (c *Conn) writeExists(numMessages uint32) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	return writeExists(enc.Encoder, numMessages)
+}
+
+func writeExists(enc *imapwire.Encoder, numMessages uint32) error {
+	return enc.Atom("*").SP().Number(numMessages).SP().Atom("EXISTS").CRLF()
+}
+
+func (c *Conn) writeObsoleteRecent(n uint32) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	return writeObsoleteRecent(enc.Encoder, n)
+}
+
+func writeObsoleteRecent(enc *imapwire.Encoder, n uint32) error {
+	return enc.Atom("*").SP().Number(n).SP().Atom("RECENT").CRLF()
 }
 
 // UpdateWriter writes status updates.

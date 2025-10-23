@@ -102,6 +102,8 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 		Caps: imap.CapSet{
 			imap.CapIMAP4rev1: {},
 			imap.CapIMAP4rev2: {},
+			imap.CapCondStore: {},
+			imap.CapQResync:   {},
 		},
 	})
 
@@ -175,6 +177,15 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 	if initialState >= imap.ConnStateSelected {
 		if _, err := client.Select("INBOX", nil).Wait(); err != nil {
 			t.Fatalf("Select().Wait() = %v", err)
+		}
+	}
+
+	// Enable CONDSTORE for Dovecot tests (required for CONDSTORE features)
+	if useDovecot && initialState >= imap.ConnStateAuthenticated {
+		if client.Caps().Has(imap.CapCondStore) {
+			if _, err := client.Enable(imap.CapCondStore).Wait(); err != nil {
+				t.Logf("Failed to enable CONDSTORE: %v", err)
+			}
 		}
 	}
 
