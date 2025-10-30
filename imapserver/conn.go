@@ -140,7 +140,7 @@ func (c *Conn) serve() {
 		}
 	}()
 
-	caps := c.server.options.caps()
+	caps := c.server.options.caps().set()
 	if _, ok := c.session.(SessionIMAP4rev2); !ok && caps.Has(imap.CapIMAP4rev2) {
 		panic("imapserver: server advertises IMAP4rev2 but session doesn't support it")
 	}
@@ -401,7 +401,7 @@ func (c *Conn) checkBufferedLiteral(size int64, nonSync bool) error {
 }
 
 func (c *Conn) acceptLiteral(size int64, nonSync bool) error {
-	if nonSync && size > 4096 && !c.server.options.caps().Has(imap.CapLiteralPlus) {
+	if nonSync && size > 4096 && !c.server.options.caps().set().Has(imap.CapLiteralPlus) {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Non-synchronizing literals are limited to 4096 bytes",
@@ -595,7 +595,7 @@ func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 
 // WriteNumRecent writes an RECENT response (not used in IMAP4rev2, will be ignored).
 func (w *UpdateWriter) WriteNumRecent(n uint32) error {
-	if w.conn.enabled.Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().Has(imap.CapIMAP4rev1) {
+	if w.conn.enabled.Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().set().Has(imap.CapIMAP4rev1) {
 		return nil
 	}
 	return w.conn.writeObsoleteRecent(n)

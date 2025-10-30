@@ -28,7 +28,7 @@ func (c *Conn) handleCapability(dec *imapwire.Decoder) error {
 // Some extensions (e.g. SASL-IR, ENABLE) don't require backend support and
 // thus are always enabled.
 func (c *Conn) availableCaps() []imap.Cap {
-	available := c.server.options.caps()
+	available := c.server.options.caps().set()
 
 	var caps []imap.Cap
 	addAvailableCaps(&caps, available, []imap.Cap{

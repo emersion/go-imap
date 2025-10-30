@@ -99,9 +99,9 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 			Certificates: []tls.Certificate{cert},
 		},
 		InsecureAuth: true,
-		Caps: imap.CapSet{
-			imap.CapIMAP4rev1: {},
-			imap.CapIMAP4rev2: {},
+		Caps: &imapserver.SupportedCaps{
+			IMAP4rev1: true,
+			IMAP4rev2: true,
 		},
 	})
 
