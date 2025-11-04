@@ -98,7 +98,7 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 
 	enc.Atom("*").SP().Atom("ESEARCH")
 	if tag != "" {
-		enc.SP().Special('(').Atom("TAG").SP().String(tag).Special(')')
+		enc.SP().Special('(').Atom("TAG").SP().String("\""+tag+"\"").Special(')')
 	}
 	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
