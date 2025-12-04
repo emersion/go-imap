@@ -1,6 +1,7 @@
 package imapclient_test
 
 import (
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -69,12 +70,12 @@ func TestSort(t *testing.T) {
 				want: []uint32{1, 2, 3},
 			},
 			{
-				name: "REVERSE ARRIVAL",
+				name: "REVERSE SUBJECT",
 				options: &imapclient.SortOptions{
-					SortCriteria:   []imap.SortCriterion{{Key: imap.SortKeyArrival, Reverse: true}},
+					SortCriteria:   []imap.SortCriterion{{Key: imap.SortKeySubject, Reverse: true}},
 					SearchCriteria: allMsgs,
 				},
-				want: []uint32{3, 2, 1},
+				want: []uint32{1, 2, 3}, // C, B, A (reversed)
 			},
 			{
 				name: "SIZE",
@@ -123,6 +124,11 @@ func TestSort(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Skip DISPLAY test for Dovecot as it doesn't support SORT=DISPLAY
+				if tt.name == "DISPLAY" && os.Getenv("GOIMAP_TEST_DOVECOT") == "1" {
+					t.Skip("Dovecot doesn't support SORT=DISPLAY")
+				}
+
 				data, err := client.Sort(tt.options).Wait()
 				if err != nil {
 					t.Fatalf("Sort() failed: %v", err)
@@ -138,8 +144,9 @@ func TestSort(t *testing.T) {
 	})
 
 	t.Run("UID SORT", func(t *testing.T) {
+		// Use SUBJECT for sorting as it's more deterministic than ARRIVAL across servers
 		options := &imapclient.SortOptions{
-			SortCriteria:   []imap.SortCriterion{{Key: imap.SortKeyArrival, Reverse: true}},
+			SortCriteria:   []imap.SortCriterion{{Key: imap.SortKeySubject}},
 			SearchCriteria: allMsgs,
 		}
 		data, err := client.UIDSort(options).Wait()
@@ -147,6 +154,7 @@ func TestSort(t *testing.T) {
 			t.Fatalf("UIDSort() failed: %v", err)
 		}
 
+		// Subjects are A, B, C -> UIDs 3, 2, 1
 		wantUIDs := []imap.UID{3, 2, 1}
 		if !reflect.DeepEqual(data.UIDs, wantUIDs) {
 			t.Errorf("UIDSort() UIDs = %v, want %v", data.UIDs, wantUIDs)
@@ -157,6 +165,11 @@ func TestSort(t *testing.T) {
 	})
 
 	t.Run("ESORT", func(t *testing.T) {
+		// Skip for Dovecot as it doesn't support ESORT extension
+		if os.Getenv("GOIMAP_TEST_DOVECOT") == "1" {
+			t.Skip("Dovecot doesn't support ESORT")
+		}
+
 		options := &imapclient.SortOptions{
 			SortCriteria:   []imap.SortCriterion{{Key: imap.SortKeyArrival}},
 			SearchCriteria: allMsgs,
