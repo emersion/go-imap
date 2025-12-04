@@ -276,6 +276,12 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleMove(dec, numKind)
 	case "SEARCH", "UID SEARCH":
 		err = c.handleSearch(tag, dec, numKind)
+	case "GETACL":
+		err = c.handleGetACL(dec)
+	case "SETACL":
+		err = c.handleSetACL(dec)
+	case "DELETEACL":
+		err = c.handleDeleteACL(dec)
 	default:
 		if c.state == imap.ConnStateNotAuthenticated {
 			// Don't allow a single unknown command before authentication to

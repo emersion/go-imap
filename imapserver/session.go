@@ -124,3 +124,9 @@ type SessionAppendLimit interface {
 	// this server in an APPEND command.
 	AppendLimit() uint32
 }
+
+type SessionACL interface {
+	GetACL(mailbox string) ([]*UserACL, error)
+	SetACL(mailbox, identifier string, rights []imap.Right) error
+	DeleteACL(mailbox, identifier string) error
+}
