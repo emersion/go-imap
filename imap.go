@@ -82,6 +82,7 @@ const (
 	FlagFlagged  Flag = "\\Flagged"
 	FlagDeleted  Flag = "\\Deleted"
 	FlagDraft    Flag = "\\Draft"
+	FlagRecent   Flag = "\\Recent" // This flag was in use in IMAP4rev1 and is now deprecated.
 
 	// Widely used flags
 	FlagForwarded Flag = "$Forwarded"
