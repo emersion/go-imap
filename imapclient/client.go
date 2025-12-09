@@ -154,16 +154,17 @@ type Client struct {
 	decCh  chan struct{}
 	decErr error
 
-	mutex        sync.Mutex
-	state        imap.ConnState
-	caps         imap.CapSet
-	enabled      imap.CapSet
-	pendingCapCh chan struct{}
-	mailbox      *SelectedMailbox
-	cmdTag       uint64
-	pendingCmds  []command
-	contReqs     []continuationRequest
-	closed       bool
+	mutex           sync.Mutex
+	state           imap.ConnState
+	caps            imap.CapSet
+	enabled         imap.CapSet
+	enableAttempted bool
+	pendingCapCh    chan struct{}
+	mailbox         *SelectedMailbox
+	cmdTag          uint64
+	pendingCmds     []command
+	contReqs        []continuationRequest
+	closed          bool
 }
 
 // New creates a new IMAP client.
@@ -530,6 +531,7 @@ func (c *Client) completeCommand(cmd command, err error) {
 			c.state = imap.ConnStateNotAuthenticated
 			c.mailbox = nil
 			c.enabled = make(imap.CapSet)
+			c.enableAttempted = false
 			c.mutex.Unlock()
 		}
 	case *SelectCommand:
