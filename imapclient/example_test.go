@@ -120,7 +120,7 @@ func ExampleClient_List_stream() {
 		if mbox == nil {
 			break
 		}
-		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, mbox.Status.NumMessages, mbox.Status.NumUnseen)
+		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, *mbox.Status.NumMessages, *mbox.Status.NumUnseen)
 	}
 	if err := listCmd.Close(); err != nil {
 		log.Fatalf("LIST command failed: %v", err)
