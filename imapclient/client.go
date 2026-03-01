@@ -1205,6 +1205,12 @@ type UnilateralDataHandler struct {
 	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)
 
+	// Called when the server sends an unsolicited LIST response.
+	//
+	// Used with NOTIFY MailboxName events (RFC 5465) to detect mailbox
+	// creation, deletion, or renaming, and for subscription changes.
+	List func(data *imap.ListData)
+
 	// Called when the server sends an unsolicited STATUS response.
 	//
 	// Commonly used with NOTIFY to receive mailbox status updates
