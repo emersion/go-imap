@@ -650,9 +650,11 @@ func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	return w.conn.writeExists(n)
 }
 
-// WriteNumRecent writes an RECENT response (not used in IMAP4rev2, will be ignored).
+// WriteNumRecent writes a RECENT response (not used in IMAP4rev2, will be ignored).
 func (w *UpdateWriter) WriteNumRecent(n uint32) error {
-	if w.conn.enabled.Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().Has(imap.CapIMAP4rev1) {
+	// Suppress RECENT when IMAP4rev2 is advertised (automatically active)
+	// or when IMAP4rev1 is not available.
+	if w.conn.server.options.caps().Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().Has(imap.CapIMAP4rev1) {
 		return nil
 	}
 	return w.conn.writeObsoleteRecent(n)
