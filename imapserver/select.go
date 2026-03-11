@@ -124,7 +124,10 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	isQResync := options.QResync != nil && data.UIDValidity == options.QResync.UIDValidity
 	if !isQResync {
 		writeExists(enc.Encoder, data.NumMessages)
-		if !c.enabled.Has(imap.CapIMAP4rev2) && c.server.options.caps().Has(imap.CapIMAP4rev1) {
+		// Fix #1: Check if IMAP4rev2 is advertised (not just enabled), since
+		// this codebase treats IMAP4rev2 as automatically active when advertised.
+		imap4rev2Active := c.server.options.caps().Has(imap.CapIMAP4rev2)
+		if !imap4rev2Active && c.server.options.caps().Has(imap.CapIMAP4rev1) {
 			writeObsoleteRecent(enc.Encoder, data.NumRecent)
 			if data.FirstUnseenSeqNum != 0 {
 				writeObsoleteUnseen(enc.Encoder, data.FirstUnseenSeqNum)
@@ -132,8 +135,9 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
+	// Fix #4: Use VANISHED (EARLIER) during SELECT QRESYNC per RFC 7162
 	if len(data.Vanished) > 0 {
-		writeVanished(enc.Encoder, data.Vanished)
+		writeVanishedEarlier(enc.Encoder, data.Vanished)
 	}
 
 	if len(data.Modified) > 0 {
@@ -148,8 +152,10 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	writeUIDNext(enc.Encoder, data.UIDNext)
 	writeFlags(enc.Encoder, data.Flags)
 	writePermanentFlags(enc.Encoder, data.PermanentFlags)
+	// Fix #2: Use writeListData with the raw encoder to avoid deadlock.
+	// c.writeList would call newResponseEncoder which re-locks encMutex.
 	if data.List != nil {
-		if err := c.writeList(data.List); err != nil {
+		if err := writeListData(enc.Encoder, data.List); err != nil {
 			return err
 		}
 	}
@@ -269,13 +275,24 @@ func writeVanished(enc *imapwire.Encoder, uids imap.UIDSet) error {
 	return enc.CRLF()
 }
 
+// writeVanishedEarlier writes a VANISHED (EARLIER) response per RFC 7162.
+// Used during SELECT with QRESYNC to indicate UIDs expunged since the
+// client's last known state.
+func writeVanishedEarlier(enc *imapwire.Encoder, uids imap.UIDSet) error {
+	enc.Atom("*").SP().Atom("VANISHED").SP()
+	enc.Special('(').Atom("EARLIER").Special(')')
+	enc.SP().NumSet(uids)
+	return enc.CRLF()
+}
+
 func writeQResyncFetch(enc *imapwire.Encoder, mod imap.SelectModifiedData) error {
 	enc.Atom("*").SP().Number(mod.SeqNum).SP().Atom("FETCH").SP().Special('(')
 	enc.Atom("UID").SP().UID(mod.UID)
 	enc.SP().Atom("FLAGS").SP().List(len(mod.Flags), func(i int) {
 		enc.Flag(mod.Flags[i])
 	})
-	enc.SP().Atom("MODSEQ").SP().ModSeq(mod.ModSeq)
+	// Fix #3: FETCH MODSEQ must be parenthesized per RFC 7162
+	enc.SP().Atom("MODSEQ").SP().Special('(').ModSeq(mod.ModSeq).Special(')')
 	enc.Special(')')
 	return enc.CRLF()
 }

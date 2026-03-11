@@ -93,14 +93,18 @@ func (c *Conn) handleThread(tag string, dec *imapwire.Decoder, numKind NumKind) 
 
 func writeThread(enc *imapwire.Encoder, thread *ThreadData) {
 	enc.Special('(')
+	hasContent := false
 	for i, num := range thread.Chain {
 		if i > 0 {
 			enc.SP()
 		}
 		enc.Number(num)
+		hasContent = true
 	}
-	for _, sub := range thread.SubThreads {
-		if len(thread.Chain) > 0 {
+	for i, sub := range thread.SubThreads {
+		// Fix #5: Always insert separator between items, whether chain
+		// is empty or not.
+		if hasContent || i > 0 {
 			enc.SP()
 		}
 		writeThread(enc, &sub)
