@@ -57,6 +57,10 @@ func (c *Client) upgradeStartTLS(startTLS *startTLSCommand) {
 	tlsConn := tls.Client(cleartextConn, startTLS.tlsConfig)
 	rw := c.options.wrapReadWriter(tlsConn)
 
+	if c.tlsConn != nil {
+		panic("imapclient: TLS started twice")
+	}
+	c.tlsConn = tlsConn
 	c.br.Reset(rw)
 	// Unfortunately we can't re-use the bufio.Writer here, it races with
 	// Client.StartTLS

@@ -59,6 +59,9 @@ func (c *Conn) availableCaps() []imap.Cap {
 	} else if c.state == imap.ConnStateNotAuthenticated {
 		caps = append(caps, imap.CapLoginDisabled)
 	}
+	if c.canCompress() {
+		caps = append(caps, imap.Cap("COMPRESS=DEFLATE"))
+	}
 	if c.state == imap.ConnStateAuthenticated || c.state == imap.ConnStateSelected {
 		if available.Has(imap.CapIMAP4rev1) {
 			// IMAP4rev1-specific capabilities that don't require backend

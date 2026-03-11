@@ -49,6 +49,9 @@ const (
 
 	// APPENDLIMIT
 	ResponseCodeTooBig ResponseCode = "TOOBIG"
+
+	// COMPRESS
+	ResponseCodeCompressionActive ResponseCode = "COMPRESSIONACTIVE"
 )
 
 // StatusResponse is a generic status response.

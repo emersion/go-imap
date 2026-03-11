@@ -158,6 +158,19 @@ func (set CapSet) AuthMechanisms() []string {
 	return l
 }
 
+// CompressAlgorithms returns the list of supported compresson mechanisms.
+func (set CapSet) CompressAlgorithms() []string {
+	var l []string
+	for c := range set {
+		if !strings.HasPrefix(string(c), "COMPRESS=") {
+			continue
+		}
+		algo := strings.TrimPrefix(string(c), "COMPRESS=")
+		l = append(l, algo)
+	}
+	return l
+}
+
 // AppendLimit checks the APPENDLIMIT capability.
 //
 // If the server supports APPENDLIMIT, ok is true. If the server doesn't have
