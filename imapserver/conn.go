@@ -208,7 +208,7 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 			return nil
 		}
 
-		if dec.ExpectCRLF() {
+		if dec.CRLF() {
 			continue
 		}
 		break

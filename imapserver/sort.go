@@ -37,8 +37,6 @@ func (c *Conn) handleSort(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	esortReturnOpts.All = true // Default if no RETURN or RETURN (ALL)
 
 	var atom string
-	// dec.Func returns true if an atom is read; 'atom' will contain it.
-	// If the next token is not an atom (e.g., '('), it returns false and dec.Err() is nil.
 	if dec.Func(&atom, imapwire.IsAtomChar) && strings.EqualFold(atom, "RETURN") {
 		// Atom "RETURN" was successfully read and consumed.
 		if !dec.ExpectSP() {
