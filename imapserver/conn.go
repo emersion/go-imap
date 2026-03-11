@@ -301,6 +301,14 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleSearch(tag, dec, numKind)
 	case "SORT", "UID SORT":
 		err = c.handleSort(tag, dec, numKind)
+	case "THREAD", "UID THREAD":
+		err = c.handleThread(tag, dec, numKind)
+	case "GETQUOTA":
+		err = c.handleGetQuota(tag, dec)
+		sendOK = false
+	case "GETQUOTAROOT":
+		err = c.handleGetQuotaRoot(tag, dec)
+		sendOK = false
 	default:
 		if c.state == imap.ConnStateNotAuthenticated {
 			// Don't allow a single unknown command before authentication to
