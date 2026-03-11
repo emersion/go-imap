@@ -10,10 +10,8 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-// appendLimit is the maximum size of an APPEND payload.
-//
-// TODO: make configurable
-const appendLimit = 100 * 1024 * 1024 // 100MiB
+// defaultAppendLimit is the default maximum size of an APPEND payload.
+const defaultAppendLimit = 100 * 1024 * 1024 // 100MiB
 
 func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	var (
@@ -49,7 +47,7 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	options.Time = t
 
 	var dataExt string
-	if dec.Atom(&dataExt) {
+	if !dec.Special('~') && dec.Atom(&dataExt) { // ignore literal8 prefix if any for BINARY
 		switch strings.ToUpper(dataExt) {
 		case "UTF8":
 			// '~' is the literal8 prefix
@@ -59,13 +57,16 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 		default:
 			return newClientBugError("Unknown APPEND data extension")
 		}
-	} else {
-		dec.Special('~') // ignore literal8 prefix if any for BINARY
 	}
 
 	lit, nonSync, err := dec.ExpectLiteralReader()
 	if err != nil {
 		return err
+	}
+
+	appendLimit := int64(defaultAppendLimit)
+	if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
+		appendLimit = int64(appendLimitSession.AppendLimit())
 	}
 
 	if lit.Size() > appendLimit {

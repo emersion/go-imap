@@ -120,7 +120,7 @@ func ExampleClient_List_stream() {
 		if mbox == nil {
 			break
 		}
-		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, mbox.Status.NumMessages, mbox.Status.NumUnseen)
+		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, *mbox.Status.NumMessages, *mbox.Status.NumUnseen)
 	}
 	if err := listCmd.Close(); err != nil {
 		log.Fatalf("LIST command failed: %v", err)
@@ -145,12 +145,11 @@ func ExampleClient_Fetch() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader}
 	fetchOptions := &imap.FetchOptions{
-		Flags:    true,
-		Envelope: true,
-		BodySection: []*imap.FetchItemBodySection{
-			{Specifier: imap.PartSpecifierHeader},
-		},
+		Flags:       true,
+		Envelope:    true,
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	messages, err := c.Fetch(seqSet, fetchOptions).Collect()
 	if err != nil {
@@ -158,11 +157,7 @@ func ExampleClient_Fetch() {
 	}
 
 	msg := messages[0]
-	var header []byte
-	for _, buf := range msg.BodySection {
-		header = buf
-		break
-	}
+	header := msg.FindBodySection(bodySection)
 
 	log.Printf("Flags: %v", msg.Flags)
 	log.Printf("Subject: %v", msg.Envelope.Subject)
@@ -173,9 +168,10 @@ func ExampleClient_Fetch_streamBody() {
 	var c *imapclient.Client
 
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
 		UID:         true,
-		BodySection: []*imap.FetchItemBodySection{{}},
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	fetchCmd := c.Fetch(seqSet, fetchOptions)
 	defer fetchCmd.Close()
@@ -215,8 +211,9 @@ func ExampleClient_Fetch_parseBody() {
 
 	// Send a FETCH command to fetch the message body
 	seqSet := imap.SeqSetNum(1)
+	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
-		BodySection: []*imap.FetchItemBodySection{{}},
+		BodySection: []*imap.FetchItemBodySection{bodySection},
 	}
 	fetchCmd := c.Fetch(seqSet, fetchOptions)
 	defer fetchCmd.Close()
@@ -227,14 +224,14 @@ func ExampleClient_Fetch_parseBody() {
 	}
 
 	// Find the body section in the response
-	var bodySection imapclient.FetchItemDataBodySection
+	var bodySectionData imapclient.FetchItemDataBodySection
 	ok := false
 	for {
 		item := msg.Next()
 		if item == nil {
 			break
 		}
-		bodySection, ok = item.(imapclient.FetchItemDataBodySection)
+		bodySectionData, ok = item.(imapclient.FetchItemDataBodySection)
 		if ok {
 			break
 		}
@@ -244,7 +241,7 @@ func ExampleClient_Fetch_parseBody() {
 	}
 
 	// Read the message via the go-message library
-	mr, err := mail.CreateReader(bodySection.Literal)
+	mr, err := mail.CreateReader(bodySectionData.Literal)
 	if err != nil {
 		log.Fatalf("failed to create mail reader: %v", err)
 	}
@@ -337,13 +334,28 @@ func ExampleClient_Idle() {
 	if err != nil {
 		log.Fatalf("IDLE command failed: %v", err)
 	}
+	defer idleCmd.Close()
 
-	// Wait for 30s to receive updates from the server
-	time.Sleep(30 * time.Second)
+	done := make(chan error, 1)
+	go func() {
+		done <- idleCmd.Wait()
+	}()
 
-	// Stop idling
-	if err := idleCmd.Close(); err != nil {
-		log.Fatalf("failed to stop idling: %v", err)
+	// Wait for 30s to receive updates from the server, then stop idling
+	t := time.NewTimer(30 * time.Second)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		if err := idleCmd.Close(); err != nil {
+			log.Fatalf("failed to stop idling: %v", err)
+		}
+		if err := <-done; err != nil {
+			log.Fatalf("IDLE command failed: %v", err)
+		}
+	case err := <-done:
+		if err != nil {
+			log.Fatalf("IDLE command failed: %v", err)
+		}
 	}
 }
 
@@ -364,5 +376,36 @@ func ExampleClient_Authenticate_oauth() {
 	})
 	if err := c.Authenticate(saslClient); err != nil {
 		log.Fatalf("authentication failed: %v", err)
+	}
+}
+
+func ExampleClient_Closed() {
+	c, err := imapclient.DialTLS("mail.example.org:993", nil)
+	if err != nil {
+		log.Fatalf("failed to dial IMAP server: %v", err)
+	}
+
+	selected := false
+
+	go func(c *imapclient.Client) {
+		if err := c.Login("root", "asdf").Wait(); err != nil {
+			log.Fatalf("failed to login: %v", err)
+		}
+
+		if _, err := c.Select("INBOX", nil).Wait(); err != nil {
+			log.Fatalf("failed to select INBOX: %v", err)
+		}
+
+		selected = true
+
+		c.Close()
+	}(c)
+
+	// This channel shall be closed when the connection is closed.
+	<-c.Closed()
+	log.Println("Connection has been closed")
+
+	if !selected {
+		log.Fatalf("Connection was closed before selecting mailbox")
 	}
 }

@@ -3,6 +3,7 @@ package imap
 // StatusOptions contains options for the STATUS command.
 type StatusOptions struct {
 	NumMessages bool
+	NumRecent   bool // Obsolete, IMAP4rev1 only. Server-only, not supported in imapclient.
 	UIDNext     bool
 	UIDValidity bool
 	NumUnseen   bool
@@ -21,6 +22,7 @@ type StatusData struct {
 	Mailbox string
 
 	NumMessages *uint32
+	NumRecent   *uint32 // Obsolete, IMAP4rev1 only. Server-only, not supported in imapclient.
 	UIDNext     UID
 	UIDValidity uint32
 	NumUnseen   *uint32

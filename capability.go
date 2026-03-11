@@ -15,8 +15,6 @@ const (
 	CapIMAP4rev1 Cap = "IMAP4rev1" // RFC 3501
 	CapIMAP4rev2 Cap = "IMAP4rev2" // RFC 9051
 
-	CapAuthPlain Cap = "AUTH=PLAIN"
-
 	CapStartTLS      Cap = "STARTTLS"
 	CapLoginDisabled Cap = "LOGINDISABLED"
 
@@ -34,12 +32,12 @@ const (
 	CapMove         Cap = "MOVE"          // RFC 6851
 	CapLiteralMinus Cap = "LITERAL-"      // RFC 7888
 	CapStatusSize   Cap = "STATUS=SIZE"   // RFC 8438
+	CapChildren     Cap = "CHILDREN"      // RFC 3348
 
 	CapACL              Cap = "ACL"                // RFC 4314
 	CapAppendLimit      Cap = "APPENDLIMIT"        // RFC 7889
 	CapBinary           Cap = "BINARY"             // RFC 3516
 	CapCatenate         Cap = "CATENATE"           // RFC 4469
-	CapChildren         Cap = "CHILDREN"           // RFC 3348
 	CapCondStore        Cap = "CONDSTORE"          // RFC 7162
 	CapConvert          Cap = "CONVERT"            // RFC 5259
 	CapCreateSpecialUse Cap = "CREATE-SPECIAL-USE" // RFC 6154
@@ -92,6 +90,7 @@ var imap4rev2Caps = CapSet{
 	CapMove:         {},
 	CapLiteralMinus: {},
 	CapStatusSize:   {},
+	CapChildren:     {},
 }
 
 // AuthCap returns the capability name for an SASL authentication mechanism.
@@ -105,6 +104,14 @@ type CapSet map[Cap]struct{}
 func (set CapSet) has(c Cap) bool {
 	_, ok := set[c]
 	return ok
+}
+
+func (set CapSet) Copy() CapSet {
+	newSet := make(CapSet, len(set))
+	for c := range set {
+		newSet[c] = struct{}{}
+	}
+	return newSet
 }
 
 // Has checks whether a capability is supported.

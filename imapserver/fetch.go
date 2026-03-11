@@ -112,6 +112,10 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		bs := &imap.FetchItemBodySection{}
 		writerOptions.obsolete[bs] = attName
 		options.BodySection = append(options.BodySection, bs)
+	case "RFC822.PEEK": // obsolete, equivalent to BODY.PEEK[], used by Outlook
+		bs := &imap.FetchItemBodySection{Peek: true}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
 	case "RFC822.HEADER": // equivalent to BODY.PEEK[HEADER]
 		bs := &imap.FetchItemBodySection{
 			Specifier: imap.PartSpecifierHeader,
@@ -439,7 +443,7 @@ func (w *FetchResponseWriter) WriteBinarySection(section *imap.FetchItemBinarySe
 }
 
 // WriteBinarySectionSize writes a binary section size.
-func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBinarySection, size uint32) {
+func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBinarySectionSize, size uint32) {
 	w.writeItemSep()
 	enc := w.enc.Encoder
 
@@ -552,7 +556,7 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 }
 
 func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 		return
 	}
@@ -611,9 +615,10 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart,
 	writeNString(enc, bs.Description)
 	enc.SP()
 	if bs.Encoding == "" {
-		enc.String("7BIT")
+		enc.String("7bit")
 	} else {
-		enc.String(strings.ToUpper(bs.Encoding))
+		// Outlook for iOS chokes on upper-case encodings
+		enc.String(strings.ToLower(bs.Encoding))
 	}
 	enc.SP().Number(bs.Size)
 
@@ -646,10 +651,9 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 	if len(bs.Children) == 0 {
 		panic("imapserver: imap.BodyStructureMultiPart must have at least one child")
 	}
-	for i, child := range bs.Children {
-		if i > 0 {
-			enc.SP()
-		}
+	for _, child := range bs.Children {
+		// ABNF for body-type-mpart doesn't have SP between body entries, and
+		// Outlook for iOS chokes on SP
 		writeBodyStructure(enc, child, extended)
 	}
 
@@ -671,7 +675,7 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 }
 
 func writeBodyFldParam(enc *imapwire.Encoder, params map[string]string) {
-	if params == nil {
+	if len(params) == 0 {
 		enc.NIL()
 		return
 	}
@@ -701,7 +705,7 @@ func writeBodyFldDsp(enc *imapwire.Encoder, disp *imap.BodyStructureDisposition)
 }
 
 func writeBodyFldLang(enc *imapwire.Encoder, l []string) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 	} else {
 		enc.List(len(l), func(i int) {

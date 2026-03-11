@@ -58,7 +58,7 @@ type Session interface {
 	Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error)
 	Create(mailbox string, options *imap.CreateOptions) error
 	Delete(mailbox string) error
-	Rename(mailbox, newName string) error
+	Rename(mailbox, newName string, options *imap.RenameOptions) error
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
@@ -113,4 +113,14 @@ type SessionUnauthenticate interface {
 
 	// Authenticated state
 	Unauthenticate() error
+}
+
+// SessionAppendLimit is an IMAP session which has the same APPEND limit for
+// all mailboxes.
+type SessionAppendLimit interface {
+	Session
+
+	// AppendLimit returns the maximum size in bytes that can be uploaded to
+	// this server in an APPEND command.
+	AppendLimit() uint32
 }

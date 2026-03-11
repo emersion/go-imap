@@ -125,6 +125,10 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 }
 
 func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient.Client, io.Closer) {
+	return newClientServerPairWithOptions(t, initialState, nil)
+}
+
+func newClientServerPairWithOptions(t *testing.T, initialState imap.ConnState, options *imapclient.Options) (*imapclient.Client, io.Closer) {
 	var useDovecot bool
 	switch os.Getenv("GOIMAP_TEST_DOVECOT") {
 	case "0", "":
@@ -151,11 +155,13 @@ func newClientServerPair(t *testing.T, initialState imap.ConnState) (*imapclient
 	var debugWriter swapWriter
 	debugWriter.Swap(io.Discard)
 
-	var options imapclient.Options
+	if options == nil {
+		options = &imapclient.Options{}
+	}
 	if testing.Verbose() {
 		options.DebugWriter = &debugWriter
 	}
-	client := imapclient.New(conn, &options)
+	client := imapclient.New(conn, options)
 
 	if initialState >= imap.ConnStateAuthenticated {
 		// Dovecot connections are pre-authenticated

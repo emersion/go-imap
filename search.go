@@ -138,7 +138,6 @@ type SearchData struct {
 	All NumSet
 
 	// requires IMAP4rev2 or ESEARCH
-	UID   bool
 	Min   uint32
 	Max   uint32
 	Count uint32

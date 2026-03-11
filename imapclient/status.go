@@ -37,6 +37,9 @@ func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusComm
 	if options == nil {
 		options = new(imap.StatusOptions)
 	}
+	if options.NumRecent {
+		panic("StatusOptions.NumRecent is not supported in imapclient")
+	}
 
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
@@ -65,6 +68,13 @@ func (c *Client) handleStatus() error {
 			return false
 		}
 	})
+	if cmd == nil {
+		// Unsolicited STATUS response (e.g., from NOTIFY)
+		if handler := c.options.unilateralDataHandler().Status; handler != nil {
+			handler(data)
+		}
+		return nil
+	}
 	switch cmd := cmd.(type) {
 	case *StatusCommand:
 		cmd.data = *data

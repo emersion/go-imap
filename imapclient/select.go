@@ -51,7 +51,7 @@ func (c *Client) handleFlags() error {
 	c.mutex.Lock()
 	if c.state == imap.ConnStateSelected {
 		c.mailbox = c.mailbox.copy()
-		c.mailbox.PermanentFlags = flags
+		c.mailbox.Flags = flags
 	}
 	c.mutex.Unlock()
 

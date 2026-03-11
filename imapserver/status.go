@@ -14,13 +14,10 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 	}
 
 	var options imap.StatusOptions
-	recent := false
 	err := dec.ExpectList(func() error {
-		isRecent, err := readStatusItem(dec, &options)
+		err := readStatusItem(dec, &options)
 		if err != nil {
 			return err
-		} else if isRecent {
-			recent = true
 		}
 		return nil
 	})
@@ -32,6 +29,13 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return dec.Err()
 	}
 
+	if options.NumRecent && !c.server.options.caps().Has(imap.CapIMAP4rev1) {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Text: "Unknown STATUS data item",
+		}
+	}
+
 	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
 		return err
 	}
@@ -41,10 +45,10 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return err
 	}
 
-	return c.writeStatus(data, &options, recent)
+	return c.writeStatus(data, &options)
 }
 
-func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions, recent bool) error {
+func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
@@ -79,18 +83,18 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions, r
 	if options.DeletedStorage {
 		listEnc.Item().Atom("DELETED-STORAGE").SP().Number64(*data.DeletedStorage)
 	}
-	if recent {
-		listEnc.Item().Atom("RECENT").SP().Number(0)
+	if options.NumRecent {
+		listEnc.Item().Atom("RECENT").SP().Number(*data.NumRecent)
 	}
 	listEnc.End()
 
 	return enc.CRLF()
 }
 
-func readStatusItem(dec *imapwire.Decoder, options *imap.StatusOptions) (isRecent bool, err error) {
+func readStatusItem(dec *imapwire.Decoder, options *imap.StatusOptions) error {
 	var name string
 	if !dec.ExpectAtom(&name) {
-		return false, dec.Err()
+		return dec.Err()
 	}
 	switch strings.ToUpper(name) {
 	case "MESSAGES":
@@ -110,12 +114,12 @@ func readStatusItem(dec *imapwire.Decoder, options *imap.StatusOptions) (isRecen
 	case "DELETED-STORAGE":
 		options.DeletedStorage = true
 	case "RECENT":
-		isRecent = true
+		options.NumRecent = true
 	default:
-		return false, &imap.Error{
+		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown STATUS data item",
 		}
 	}
-	return isRecent, nil
+	return nil
 }
