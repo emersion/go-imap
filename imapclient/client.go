@@ -154,16 +154,15 @@ type Client struct {
 	decCh  chan struct{}
 	decErr error
 
-	mutex        sync.Mutex
-	state        imap.ConnState
-	caps         imap.CapSet
-	enabled      imap.CapSet
-	pendingCapCh chan struct{}
-	mailbox      *SelectedMailbox
-	cmdTag       uint64
-	pendingCmds  []command
-	contReqs     []continuationRequest
-	closed       bool
+	mutex       sync.Mutex
+	state       imap.ConnState
+	caps        imap.CapSet
+	enabled     imap.CapSet
+	mailbox     *SelectedMailbox
+	cmdTag      uint64
+	pendingCmds []command
+	contReqs    []continuationRequest
+	closed      bool
 }
 
 // New creates a new IMAP client.
@@ -319,58 +318,35 @@ func (c *Client) Caps() imap.CapSet {
 
 	c.mutex.Lock()
 	caps := c.caps
-	capCh := c.pendingCapCh
 	c.mutex.Unlock()
 
 	if caps != nil {
 		return caps
 	}
 
-	if capCh == nil {
-		capCmd := c.Capability()
-		capCh := make(chan struct{})
-		go func() {
-			capCmd.Wait()
-			close(capCh)
-		}()
-		c.mutex.Lock()
-		c.pendingCapCh = capCh
-		c.mutex.Unlock()
-	}
-
-	timer := time.NewTimer(respReadTimeout)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
+	capCmd := c.Capability()
+	caps, err := capCmd.Wait()
+	if err != nil {
 		return nil
-	case <-capCh:
-		// ok
 	}
-
-	// TODO: this is racy if caps are reset before we get the reply
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.caps
+	return caps
 }
 
 func (c *Client) setCaps(caps imap.CapSet) {
 	// If the capabilities are being reset, request the updated capabilities
 	// from the server
-	var capCh chan struct{}
 	if caps == nil {
-		capCh = make(chan struct{})
-
 		// We need to send the CAPABILITY command in a separate goroutine:
 		// setCaps might be called with Client.encMutex locked
 		go func() {
 			c.Capability().Wait()
-			close(capCh)
 		}()
 	}
 
 	c.mutex.Lock()
 	c.caps = caps
-	c.pendingCapCh = capCh
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	c.dec.QuotedUTF8 = quotedUTF8
 	c.mutex.Unlock()
 }
 
@@ -986,6 +962,11 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleFetch(num)
 	case "EXPUNGE":
 		return c.handleExpunge(num)
+	case "VANISHED":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		return c.handleVanished()
 	case "SEARCH":
 		return c.handleSearch()
 	case "ESEARCH":
@@ -1021,6 +1002,28 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleGetACL()
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
+	}
+
+	return nil
+}
+
+func (c *Client) handleVanished() error {
+	var data imap.VanishedData
+	isParen := c.dec.Special('(')
+	if isParen {
+		var tag string
+		if !c.dec.ExpectAtom(&tag) || !c.dec.ExpectSpecial(')') {
+			return c.dec.Err()
+		}
+		data.Earlier = strings.ToUpper(tag) == "EARLIER"
+	}
+
+	if !c.dec.ExpectSP() || !c.dec.ExpectUIDSet(&data.UIDs) {
+		return c.dec.Err()
+	}
+
+	if handler := c.options.unilateralDataHandler().Vanished; handler != nil {
+		handler(&data)
 	}
 
 	return nil
@@ -1201,6 +1204,9 @@ type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
+
+	// requires ENABLE QRESYNC
+	Vanished func(data *imap.VanishedData)
 
 	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)

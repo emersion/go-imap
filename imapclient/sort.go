@@ -39,7 +39,7 @@ func (c *Client) sort(numKind imapwire.NumKind, options *SortOptions) *SortComma
 		enc.Atom(string(criterion.Key))
 	})
 	enc.SP().Atom("UTF-8").SP()
-	writeSearchKey(enc.Encoder, options.SearchCriteria)
+	writeSearchKey(enc.Encoder, options.SearchCriteria, c.Caps().Has(imap.CapCondStore))
 	enc.end()
 	return cmd
 }

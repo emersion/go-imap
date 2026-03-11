@@ -18,21 +18,29 @@ type Mailbox struct {
 	tracker     *imapserver.MailboxTracker
 	uidValidity uint32
 
-	mutex      sync.Mutex
-	name       string
-	subscribed bool
-	specialUse []imap.MailboxAttr
-	l          []*message
-	uidNext    imap.UID
+	mutex         sync.Mutex
+	name          string
+	subscribed    bool
+	specialUse    []imap.MailboxAttr
+	l             []*message
+	uidNext       imap.UID
+	highestModSeq uint64
+	expunged      []expungedMessage
+}
+
+type expungedMessage struct {
+	uid    imap.UID
+	modSeq uint64
 }
 
 // NewMailbox creates a new mailbox.
 func NewMailbox(name string, uidValidity uint32) *Mailbox {
 	return &Mailbox{
-		tracker:     imapserver.NewMailboxTracker(0),
-		uidValidity: uidValidity,
-		name:        name,
-		uidNext:     1,
+		tracker:       imapserver.NewMailboxTracker(0),
+		uidValidity:   uidValidity,
+		name:          name,
+		uidNext:       1,
+		highestModSeq: 1,
 	}
 }
 
@@ -93,6 +101,9 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 	if options.Size {
 		size := mbox.sizeLocked()
 		data.Size = &size
+	}
+	if options.HighestModSeq {
+		data.HighestModSeq = mbox.highestModSeq
 	}
 	if options.NumRecent {
 		num := uint32(0)
@@ -156,6 +167,9 @@ func (mbox *Mailbox) appendBytes(buf []byte, options *imap.AppendOptions) *imap.
 	msg.uid = mbox.uidNext
 	mbox.uidNext++
 
+	mbox.highestModSeq++
+	msg.modSeq = mbox.highestModSeq
+
 	mbox.l = append(mbox.l, msg)
 	mbox.tracker.QueueNumMessages(uint32(len(mbox.l)))
 
@@ -196,6 +210,7 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 		FirstUnseenSeqNum: firstUnseenSeqNum,
 		UIDNext:           mbox.uidNext,
 		UIDValidity:       mbox.uidValidity,
+		HighestModSeq:     mbox.highestModSeq,
 	}
 }
 
@@ -254,29 +269,23 @@ func (mbox *Mailbox) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) err
 }
 
 func (mbox *Mailbox) expungeLocked(expunged map[*message]struct{}) (seqNums []uint32) {
-	// TODO: optimize
+	mbox.highestModSeq++
+	expungeModSeq := mbox.highestModSeq
 
-	// Iterate in reverse order, to keep sequence numbers consistent
-	var filtered []*message
-	for i := len(mbox.l) - 1; i >= 0; i-- {
+	n := 0
+	for i := 0; i < len(mbox.l); i++ {
 		msg := mbox.l[i]
 		if _, ok := expunged[msg]; ok {
 			seqNum := uint32(i) + 1
 			seqNums = append(seqNums, seqNum)
 			mbox.tracker.QueueExpunge(seqNum)
+			mbox.expunged = append(mbox.expunged, expungedMessage{uid: msg.uid, modSeq: expungeModSeq})
 		} else {
-			filtered = append(filtered, msg)
+			mbox.l[n] = msg
+			n++
 		}
 	}
-
-	// Reverse filtered
-	for i := 0; i < len(filtered)/2; i++ {
-		j := len(filtered) - i - 1
-		filtered[i], filtered[j] = filtered[j], filtered[i]
-	}
-
-	mbox.l = filtered
-
+	mbox.l = mbox.l[:n]
 	return seqNums
 }
 
@@ -309,6 +318,42 @@ func (mbox *MailboxView) Close() {
 	mbox.tracker.Close()
 }
 
+func (mbox *MailboxView) selectData(options *imap.SelectOptions) (*imap.SelectData, error) {
+	mbox.mutex.Lock()
+	defer mbox.mutex.Unlock()
+
+	data := mbox.selectDataLocked()
+
+	if options.QResync != nil && mbox.uidValidity == options.QResync.UIDValidity {
+		var vanished imap.UIDSet
+		for _, expunged := range mbox.expunged {
+			if expunged.modSeq > options.QResync.ModSeq {
+				vanished.AddNum(expunged.uid)
+			}
+		}
+		data.Vanished = vanished
+
+		var modified []imap.SelectModifiedData
+		for i, msg := range mbox.l {
+			if msg.modSeq > options.QResync.ModSeq {
+				seqNum := mbox.tracker.EncodeSeqNum(uint32(i + 1))
+				if seqNum == 0 {
+					continue // message has been expunged in this session
+				}
+				modified = append(modified, imap.SelectModifiedData{
+					SeqNum: seqNum,
+					UID:    msg.uid,
+					Flags:  msg.flagList(),
+					ModSeq: msg.modSeq,
+				})
+			}
+		}
+		data.Modified = modified
+	}
+
+	return data, nil
+}
+
 func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error {
 	markSeen := false
 	for _, bs := range options.BodySection {
@@ -321,6 +366,10 @@ func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, op
 	var err error
 	mbox.forEach(numSet, func(seqNum uint32, msg *message) {
 		if err != nil {
+			return
+		}
+
+		if options.ChangedSince > 0 && msg.modSeq <= options.ChangedSince {
 			return
 		}
 
@@ -383,6 +432,7 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 		data.All = uidSet
 	}
 
+	data.ModSeq = mbox.highestModSeq
 	if options.ReturnSave {
 		mbox.searchRes = uidSet
 	}
@@ -417,14 +467,50 @@ func (mbox *MailboxView) staticSearchCriteria(criteria *imap.SearchCriteria) {
 	}
 }
 
+type modifiedMessageData struct {
+	seqNum uint32
+	uid    imap.UID
+	flags  []imap.Flag
+	modSeq uint64
+}
+
+func writeStoreFetchResponse(w *imapserver.FetchWriter, tracker *imapserver.SessionTracker, mod modifiedMessageData) error {
+	respWriter := w.CreateMessage(tracker.EncodeSeqNum(mod.seqNum))
+	respWriter.WriteUID(mod.uid)
+	respWriter.WriteFlags(mod.flags)
+	respWriter.WriteModSeq(mod.modSeq)
+	return respWriter.Close()
+}
+
 func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
+	var modified []modifiedMessageData
 	mbox.forEach(numSet, func(seqNum uint32, msg *message) {
-		msg.store(flags)
-		mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
+		if options != nil && options.UnchangedSince > 0 && msg.modSeq > options.UnchangedSince {
+			return
+		}
+
+		if changed := msg.store(mbox.Mailbox, flags); changed {
+			mbox.Mailbox.tracker.QueueMessageFlags(seqNum, msg.uid, msg.flagList(), mbox.tracker)
+
+			if !flags.Silent {
+				modified = append(modified, modifiedMessageData{
+					seqNum: seqNum,
+					uid:    msg.uid,
+					flags:  msg.flagList(),
+					modSeq: msg.modSeq,
+				})
+			}
+		}
 	})
+
 	if !flags.Silent {
-		return mbox.Fetch(w, numSet, &imap.FetchOptions{Flags: true})
+		for _, mod := range modified {
+			if err := writeStoreFetchResponse(w, mbox.tracker, mod); err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
 }
 

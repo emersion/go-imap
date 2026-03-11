@@ -17,7 +17,7 @@ func (c *Client) thread(numKind imapwire.NumKind, options *ThreadOptions) *Threa
 	cmd := &ThreadCommand{}
 	enc := c.beginCommand(uidCmdName("THREAD", numKind), cmd)
 	enc.SP().Atom(string(options.Algorithm)).SP().Atom("UTF-8").SP()
-	writeSearchKey(enc.Encoder, options.SearchCriteria)
+	writeSearchKey(enc.Encoder, options.SearchCriteria, c.Caps().Has(imap.CapCondStore))
 	enc.end()
 	return cmd
 }

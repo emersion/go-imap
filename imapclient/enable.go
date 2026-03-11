@@ -14,7 +14,7 @@ func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
 	// extensions we support here
 	for _, name := range caps {
 		switch name {
-		case imap.CapIMAP4rev2, imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer:
+		case imap.CapIMAP4rev2, imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer, imap.CapQResync, imap.CapCondStore:
 			// ok
 		default:
 			done := make(chan error)
@@ -43,6 +43,9 @@ func (c *Client) handleEnabled() error {
 	for name := range caps {
 		c.enabled[name] = struct{}{}
 	}
+
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	c.dec.QuotedUTF8 = quotedUTF8
 	c.mutex.Unlock()
 
 	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {

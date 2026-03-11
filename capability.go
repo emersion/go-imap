@@ -130,7 +130,13 @@ func (set CapSet) Has(c Cap) bool {
 	if c == CapLiteralMinus && set.has(CapLiteralPlus) {
 		return true
 	}
-	if c == CapCondStore && set.has(CapQResync) {
+
+	// IMAP4rev2 implies QRESYNC, which in turn implies CONDSTORE.
+	isQResync := set.has(CapQResync) || set.has(CapIMAP4rev2)
+	if c == CapQResync && isQResync {
+		return true
+	}
+	if c == CapCondStore && isQResync {
 		return true
 	}
 	if c == CapUTF8Accept && set.has(CapUTF8Only) {
