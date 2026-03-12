@@ -40,11 +40,11 @@ func (c *Conn) handleThread(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	if !dec.ExpectAtom(&charset) || !dec.ExpectSP() {
 		return dec.Err()
 	}
-	if !strings.EqualFold(charset, "UTF-8") {
+	if !strings.EqualFold(charset, "UTF-8") && !strings.EqualFold(charset, "US-ASCII") {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
 			Code: imap.ResponseCodeBadCharset,
-			Text: "Only UTF-8 is supported for THREAD",
+			Text: "Only UTF-8 and US-ASCII are supported for THREAD",
 		}
 	}
 

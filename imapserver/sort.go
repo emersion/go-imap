@@ -127,11 +127,11 @@ func (c *Conn) handleSort(tag string, dec *imapwire.Decoder, numKind NumKind) er
 	if !dec.ExpectAtom(&charset) || !dec.ExpectSP() {
 		return dec.Err()
 	}
-	if !strings.EqualFold(charset, "UTF-8") {
+	if !strings.EqualFold(charset, "UTF-8") && !strings.EqualFold(charset, "US-ASCII") {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
 			Code: imap.ResponseCodeBadCharset,
-			Text: "Only UTF-8 is supported for SORT",
+			Text: "Only UTF-8 and US-ASCII are supported for SORT",
 		}
 	}
 
@@ -220,13 +220,16 @@ func (c *Conn) writeSortResponse(tag string, numKind NumKind, data *SortData, re
 		enc.end()
 	}
 
-	// A SORT response is always sent, either for a regular SORT, or following
-	// an ESEARCH response for an ESORT.
-	enc := newResponseEncoder(c)
-	defer enc.end()
-	enc.Atom("*").SP().Atom("SORT")
-	for _, num := range data.Nums {
-		enc.SP().Number(num)
+	// Only send the legacy SORT response for regular SORT (not ESORT with partial return options).
+	if returnOpts.All || !c.server.options.caps().Has(imap.CapESort) {
+		enc := newResponseEncoder(c)
+		defer enc.end()
+		enc.Atom("*").SP().Atom("SORT")
+		for _, num := range data.Nums {
+			enc.SP().Number(num)
+		}
+		return enc.CRLF()
 	}
-	return enc.CRLF()
+
+	return nil
 }
