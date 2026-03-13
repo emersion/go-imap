@@ -140,10 +140,11 @@ func (options *Options) dialer() *net.Dialer {
 // pipelining (see above). Additionally, some commands (e.g. StartTLS,
 // Authenticate, Idle) block the client during their execution.
 type Client struct {
-	conn     net.Conn
-	options  Options
-	br       *bufio.Reader
-	bw       *bufio.Writer
+	conn    net.Conn
+	tlsConn *tls.Conn
+	options Options
+	br      *bufio.Reader
+	bw      *bufio.Writer
 	dec      *imapwire.Decoder
 	encMutex sync.Mutex
 
@@ -630,10 +631,11 @@ func (c *Client) readResponse() error {
 		token    string
 		err      error
 		startTLS *startTLSCommand
+		compress *compressCommand
 	)
 	if tag != "" {
 		token = "response-tagged"
-		startTLS, err = c.readResponseTagged(tag, typ)
+		startTLS, compress, err = c.readResponseTagged(tag, typ)
 	} else {
 		token = "response-data"
 		err = c.readResponseData(typ)
@@ -648,6 +650,9 @@ func (c *Client) readResponse() error {
 
 	if startTLS != nil {
 		c.upgradeStartTLS(startTLS)
+	}
+	if compress != nil {
+		c.upgradeCompress(compress)
 	}
 
 	return nil
@@ -678,10 +683,10 @@ func (c *Client) readContinueReq() error {
 	return nil
 }
 
-func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand, err error) {
+func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand, compress *compressCommand, err error) {
 	cmd := c.deletePendingCmdByTag(tag)
 	if cmd == nil {
-		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
+		return nil, nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
 
 	// We've removed the command from the pending queue above. Make sure we
@@ -699,14 +704,14 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 	var code string
 	if hasSP && c.dec.Special('[') { // resp-text-code
 		if !c.dec.ExpectAtom(&code) {
-			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
+			return nil, nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
 		// TODO: LONGENTRIES and MAXSIZE from METADATA
 		switch code {
 		case "CAPABILITY": // capability-data
 			caps, err := readCapabilities(c.dec)
 			if err != nil {
-				return nil, fmt.Errorf("in capability-data: %v", err)
+				return nil, nil, fmt.Errorf("in capability-data: %v", err)
 			}
 			c.setCaps(caps)
 		case "APPENDUID":
@@ -715,7 +720,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				uid         imap.UID
 			)
 			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUID(&uid) {
-				return nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
+				return nil, nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
 			}
 			if cmd, ok := cmd.(*AppendCommand); ok {
 				cmd.data.UID = uid
@@ -723,11 +728,11 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			}
 		case "COPYUID":
 			if !c.dec.ExpectSP() {
-				return nil, c.dec.Err()
+				return nil, nil, c.dec.Err()
 			}
 			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 			if err != nil {
-				return nil, fmt.Errorf("in resp-code-copy: %v", err)
+				return nil, nil, fmt.Errorf("in resp-code-copy: %v", err)
 			}
 			switch cmd := cmd.(type) {
 			case *CopyCommand:
@@ -747,13 +752,13 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			}
 		}
 		if !c.dec.ExpectSpecial(']') {
-			return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
+			return nil, nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 		hasSP = c.dec.SP()
 	}
 	var text string
 	if hasSP && !c.dec.ExpectText(&text) {
-		return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
+		return nil, nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 	}
 
 	var cmdErr error
@@ -767,13 +772,16 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			Text: text,
 		}
 	default:
-		return nil, fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
+		return nil, nil, fmt.Errorf("in resp-cond-state: expected OK, NO or BAD status condition, but got %v", typ)
 	}
 
 	c.completeCommand(cmd, cmdErr)
 
 	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
 		startTLS = cmd
+	}
+	if cmd, ok := cmd.(*compressCommand); ok && cmdErr == nil {
+		compress = cmd
 	}
 
 	if cmdErr == nil && code != "CAPABILITY" {
@@ -784,7 +792,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 		}
 	}
 
-	return startTLS, nil
+	return startTLS, compress, nil
 }
 
 func (c *Client) readResponseData(typ string) error {

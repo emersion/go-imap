@@ -63,6 +63,7 @@ func (c *Client) upgradeStartTLS(startTLS *startTLSCommand) {
 	c.bw = bufio.NewWriter(rw)
 
 	startTLS.tlsConn = tlsConn
+	c.tlsConn = tlsConn
 }
 
 type startTLSCommand struct {

@@ -40,9 +40,10 @@ type Conn struct {
 	bw       *bufio.Writer
 	encMutex sync.Mutex
 
-	mutex   sync.Mutex
-	conn    net.Conn
-	enabled imap.CapSet
+	mutex      sync.Mutex
+	conn       net.Conn
+	enabled    imap.CapSet
+	compressed bool
 
 	state   imap.ConnState
 	session Session
@@ -245,6 +246,9 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		sendOK = false
 	case "STARTTLS":
 		err = c.handleStartTLS(tag, dec)
+		sendOK = false
+	case "COMPRESS":
+		err = c.handleCompress(tag, dec)
 		sendOK = false
 	case "AUTHENTICATE":
 		err = c.handleAuthenticate(tag, dec)
