@@ -54,7 +54,7 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 
 	enc.Atom("*").SP().Atom("STATUS").SP().Mailbox(data.Mailbox).SP()
 	listEnc := enc.BeginList()
-	if options.NumMessages {
+	if options.NumMessages && data.NumMessages != nil {
 		listEnc.Item().Atom("MESSAGES").SP().Number(*data.NumMessages)
 	}
 	if options.UIDNext {
@@ -63,13 +63,13 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 	if options.UIDValidity {
 		listEnc.Item().Atom("UIDVALIDITY").SP().Number(data.UIDValidity)
 	}
-	if options.NumUnseen {
+	if options.NumUnseen && data.NumUnseen != nil {
 		listEnc.Item().Atom("UNSEEN").SP().Number(*data.NumUnseen)
 	}
-	if options.NumDeleted {
+	if options.NumDeleted && data.NumDeleted != nil {
 		listEnc.Item().Atom("DELETED").SP().Number(*data.NumDeleted)
 	}
-	if options.Size {
+	if options.Size && data.Size != nil {
 		listEnc.Item().Atom("SIZE").SP().Number64(*data.Size)
 	}
 	if options.AppendLimit {
@@ -80,10 +80,10 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 			enc.NIL()
 		}
 	}
-	if options.DeletedStorage {
+	if options.DeletedStorage && data.DeletedStorage != nil {
 		listEnc.Item().Atom("DELETED-STORAGE").SP().Number64(*data.DeletedStorage)
 	}
-	if options.NumRecent {
+	if options.NumRecent && data.NumRecent != nil {
 		listEnc.Item().Atom("RECENT").SP().Number(*data.NumRecent)
 	}
 	listEnc.End()
