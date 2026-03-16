@@ -16,7 +16,7 @@ func ExampleClient() {
 	log.Println("Connecting to server...")
 
 	// Connect to server
-	c, err := client.DialTLS("mail.example.org:993", nil)
+	c, err := client.DialTLS("mail.example.org:993", nil, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func ExampleClient_StartTLS() {
 	log.Println("Connecting to server...")
 
 	// Connect to server
-	c, err := client.Dial("mail.example.org:143")
+	c, err := client.Dial("mail.example.org:143", 0)
 	if err != nil {
 		log.Fatal(err)
 	}

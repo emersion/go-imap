@@ -580,10 +580,11 @@ func (c *Client) SetDebug(w io.Writer) {
 }
 
 // New creates a new client from an existing connection.
-func New(conn net.Conn) (*Client, error) {
+func New(conn net.Conn, maxLiteralSize uint32) (*Client, error) {
 	continues := make(chan bool)
 	w := imap.NewClientWriter(nil, continues)
 	r := imap.NewReader(nil)
+	r.MaxLiteralSize = maxLiteralSize
 
 	c := &Client{
 		conn:      imap.NewConn(conn, r, w),
@@ -609,8 +610,8 @@ func New(conn net.Conn) (*Client, error) {
 }
 
 // Dial connects to an IMAP server using an unencrypted connection.
-func Dial(addr string) (*Client, error) {
-	return DialWithDialer(new(net.Dialer), addr)
+func Dial(addr string, maxLiteralSize uint32) (*Client, error) {
+	return DialWithDialer(new(net.Dialer), addr, maxLiteralSize)
 }
 
 type Dialer interface {
@@ -622,7 +623,7 @@ type Dialer interface {
 // using dialer.Dial.
 //
 // Among other uses, this allows to apply a dial timeout.
-func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
+func DialWithDialer(dialer Dialer, addr string, maxLiteralSize uint32) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -639,7 +640,7 @@ func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
 		}
 	}
 
-	c, err := New(conn)
+	c, err := New(conn, maxLiteralSize)
 	if err != nil {
 		return nil, err
 	}
@@ -649,15 +650,15 @@ func DialWithDialer(dialer Dialer, addr string) (*Client, error) {
 }
 
 // DialTLS connects to an IMAP server using an encrypted connection.
-func DialTLS(addr string, tlsConfig *tls.Config) (*Client, error) {
-	return DialWithDialerTLS(new(net.Dialer), addr, tlsConfig)
+func DialTLS(addr string, tlsConfig *tls.Config, maxLiteralSize uint32) (*Client, error) {
+	return DialWithDialerTLS(new(net.Dialer), addr, tlsConfig, maxLiteralSize)
 }
 
 // DialWithDialerTLS connects to an IMAP server using an encrypted connection
 // using dialer.Dial.
 //
 // Among other uses, this allows to apply a dial timeout.
-func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Client, error) {
+func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config, maxLiteralSize uint32) (*Client, error) {
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -684,7 +685,7 @@ func DialWithDialerTLS(dialer Dialer, addr string, tlsConfig *tls.Config) (*Clie
 		}
 	}
 
-	c, err := New(tlsConn)
+	c, err := New(tlsConn, maxLiteralSize)
 	if err != nil {
 		return nil, err
 	}

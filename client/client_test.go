@@ -73,7 +73,7 @@ func newTestClientWithGreeting(t *testing.T, greeting string) (c *Client, s *ser
 		close(done)
 	}()
 
-	c, err = Dial(l.Addr().String())
+	c, err = Dial(l.Addr().String(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
