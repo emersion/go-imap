@@ -1,11 +1,20 @@
 package imapserver
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
+
+type MissingFieldDataError struct {
+	Field string
+}
+
+func (e *MissingFieldDataError) Error() string {
+	return fmt.Sprintf("requested field %q missing data", e.Field)
+}
 
 func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 	var mailbox string
@@ -54,7 +63,11 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 
 	enc.Atom("*").SP().Atom("STATUS").SP().Mailbox(data.Mailbox).SP()
 	listEnc := enc.BeginList()
-	if options.NumMessages && data.NumMessages != nil {
+	if options.NumMessages {
+		if data.NumMessages == nil {
+			return &MissingFieldDataError{Field: "NumMessages"}
+		}
+
 		listEnc.Item().Atom("MESSAGES").SP().Number(*data.NumMessages)
 	}
 	if options.UIDNext {
@@ -63,13 +76,25 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 	if options.UIDValidity {
 		listEnc.Item().Atom("UIDVALIDITY").SP().Number(data.UIDValidity)
 	}
-	if options.NumUnseen && data.NumUnseen != nil {
+	if options.NumUnseen {
+		if data.NumUnseen == nil {
+			return &MissingFieldDataError{Field: "NumUnseen"}
+		}
+
 		listEnc.Item().Atom("UNSEEN").SP().Number(*data.NumUnseen)
 	}
-	if options.NumDeleted && data.NumDeleted != nil {
+	if options.NumDeleted {
+		if data.NumDeleted == nil {
+			return &MissingFieldDataError{Field: "NumDeleted"}
+		}
+
 		listEnc.Item().Atom("DELETED").SP().Number(*data.NumDeleted)
 	}
-	if options.Size && data.Size != nil {
+	if options.Size {
+		if data.Size == nil {
+			return &MissingFieldDataError{Field: "Size"}
+		}
+
 		listEnc.Item().Atom("SIZE").SP().Number64(*data.Size)
 	}
 	if options.AppendLimit {
@@ -80,10 +105,18 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 			enc.NIL()
 		}
 	}
-	if options.DeletedStorage && data.DeletedStorage != nil {
+	if options.DeletedStorage {
+		if data.DeletedStorage == nil {
+			return &MissingFieldDataError{Field: "DeletedStorage"}
+		}
+
 		listEnc.Item().Atom("DELETED-STORAGE").SP().Number64(*data.DeletedStorage)
 	}
-	if options.NumRecent && data.NumRecent != nil {
+	if options.NumRecent {
+		if data.NumRecent == nil {
+			return &MissingFieldDataError{Field: "NumRecent"}
+		}
+
 		listEnc.Item().Atom("RECENT").SP().Number(*data.NumRecent)
 	}
 	listEnc.End()
