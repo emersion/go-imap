@@ -23,6 +23,8 @@ const (
 
 	respWriteTimeout    = 30 * time.Second
 	literalWriteTimeout = 5 * time.Minute
+
+	maxCommandSize = 50 * 1024 // RFC 2683 section 3.2.1.5 says 8KiB minimum
 )
 
 var internalServerErrorResp = &imap.StatusResponse{
@@ -83,6 +85,13 @@ func (c *Conn) Bye(text string) error {
 	return closeErr
 }
 
+func (c *Conn) EnabledCaps() imap.CapSet {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.enabled.Copy()
+}
+
 func (c *Conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
@@ -141,6 +150,9 @@ func (c *Conn) serve() {
 	if _, ok := c.session.(SessionMove); !ok && caps.Has(imap.CapMove) {
 		panic("imapserver: server advertises MOVE but session doesn't support it")
 	}
+	if _, ok := c.session.(SessionUnauthenticate); !ok && caps.Has(imap.CapUnauthenticate) {
+		panic("imapserver: server advertises UNAUTHENTICATE but session doesn't support it")
+	}
 
 	c.state = imap.ConnStateNotAuthenticated
 	statusType := imap.StatusResponseTypeOK
@@ -164,6 +176,7 @@ func (c *Conn) serve() {
 		c.setReadTimeout(readTimeout)
 
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
+		dec.MaxSize = maxCommandSize
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
 
 		if c.state == imap.ConnStateLogout || dec.EOF() {
@@ -181,6 +194,10 @@ func (c *Conn) serve() {
 }
 
 func (c *Conn) readCommand(dec *imapwire.Decoder) error {
+	if dec.CRLF() {
+		return nil // allow empty newlines
+	}
+
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
 		return fmt.Errorf("in command: %w", dec.Err())
@@ -213,6 +230,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "AUTHENTICATE":
 		err = c.handleAuthenticate(tag, dec)
 		sendOK = false
+	case "UNAUTHENTICATE":
+		err = c.handleUnauthenticate(dec)
 	case "LOGIN":
 		err = c.handleLogin(tag, dec)
 		sendOK = false
@@ -347,7 +366,8 @@ func (c *Conn) handleRename(dec *imapwire.Decoder) error {
 	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
 		return err
 	}
-	return c.session.Rename(oldName, newName)
+	var options imap.RenameOptions
+	return c.session.Rename(oldName, newName, &options)
 }
 
 func (c *Conn) handleSubscribe(dec *imapwire.Decoder) error {
@@ -476,7 +496,7 @@ type responseEncoder struct {
 
 func newResponseEncoder(conn *Conn) *responseEncoder {
 	conn.mutex.Lock()
-	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2)
+	quotedUTF8 := conn.enabled.Has(imap.CapIMAP4rev2) || conn.enabled.Has(imap.CapUTF8Accept)
 	conn.mutex.Unlock()
 
 	wireEnc := imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer)
@@ -577,13 +597,21 @@ func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	return w.conn.writeExists(n)
 }
 
+// WriteNumRecent writes an RECENT response (not used in IMAP4rev2, will be ignored).
+func (w *UpdateWriter) WriteNumRecent(n uint32) error {
+	if w.conn.enabled.Has(imap.CapIMAP4rev2) || !w.conn.server.options.caps().Has(imap.CapIMAP4rev1) {
+		return nil
+	}
+	return w.conn.writeObsoleteRecent(n)
+}
+
 // WriteMailboxFlags writes a FLAGS response.
 func (w *UpdateWriter) WriteMailboxFlags(flags []imap.Flag) error {
 	return w.conn.writeFlags(flags)
 }
 
 // WriteMessageFlags writes a FETCH response with FLAGS.
-func (w *UpdateWriter) WriteMessageFlags(seqNum, uid uint32, flags []imap.Flag) error {
+func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag) error {
 	fetchWriter := &FetchWriter{conn: w.conn}
 	respWriter := fetchWriter.CreateMessage(seqNum)
 	if uid != 0 {

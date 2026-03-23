@@ -2,40 +2,38 @@ package utf7
 
 import (
 	"errors"
+	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
-
-	"golang.org/x/text/transform"
 )
 
-// ErrInvalidUTF7 means that a transformer encountered invalid UTF-7.
+// ErrInvalidUTF7 means that a decoder encountered invalid UTF-7.
 var ErrInvalidUTF7 = errors.New("utf7: invalid UTF-7")
 
-type decoder struct {
-	ascii bool
-}
+// Decode decodes a string encoded with modified UTF-7.
+//
+// Note, raw UTF-8 is accepted.
+func Decode(src string) (string, error) {
+	if !utf8.ValidString(src) {
+		return "", errors.New("invalid UTF-8")
+	}
 
-func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	var sb strings.Builder
+	sb.Grow(len(src))
+
+	ascii := true
 	for i := 0; i < len(src); i++ {
 		ch := src[i]
 
-		if ch < min || ch > max { // Illegal code point in ASCII mode
-			err = ErrInvalidUTF7
-			return
+		if ch < min || (ch > max && ch < utf8.RuneSelf) {
+			// Illegal code point in ASCII mode. Note, UTF-8 codepoints are
+			// always allowed.
+			return "", ErrInvalidUTF7
 		}
 
 		if ch != '&' {
-			if nDst+1 > len(dst) {
-				err = transform.ErrShortDst
-				return
-			}
-
-			nSrc++
-
-			dst[nDst] = ch
-			nDst++
-
-			d.ascii = true
+			sb.WriteByte(ch)
+			ascii = true
 			continue
 		}
 
@@ -43,62 +41,33 @@ func (d *decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err er
 		start := i + 1
 		for i++; i < len(src) && src[i] != '-'; i++ {
 			if src[i] == '\r' || src[i] == '\n' { // base64 package ignores CR and LF
-				err = ErrInvalidUTF7
-				return
+				return "", ErrInvalidUTF7
 			}
 		}
 
 		if i == len(src) { // Implicit shift ("&...")
-			if atEOF {
-				err = ErrInvalidUTF7
-			} else {
-				err = transform.ErrShortSrc
-			}
-			return
+			return "", ErrInvalidUTF7
 		}
 
-		var b []byte
 		if i == start { // Escape sequence "&-"
-			b = []byte{'&'}
-			d.ascii = true
+			sb.WriteByte('&')
+			ascii = true
 		} else { // Control or non-ASCII code points in base64
-			if !d.ascii { // Null shift ("&...-&...-")
-				err = ErrInvalidUTF7
-				return
+			if !ascii { // Null shift ("&...-&...-")
+				return "", ErrInvalidUTF7
 			}
 
-			b = decode(src[start:i])
-			d.ascii = false
-		}
+			b := decode([]byte(src[start:i]))
+			if len(b) == 0 { // Bad encoding
+				return "", ErrInvalidUTF7
+			}
+			sb.Write(b)
 
-		if len(b) == 0 { // Bad encoding
-			err = ErrInvalidUTF7
-			return
-		}
-
-		if nDst+len(b) > len(dst) {
-			d.ascii = true
-			err = transform.ErrShortDst
-			return
-		}
-
-		nSrc = i + 1
-
-		for _, ch := range b {
-			dst[nDst] = ch
-			nDst++
+			ascii = false
 		}
 	}
 
-	if atEOF {
-		d.ascii = true
-	}
-
-	return
-}
-
-func (d *decoder) Reset() {
-	d.ascii = true
+	return sb.String(), nil
 }
 
 // Extracts UTF-16-BE bytes from base64 data and converts them to UTF-8.
@@ -137,7 +106,7 @@ func decode(b64 []byte) []byte {
 				return nil
 			}
 			r2 := rune(b[i])<<8 | rune(b[i+1])
-			if r = utf16.DecodeRune(r, r2); r == repl {
+			if r = utf16.DecodeRune(r, r2); r == utf8.RuneError {
 				return nil
 			}
 		} else if min <= r && r <= max {

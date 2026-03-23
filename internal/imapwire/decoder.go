@@ -9,8 +9,12 @@ import (
 	"unicode"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapnum"
 	"github.com/emersion/go-imap/v2/internal/utf7"
 )
+
+// This limits the max list nesting depth to prevent stack overflow.
+const maxListDepth = 1000
 
 // IsAtomChar returns true if ch is an ATOM-CHAR.
 func IsAtomChar(ch byte) bool {
@@ -20,6 +24,11 @@ func IsAtomChar(ch byte) bool {
 	default:
 		return !unicode.IsControl(rune(ch))
 	}
+}
+
+// Is non-empty char
+func isAStringChar(ch byte) bool {
+	return IsAtomChar(ch) || ch == ']'
 }
 
 // DecoderExpectError is an error due to the Decoder.Expect family of methods.
@@ -43,12 +52,17 @@ type Decoder struct {
 	// CheckBufferedLiteralFunc is called when a literal is about to be decoded
 	// and needs to be fully buffered in memory.
 	CheckBufferedLiteralFunc func(size int64, nonSync bool) error
+	// MaxSize defines a maximum number of bytes to be read from the input.
+	// Literals are ignored.
+	MaxSize int64
 
-	r       *bufio.Reader
-	side    ConnSide
-	err     error
-	literal bool
-	crlf    bool
+	r         *bufio.Reader
+	side      ConnSide
+	err       error
+	literal   bool
+	crlf      bool
+	listDepth int
+	readBytes int64
 }
 
 // NewDecoder creates a new decoder.
@@ -60,6 +74,7 @@ func (dec *Decoder) mustUnreadByte() {
 	if err := dec.r.UnreadByte(); err != nil {
 		panic(fmt.Errorf("imapwire: failed to unread byte: %v", err))
 	}
+	dec.readBytes--
 }
 
 // Err returns the decoder error, if any.
@@ -78,6 +93,9 @@ func (dec *Decoder) returnErr(err error) bool {
 }
 
 func (dec *Decoder) readByte() (byte, bool) {
+	if dec.MaxSize > 0 && dec.readBytes > dec.MaxSize {
+		return 0, dec.returnErr(fmt.Errorf("imapwire: max size exceeded"))
+	}
 	dec.crlf = false
 	if dec.literal {
 		return 0, dec.returnErr(fmt.Errorf("imapwire: cannot decode while a literal is open"))
@@ -89,6 +107,7 @@ func (dec *Decoder) readByte() (byte, bool) {
 		}
 		return b, dec.returnErr(err)
 	}
+	dec.readBytes++
 	return b, true
 }
 
@@ -130,7 +149,13 @@ func (dec *Decoder) Expect(ok bool, name string) bool {
 
 func (dec *Decoder) SP() bool {
 	if dec.acceptByte(' ') {
-		return true
+		// https://github.com/emersion/go-imap/issues/571
+		b, ok := dec.readByte()
+		if !ok {
+			return false
+		}
+		dec.mustUnreadByte()
+		return b != '\r' && b != '\n'
 	}
 
 	// Special case: SP is optional if the next field is a parenthesized list
@@ -147,6 +172,7 @@ func (dec *Decoder) ExpectSP() bool {
 }
 
 func (dec *Decoder) CRLF() bool {
+	dec.acceptByte(' ')  // https://github.com/emersion/go-imap/issues/540
 	dec.acceptByte('\r') // be liberal in what we receive and accept lone LF
 	if !dec.acceptByte('\n') {
 		return false
@@ -307,6 +333,17 @@ func (dec *Decoder) ExpectNumber(ptr *uint32) bool {
 	return dec.Expect(dec.Number(ptr), "number")
 }
 
+func (dec *Decoder) ExpectBodyFldOctets(ptr *uint32) bool {
+	// Workaround: some servers incorrectly return "-1" for the body structure
+	// size. See:
+	// https://github.com/emersion/go-imap/issues/534
+	if dec.acceptByte('-') {
+		*ptr = 0
+		return dec.Expect(dec.acceptByte('1'), "-1 (body-fld-octets workaround)")
+	}
+	return dec.ExpectNumber(ptr)
+}
+
 func (dec *Decoder) Number64(ptr *int64) bool {
 	s, ok := dec.numberStr()
 	if !ok {
@@ -322,6 +359,23 @@ func (dec *Decoder) Number64(ptr *int64) bool {
 
 func (dec *Decoder) ExpectNumber64(ptr *int64) bool {
 	return dec.Expect(dec.Number64(ptr), "number64")
+}
+
+func (dec *Decoder) ModSeq(ptr *uint64) bool {
+	s, ok := dec.numberStr()
+	if !ok {
+		return false
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return false // can happen on overflow
+	}
+	*ptr = v
+	return true
+}
+
+func (dec *Decoder) ExpectModSeq(ptr *uint64) bool {
+	return dec.Expect(dec.ModSeq(ptr), "mod-sequence-value")
 }
 
 func (dec *Decoder) Quoted(ptr *string) bool {
@@ -359,8 +413,9 @@ func (dec *Decoder) ExpectAString(ptr *string) bool {
 	if dec.Literal(ptr) {
 		return true
 	}
-	// TODO: accept unquoted resp-specials
-	return dec.ExpectAtom(ptr)
+	// We cannot do dec.Atom(ptr) here because sometimes mailbox names are unquoted,
+	// and they can contain special characters like `]`.
+	return dec.Expect(dec.Func(ptr, isAStringChar), "ASTRING-CHAR")
 }
 
 func (dec *Decoder) String(ptr *string) bool {
@@ -410,6 +465,15 @@ func (dec *Decoder) List(f func() error) (isList bool, err error) {
 		return true, nil
 	}
 
+	dec.listDepth++
+	defer func() {
+		dec.listDepth--
+	}()
+
+	if dec.listDepth >= maxListDepth {
+		return false, fmt.Errorf("imapwire: exceeded max depth")
+	}
+
 	for {
 		if err := f(); err != nil {
 			return true, err
@@ -453,31 +517,56 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 		*ptr = "INBOX"
 		return true
 	}
-	name, err := utf7.Encoding.NewDecoder().String(name)
+	name, err := utf7.Decode(name)
 	if err == nil {
 		*ptr = name
 	}
 	return dec.returnErr(err)
 }
 
-func (dec *Decoder) ExpectSeqSet(ptr *imap.SeqSet) bool {
+func (dec *Decoder) ExpectUID(ptr *imap.UID) bool {
+	var num uint32
+	if !dec.ExpectNumber(&num) {
+		return false
+	}
+	*ptr = imap.UID(num)
+	return true
+}
+
+func (dec *Decoder) ExpectNumSet(kind NumKind, ptr *imap.NumSet) bool {
 	if dec.Special('$') {
 		*ptr = imap.SearchRes()
 		return true
 	}
 
 	var s string
-	if !dec.Expect(dec.Func(&s, isSeqSetChar), "sequence-set") {
+	if !dec.Expect(dec.Func(&s, isNumSetChar), "sequence-set") {
 		return false
 	}
-	seqSet, err := imap.ParseSeqSet(s)
-	if err == nil {
-		*ptr = seqSet
+	numSet, err := imapnum.ParseSet(s)
+	if err != nil {
+		return dec.returnErr(err)
 	}
-	return dec.returnErr(err)
+
+	switch kind {
+	case NumKindSeq:
+		*ptr = seqSetFromNumSet(numSet)
+	case NumKindUID:
+		*ptr = uidSetFromNumSet(numSet)
+	}
+	return true
 }
 
-func isSeqSetChar(ch byte) bool {
+func (dec *Decoder) ExpectUIDSet(ptr *imap.UIDSet) bool {
+	var numSet imap.NumSet
+	ok := dec.ExpectNumSet(NumKindUID, &numSet)
+	if ok {
+		*ptr = numSet.(imap.UIDSet)
+	}
+	return ok
+}
+
+func isNumSetChar(ch byte) bool {
 	return ch == '*' || IsAtomChar(ch)
 }
 

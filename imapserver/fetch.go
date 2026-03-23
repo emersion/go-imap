@@ -24,8 +24,8 @@ type fetchWriterOptions struct {
 }
 
 func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
-	var seqSet imap.SeqSet
-	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() {
+	var numSet imap.NumSet
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 
@@ -88,7 +88,7 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c, options: writerOptions}
-	if err := c.session.Fetch(w, numKind, seqSet, &options); err != nil {
+	if err := c.session.Fetch(w, numSet, &options); err != nil {
 		return err
 	}
 	return nil
@@ -110,6 +110,10 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		options.UID = true
 	case "RFC822": // equivalent to BODY[]
 		bs := &imap.FetchItemBodySection{}
+		writerOptions.obsolete[bs] = attName
+		options.BodySection = append(options.BodySection, bs)
+	case "RFC822.PEEK": // obsolete, equivalent to BODY.PEEK[], used by Outlook
+		bs := &imap.FetchItemBodySection{Peek: true}
 		writerOptions.obsolete[bs] = attName
 		options.BodySection = append(options.BodySection, bs)
 	case "RFC822.HEADER": // equivalent to BODY.PEEK[HEADER]
@@ -349,9 +353,9 @@ func (w *FetchResponseWriter) writeItemSep() {
 }
 
 // WriteUID writes the message's UID.
-func (w *FetchResponseWriter) WriteUID(uid uint32) {
+func (w *FetchResponseWriter) WriteUID(uid imap.UID) {
 	w.writeItemSep()
-	w.enc.Atom("UID").SP().Number(uid)
+	w.enc.Atom("UID").SP().UID(uid)
 }
 
 // WriteFlags writes the message's flags.
@@ -439,7 +443,7 @@ func (w *FetchResponseWriter) WriteBinarySection(section *imap.FetchItemBinarySe
 }
 
 // WriteBinarySectionSize writes a binary section size.
-func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBinarySection, size uint32) {
+func (w *FetchResponseWriter) WriteBinarySectionSize(section *imap.FetchItemBinarySectionSize, size uint32) {
 	w.writeItemSep()
 	enc := w.enc.Encoder
 
@@ -537,14 +541,22 @@ func writeEnvelope(enc *imapwire.Encoder, envelope *imap.Envelope) {
 		writeAddressList(enc, l)
 	}
 	enc.SP()
-	writeNString(enc, envelope.InReplyTo)
+	if len(envelope.InReplyTo) > 0 {
+		enc.String("<" + strings.Join(envelope.InReplyTo, "> <") + ">")
+	} else {
+		enc.NIL()
+	}
 	enc.SP()
-	writeNString(enc, envelope.MessageID)
+	if envelope.MessageID != "" {
+		enc.String("<" + envelope.MessageID + ">")
+	} else {
+		enc.NIL()
+	}
 	enc.Special(')')
 }
 
 func writeAddressList(enc *imapwire.Encoder, l []imap.Address) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 		return
 	}
@@ -603,9 +615,10 @@ func writeBodyType1part(enc *imapwire.Encoder, bs *imap.BodyStructureSinglePart,
 	writeNString(enc, bs.Description)
 	enc.SP()
 	if bs.Encoding == "" {
-		enc.String("7BIT")
+		enc.String("7bit")
 	} else {
-		enc.String(strings.ToUpper(bs.Encoding))
+		// Outlook for iOS chokes on upper-case encodings
+		enc.String(strings.ToLower(bs.Encoding))
 	}
 	enc.SP().Number(bs.Size)
 
@@ -638,10 +651,9 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 	if len(bs.Children) == 0 {
 		panic("imapserver: imap.BodyStructureMultiPart must have at least one child")
 	}
-	for i, child := range bs.Children {
-		if i > 0 {
-			enc.SP()
-		}
+	for _, child := range bs.Children {
+		// ABNF for body-type-mpart doesn't have SP between body entries, and
+		// Outlook for iOS chokes on SP
 		writeBodyStructure(enc, child, extended)
 	}
 
@@ -663,7 +675,7 @@ func writeBodyTypeMpart(enc *imapwire.Encoder, bs *imap.BodyStructureMultiPart, 
 }
 
 func writeBodyFldParam(enc *imapwire.Encoder, params map[string]string) {
-	if params == nil {
+	if len(params) == 0 {
 		enc.NIL()
 		return
 	}
@@ -693,7 +705,7 @@ func writeBodyFldDsp(enc *imapwire.Encoder, disp *imap.BodyStructureDisposition)
 }
 
 func writeBodyFldLang(enc *imapwire.Encoder, l []string) {
-	if l == nil {
+	if len(l) == 0 {
 		enc.NIL()
 	} else {
 		enc.List(len(l), func(i int) {

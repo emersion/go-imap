@@ -212,7 +212,9 @@ func (s *Server) Close() error {
 
 	s.mutex.Lock()
 	for c := range s.conns {
+		c.mutex.Lock()
 		c.conn.Close()
+		c.mutex.Unlock()
 	}
 	s.mutex.Unlock()
 

@@ -102,13 +102,13 @@ func (c *Client) handleQuotaRoot() error {
 
 // GetQuotaCommand is a GETQUOTA command.
 type GetQuotaCommand struct {
-	cmd
+	commandBase
 	root string
 	data *QuotaData
 }
 
 func (cmd *GetQuotaCommand) Wait() (*QuotaData, error) {
-	if err := cmd.cmd.Wait(); err != nil {
+	if err := cmd.wait(); err != nil {
 		return nil, err
 	}
 	return cmd.data, nil
@@ -116,14 +116,14 @@ func (cmd *GetQuotaCommand) Wait() (*QuotaData, error) {
 
 // GetQuotaRootCommand is a GETQUOTAROOT command.
 type GetQuotaRootCommand struct {
-	cmd
+	commandBase
 	mailbox string
 	roots   []string
 	data    []QuotaData
 }
 
 func (cmd *GetQuotaRootCommand) Wait() ([]QuotaData, error) {
-	if err := cmd.cmd.Wait(); err != nil {
+	if err := cmd.wait(); err != nil {
 		return nil, err
 	}
 	return cmd.data, nil

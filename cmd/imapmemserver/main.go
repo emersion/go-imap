@@ -54,7 +54,54 @@ func main() {
 
 	if username != "" || password != "" {
 		user := imapmemserver.NewUser(username, password)
-		user.Create("INBOX", nil)
+
+		// Create standard mailboxes with special-use attributes as per RFC 6154
+		if err := user.Create("INBOX", nil); err != nil {
+			log.Printf("Failed to create INBOX: %v", err)
+		}
+
+		if err := user.Create("Drafts", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrDrafts},
+		}); err != nil {
+			log.Printf("Failed to create Drafts mailbox: %v", err)
+		}
+
+		if err := user.Create("Sent", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrSent},
+		}); err != nil {
+			log.Printf("Failed to create Sent mailbox: %v", err)
+		}
+
+		if err := user.Create("Archive", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrArchive},
+		}); err != nil {
+			log.Printf("Failed to create Archive mailbox: %v", err)
+		}
+
+		if err := user.Create("Junk", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrJunk},
+		}); err != nil {
+			log.Printf("Failed to create Junk mailbox: %v", err)
+		}
+
+		if err := user.Create("Trash", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrTrash},
+		}); err != nil {
+			log.Printf("Failed to create Trash mailbox: %v", err)
+		}
+
+		if err := user.Create("Flagged", &imap.CreateOptions{
+			SpecialUse: []imap.MailboxAttr{imap.MailboxAttrFlagged},
+		}); err != nil {
+			log.Printf("Failed to create Flagged mailbox: %v", err)
+		}
+
+		// Subscribe to the most commonly used mailboxes
+		_ = user.Subscribe("INBOX")
+		_ = user.Subscribe("Drafts")
+		_ = user.Subscribe("Sent")
+		_ = user.Subscribe("Trash")
+
 		memServer.AddUser(user)
 	}
 

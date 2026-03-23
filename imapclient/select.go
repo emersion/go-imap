@@ -17,6 +17,9 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
+	if options != nil && options.CondStore {
+		enc.SP().Special('(').Atom("CONDSTORE").Special(')')
+	}
 	enc.end()
 	return cmd
 }
@@ -27,7 +30,7 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 func (c *Client) Unselect() *Command {
 	cmd := &unselectCommand{}
 	c.beginCommand("UNSELECT", cmd).end()
-	return &cmd.cmd
+	return &cmd.Command
 }
 
 // UnselectAndExpunge sends a CLOSE command.
@@ -36,7 +39,7 @@ func (c *Client) Unselect() *Command {
 func (c *Client) UnselectAndExpunge() *Command {
 	cmd := &unselectCommand{}
 	c.beginCommand("CLOSE", cmd).end()
-	return &cmd.cmd
+	return &cmd.Command
 }
 
 func (c *Client) handleFlags() error {
@@ -48,7 +51,7 @@ func (c *Client) handleFlags() error {
 	c.mutex.Lock()
 	if c.state == imap.ConnStateSelected {
 		c.mailbox = c.mailbox.copy()
-		c.mailbox.PermanentFlags = flags
+		c.mailbox.Flags = flags
 	}
 	c.mutex.Unlock()
 
@@ -83,15 +86,15 @@ func (c *Client) handleExists(num uint32) error {
 
 // SelectCommand is a SELECT command.
 type SelectCommand struct {
-	cmd
+	commandBase
 	mailbox string
 	data    imap.SelectData
 }
 
 func (cmd *SelectCommand) Wait() (*imap.SelectData, error) {
-	return &cmd.data, cmd.cmd.Wait()
+	return &cmd.data, cmd.wait()
 }
 
 type unselectCommand struct {
-	cmd
+	Command
 }

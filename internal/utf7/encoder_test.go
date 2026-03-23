@@ -115,10 +115,8 @@ var encode = []struct {
 }
 
 func TestEncoder(t *testing.T) {
-	enc := utf7.Encoding.NewEncoder()
-
 	for _, test := range encode {
-		out, _ := enc.String(test.in)
+		out := utf7.Encode(test.in)
 		if out != test.out {
 			t.Errorf("UTF7Encode(%+q) expected %+q; got %+q", test.in, test.out, out)
 		}

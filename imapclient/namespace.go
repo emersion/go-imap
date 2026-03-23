@@ -29,12 +29,12 @@ func (c *Client) handleNamespace() error {
 
 // NamespaceCommand is a NAMESPACE command.
 type NamespaceCommand struct {
-	cmd
+	commandBase
 	data imap.NamespaceData
 }
 
 func (cmd *NamespaceCommand) Wait() (*imap.NamespaceData, error) {
-	return &cmd.data, cmd.cmd.Wait()
+	return &cmd.data, cmd.wait()
 }
 
 func readNamespaceResponse(dec *imapwire.Decoder) (*imap.NamespaceData, error) {

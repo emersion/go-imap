@@ -1,6 +1,8 @@
 package imapserver
 
 import (
+	"fmt"
+
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -59,11 +61,17 @@ func (c *Conn) availableCaps() []imap.Cap {
 	}
 	if c.state == imap.ConnStateAuthenticated || c.state == imap.ConnStateSelected {
 		if available.Has(imap.CapIMAP4rev1) {
+			// IMAP4rev1-specific capabilities that don't require backend
+			// support and are not applicable to IMAP4rev2
 			caps = append(caps, []imap.Cap{
 				imap.CapUnselect,
 				imap.CapEnable,
 				imap.CapIdle,
+				imap.CapUTF8Accept,
 			}...)
+
+			// IMAP4rev1-specific capabilities which require backend support
+			// and are not applicable to IMAP4rev2
 			addAvailableCaps(&caps, available, []imap.Cap{
 				imap.CapNamespace,
 				imap.CapUIDPlus,
@@ -73,12 +81,26 @@ func (c *Conn) availableCaps() []imap.Cap {
 				imap.CapListStatus,
 				imap.CapMove,
 				imap.CapStatusSize,
+				imap.CapBinary,
+				imap.CapChildren,
 			})
 		}
+
+		// Capabilities which require backend support and apply to both
+		// IMAP4rev1 and IMAP4rev2
 		addAvailableCaps(&caps, available, []imap.Cap{
+			imap.CapSpecialUse,
 			imap.CapCreateSpecialUse,
 			imap.CapLiteralPlus,
+			imap.CapUnauthenticate,
 		})
+
+		if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
+			limit := appendLimitSession.AppendLimit()
+			caps = append(caps, imap.Cap(fmt.Sprintf("APPENDLIMIT=%d", limit)))
+		} else {
+			addAvailableCaps(&caps, available, []imap.Cap{imap.CapAppendLimit})
+		}
 	}
 	return caps
 }

@@ -3,27 +3,15 @@ package imapclient
 import (
 	"fmt"
 	"io"
-	"net/mail"
+	netmail "net/mail"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
+	"github.com/emersion/go-message/mail"
 )
-
-func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
-	cmd := &FetchCommand{
-		uid:    uid,
-		seqSet: seqSet,
-		msgs:   make(chan *FetchMessageData, 128),
-	}
-	enc := c.beginCommand(uidCmdName("FETCH", uid), cmd)
-	enc.SP().SeqSet(seqSet).SP()
-	writeFetchItems(enc.Encoder, uid, options)
-	enc.end()
-	return cmd
-}
 
 // Fetch sends a FETCH command.
 //
@@ -31,23 +19,33 @@ func (c *Client) fetch(uid bool, seqSet imap.SeqSet, options *imap.FetchOptions)
 // defer a call to FetchCommand.Close.
 //
 // A nil options pointer is equivalent to a zero options value.
-func (c *Client) Fetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
-	return c.fetch(false, seqSet, options)
+func (c *Client) Fetch(numSet imap.NumSet, options *imap.FetchOptions) *FetchCommand {
+	if options == nil {
+		options = new(imap.FetchOptions)
+	}
+
+	numKind := imapwire.NumSetKind(numSet)
+
+	cmd := &FetchCommand{
+		numSet: numSet,
+		msgs:   make(chan *FetchMessageData, 128),
+	}
+	enc := c.beginCommand(uidCmdName("FETCH", numKind), cmd)
+	enc.SP().NumSet(numSet).SP()
+	writeFetchItems(enc.Encoder, numKind, options)
+	if options.ChangedSince != 0 {
+		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
+	}
+	enc.end()
+	return cmd
 }
 
-// UIDFetch sends a UID FETCH command.
-//
-// See Fetch.
-func (c *Client) UIDFetch(seqSet imap.SeqSet, options *imap.FetchOptions) *FetchCommand {
-	return c.fetch(true, seqSet, options)
-}
-
-func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions) {
+func writeFetchItems(enc *imapwire.Encoder, numKind imapwire.NumKind, options *imap.FetchOptions) {
 	listEnc := enc.BeginList()
 
 	// Ensure we request UID as the first data item for UID FETCH, to be safer.
 	// We want to get it before any literal.
-	if options.UID || uid {
+	if options.UID || numKind == imapwire.NumKindUID {
 		listEnc.Item().Atom("UID")
 	}
 
@@ -58,6 +56,7 @@ func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions
 		"FLAGS":         options.Flags,
 		"INTERNALDATE":  options.InternalDate,
 		"RFC822.SIZE":   options.RFC822Size,
+		"MODSEQ":        options.ModSeq,
 	}
 	for k, req := range m {
 		if req {
@@ -74,6 +73,8 @@ func writeFetchItems(enc *imapwire.Encoder, uid bool, options *imap.FetchOptions
 	for _, bss := range options.BinarySectionSize {
 		writeFetchItemBinarySectionSize(listEnc.Item(), bss)
 	}
+
+	listEnc.End()
 }
 
 func writeFetchItemBodySection(enc *imapwire.Encoder, item *imap.FetchItemBodySection) {
@@ -147,14 +148,42 @@ func writeSectionPartial(enc *imapwire.Encoder, partial *imap.SectionPartial) {
 
 // FetchCommand is a FETCH command.
 type FetchCommand struct {
-	cmd
+	commandBase
 
-	uid        bool
-	seqSet     imap.SeqSet
+	numSet     imap.NumSet
 	recvSeqSet imap.SeqSet
+	recvUIDSet imap.UIDSet
 
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
+}
+
+func (cmd *FetchCommand) recvSeqNum(seqNum uint32) bool {
+	set, ok := cmd.numSet.(imap.SeqSet)
+	if !ok || !set.Contains(seqNum) {
+		return false
+	}
+
+	if cmd.recvSeqSet.Contains(seqNum) {
+		return false
+	}
+
+	cmd.recvSeqSet.AddNum(seqNum)
+	return true
+}
+
+func (cmd *FetchCommand) recvUID(uid imap.UID) bool {
+	set, ok := cmd.numSet.(imap.UIDSet)
+	if !ok || !set.Contains(uid) {
+		return false
+	}
+
+	if cmd.recvUIDSet.Contains(uid) {
+		return false
+	}
+
+	cmd.recvUIDSet.AddNum(uid)
+	return true
 }
 
 // Next advances to the next message.
@@ -165,7 +194,8 @@ func (cmd *FetchCommand) Next() *FetchMessageData {
 	if cmd.prev != nil {
 		cmd.prev.discard()
 	}
-	return <-cmd.msgs
+	cmd.prev = <-cmd.msgs
+	return cmd.prev
 }
 
 // Close releases the command.
@@ -176,7 +206,7 @@ func (cmd *FetchCommand) Close() error {
 	for cmd.Next() != nil {
 		// ignore
 	}
-	return cmd.cmd.Wait()
+	return cmd.wait()
 }
 
 // Collect accumulates message data into a list.
@@ -204,6 +234,61 @@ func (cmd *FetchCommand) Collect() ([]*FetchMessageBuffer, error) {
 		l = append(l, buf)
 	}
 	return l, cmd.Close()
+}
+
+func matchFetchItemBodySection(cmd, resp *imap.FetchItemBodySection) bool {
+	if cmd.Specifier != resp.Specifier {
+		return false
+	}
+
+	if !intSliceEqual(cmd.Part, resp.Part) {
+		return false
+	}
+	if !stringSliceEqualFold(cmd.HeaderFields, resp.HeaderFields) {
+		return false
+	}
+	if !stringSliceEqualFold(cmd.HeaderFieldsNot, resp.HeaderFieldsNot) {
+		return false
+	}
+
+	if (cmd.Partial == nil) != (resp.Partial == nil) {
+		return false
+	}
+	if cmd.Partial != nil && cmd.Partial.Offset != resp.Partial.Offset {
+		return false
+	}
+
+	// Ignore Partial.Size and Peek: these are not echoed back by the server
+	return true
+}
+
+func matchFetchItemBinarySection(cmd, resp *imap.FetchItemBinarySection) bool {
+	// Ignore Partial and Peek: these are not echoed back by the server
+	return intSliceEqual(cmd.Part, resp.Part)
+}
+
+func intSliceEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func stringSliceEqualFold(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !strings.EqualFold(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // FetchMessageData contains a message's FETCH data.
@@ -283,6 +368,8 @@ var (
 )
 
 // FetchItemDataBodySection holds data returned by FETCH BODY[].
+//
+// Literal might be nil.
 type FetchItemDataBodySection struct {
 	Section *imap.FetchItemBodySection
 	Literal imap.LiteralReader
@@ -291,10 +378,20 @@ type FetchItemDataBodySection struct {
 func (FetchItemDataBodySection) fetchItemData() {}
 
 func (item FetchItemDataBodySection) discard() {
-	io.Copy(io.Discard, item.Literal)
+	if item.Literal != nil {
+		io.Copy(io.Discard, item.Literal)
+	}
+}
+
+// MatchCommand checks whether a section returned by the server in a response
+// is compatible with a section requested by the client in a command.
+func (dataItem *FetchItemDataBodySection) MatchCommand(item *imap.FetchItemBodySection) bool {
+	return matchFetchItemBodySection(item, dataItem.Section)
 }
 
 // FetchItemDataBinarySection holds data returned by FETCH BINARY[].
+//
+// Literal might be nil.
 type FetchItemDataBinarySection struct {
 	Section *imap.FetchItemBinarySection
 	Literal imap.LiteralReader
@@ -303,7 +400,15 @@ type FetchItemDataBinarySection struct {
 func (FetchItemDataBinarySection) fetchItemData() {}
 
 func (item FetchItemDataBinarySection) discard() {
-	io.Copy(io.Discard, item.Literal)
+	if item.Literal != nil {
+		io.Copy(io.Discard, item.Literal)
+	}
+}
+
+// MatchCommand checks whether a section returned by the server in a response
+// is compatible with a section requested by the client in a command.
+func (dataItem *FetchItemDataBinarySection) MatchCommand(item *imap.FetchItemBinarySection) bool {
+	return matchFetchItemBinarySection(item, dataItem.Section)
 }
 
 // FetchItemDataFlags holds data returned by FETCH FLAGS.
@@ -336,7 +441,7 @@ func (FetchItemDataRFC822Size) fetchItemData() {}
 
 // FetchItemDataUID holds data returned by FETCH UID.
 type FetchItemDataUID struct {
-	UID uint32
+	UID imap.UID
 }
 
 func (FetchItemDataUID) fetchItemData() {}
@@ -358,6 +463,36 @@ type FetchItemDataBinarySectionSize struct {
 
 func (FetchItemDataBinarySectionSize) fetchItemData() {}
 
+// MatchCommand checks whether a section size returned by the server in a
+// response is compatible with a section size requested by the client in a
+// command.
+func (data *FetchItemDataBinarySectionSize) MatchCommand(item *imap.FetchItemBinarySectionSize) bool {
+	return intSliceEqual(item.Part, data.Part)
+}
+
+// FetchItemDataModSeq holds data returned by FETCH MODSEQ.
+//
+// This requires the CONDSTORE extension.
+type FetchItemDataModSeq struct {
+	ModSeq uint64
+}
+
+func (FetchItemDataModSeq) fetchItemData() {}
+
+// FetchBodySectionBuffer is a buffer for the data returned by
+// FetchItemBodySection.
+type FetchBodySectionBuffer struct {
+	Section *imap.FetchItemBodySection
+	Bytes   []byte
+}
+
+// FetchBinarySectionBuffer is a buffer for the data returned by
+// FetchItemBinarySection.
+type FetchBinarySectionBuffer struct {
+	Section *imap.FetchItemBinarySection
+	Bytes   []byte
+}
+
 // FetchMessageBuffer is a buffer for the data returned by FetchMessageData.
 //
 // The SeqNum field is always populated. All remaining fields are optional.
@@ -367,33 +502,42 @@ type FetchMessageBuffer struct {
 	Envelope          *imap.Envelope
 	InternalDate      time.Time
 	RFC822Size        int64
-	UID               uint32
+	UID               imap.UID
 	BodyStructure     imap.BodyStructure
-	BodySection       map[*imap.FetchItemBodySection][]byte
-	BinarySection     map[*imap.FetchItemBinarySection][]byte
+	BodySection       []FetchBodySectionBuffer
+	BinarySection     []FetchBinarySectionBuffer
 	BinarySectionSize []FetchItemDataBinarySectionSize
+	ModSeq            uint64 // requires CONDSTORE
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 	switch item := item.(type) {
 	case FetchItemDataBodySection:
-		b, err := io.ReadAll(item.Literal)
-		if err != nil {
-			return err
+		var b []byte
+		if item.Literal != nil {
+			var err error
+			b, err = io.ReadAll(item.Literal)
+			if err != nil {
+				return err
+			}
 		}
-		if buf.BodySection == nil {
-			buf.BodySection = make(map[*imap.FetchItemBodySection][]byte)
-		}
-		buf.BodySection[item.Section] = b
+		buf.BodySection = append(buf.BodySection, FetchBodySectionBuffer{
+			Section: item.Section,
+			Bytes:   b,
+		})
 	case FetchItemDataBinarySection:
-		b, err := io.ReadAll(item.Literal)
-		if err != nil {
-			return err
+		var b []byte
+		if item.Literal != nil {
+			var err error
+			b, err = io.ReadAll(item.Literal)
+			if err != nil {
+				return err
+			}
 		}
-		if buf.BinarySection == nil {
-			buf.BinarySection = make(map[*imap.FetchItemBinarySection][]byte)
-		}
-		buf.BinarySection[item.Section] = b
+		buf.BinarySection = append(buf.BinarySection, FetchBinarySectionBuffer{
+			Section: item.Section,
+			Bytes:   b,
+		})
 	case FetchItemDataFlags:
 		buf.Flags = item.Flags
 	case FetchItemDataEnvelope:
@@ -408,10 +552,48 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.BodyStructure = item.BodyStructure
 	case FetchItemDataBinarySectionSize:
 		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
+	case FetchItemDataModSeq:
+		buf.ModSeq = item.ModSeq
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
 	return nil
+}
+
+// FindBodySection returns the contents of a requested body section.
+//
+// If the body section is not found, nil is returned.
+func (buf *FetchMessageBuffer) FindBodySection(section *imap.FetchItemBodySection) []byte {
+	for _, s := range buf.BodySection {
+		if matchFetchItemBodySection(section, s.Section) {
+			return s.Bytes
+		}
+	}
+	return nil
+}
+
+// FindBinarySection returns the contents of a requested binary section.
+//
+// If the binary section is not found, nil is returned.
+func (buf *FetchMessageBuffer) FindBinarySection(section *imap.FetchItemBinarySection) []byte {
+	for _, s := range buf.BinarySection {
+		if matchFetchItemBinarySection(section, s.Section) {
+			return s.Bytes
+		}
+	}
+	return nil
+}
+
+// FindBinarySectionSize returns a requested binary section size.
+//
+// If the binary section size is not found, false is returned.
+func (buf *FetchMessageBuffer) FindBinarySectionSize(part []int) (uint32, bool) {
+	for _, s := range buf.BinarySectionSize {
+		if intSliceEqual(part, s.Part) {
+			return s.Size, true
+		}
+	}
+	return 0, false
 }
 
 func (c *Client) handleFetch(seqNum uint32) error {
@@ -427,7 +609,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 	// the response data. But the response data comes in in a streaming
 	// fashion: it can contain literals. Assume that the UID will be returned
 	// before any literal.
-	var uid uint32
+	var uid imap.UID
 	handled := false
 	handleMsg := func() {
 		if handled {
@@ -441,18 +623,11 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			}
 
 			// Skip if we haven't requested or already handled this message
-			var num uint32
-			if cmd.uid {
-				num = uid
+			if _, ok := cmd.numSet.(imap.UIDSet); ok {
+				return uid != 0 && cmd.recvUID(uid)
 			} else {
-				num = seqNum
+				return seqNum != 0 && cmd.recvSeqNum(seqNum)
 			}
-			if num == 0 || !cmd.seqSet.Contains(num) || cmd.recvSeqSet.Contains(num) {
-				return false
-			}
-			cmd.recvSeqSet.AddNum(num)
-
-			return true
 		})
 		if cmd != nil {
 			cmd := cmd.(*FetchCommand)
@@ -521,7 +696,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 			item = FetchItemDataRFC822Size{Size: size}
 		case "UID":
-			if !dec.ExpectSP() || !dec.ExpectNumber(&uid) {
+			if !dec.ExpectSP() || !dec.ExpectUID(&uid) {
 				return dec.Err()
 			}
 
@@ -603,6 +778,9 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				IsExtended:    attName == "BODYSTRUCTURE",
 			}
 		case "BINARY.SIZE":
+			if !dec.ExpectSpecial('[') {
+				return dec.Err()
+			}
 			part, dot := readSectionPart(dec)
 			if dot {
 				return fmt.Errorf("in section-binary: expected number after dot")
@@ -617,6 +795,12 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				Part: part,
 				Size: size,
 			}
+		case "MODSEQ":
+			var modSeq uint64
+			if !dec.ExpectSP() || !dec.ExpectSpecial('(') || !dec.ExpectModSeq(&modSeq) || !dec.ExpectSpecial(')') {
+				return dec.Err()
+			}
+			item = FetchItemDataModSeq{ModSeq: modSeq}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
@@ -656,7 +840,7 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, erro
 		return nil, dec.Err()
 	}
 	// TODO: handle error
-	envelope.Date, _ = mail.ParseDate(date)
+	envelope.Date, _ = netmail.ParseDate(date)
 	envelope.Subject, _ = options.decodeText(subject)
 
 	addrLists := []struct {
@@ -680,9 +864,13 @@ func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, erro
 		*addrList.out = l
 	}
 
-	if !dec.ExpectNString(&envelope.InReplyTo) || !dec.ExpectSP() || !dec.ExpectNString(&envelope.MessageID) {
+	var inReplyTo, messageID string
+	if !dec.ExpectNString(&inReplyTo) || !dec.ExpectSP() || !dec.ExpectNString(&messageID) {
 		return nil, dec.Err()
 	}
+	// TODO: handle errors
+	envelope.InReplyTo, _ = parseMsgIDList(inReplyTo)
+	envelope.MessageID, _ = parseMsgID(messageID)
 
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()
@@ -720,6 +908,18 @@ func readAddress(dec *imapwire.Decoder, options *Options) (*imap.Address, error)
 	// TODO: handle error
 	addr.Name, _ = options.decodeText(name)
 	return &addr, nil
+}
+
+func parseMsgID(s string) (string, error) {
+	var h mail.Header
+	h.Set("Message-Id", s)
+	return h.MessageID()
+}
+
+func parseMsgIDList(s string) ([]string, error) {
+	var h mail.Header
+	h.Set("In-Reply-To", s)
+	return h.MsgIDList("In-Reply-To")
 }
 
 func readBody(dec *imapwire.Decoder, options *Options) (imap.BodyStructure, error) {
@@ -763,30 +963,35 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
-
 	var err error
-	bs.Params, err = readBodyFldParam(dec)
+	bs.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, err
 	}
-	if name, ok := bs.Params["name"]; ok {
-		// TODO: handle error
-		bs.Params["name"], _ = options.decodeText(name)
-	}
 
 	var description string
-	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectNumber(&bs.Size) {
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectBodyFldOctets(&bs.Size) {
 		return nil, dec.Err()
 	}
+
+	// Content-Transfer-Encoding should always be set, but some non-standard
+	// servers leave it NIL. Default to 7bit.
+	if bs.Encoding == "" {
+		bs.Encoding = "7bit"
+	}
+
 	// TODO: handle errors
 	bs.Description, _ = options.decodeText(description)
 
+	// Some servers don't include the extra fields for message and text
+	// (see https://github.com/emersion/go-imap/issues/557)
+	hasSP := dec.SP()
+	if !hasSP {
+		return &bs, nil
+	}
+
 	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
 		var msg imap.BodyStructureMessageRFC822
-
-		if !dec.ExpectSP() {
-			return nil, dec.Err()
-		}
 
 		msg.Envelope, err = readEnvelope(dec, options)
 		if err != nil {
@@ -807,17 +1012,22 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 		}
 
 		bs.MessageRFC822 = &msg
+		hasSP = false
 	} else if strings.EqualFold(bs.Type, "text") {
 		var text imap.BodyStructureText
 
-		if !dec.ExpectSP() || !dec.ExpectNumber64(&text.NumLines) {
+		if !dec.ExpectNumber64(&text.NumLines) {
 			return nil, dec.Err()
 		}
 
 		bs.Text = &text
+		hasSP = false
 	}
 
-	if dec.SP() {
+	if !hasSP {
+		hasSP = dec.SP()
+	}
+	if hasSP {
 		bs.Extended, err = readBodyExt1part(dec, options)
 		if err != nil {
 			return nil, fmt.Errorf("in body-ext-1part: %v", err)
@@ -895,7 +1105,7 @@ func readBodyExtMpart(dec *imapwire.Decoder, options *Options) (*imap.BodyStruct
 	var ext imap.BodyStructureMultiPartExt
 
 	var err error
-	ext.Params, err = readBodyFldParam(dec)
+	ext.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, fmt.Errorf("in body-fld-param: %v", err)
 	}
@@ -943,22 +1153,17 @@ func readBodyFldDsp(dec *imapwire.Decoder, options *Options) (*imap.BodyStructur
 	}
 
 	var err error
-	disp.Params, err = readBodyFldParam(dec)
+	disp.Params, err = readBodyFldParam(dec, options)
 	if err != nil {
 		return nil, err
 	}
-	if filename, ok := disp.Params["filename"]; ok {
-		// TODO: handle error
-		disp.Params["filename"], _ = options.decodeText(filename)
-	}
-
 	if !dec.ExpectSpecial(')') {
 		return nil, dec.Err()
 	}
 	return &disp, nil
 }
 
-func readBodyFldParam(dec *imapwire.Decoder) (map[string]string, error) {
+func readBodyFldParam(dec *imapwire.Decoder, options *Options) (map[string]string, error) {
 	var (
 		params map[string]string
 		k      string
@@ -975,7 +1180,10 @@ func readBodyFldParam(dec *imapwire.Decoder) (map[string]string, error) {
 			if params == nil {
 				params = make(map[string]string)
 			}
-			params[k] = s
+			decoded, _ := options.decodeText(s)
+			// TODO: handle error
+
+			params[strings.ToLower(k)] = decoded
 			k = ""
 		}
 
@@ -1110,7 +1318,7 @@ type fetchLiteralReader struct {
 
 func (lit *fetchLiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.LiteralReader.Read(b)
-	if err == io.EOF && lit.ch != nil {
+	if err != nil && lit.ch != nil {
 		close(lit.ch)
 		lit.ch = nil
 	}

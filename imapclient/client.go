@@ -10,11 +10,11 @@
 //	import (
 //		"mime"
 //
-//		_ "github.com/emersion/go-message/charset"
+//		"github.com/emersion/go-message/charset"
 //	)
 //
 //	options := &imapclient.Options{
-//		WordDecoder: &mime.WordDecoder{CharsetReader: message.CharsetReader},
+//		WordDecoder: &mime.WordDecoder{CharsetReader: charset.Reader},
 //	}
 //	client, err := imapclient.DialTLS("imap.example.org:993", options)
 package imapclient
@@ -22,12 +22,14 @@ package imapclient
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
 	"net"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +45,8 @@ const (
 
 	cmdWriteTimeout     = 30 * time.Second
 	literalWriteTimeout = 5 * time.Minute
+
+	defaultDialTimeout = 30 * time.Second
 )
 
 // SelectedMailbox contains metadata for the currently selected mailbox.
@@ -60,6 +64,9 @@ func (mbox *SelectedMailbox) copy() *SelectedMailbox {
 
 // Options contains options for Client.
 type Options struct {
+	// TLS configuration for use by DialTLS and DialStartTLS. If nil, the
+	// default configuration is used.
+	TLSConfig *tls.Config
 	// Raw ingress and egress data will be written to this writer, if any.
 	// Note, this may include sensitive information such as credentials used
 	// during authentication.
@@ -68,6 +75,9 @@ type Options struct {
 	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
+	// Dialer to use when establishing connections with the Dial* functions.
+	// If nil, a default dialer with a 30 second timeout is used.
+	Dialer *net.Dialer
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -102,6 +112,21 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 	return options.UnilateralDataHandler
 }
 
+func (options *Options) tlsConfig() *tls.Config {
+	if options.TLSConfig != nil {
+		return options.TLSConfig.Clone()
+	} else {
+		return new(tls.Config)
+	}
+}
+
+func (options *Options) dialer() *net.Dialer {
+	if options.Dialer == nil {
+		return &net.Dialer{Timeout: defaultDialTimeout}
+	}
+	return options.Dialer
+}
+
 // Client is an IMAP client.
 //
 // IMAP commands are exposed as methods. These methods will block until the
@@ -132,6 +157,7 @@ type Client struct {
 	mutex        sync.Mutex
 	state        imap.ConnState
 	caps         imap.CapSet
+	enabled      imap.CapSet
 	pendingCapCh chan struct{}
 	mailbox      *SelectedMailbox
 	cmdTag       uint64
@@ -163,36 +189,22 @@ func New(conn net.Conn, options *Options) *Client {
 		greetingCh: make(chan struct{}),
 		decCh:      make(chan struct{}),
 		state:      imap.ConnStateNone,
+		enabled:    make(imap.CapSet),
 	}
 	go client.read()
 	return client
 }
 
-// DialTLS connects to an IMAP server with implicit TLS.
-func DialTLS(address string, options *Options) (*Client, error) {
-	conn, err := tls.Dial("tcp", address, &tls.Config{
-		NextProtos: []string{"imap"},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return New(conn, options), nil
-}
-
-// DialStartTLS connects to an IMAP server with STARTTLS.
-func DialStartTLS(address string, options *Options) (*Client, error) {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := net.Dial("tcp", address)
-	if err != nil {
-		return nil, err
+// NewStartTLS creates a new IMAP client with STARTTLS.
+//
+// A nil options pointer is equivalent to a zero options value.
+func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
 	}
 
 	client := New(conn, options)
-	if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+	if err := client.startTLS(options.TLSConfig); err != nil {
 		conn.Close()
 		return nil, err
 	}
@@ -203,7 +215,64 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, fmt.Errorf("imapclient: server sent PREAUTH on unencrypted connection")
 	}
 
-	return client, err
+	return client, nil
+}
+
+// DialInsecure connects to an IMAP server without any encryption at all.
+func DialInsecure(address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
+	conn, err := options.dialer().Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return New(conn, options), nil
+}
+
+// DialTLS connects to an IMAP server with implicit TLS.
+func DialTLS(address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
+	tlsConfig := options.tlsConfig()
+	if tlsConfig.NextProtos == nil {
+		tlsConfig.NextProtos = []string{"imap"}
+	}
+
+	dialer := options.dialer()
+	conn, err := tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	return New(conn, options), nil
+}
+
+// DialStartTLS connects to an IMAP server with STARTTLS.
+func DialStartTLS(address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := options.dialer().Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := options.tlsConfig()
+	if tlsConfig.ServerName == "" {
+		tlsConfig.ServerName = host
+	}
+	newOptions := *options
+	newOptions.TLSConfig = tlsConfig
+	return NewStartTLS(conn, &newOptions)
 }
 
 func (c *Client) setReadTimeout(dur time.Duration) {
@@ -269,7 +338,14 @@ func (c *Client) Caps() imap.CapSet {
 		c.mutex.Unlock()
 	}
 
-	<-capCh
+	timer := time.NewTimer(respReadTimeout)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-capCh:
+		// ok
+	}
 
 	// TODO: this is racy if caps are reset before we get the reply
 	c.mutex.Lock()
@@ -309,6 +385,15 @@ func (c *Client) Mailbox() *SelectedMailbox {
 	return c.mailbox
 }
 
+// Closed returns a channel that is closed when the connection is closed.
+//
+// This channel cannot be used to reliably determine whether a connection is healthy. If
+// the underlying connection times out, the channel will be closed eventually, but not
+// immediately. To check whether the connection is healthy, send a command (such as Noop).
+func (c *Client) Closed() <-chan struct{} {
+	return c.decCh
+}
+
 // Close immediately closes the connection.
 func (c *Client) Close() error {
 	c.mutex.Lock()
@@ -317,7 +402,7 @@ func (c *Client) Close() error {
 	c.mutex.Unlock()
 
 	// Ignore net.ErrClosed here, because we also call conn.Close in c.read
-	if err := c.conn.Close(); err != nil && err != net.ErrClosed {
+	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, io.ErrClosedPipe) {
 		return err
 	}
 
@@ -341,12 +426,21 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	c.encMutex.Lock() // unlocked by commandEncoder.end
 
 	c.mutex.Lock()
+
 	c.cmdTag++
 	tag := fmt.Sprintf("T%v", c.cmdTag)
+
+	baseCmd := cmd.base()
+	*baseCmd = commandBase{
+		tag:  tag,
+		done: make(chan error, 1),
+	}
+
 	c.pendingCmds = append(c.pendingCmds, cmd)
-	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2)
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	literalPlus := c.caps.Has(imap.CapLiteralPlus)
+
 	c.mutex.Unlock()
 
 	c.setWriteTimeout(cmdWriteTimeout)
@@ -359,11 +453,6 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 		return c.registerContReq(cmd)
 	}
 
-	baseCmd := cmd.base()
-	*baseCmd = Command{
-		tag:  tag,
-		done: make(chan error, 1),
-	}
 	enc := &commandEncoder{
 		Encoder: wireEnc,
 		client:  c,
@@ -437,7 +526,11 @@ func (c *Client) completeCommand(cmd command, err error) {
 		}
 	case *unauthenticateCommand:
 		if err == nil {
-			c.setState(imap.ConnStateNotAuthenticated)
+			c.mutex.Lock()
+			c.state = imap.ConnStateNotAuthenticated
+			c.mailbox = nil
+			c.enabled = make(imap.CapSet)
+			c.mutex.Unlock()
 		}
 	case *SelectCommand:
 		if err == nil {
@@ -484,15 +577,18 @@ func (c *Client) registerContReq(cmd command) *imapwire.ContinuationRequest {
 	return contReq
 }
 
-func (c *Client) unregisterContReq(contReq *imapwire.ContinuationRequest) {
+func (c *Client) closeWithError(err error) {
+	c.conn.Close()
+
 	c.mutex.Lock()
-	for i := range c.contReqs {
-		if c.contReqs[i].ContinuationRequest == contReq {
-			c.contReqs = append(c.contReqs[:i], c.contReqs[i+1:]...)
-			break
-		}
-	}
+	c.state = imap.ConnStateLogout
+	pendingCmds := c.pendingCmds
+	c.pendingCmds = nil
 	c.mutex.Unlock()
+
+	for _, cmd := range pendingCmds {
+		c.completeCommand(cmd, err)
+	}
 }
 
 // read continuously reads data coming from the server.
@@ -506,26 +602,17 @@ func (c *Client) read() {
 			c.decErr = fmt.Errorf("imapclient: panic reading response: %v\n%s", v, debug.Stack())
 		}
 
-		c.conn.Close()
-
-		c.mutex.Lock()
-		c.state = imap.ConnStateLogout
-		pendingCmds := c.pendingCmds
-		c.pendingCmds = nil
-		c.mutex.Unlock()
-
 		cmdErr := c.decErr
 		if cmdErr == nil {
 			cmdErr = io.ErrUnexpectedEOF
 		}
-		for _, cmd := range pendingCmds {
-			c.completeCommand(cmd, cmdErr)
-		}
+		c.closeWithError(cmdErr)
 	}()
 
-	c.setReadTimeout(idleReadTimeout)
+	c.setReadTimeout(respReadTimeout) // We're waiting for the greeting
 	for {
-		if c.dec.EOF() {
+		// Ignore net.ErrClosed here, because we also call conn.Close in c.Close
+		if c.dec.EOF() || errors.Is(c.dec.Err(), net.ErrClosed) || errors.Is(c.dec.Err(), io.ErrClosedPipe) {
 			break
 		}
 		if err := c.readResponse(); err != nil {
@@ -560,6 +647,9 @@ func (c *Client) readResponse() error {
 		return fmt.Errorf("in response: cannot read type: %v", c.dec.Err())
 	}
 
+	// Change typ to uppercase, as it's case-insensitive
+	typ = strings.ToUpper(typ)
+
 	var (
 		token    string
 		err      error
@@ -568,12 +658,6 @@ func (c *Client) readResponse() error {
 	if tag != "" {
 		token = "response-tagged"
 		startTLS, err = c.readResponseTagged(tag, typ)
-	} else if typ == "BYE" {
-		token = "resp-cond-bye"
-		var text string
-		if !c.dec.ExpectText(&text) {
-			return fmt.Errorf("in resp-text: %v", c.dec.Err())
-		}
 	} else {
 		token = "response-data"
 		err = c.readResponseData(typ)
@@ -587,8 +671,7 @@ func (c *Client) readResponse() error {
 	}
 
 	if startTLS != nil {
-		c.upgradeStartTLS(startTLS.tlsConfig)
-		close(startTLS.upgradeDone)
+		c.upgradeStartTLS(startTLS)
 	}
 
 	return nil
@@ -619,17 +702,26 @@ func (c *Client) readContinueReq() error {
 	return nil
 }
 
-func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
+func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand, err error) {
 	cmd := c.deletePendingCmdByTag(tag)
 	if cmd == nil {
 		return nil, fmt.Errorf("received tagged response with unknown tag %q", tag)
 	}
 
-	if !c.dec.ExpectSP() {
-		return nil, c.dec.Err()
-	}
+	// We've removed the command from the pending queue above. Make sure we
+	// don't stall it on error.
+	defer func() {
+		if err != nil {
+			c.completeCommand(cmd, err)
+		}
+	}()
+
+	// Some servers don't provide a text even if the RFC requires it,
+	// see #500 and #502
+	hasSP := c.dec.SP()
+
 	var code string
-	if c.dec.Special('[') { // resp-text-code
+	if hasSP && c.dec.Special('[') { // resp-text-code
 		if !c.dec.ExpectAtom(&code) {
 			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 		}
@@ -642,8 +734,11 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 			}
 			c.setCaps(caps)
 		case "APPENDUID":
-			var uidValidity, uid uint32
-			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uid) {
+			var (
+				uidValidity uint32
+				uid         imap.UID
+			)
+			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUID(&uid) {
 				return nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
 			}
 			if cmd, ok := cmd.(*AppendCommand); ok {
@@ -654,11 +749,18 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 			if !c.dec.ExpectSP() {
 				return nil, c.dec.Err()
 			}
-			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 			if err != nil {
 				return nil, fmt.Errorf("in resp-code-copy: %v", err)
 			}
-			if cmd, ok := cmd.(*CopyCommand); ok {
+			switch cmd := cmd.(type) {
+			case *CopyCommand:
+				cmd.data.UIDValidity = uidValidity
+				cmd.data.SourceUIDs = srcUIDs
+				cmd.data.DestUIDs = dstUIDs
+			case *MoveCommand:
+				// This can happen when Client.Move falls back to COPY +
+				// STORE + EXPUNGE
 				cmd.data.UIDValidity = uidValidity
 				cmd.data.SourceUIDs = srcUIDs
 				cmd.data.DestUIDs = dstUIDs
@@ -668,12 +770,13 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 				c.dec.DiscardUntilByte(']')
 			}
 		}
-		if !c.dec.ExpectSpecial(']') || !c.dec.ExpectSP() {
+		if !c.dec.ExpectSpecial(']') {
 			return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
+		hasSP = c.dec.SP()
 	}
 	var text string
-	if !c.dec.ExpectText(&text) {
+	if hasSP && !c.dec.ExpectText(&text) {
 		return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
 	}
 
@@ -693,7 +796,6 @@ func (c *Client) readResponseTagged(tag, typ string) (*startTLSCommand, error) {
 
 	c.completeCommand(cmd, cmdErr)
 
-	var startTLS *startTLSCommand
 	if cmd, ok := cmd.(*startTLSCommand); ok && cmdErr == nil {
 		startTLS = cmd
 	}
@@ -724,15 +826,15 @@ func (c *Client) readResponseData(typ string) error {
 		}
 	}
 
-	switch typ {
+	// All response type are case insensitive
+	switch strings.ToUpper(typ) {
 	case "OK", "PREAUTH", "NO", "BAD", "BYE": // resp-cond-state / resp-cond-bye / resp-cond-auth
-		if !c.dec.ExpectSP() {
-			return c.dec.Err()
-		}
+		// Some servers don't provide a text even if the RFC requires it,
+		// see #500 and #502
+		hasSP := c.dec.SP()
 
 		var code string
-		hasText := true
-		if c.dec.Special('[') { // resp-text-code
+		if hasSP && c.dec.Special('[') { // resp-text-code
 			if !c.dec.ExpectAtom(&code) {
 				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
 			}
@@ -765,8 +867,8 @@ func (c *Client) readResponseData(typ string) error {
 					handler(&UnilateralDataMailbox{PermanentFlags: flags})
 				}
 			case "UIDNEXT":
-				var uidNext uint32
-				if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidNext) {
+				var uidNext imap.UID
+				if !c.dec.ExpectSP() || !c.dec.ExpectUID(&uidNext) {
 					return c.dec.Err()
 				}
 				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
@@ -784,7 +886,7 @@ func (c *Client) readResponseData(typ string) error {
 				if !c.dec.ExpectSP() {
 					return c.dec.Err()
 				}
-				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopy(c.dec)
+				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 				if err != nil {
 					return fmt.Errorf("in resp-code-copy: %v", err)
 				}
@@ -792,6 +894,20 @@ func (c *Client) readResponseData(typ string) error {
 					cmd.data.UIDValidity = uidValidity
 					cmd.data.SourceUIDs = srcUIDs
 					cmd.data.DestUIDs = dstUIDs
+				}
+			case "HIGHESTMODSEQ":
+				var modSeq uint64
+				if !c.dec.ExpectSP() || !c.dec.ExpectModSeq(&modSeq) {
+					return c.dec.Err()
+				}
+				if cmd := findPendingCmdByType[*SelectCommand](c); cmd != nil {
+					cmd.data.HighestModSeq = modSeq
+				}
+			case "NOMODSEQ":
+				// ignore
+			case "NOTIFICATIONOVERFLOW":
+				if handler := c.options.unilateralDataHandler().NotificationOverflow; handler != nil {
+					handler()
 				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
@@ -801,13 +917,11 @@ func (c *Client) readResponseData(typ string) error {
 			if !c.dec.ExpectSpecial(']') {
 				return fmt.Errorf("in resp-text: %v", c.dec.Err())
 			}
-			// Some servers don't provide a text even if the RFC requires it,
-			// see #500
-			hasText = c.dec.SP()
+			hasSP = c.dec.SP()
 		}
 
 		var text string
-		if hasText && !c.dec.ExpectText(&text) {
+		if hasSP && !c.dec.ExpectText(&text) {
 			return fmt.Errorf("in resp-text: %v", c.dec.Err())
 		}
 
@@ -835,6 +949,8 @@ func (c *Client) readResponseData(typ string) error {
 			}
 			close(c.greetingCh)
 		}
+	case "ID":
+		return c.handleID()
 	case "CAPABILITY":
 		return c.handleCapability()
 	case "ENABLED":
@@ -893,6 +1009,16 @@ func (c *Client) readResponseData(typ string) error {
 			return c.dec.Err()
 		}
 		return c.handleQuotaRoot()
+	case "MYRIGHTS":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		return c.handleMyRights()
+	case "ACL":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		return c.handleGetACL()
 	default:
 		return fmt.Errorf("unsupported response type %q", typ)
 	}
@@ -902,8 +1028,15 @@ func (c *Client) readResponseData(typ string) error {
 
 // WaitGreeting waits for the server's initial greeting.
 func (c *Client) WaitGreeting() error {
-	<-c.greetingCh
-	return c.greetingErr
+	select {
+	case <-c.greetingCh:
+		return c.greetingErr
+	case <-c.decCh:
+		if c.decErr != nil {
+			return fmt.Errorf("got error before greeting: %v", c.decErr)
+		}
+		return fmt.Errorf("connection closed before greeting")
+	}
 }
 
 // Noop sends a NOOP command.
@@ -919,7 +1052,7 @@ func (c *Client) Noop() *Command {
 func (c *Client) Logout() *Command {
 	cmd := &logoutCommand{}
 	c.beginCommand("LOGOUT", cmd).end()
-	return &cmd.cmd
+	return &cmd.Command
 }
 
 // Login sends a LOGIN command.
@@ -928,7 +1061,7 @@ func (c *Client) Login(username, password string) *Command {
 	enc := c.beginCommand("LOGIN", cmd)
 	enc.SP().String(username).SP().String(password)
 	enc.end()
-	return &cmd.cmd
+	return &cmd.Command
 }
 
 // Delete sends a DELETE command.
@@ -941,7 +1074,9 @@ func (c *Client) Delete(mailbox string) *Command {
 }
 
 // Rename sends a RENAME command.
-func (c *Client) Rename(mailbox, newName string) *Command {
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Rename(mailbox, newName string, options *imap.RenameOptions) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("RENAME", cmd)
 	enc.SP().Mailbox(mailbox).SP().Mailbox(newName)
@@ -958,7 +1093,7 @@ func (c *Client) Subscribe(mailbox string) *Command {
 	return cmd
 }
 
-// Subscribe sends an UNSUBSCRIBE command.
+// Unsubscribe sends an UNSUBSCRIBE command.
 func (c *Client) Unsubscribe(mailbox string) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("UNSUBSCRIBE", cmd)
@@ -967,18 +1102,21 @@ func (c *Client) Unsubscribe(mailbox string) *Command {
 	return cmd
 }
 
-func uidCmdName(name string, uid bool) string {
-	if uid {
-		return "UID " + name
-	} else {
+func uidCmdName(name string, kind imapwire.NumKind) string {
+	switch kind {
+	case imapwire.NumKindSeq:
 		return name
+	case imapwire.NumKindUID:
+		return "UID " + name
+	default:
+		panic("imapclient: invalid imapwire.NumKind")
 	}
 }
 
 type commandEncoder struct {
 	*imapwire.Encoder
 	client *Client
-	cmd    *Command
+	cmd    *commandBase
 }
 
 // end ends an outgoing command.
@@ -998,7 +1136,9 @@ func (ce *commandEncoder) end() {
 // commandEncoder.end to release the lock.
 func (ce *commandEncoder) flush() {
 	if err := ce.Encoder.CRLF(); err != nil {
-		ce.cmd.err = err
+		// TODO: consider stashing the error in Client to return it in future
+		// calls
+		ce.client.closeWithError(err)
 	}
 	ce.Encoder = nil
 }
@@ -1032,7 +1172,7 @@ func (lw literalWriter) Close() error {
 // continuationRequest is a pending continuation request.
 type continuationRequest struct {
 	*imapwire.ContinuationRequest
-	cmd *Command
+	cmd *commandBase
 }
 
 // UnilateralDataMailbox describes a mailbox status update.
@@ -1052,11 +1192,35 @@ type UnilateralDataMailbox struct {
 //
 // The handler will be invoked in an arbitrary goroutine.
 //
+// These handlers are important when using the IDLE or NOTIFY commands, as the
+// server will send unsolicited STATUS, FETCH, and EXPUNGE responses for
+// mailbox events.
+//
 // See Options.UnilateralDataHandler.
 type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
+
+	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
+	Metadata func(mailbox string, entries []string)
+
+	// Called when the server sends an unsolicited LIST response.
+	//
+	// Used with NOTIFY MailboxName events (RFC 5465) to detect mailbox
+	// creation, deletion, or renaming, and for subscription changes.
+	List func(data *imap.ListData)
+
+	// Called when the server sends an unsolicited STATUS response.
+	//
+	// Commonly used with NOTIFY to receive mailbox status updates
+	// for non-selected mailboxes (RFC 5465).
+	Status func(data *imap.StatusData)
+
+	// Called when the server sends NOTIFICATIONOVERFLOW (RFC 5465).
+	//
+	// Indicates the server has disabled all NOTIFY notifications.
+	NotificationOverflow func()
 }
 
 // command is an interface for IMAP commands.
@@ -1064,35 +1228,41 @@ type UnilateralDataHandler struct {
 // Commands are represented by the Command type, but can be extended by other
 // types (e.g. CapabilityCommand).
 type command interface {
-	base() *Command
+	base() *commandBase
 }
 
-// Command is a basic IMAP command.
-type Command struct {
+type commandBase struct {
 	tag  string
 	done chan error
 	err  error
 }
 
-func (cmd *Command) base() *Command {
+func (cmd *commandBase) base() *commandBase {
 	return cmd
 }
 
-// Wait blocks until the command has completed.
-func (cmd *Command) Wait() error {
+func (cmd *commandBase) wait() error {
 	if cmd.err == nil {
 		cmd.err = <-cmd.done
 	}
 	return cmd.err
 }
 
-type cmd = Command // type alias to avoid exporting anonymous struct fields
+// Command is a basic IMAP command.
+type Command struct {
+	commandBase
+}
+
+// Wait blocks until the command has completed.
+func (cmd *Command) Wait() error {
+	return cmd.wait()
+}
 
 type loginCommand struct {
-	cmd
+	Command
 }
 
 // logoutCommand is a LOGOUT command.
 type logoutCommand struct {
-	cmd
+	Command
 }

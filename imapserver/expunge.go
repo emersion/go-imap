@@ -13,14 +13,14 @@ func (c *Conn) handleExpunge(dec *imapwire.Decoder) error {
 }
 
 func (c *Conn) handleUIDExpunge(dec *imapwire.Decoder) error {
-	var seqSet imap.SeqSet
-	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectCRLF() {
+	var uidSet imap.UIDSet
+	if !dec.ExpectSP() || !dec.ExpectUIDSet(&uidSet) || !dec.ExpectCRLF() {
 		return dec.Err()
 	}
-	return c.expunge(&seqSet)
+	return c.expunge(&uidSet)
 }
 
-func (c *Conn) expunge(uids *imap.SeqSet) error {
+func (c *Conn) expunge(uids *imap.UIDSet) error {
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
 	}

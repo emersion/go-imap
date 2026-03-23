@@ -30,8 +30,10 @@ var decode = []struct {
 	{"\x1F", "", false},
 	{"abc\n", "", false},
 	{"abc\x7Fxyz", "", false},
-	{"\uFFFD", "", false},
-	{"\u041C", "", false},
+
+	// Invalid UTF-8
+	{"\xc3\x28", "", false},
+	{"\xe2\x82\x28", "", false},
 
 	// Invalid Base64 alphabet
 	{"&/+8-", "", false},
@@ -97,10 +99,8 @@ var decode = []struct {
 }
 
 func TestDecoder(t *testing.T) {
-	dec := utf7.Encoding.NewDecoder()
-
 	for _, test := range decode {
-		out, err := dec.String(test.in)
+		out, err := utf7.Decode(test.in)
 		if out != test.out {
 			t.Errorf("UTF7Decode(%+q) expected %+q; got %+q", test.in, test.out, out)
 		}

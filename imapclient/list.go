@@ -25,6 +25,9 @@ func getSelectOpts(options *imap.ListOptions) []string {
 	if options.SelectRecursiveMatch {
 		l = append(l, "RECURSIVEMATCH")
 	}
+	if options.SelectSpecialUse {
+		l = append(l, "SPECIAL-USE")
+	}
 	return l
 }
 
@@ -42,6 +45,9 @@ func getReturnOpts(options *imap.ListOptions) []string {
 	}
 	if options.ReturnStatus != nil {
 		l = append(l, "STATUS")
+	}
+	if options.ReturnSpecialUse {
+		l = append(l, "SPECIAL-USE")
 	}
 	return l
 }
@@ -66,7 +72,7 @@ func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListComma
 			enc.Atom(selectOpts[i])
 		})
 	}
-	enc.SP().Mailbox(ref).SP().String(pattern)
+	enc.SP().Mailbox(ref).SP().Mailbox(pattern)
 	if returnOpts := getReturnOpts(options); len(returnOpts) > 0 {
 		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
 			opt := returnOpts[i]
@@ -113,12 +119,18 @@ func (c *Client) handleList() error {
 		cmd.data.List = data
 	}
 
+	if cmd == nil {
+		if handler := c.options.unilateralDataHandler().List; handler != nil {
+			handler(data)
+		}
+	}
+
 	return nil
 }
 
 // ListCommand is a LIST command.
 type ListCommand struct {
-	cmd
+	commandBase
 	mailboxes chan *imap.ListData
 
 	returnStatus bool
@@ -141,7 +153,7 @@ func (cmd *ListCommand) Close() error {
 	for cmd.Next() != nil {
 		// ignore
 	}
-	return cmd.cmd.Wait()
+	return cmd.wait()
 }
 
 // Collect accumulates mailboxes into a list.

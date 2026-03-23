@@ -14,10 +14,10 @@ func (c *Client) Expunge() *ExpungeCommand {
 // UIDExpunge sends a UID EXPUNGE command.
 //
 // This command requires support for IMAP4rev2 or the UIDPLUS extension.
-func (c *Client) UIDExpunge(uids imap.SeqSet) *ExpungeCommand {
+func (c *Client) UIDExpunge(uids imap.UIDSet) *ExpungeCommand {
 	cmd := &ExpungeCommand{seqNums: make(chan uint32, 128)}
 	enc := c.beginCommand("UID EXPUNGE", cmd)
-	enc.SP().SeqSet(uids)
+	enc.SP().NumSet(uids)
 	enc.end()
 	return cmd
 }
@@ -45,7 +45,7 @@ func (c *Client) handleExpunge(seqNum uint32) error {
 // The caller must fully consume the ExpungeCommand. A simple way to do so is
 // to defer a call to FetchCommand.Close.
 type ExpungeCommand struct {
-	cmd
+	commandBase
 	seqNums chan uint32
 }
 
@@ -65,7 +65,7 @@ func (cmd *ExpungeCommand) Close() error {
 	for cmd.Next() != 0 {
 		// ignore
 	}
-	return cmd.cmd.Wait()
+	return cmd.wait()
 }
 
 // Collect accumulates expunged sequence numbers into a list.

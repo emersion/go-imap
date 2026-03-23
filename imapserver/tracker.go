@@ -89,7 +89,7 @@ func (t *MailboxTracker) QueueMailboxFlags(flags []imap.Flag) {
 // QueueMessageFlags queues a new FETCH FLAGS update.
 //
 // If source is not nil, the update won't be dispatched to it.
-func (t *MailboxTracker) QueueMessageFlags(seqNum, uid uint32, flags []imap.Flag, source *SessionTracker) {
+func (t *MailboxTracker) QueueMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag, source *SessionTracker) {
 	t.queueUpdate(&trackerUpdate{fetch: &trackerUpdateFetch{
 		seqNum: seqNum,
 		uid:    uid,
@@ -106,7 +106,7 @@ type trackerUpdate struct {
 
 type trackerUpdateFetch struct {
 	seqNum uint32
-	uid    uint32
+	uid    imap.UID
 	flags  []imap.Flag
 }
 

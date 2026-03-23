@@ -18,6 +18,7 @@ func statusItems(options *imap.StatusOptions) []string {
 		"SIZE":            options.Size,
 		"APPENDLIMIT":     options.AppendLimit,
 		"DELETED-STORAGE": options.DeletedStorage,
+		"HIGHESTMODSEQ":   options.HighestModSeq,
 	}
 
 	var l []string
@@ -30,7 +31,16 @@ func statusItems(options *imap.StatusOptions) []string {
 }
 
 // Status sends a STATUS command.
+//
+// A nil options pointer is equivalent to a zero options value.
 func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusCommand {
+	if options == nil {
+		options = new(imap.StatusOptions)
+	}
+	if options.NumRecent {
+		panic("StatusOptions.NumRecent is not supported in imapclient")
+	}
+
 	cmd := &StatusCommand{mailbox: mailbox}
 	enc := c.beginCommand("STATUS", cmd)
 	enc.SP().Mailbox(mailbox).SP()
@@ -58,6 +68,13 @@ func (c *Client) handleStatus() error {
 			return false
 		}
 	})
+	if cmd == nil {
+		// Unsolicited STATUS response (e.g., from NOTIFY)
+		if handler := c.options.unilateralDataHandler().Status; handler != nil {
+			handler(data)
+		}
+		return nil
+	}
 	switch cmd := cmd.(type) {
 	case *StatusCommand:
 		cmd.data = *data
@@ -72,13 +89,13 @@ func (c *Client) handleStatus() error {
 
 // StatusCommand is a STATUS command.
 type StatusCommand struct {
-	cmd
+	commandBase
 	mailbox string
 	data    imap.StatusData
 }
 
 func (cmd *StatusCommand) Wait() (*imap.StatusData, error) {
-	return &cmd.data, cmd.cmd.Wait()
+	return &cmd.data, cmd.wait()
 }
 
 func readStatus(dec *imapwire.Decoder) (*imap.StatusData, error) {
@@ -110,7 +127,9 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 		ok = dec.ExpectNumber(&num)
 		data.NumMessages = &num
 	case "UIDNEXT":
-		ok = dec.ExpectNumber(&data.UIDNext)
+		var uidNext imap.UID
+		ok = dec.ExpectUID(&uidNext)
+		data.UIDNext = uidNext
 	case "UIDVALIDITY":
 		ok = dec.ExpectNumber(&data.UIDValidity)
 	case "UNSEEN":
@@ -138,6 +157,8 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 		var storage int64
 		ok = dec.ExpectNumber64(&storage)
 		data.DeletedStorage = &storage
+	case "HIGHESTMODSEQ":
+		ok = dec.ExpectModSeq(&data.HighestModSeq)
 	default:
 		if !dec.DiscardValue() {
 			return dec.Err()

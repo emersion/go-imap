@@ -38,7 +38,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 	for {
 		challengeStr, err := contReq.Wait()
 		if err != nil {
-			return cmd.Wait()
+			return cmd.wait()
 		}
 
 		if challengeStr == "" {
@@ -72,7 +72,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 }
 
 type authenticateCommand struct {
-	cmd
+	commandBase
 }
 
 func (c *Client) writeSASLResp(resp []byte) error {
@@ -92,9 +92,9 @@ func (c *Client) writeSASLResp(resp []byte) error {
 func (c *Client) Unauthenticate() *Command {
 	cmd := &unauthenticateCommand{}
 	c.beginCommand("UNAUTHENTICATE", cmd).end()
-	return &cmd.cmd
+	return &cmd.Command
 }
 
 type unauthenticateCommand struct {
-	cmd
+	Command
 }

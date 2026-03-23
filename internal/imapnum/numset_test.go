@@ -1,4 +1,4 @@
-package imap
+package imapnum
 
 import (
 	"math/rand"
@@ -8,79 +8,79 @@ import (
 
 const max = ^uint32(0)
 
-func TestParseSeq(t *testing.T) {
+func TestParseNumRange(t *testing.T) {
 	tests := []struct {
 		in  string
-		out Seq
+		out Range
 		ok  bool
 	}{
 		// Invalid number
-		{"", Seq{}, false},
-		{" ", Seq{}, false},
-		{"A", Seq{}, false},
-		{"0", Seq{}, false},
-		{" 1", Seq{}, false},
-		{"1 ", Seq{}, false},
-		{"*1", Seq{}, false},
-		{"1*", Seq{}, false},
-		{"-1", Seq{}, false},
-		{"01", Seq{}, false},
-		{"0x1", Seq{}, false},
-		{"1 2", Seq{}, false},
-		{"1,2", Seq{}, false},
-		{"1.2", Seq{}, false},
-		{"4294967296", Seq{}, false},
+		{"", Range{}, false},
+		{" ", Range{}, false},
+		{"A", Range{}, false},
+		{"0", Range{}, false},
+		{" 1", Range{}, false},
+		{"1 ", Range{}, false},
+		{"*1", Range{}, false},
+		{"1*", Range{}, false},
+		{"-1", Range{}, false},
+		{"01", Range{}, false},
+		{"0x1", Range{}, false},
+		{"1 2", Range{}, false},
+		{"1,2", Range{}, false},
+		{"1.2", Range{}, false},
+		{"4294967296", Range{}, false},
 
 		// Valid number
-		{"*", Seq{0, 0}, true},
-		{"1", Seq{1, 1}, true},
-		{"42", Seq{42, 42}, true},
-		{"1000", Seq{1000, 1000}, true},
-		{"4294967295", Seq{max, max}, true},
+		{"*", Range{0, 0}, true},
+		{"1", Range{1, 1}, true},
+		{"42", Range{42, 42}, true},
+		{"1000", Range{1000, 1000}, true},
+		{"4294967295", Range{max, max}, true},
 
 		// Invalid range
-		{":", Seq{}, false},
-		{"*:", Seq{}, false},
-		{":*", Seq{}, false},
-		{"1:", Seq{}, false},
-		{":1", Seq{}, false},
-		{"0:0", Seq{}, false},
-		{"0:*", Seq{}, false},
-		{"0:1", Seq{}, false},
-		{"1:0", Seq{}, false},
-		{"1:2 ", Seq{}, false},
-		{"1: 2", Seq{}, false},
-		{"1:2:", Seq{}, false},
-		{"1:2,", Seq{}, false},
-		{"1:2:3", Seq{}, false},
-		{"1:2,3", Seq{}, false},
-		{"*:4294967296", Seq{}, false},
-		{"0:4294967295", Seq{}, false},
-		{"1:4294967296", Seq{}, false},
-		{"4294967296:*", Seq{}, false},
-		{"4294967295:0", Seq{}, false},
-		{"4294967296:1", Seq{}, false},
-		{"4294967295:4294967296", Seq{}, false},
+		{":", Range{}, false},
+		{"*:", Range{}, false},
+		{":*", Range{}, false},
+		{"1:", Range{}, false},
+		{":1", Range{}, false},
+		{"0:0", Range{}, false},
+		{"0:*", Range{}, false},
+		{"0:1", Range{}, false},
+		{"1:0", Range{}, false},
+		{"1:2 ", Range{}, false},
+		{"1: 2", Range{}, false},
+		{"1:2:", Range{}, false},
+		{"1:2,", Range{}, false},
+		{"1:2:3", Range{}, false},
+		{"1:2,3", Range{}, false},
+		{"*:4294967296", Range{}, false},
+		{"0:4294967295", Range{}, false},
+		{"1:4294967296", Range{}, false},
+		{"4294967296:*", Range{}, false},
+		{"4294967295:0", Range{}, false},
+		{"4294967296:1", Range{}, false},
+		{"4294967295:4294967296", Range{}, false},
 
 		// Valid range
-		{"*:*", Seq{0, 0}, true},
-		{"1:*", Seq{1, 0}, true},
-		{"*:1", Seq{1, 0}, true},
-		{"2:2", Seq{2, 2}, true},
-		{"2:42", Seq{2, 42}, true},
-		{"42:2", Seq{2, 42}, true},
-		{"*:4294967294", Seq{max - 1, 0}, true},
-		{"*:4294967295", Seq{max, 0}, true},
-		{"4294967294:*", Seq{max - 1, 0}, true},
-		{"4294967295:*", Seq{max, 0}, true},
-		{"1:4294967294", Seq{1, max - 1}, true},
-		{"1:4294967295", Seq{1, max}, true},
-		{"4294967295:1000", Seq{1000, max}, true},
-		{"4294967294:4294967295", Seq{max - 1, max}, true},
-		{"4294967295:4294967295", Seq{max, max}, true},
+		{"*:*", Range{0, 0}, true},
+		{"1:*", Range{1, 0}, true},
+		{"*:1", Range{1, 0}, true},
+		{"2:2", Range{2, 2}, true},
+		{"2:42", Range{2, 42}, true},
+		{"42:2", Range{2, 42}, true},
+		{"*:4294967294", Range{max - 1, 0}, true},
+		{"*:4294967295", Range{max, 0}, true},
+		{"4294967294:*", Range{max - 1, 0}, true},
+		{"4294967295:*", Range{max, 0}, true},
+		{"1:4294967294", Range{1, max - 1}, true},
+		{"1:4294967295", Range{1, max}, true},
+		{"4294967295:1000", Range{1000, max}, true},
+		{"4294967294:4294967295", Range{max - 1, max}, true},
+		{"4294967295:4294967295", Range{max, max}, true},
 	}
 	for _, test := range tests {
-		out, err := parseSeq(test.in)
+		out, err := parseNumRange(test.in)
 		if !test.ok {
 			if err == nil {
 				t.Errorf("parseSeq(%q) expected error; got %q", test.in, out)
@@ -93,7 +93,7 @@ func TestParseSeq(t *testing.T) {
 	}
 }
 
-func TestSeqContainsLess(t *testing.T) {
+func TestNumRangeContainsLess(t *testing.T) {
 	tests := []struct {
 		s        string
 		q        uint32
@@ -143,7 +143,7 @@ func TestSeqContainsLess(t *testing.T) {
 		{"4:*", max, true, false},
 	}
 	for _, test := range tests {
-		s, err := parseSeq(test.s)
+		s, err := parseNumRange(test.s)
 		if err != nil {
 			t.Errorf("parseSeq(%q) unexpected error; %v", test.s, err)
 			continue
@@ -157,7 +157,7 @@ func TestSeqContainsLess(t *testing.T) {
 	}
 }
 
-func TestSeqMerge(T *testing.T) {
+func TestNumRangeMerge(T *testing.T) {
 	tests := []struct {
 		s, t, out string
 	}{
@@ -340,12 +340,12 @@ func TestSeqMerge(T *testing.T) {
 		{"1:4294967295", "2:*", "1:*"},
 	}
 	for _, test := range tests {
-		s, err := parseSeq(test.s)
+		s, err := parseNumRange(test.s)
 		if err != nil {
 			T.Errorf("parseSeq(%q) unexpected error; %v", test.s, err)
 			continue
 		}
-		t, err := parseSeq(test.t)
+		t, err := parseNumRange(test.t)
 		if err != nil {
 			T.Errorf("parseSeq(%q) unexpected error; %v", test.t, err)
 			continue
@@ -366,31 +366,31 @@ func TestSeqMerge(T *testing.T) {
 	}
 }
 
-func checkSeqSet(s SeqSet, t *testing.T) {
+func checkNumSet(s Set, t *testing.T) {
 	n := len(s)
 	for i, v := range s {
 		if v.Start == 0 {
 			if v.Stop != 0 {
-				t.Errorf(`SeqSet(%q) index %d: "*:n" range`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "*:n" range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`SeqSet(%q) index %d: "*" not at the end`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "*" not at the end`, s, i)
 			}
 			continue
 		}
 		if i > 0 && s[i-1].Stop >= v.Start-1 {
-			t.Errorf(`SeqSet(%q) index %d: overlap`, s, i)
+			t.Errorf(`NumSet(%q) index %d: overlap`, s, i)
 		}
 		if v.Stop < v.Start {
 			if v.Stop != 0 {
-				t.Errorf(`SeqSet(%q) index %d: reversed range`, s, i)
+				t.Errorf(`NumSet(%q) index %d: reversed range`, s, i)
 			} else if i != n-1 {
-				t.Errorf(`SeqSet(%q) index %d: "n:*" not at the end`, s, i)
+				t.Errorf(`NumSet(%q) index %d: "n:*" not at the end`, s, i)
 			}
 		}
 	}
 }
 
-func TestSeqSetInfo(t *testing.T) {
+func TestNumSetInfo(t *testing.T) {
 	tests := []struct {
 		s        string
 		q        uint32
@@ -531,8 +531,8 @@ func TestSeqSetInfo(t *testing.T) {
 		{"1,3:5,7,9,42,60:70,100:*", max, true},
 	}
 	for _, test := range tests {
-		s, _ := ParseSeqSet(test.s)
-		checkSeqSet(s, t)
+		s, _ := ParseSet(test.s)
+		checkNumSet(s, t)
 		if s.Contains(test.q) != test.contains {
 			t.Errorf("%q.Contains(%v) expected %v", test.s, test.q, test.contains)
 		}
@@ -550,7 +550,7 @@ func TestSeqSetInfo(t *testing.T) {
 	}
 }
 
-func TestParseSeqSet(t *testing.T) {
+func TestParseNumSet(t *testing.T) {
 	tests := []struct {
 		in  string
 		out string
@@ -673,12 +673,12 @@ func TestParseSeqSet(t *testing.T) {
 	}
 	for _, test := range tests {
 		for i := 0; i < 100 && test.in != ""; i++ {
-			s, err := ParseSeqSet(test.in)
+			s, err := ParseSet(test.in)
 			if err != nil {
 				t.Errorf("Add(%q) unexpected error; %v", test.in, err)
 				i = 100
 			}
-			checkSeqSet(s, t)
+			checkNumSet(s, t)
 			if out := s.String(); out != test.out {
 				t.Errorf("%q.String() expected %q; got %q", test.in, test.out, out)
 				i = 100
@@ -688,34 +688,34 @@ func TestParseSeqSet(t *testing.T) {
 	}
 }
 
-func TestSeqSetAddNumRangeSet(t *testing.T) {
+func TestNumSetAddNumRangeSet(t *testing.T) {
 	type num []uint32
 	tests := []struct {
 		num num
-		rng Seq
+		rng Range
 		set string
 		out string
 	}{
-		{num{5}, Seq{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5}, Seq{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, Range{1, 3}, "1:2,5,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5}, Range{3, 1}, "2:3,7:13,15,17:*", "1:3,5,7:13,15,17:*"},
 
-		{num{15}, Seq{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
-		{num{15}, Seq{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, Range{17, 0}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
+		{num{15}, Range{0, 17}, "1:3,5,7:13", "1:3,5,7:13,15,17:*"},
 
-		{num{1, 3, 5, 7, 9, 11, 0}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, Seq{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
-		{num{5, 1, 7, 3, 9, 0, 11}, Seq{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{1, 3, 5, 7, 9, 11, 0}, Range{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, Range{8, 13}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
+		{num{5, 1, 7, 3, 9, 0, 11}, Range{13, 8}, "2,15,17:*", "1:3,5,7:13,15,17:*"},
 	}
 	for _, test := range tests {
-		other, _ := ParseSeqSet(test.set)
+		other, _ := ParseSet(test.set)
 
-		var s SeqSet
+		var s Set
 		s.AddNum(test.num...)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 		s.AddRange(test.rng.Start, test.rng.Stop)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 		s.AddSet(other)
-		checkSeqSet(s, t)
+		checkNumSet(s, t)
 
 		if out := s.String(); out != test.out {
 			t.Errorf("(%v + %v + %q).String() expected %q; got %q", test.num, test.rng, test.set, test.out, out)

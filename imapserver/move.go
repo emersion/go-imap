@@ -6,7 +6,7 @@ import (
 )
 
 func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
-	seqSet, dest, err := readCopy(dec)
+	numSet, dest, err := readCopy(numKind, dec)
 	if err != nil {
 		return err
 	}
@@ -18,7 +18,7 @@ func (c *Conn) handleMove(dec *imapwire.Decoder, numKind NumKind) error {
 		return newClientBugError("MOVE is not supported")
 	}
 	w := &MoveWriter{conn: c}
-	return session.Move(w, numKind, seqSet, dest)
+	return session.Move(w, numSet, dest)
 }
 
 // MoveWriter writes responses for the MOVE command.

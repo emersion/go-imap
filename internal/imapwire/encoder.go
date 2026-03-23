@@ -18,8 +18,8 @@ import (
 // CRLF is called. These methods return the Encoder so that calls can be
 // chained.
 type Encoder struct {
-	// QuotedUTF8 allows non-ASCII strings to be encoded as quoted strings.
-	// This requires IMAP4rev2.
+	// QuotedUTF8 allows raw UTF-8 in quoted strings. This requires IMAP4rev2
+	// to be available, or UTF8=ACCEPT to be enabled.
 	QuotedUTF8 bool
 	// LiteralMinus enables non-synchronizing literals for short payloads.
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
@@ -153,13 +153,17 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
 	} else {
-		name, _ = utf7.Encoding.NewEncoder().String(name)
+		if enc.QuotedUTF8 {
+			name = utf7.Escape(name)
+		} else {
+			name = utf7.Encode(name)
+		}
 		return enc.String(name)
 	}
 }
 
-func (enc *Encoder) SeqSet(seqSet imap.SeqSet) *Encoder {
-	s := seqSet.String()
+func (enc *Encoder) NumSet(numSet imap.NumSet) *Encoder {
+	s := numSet.String()
 	if s == "" {
 		enc.setErr(fmt.Errorf("imapwire: cannot encode empty sequence set"))
 		return enc
@@ -210,6 +214,11 @@ func (enc *Encoder) Number64(v int64) *Encoder {
 	return enc.writeString(strconv.FormatInt(v, 10))
 }
 
+func (enc *Encoder) ModSeq(v uint64) *Encoder {
+	// TODO: disallow zero values
+	return enc.writeString(strconv.FormatUint(v, 10))
+}
+
 // List writes a parenthesized list.
 func (enc *Encoder) List(n int, f func(i int)) *Encoder {
 	enc.Special('(')
@@ -234,6 +243,10 @@ func (enc *Encoder) NIL() *Encoder {
 
 func (enc *Encoder) Text(s string) *Encoder {
 	return enc.writeString(s)
+}
+
+func (enc *Encoder) UID(uid imap.UID) *Encoder {
+	return enc.Number(uint32(uid))
 }
 
 // Literal writes a literal.

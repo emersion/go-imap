@@ -8,10 +8,10 @@ import (
 	"net"
 )
 
-// StartTLS sends a STARTTLS command.
+// startTLS sends a STARTTLS command.
 //
 // Unlike other commands, this method blocks until the command completes.
-func (c *Client) StartTLS(config *tls.Config) error {
+func (c *Client) startTLS(config *tls.Config) error {
 	upgradeDone := make(chan struct{})
 	cmd := &startTLSCommand{
 		tlsConfig:   config,
@@ -25,16 +25,21 @@ func (c *Client) StartTLS(config *tls.Config) error {
 	// commands until a server response is seen and the TLS negotiation is
 	// complete
 
-	if err := cmd.Wait(); err != nil {
+	if err := cmd.wait(); err != nil {
 		return err
 	}
 
 	// The decoder goroutine will invoke Client.upgradeStartTLS
 	<-upgradeDone
-	return nil
+
+	return cmd.tlsConn.Handshake()
 }
 
-func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
+// upgradeStartTLS finishes the STARTTLS upgrade after the server has sent an
+// OK response. It runs in the decoder goroutine.
+func (c *Client) upgradeStartTLS(startTLS *startTLSCommand) {
+	defer close(startTLS.upgradeDone)
+
 	// Drain buffered data from our bufio.Reader
 	var buf bytes.Buffer
 	if _, err := io.CopyN(&buf, c.br, int64(c.br.Buffered())); err != nil {
@@ -49,19 +54,23 @@ func (c *Client) upgradeStartTLS(tlsConfig *tls.Config) {
 		cleartextConn = c.conn
 	}
 
-	tlsConn := tls.Client(cleartextConn, tlsConfig)
+	tlsConn := tls.Client(cleartextConn, startTLS.tlsConfig)
 	rw := c.options.wrapReadWriter(tlsConn)
 
 	c.br.Reset(rw)
 	// Unfortunately we can't re-use the bufio.Writer here, it races with
 	// Client.StartTLS
 	c.bw = bufio.NewWriter(rw)
+
+	startTLS.tlsConn = tlsConn
 }
 
 type startTLSCommand struct {
-	cmd
-	tlsConfig   *tls.Config
+	commandBase
+	tlsConfig *tls.Config
+
 	upgradeDone chan<- struct{}
+	tlsConn     *tls.Conn
 }
 
 type startTLSConn struct {

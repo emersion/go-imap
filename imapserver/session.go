@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal/imapwire"
 	"github.com/emersion/go-sasl"
 )
 
@@ -26,8 +27,8 @@ type GreetingData struct {
 type NumKind int
 
 const (
-	NumKindSeq NumKind = 1 + iota
-	NumKindUID
+	NumKindSeq = NumKind(imapwire.NumKindSeq)
+	NumKindUID = NumKind(imapwire.NumKindUID)
 )
 
 // String implements fmt.Stringer.
@@ -42,6 +43,10 @@ func (kind NumKind) String() string {
 	}
 }
 
+func (kind NumKind) wire() imapwire.NumKind {
+	return imapwire.NumKind(kind)
+}
+
 // Session is an IMAP session.
 type Session interface {
 	Close() error
@@ -53,7 +58,7 @@ type Session interface {
 	Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error)
 	Create(mailbox string, options *imap.CreateOptions) error
 	Delete(mailbox string) error
-	Rename(mailbox, newName string) error
+	Rename(mailbox, newName string, options *imap.RenameOptions) error
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
@@ -64,11 +69,11 @@ type Session interface {
 
 	// Selected state
 	Unselect() error
-	Expunge(w *ExpungeWriter, uids *imap.SeqSet) error
+	Expunge(w *ExpungeWriter, uids *imap.UIDSet) error
 	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
-	Fetch(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, options *imap.FetchOptions) error
-	Store(w *FetchWriter, kind NumKind, seqSet imap.SeqSet, flags *imap.StoreFlags, options *imap.StoreOptions) error
-	Copy(kind NumKind, seqSet imap.SeqSet, dest string) (*imap.CopyData, error)
+	Fetch(w *FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error
+	Store(w *FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error
+	Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error)
 }
 
 // SessionNamespace is an IMAP session which supports NAMESPACE.
@@ -84,7 +89,7 @@ type SessionMove interface {
 	Session
 
 	// Selected state
-	Move(w *MoveWriter, kind NumKind, seqSet imap.SeqSet, dest string) error
+	Move(w *MoveWriter, numSet imap.NumSet, dest string) error
 }
 
 // SessionIMAP4rev2 is an IMAP session which supports IMAP4rev2.
@@ -100,4 +105,22 @@ type SessionSASL interface {
 	Session
 	AuthenticateMechanisms() []string
 	Authenticate(mech string) (sasl.Server, error)
+}
+
+// SessionUnauthenticate is an IMAP session which supports UNAUTHENTICATE.
+type SessionUnauthenticate interface {
+	Session
+
+	// Authenticated state
+	Unauthenticate() error
+}
+
+// SessionAppendLimit is an IMAP session which has the same APPEND limit for
+// all mailboxes.
+type SessionAppendLimit interface {
+	Session
+
+	// AppendLimit returns the maximum size in bytes that can be uploaded to
+	// this server in an APPEND command.
+	AppendLimit() uint32
 }

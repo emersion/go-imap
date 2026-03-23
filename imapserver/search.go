@@ -86,25 +86,27 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	}
 
 	if c.enabled.Has(imap.CapIMAP4rev2) || extended {
-		return c.writeESearch(tag, data, &options)
+		return c.writeESearch(tag, data, &options, numKind)
 	} else {
 		return c.writeSearch(data.All)
 	}
 }
 
-func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
+func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions, numKind NumKind) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
 	enc.Atom("*").SP().Atom("ESEARCH")
 	if tag != "" {
-		enc.SP().Special('(').Atom("TAG").SP().Atom(tag).Special(')')
+		enc.SP().Special('(').Atom("TAG").SP().String(tag).Special(')')
 	}
-	if data.UID {
+	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
 	}
-	if options.ReturnAll && len(data.All) > 0 {
-		enc.SP().Atom("ALL").SP().SeqSet(data.All)
+	// When there is no result, we need to send an ESEARCH response with no ALL
+	// keyword
+	if options.ReturnAll && !isNumSetEmpty(data.All) {
+		enc.SP().Atom("ALL").SP().NumSet(data.All)
 	}
 	if options.ReturnMin && data.Min > 0 {
 		enc.SP().Atom("MIN").SP().Number(data.Min)
@@ -118,18 +120,39 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	return enc.CRLF()
 }
 
-func (c *Conn) writeSearch(seqSet imap.SeqSet) error {
+func isNumSetEmpty(numSet imap.NumSet) bool {
+	switch numSet := numSet.(type) {
+	case imap.SeqSet:
+		return len(numSet) == 0
+	case imap.UIDSet:
+		return len(numSet) == 0
+	default:
+		panic("unknown imap.NumSet type")
+	}
+}
+
+func (c *Conn) writeSearch(numSet imap.NumSet) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
-	nums, ok := seqSet.Nums()
+	enc.Atom("*").SP().Atom("SEARCH")
+	var ok bool
+	switch numSet := numSet.(type) {
+	case imap.SeqSet:
+		var nums []uint32
+		nums, ok = numSet.Nums()
+		for _, num := range nums {
+			enc.SP().Number(num)
+		}
+	case imap.UIDSet:
+		var uids []imap.UID
+		uids, ok = numSet.Nums()
+		for _, uid := range uids {
+			enc.SP().UID(uid)
+		}
+	}
 	if !ok {
 		return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response")
-	}
-
-	enc.Atom("*").SP().Atom("SEARCH")
-	for _, num := range nums {
-		enc.SP().Number(num)
 	}
 	return enc.CRLF()
 }
@@ -152,6 +175,8 @@ func readSearchReturnOpts(dec *imapwire.Decoder, options *imap.SearchOptions) er
 			options.ReturnAll = true
 		case "COUNT":
 			options.ReturnCount = true
+		case "SAVE":
+			options.ReturnSave = true
 		default:
 			return newClientBugError("unknown SEARCH RETURN option")
 		}
@@ -181,11 +206,11 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 	case "ALL":
 		// nothing to do
 	case "UID":
-		var seqSet imap.SeqSet
-		if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) {
+		var uidSet imap.UIDSet
+		if !dec.ExpectSP() || !dec.ExpectUIDSet(&uidSet) {
 			return dec.Err()
 		}
-		criteria.UID = append(criteria.UID, seqSet)
+		criteria.UID = append(criteria.UID, uidSet)
 	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":
 		criteria.Flag = append(criteria.Flag, searchKeyFlag(key))
 	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
@@ -193,7 +218,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		criteria.NotFlag = append(criteria.NotFlag, searchKeyFlag(notKey))
 	case "NEW":
 		criteria.Flag = append(criteria.Flag, internal.FlagRecent)
-		criteria.NotFlag = append(criteria.Flag, imap.FlagSeen)
+		criteria.NotFlag = append(criteria.NotFlag, imap.FlagSeen)
 	case "OLD":
 		criteria.NotFlag = append(criteria.NotFlag, internal.FlagRecent)
 	case "KEYWORD", "UNKEYWORD":
@@ -283,7 +308,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		var not imap.SearchCriteria
 		if err := readSearchKey(&not, dec); err != nil {
-			return nil
+			return err
 		}
 		criteria.Not = append(criteria.Not, not)
 	case "OR":
@@ -292,17 +317,19 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		var or [2]imap.SearchCriteria
 		if err := readSearchKey(&or[0], dec); err != nil {
-			return nil
+			return err
 		}
 		if !dec.ExpectSP() {
 			return dec.Err()
 		}
 		if err := readSearchKey(&or[1], dec); err != nil {
-			return nil
+			return err
 		}
 		criteria.Or = append(criteria.Or, or)
+	case "$":
+		criteria.UID = append(criteria.UID, imap.SearchRes())
 	default:
-		seqSet, err := imap.ParseSeqSet(key)
+		seqSet, err := imapwire.ParseSeqSet(key)
 		if err != nil {
 			return err
 		}

@@ -15,8 +15,6 @@ const (
 	CapIMAP4rev1 Cap = "IMAP4rev1" // RFC 3501
 	CapIMAP4rev2 Cap = "IMAP4rev2" // RFC 9051
 
-	CapAuthPlain Cap = "AUTH=PLAIN"
-
 	CapStartTLS      Cap = "STARTTLS"
 	CapLoginDisabled Cap = "LOGINDISABLED"
 
@@ -34,12 +32,12 @@ const (
 	CapMove         Cap = "MOVE"          // RFC 6851
 	CapLiteralMinus Cap = "LITERAL-"      // RFC 7888
 	CapStatusSize   Cap = "STATUS=SIZE"   // RFC 8438
+	CapChildren     Cap = "CHILDREN"      // RFC 3348
 
 	CapACL              Cap = "ACL"                // RFC 4314
 	CapAppendLimit      Cap = "APPENDLIMIT"        // RFC 7889
 	CapBinary           Cap = "BINARY"             // RFC 3516
 	CapCatenate         Cap = "CATENATE"           // RFC 4469
-	CapChildren         Cap = "CHILDREN"           // RFC 3348
 	CapCondStore        Cap = "CONDSTORE"          // RFC 7162
 	CapConvert          Cap = "CONVERT"            // RFC 5259
 	CapCreateSpecialUse Cap = "CREATE-SPECIAL-USE" // RFC 6154
@@ -73,6 +71,9 @@ const (
 	CapUTF8Accept       Cap = "UTF8=ACCEPT"        // RFC 6855
 	CapUTF8Only         Cap = "UTF8=ONLY"          // RFC 6855
 	CapWithin           Cap = "WITHIN"             // RFC 5032
+	CapUIDOnly          Cap = "UIDONLY"            // RFC 9586
+	CapListMetadata     Cap = "LIST-METADATA"      // RFC 9590
+	CapInProgress       Cap = "INPROGRESS"         // RFC 9585
 )
 
 var imap4rev2Caps = CapSet{
@@ -89,6 +90,12 @@ var imap4rev2Caps = CapSet{
 	CapMove:         {},
 	CapLiteralMinus: {},
 	CapStatusSize:   {},
+	CapChildren:     {},
+}
+
+// AuthCap returns the capability name for an SASL authentication mechanism.
+func AuthCap(mechanism string) Cap {
+	return Cap("AUTH=" + mechanism)
 }
 
 // CapSet is a set of capabilities.
@@ -97,6 +104,14 @@ type CapSet map[Cap]struct{}
 func (set CapSet) has(c Cap) bool {
 	_, ok := set[c]
 	return ok
+}
+
+func (set CapSet) Copy() CapSet {
+	newSet := make(CapSet, len(set))
+	for c := range set {
+		newSet[c] = struct{}{}
+	}
+	return newSet
 }
 
 // Has checks whether a capability is supported.
@@ -113,6 +128,12 @@ func (set CapSet) Has(c Cap) bool {
 	}
 
 	if c == CapLiteralMinus && set.has(CapLiteralPlus) {
+		return true
+	}
+	if c == CapCondStore && set.has(CapQResync) {
+		return true
+	}
+	if c == CapUTF8Accept && set.has(CapUTF8Only) {
 		return true
 	}
 	if c == CapAppendLimit {

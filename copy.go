@@ -4,6 +4,6 @@ package imap
 type CopyData struct {
 	// requires UIDPLUS or IMAP4rev2
 	UIDValidity uint32
-	SourceUIDs  SeqSet
-	DestUIDs    SeqSet
+	SourceUIDs  UIDSet
+	DestUIDs    UIDSet
 }

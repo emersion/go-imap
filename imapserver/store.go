@@ -10,10 +10,10 @@ import (
 
 func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	var (
-		seqSet imap.SeqSet
+		numSet imap.NumSet
 		item   string
 	)
-	if !dec.ExpectSP() || !dec.ExpectSeqSet(&seqSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 	var flags []imap.Flag
@@ -70,7 +70,7 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 
 	w := &FetchWriter{conn: c}
 	options := imap.StoreOptions{}
-	return c.session.Store(w, numKind, seqSet, &imap.StoreFlags{
+	return c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,

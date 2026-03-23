@@ -18,6 +18,9 @@ type FetchOptions struct {
 	BodySection       []*FetchItemBodySection
 	BinarySection     []*FetchItemBinarySection     // requires IMAP4rev2 or BINARY
 	BinarySectionSize []*FetchItemBinarySectionSize // requires IMAP4rev2 or BINARY
+	ModSeq            bool                          // requires CONDSTORE
+
+	ChangedSince uint64 // requires CONDSTORE
 }
 
 // FetchItemBodyStructure contains FETCH options for the body structure.
@@ -41,6 +44,18 @@ type SectionPartial struct {
 }
 
 // FetchItemBodySection is a FETCH BODY[] data item.
+//
+// To fetch the whole body of a message, use the zero FetchItemBodySection:
+//
+//	imap.FetchItemBodySection{}
+//
+// To fetch only a specific part, use the Part field:
+//
+//	imap.FetchItemBodySection{Part: []int{1, 2, 3}}
+//
+// To fetch only the header of the message, use the Specifier field:
+//
+//	imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader}
 type FetchItemBodySection struct {
 	Specifier       PartSpecifier
 	Part            []int
@@ -63,6 +78,10 @@ type FetchItemBinarySectionSize struct {
 }
 
 // Envelope is the envelope structure of a message.
+//
+// The subject and addresses are UTF-8 (ie, not in their encoded form). The
+// In-Reply-To and Message-ID values contain message identifiers without angle
+// brackets.
 type Envelope struct {
 	Date      time.Time
 	Subject   string
@@ -72,7 +91,7 @@ type Envelope struct {
 	To        []Address
 	Cc        []Address
 	Bcc       []Address
-	InReplyTo string
+	InReplyTo []string
 	MessageID string
 }
 

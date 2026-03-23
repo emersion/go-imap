@@ -55,6 +55,10 @@ func ExpectDate(dec *imapwire.Decoder) (time.Time, error) {
 func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	var flags []imap.Flag
 	err := dec.ExpectList(func() error {
+		// Some servers start the list with a space, so we need to skip it
+		// https://github.com/emersion/go-imap/pull/633
+		dec.SP()
+
 		flag, err := ExpectFlag(dec)
 		if err != nil {
 			return err
@@ -63,6 +67,14 @@ func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 		return nil
 	})
 	return flags, err
+}
+
+func ExpectCap(dec *imapwire.Decoder) (imap.Cap, error) {
+	var name string
+	if !dec.ExpectAtom(&name) {
+		return "", dec.Err()
+	}
+	return canonicalCap(name), nil
 }
 
 func ExpectFlag(dec *imapwire.Decoder) (imap.Flag, error) {
@@ -135,6 +147,7 @@ func canonInit() {
 		imap.MailboxAttrJunk,
 		imap.MailboxAttrSent,
 		imap.MailboxAttrTrash,
+		imap.MailboxAttrImportant,
 	}
 
 	canonFlag = make(map[string]imap.Flag)
@@ -162,4 +175,14 @@ func canonicalMailboxAttr(s string) imap.MailboxAttr {
 		return attr
 	}
 	return imap.MailboxAttr(s)
+}
+
+func canonicalCap(s string) imap.Cap {
+	// Only two caps are not fully uppercase
+	for _, cap := range []imap.Cap{imap.CapIMAP4rev1, imap.CapIMAP4rev2} {
+		if strings.EqualFold(s, string(cap)) {
+			return cap
+		}
+	}
+	return imap.Cap(strings.ToUpper(s))
 }

@@ -3,16 +3,15 @@ package imapserver
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-// appendLimit is the maximum size of an APPEND payload.
-//
-// TODO: make configurable
-const appendLimit = 100 * 1024 * 1024 // 100MiB
+// defaultAppendLimit is the default maximum size of an APPEND payload.
+const defaultAppendLimit = 100 * 1024 * 1024 // 100MiB
 
 func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	var (
@@ -47,10 +46,29 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	}
 	options.Time = t
 
+	var dataExt string
+	if !dec.Special('~') && dec.Atom(&dataExt) { // ignore literal8 prefix if any for BINARY
+		switch strings.ToUpper(dataExt) {
+		case "UTF8":
+			// '~' is the literal8 prefix
+			if !dec.ExpectSP() || !dec.ExpectSpecial('(') || !dec.ExpectSpecial('~') {
+				return dec.Err()
+			}
+		default:
+			return newClientBugError("Unknown APPEND data extension")
+		}
+	}
+
 	lit, nonSync, err := dec.ExpectLiteralReader()
 	if err != nil {
 		return err
 	}
+
+	appendLimit := int64(defaultAppendLimit)
+	if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
+		appendLimit = int64(appendLimitSession.AppendLimit())
+	}
+
 	if lit.Size() > appendLimit {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeNo,
@@ -75,6 +93,9 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 	if _, discardErr := io.Copy(io.Discard, lit); discardErr != nil {
 		return err
 	}
+	if dataExt != "" && !dec.ExpectSpecial(')') {
+		return dec.Err()
+	}
 	if !dec.ExpectCRLF() {
 		return err
 	}
@@ -94,7 +115,7 @@ func (c *Conn) writeAppendOK(tag string, data *imap.AppendData) error {
 	enc.Atom(tag).SP().Atom("OK").SP()
 	if data != nil {
 		enc.Special('[')
-		enc.Atom("APPENDUID").SP().Number(data.UIDValidity).SP().Number(data.UID)
+		enc.Atom("APPENDUID").SP().Number(data.UIDValidity).SP().UID(data.UID)
 		enc.Special(']').SP()
 	}
 	enc.Text("APPEND completed")
