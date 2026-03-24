@@ -92,7 +92,7 @@ func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListComma
 func (c *Client) handleList() error {
 	data, err := readList(c.dec)
 	if err != nil {
-		return fmt.Errorf("in LIST: %v", err)
+		return fmt.Errorf("in LIST: %w", err)
 	}
 
 	cmd := c.findPendingCmdFunc(func(cmd command) bool {
@@ -204,22 +204,22 @@ func readList(dec *imapwire.Decoder) (*imap.ListData, error) {
 			case "CHILDINFO":
 				data.ChildInfo, err = readChildInfoExtendedItem(dec)
 				if err != nil {
-					return fmt.Errorf("in childinfo-extended-item: %v", err)
+					return fmt.Errorf("in childinfo-extended-item: %w", err)
 				}
 			case "OLDNAME":
 				data.OldName, err = readOldNameExtendedItem(dec)
 				if err != nil {
-					return fmt.Errorf("in oldname-extended-item: %v", err)
+					return fmt.Errorf("in oldname-extended-item: %w", err)
 				}
 			default:
 				if !dec.DiscardValue() {
-					return fmt.Errorf("in tagged-ext-val: %v", err)
+					return fmt.Errorf("in tagged-ext-val: %w", err)
 				}
 			}
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("in mbox-list-extended: %v", err)
+			return nil, fmt.Errorf("in mbox-list-extended: %w", err)
 		}
 	}
 
