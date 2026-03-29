@@ -71,17 +71,20 @@ func (c *Client) MultiAppend(mailbox string) *MultiAppendCommand {
 
 // MultiAppendCommand is an APPEND command with multiple messages.
 type MultiAppendCommand struct {
-	cmd
-	enc *commandEncoder
-	wc  io.WriteCloser
+	commandBase
+	enc  *commandEncoder
+	wc   io.WriteCloser
+	data imap.MultiAppendData
 }
 
 // CreateMessage appends a new message.
-func (cmd *MultiAppendCommand) CreateMessage(size int64, options *imap.AppendOptions) io.Writer {
+func (cmd *MultiAppendCommand) CreateMessage(size int64, options *imap.AppendOptions) (io.Writer, error) {
 	if cmd.wc != nil {
-		// TODO: handle error
-		cmd.wc.Close()
+		err := cmd.wc.Close()
 		cmd.wc = nil
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cmd.enc.SP()
@@ -94,7 +97,7 @@ func (cmd *MultiAppendCommand) CreateMessage(size int64, options *imap.AppendOpt
 		cmd.enc.String(options.Time.Format(internal.DateTimeLayout)).SP()
 	}
 	cmd.wc = cmd.enc.Literal(size)
-	return cmd.wc
+	return cmd.wc, nil
 }
 
 // Close ends the APPEND command.
@@ -107,6 +110,6 @@ func (cmd *MultiAppendCommand) Close() error {
 	return err
 }
 
-func (cmd *MultiAppendCommand) Wait() error {
-	return cmd.cmd.Wait()
+func (cmd *MultiAppendCommand) Wait() (*imap.MultiAppendData, error) {
+	return &cmd.data, cmd.wait()
 }
