@@ -33,7 +33,6 @@ func TestAppend(t *testing.T) {
 	}
 }
 
-
 func TestMultiAppend(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateSelected)
 	defer server.Close()
@@ -45,10 +44,10 @@ func TestMultiAppend(t *testing.T) {
 	multiAppendCmd := client.MultiAppend("INBOX")
 	body := "This is test message"
 	for i := 0; i < 3; i++ {
-		writer, err:= multiAppendCmd.CreateMessage(int64(len(body)), nil)
+		writer, err := multiAppendCmd.CreateMessage(int64(len(body)), nil)
 		if err != nil {
 			t.Fatalf("MultiAppendCommand.CreateMessage() = %v", err)
-		} 
+		}
 		writer.Write([]byte(body))
 	}
 	if err := multiAppendCmd.Close(); err != nil {
