@@ -46,6 +46,8 @@ type Conn struct {
 
 	state   imap.ConnState
 	session Session
+
+	isSessionOver bool
 }
 
 func newConn(c net.Conn, server *Server) *Conn {
@@ -92,6 +94,8 @@ func (c *Conn) EnabledCaps() imap.CapSet {
 	return c.enabled.Copy()
 }
 
+func (c *Conn) IsSessionOver() bool { return c.isSessionOver }
+
 func (c *Conn) serve() {
 	defer func() {
 		if v := recover(); v != nil {
@@ -133,6 +137,8 @@ func (c *Conn) serve() {
 	}
 
 	defer func() {
+		c.isSessionOver = true
+
 		if c.session != nil {
 			if err := c.session.Close(); err != nil {
 				c.server.logger().Printf("failed to close session: %v", err)
