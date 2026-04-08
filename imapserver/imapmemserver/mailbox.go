@@ -21,6 +21,7 @@ type Mailbox struct {
 	mutex      sync.Mutex
 	name       string
 	subscribed bool
+	specialUse []imap.MailboxAttr
 	l          []*message
 	uidNext    imap.UID
 }
@@ -42,6 +43,9 @@ func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {
 	if options.SelectSubscribed && !mbox.subscribed {
 		return nil
 	}
+	if options.SelectSpecialUse && len(mbox.specialUse) == 0 {
+		return nil
+	}
 
 	data := imap.ListData{
 		Mailbox: mbox.name,
@@ -49,6 +53,9 @@ func (mbox *Mailbox) list(options *imap.ListOptions) *imap.ListData {
 	}
 	if mbox.subscribed {
 		data.Attrs = append(data.Attrs, imap.MailboxAttrSubscribed)
+	}
+	if (options.ReturnSpecialUse || options.SelectSpecialUse) && len(mbox.specialUse) > 0 {
+		data.Attrs = append(data.Attrs, mbox.specialUse...)
 	}
 	if options.ReturnStatus != nil {
 		data.Status = mbox.statusDataLocked(options.ReturnStatus)
@@ -86,6 +93,10 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 	if options.Size {
 		size := mbox.sizeLocked()
 		data.Size = &size
+	}
+	if options.NumRecent {
+		num := uint32(0)
+		data.NumRecent = &num
 	}
 	return &data
 }
@@ -174,13 +185,28 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 	copy(permanentFlags, flags)
 	permanentFlags = append(permanentFlags, imap.FlagWildcard)
 
+	// TODO: skip if IMAP4rev1 is disabled by the server, or IMAP4rev2 is
+	// enabled by the client
+	firstUnseenSeqNum := mbox.firstUnseenSeqNumLocked()
+
 	return &imap.SelectData{
-		Flags:          flags,
-		PermanentFlags: permanentFlags,
-		NumMessages:    uint32(len(mbox.l)),
-		UIDNext:        mbox.uidNext,
-		UIDValidity:    mbox.uidValidity,
+		Flags:             flags,
+		PermanentFlags:    permanentFlags,
+		NumMessages:       uint32(len(mbox.l)),
+		FirstUnseenSeqNum: firstUnseenSeqNum,
+		UIDNext:           mbox.uidNext,
+		UIDValidity:       mbox.uidValidity,
 	}
+}
+
+func (mbox *Mailbox) firstUnseenSeqNumLocked() uint32 {
+	for i, msg := range mbox.l {
+		seqNum := uint32(i) + 1
+		if _, ok := msg.flags[canonicalFlag(imap.FlagSeen)]; !ok {
+			return seqNum
+		}
+	}
+	return 0
 }
 
 func (mbox *Mailbox) flagsLocked() []imap.Flag {
@@ -315,9 +341,8 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 
 	mbox.staticSearchCriteria(criteria)
 
-	data := imap.SearchData{UID: numKind == imapserver.NumKindUID}
-
 	var (
+		data   imap.SearchData
 		seqSet imap.SeqSet
 		uidSet imap.UIDSet
 	)

@@ -41,9 +41,14 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	if err := c.writeExists(data.NumMessages); err != nil {
 		return err
 	}
-	if !c.enabled.Has(imap.CapIMAP4rev2) {
+	if !c.enabled.Has(imap.CapIMAP4rev2) && c.server.options.caps().Has(imap.CapIMAP4rev1) {
 		if err := c.writeObsoleteRecent(data.NumRecent); err != nil {
 			return err
+		}
+		if data.FirstUnseenSeqNum != 0 {
+			if err := c.writeObsoleteUnseen(data.FirstUnseenSeqNum); err != nil {
+				return err
+			}
 		}
 	}
 	if err := c.writeUIDValidity(data.UIDValidity); err != nil {
@@ -119,6 +124,15 @@ func (c *Conn) writeObsoleteRecent(n uint32) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 	return enc.Atom("*").SP().Number(n).SP().Atom("RECENT").CRLF()
+}
+
+func (c *Conn) writeObsoleteUnseen(n uint32) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("UNSEEN").SP().Number(n).Special(']')
+	enc.SP().Text("First unseen message")
+	return enc.CRLF()
 }
 
 func (c *Conn) writeUIDValidity(uidValidity uint32) error {

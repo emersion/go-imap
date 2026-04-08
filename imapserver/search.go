@@ -86,21 +86,21 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	}
 
 	if c.enabled.Has(imap.CapIMAP4rev2) || extended {
-		return c.writeESearch(tag, data, &options)
+		return c.writeESearch(tag, data, &options, numKind)
 	} else {
 		return c.writeSearch(data.All)
 	}
 }
 
-func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions) error {
+func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions, numKind NumKind) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
 	enc.Atom("*").SP().Atom("ESEARCH")
 	if tag != "" {
-		enc.SP().Special('(').Atom("TAG").SP().Atom(tag).Special(')')
+		enc.SP().Special('(').Atom("TAG").SP().String(tag).Special(')')
 	}
-	if data.UID {
+	if numKind == NumKindUID {
 		enc.SP().Atom("UID")
 	}
 	// When there is no result, we need to send an ESEARCH response with no ALL
@@ -218,7 +218,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		criteria.NotFlag = append(criteria.NotFlag, searchKeyFlag(notKey))
 	case "NEW":
 		criteria.Flag = append(criteria.Flag, internal.FlagRecent)
-		criteria.NotFlag = append(criteria.Flag, imap.FlagSeen)
+		criteria.NotFlag = append(criteria.NotFlag, imap.FlagSeen)
 	case "OLD":
 		criteria.NotFlag = append(criteria.NotFlag, internal.FlagRecent)
 	case "KEYWORD", "UNKEYWORD":
@@ -308,7 +308,7 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		var not imap.SearchCriteria
 		if err := readSearchKey(&not, dec); err != nil {
-			return nil
+			return err
 		}
 		criteria.Not = append(criteria.Not, not)
 	case "OR":
@@ -317,13 +317,13 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		}
 		var or [2]imap.SearchCriteria
 		if err := readSearchKey(&or[0], dec); err != nil {
-			return nil
+			return err
 		}
 		if !dec.ExpectSP() {
 			return dec.Err()
 		}
 		if err := readSearchKey(&or[1], dec); err != nil {
-			return nil
+			return err
 		}
 		criteria.Or = append(criteria.Or, or)
 	case "$":

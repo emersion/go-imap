@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
@@ -45,11 +46,11 @@ func readCapabilities(dec *imapwire.Decoder) (imap.CapSet, error) {
 		for dec.SP() {
 		}
 
-		var name string
-		if !dec.ExpectAtom(&name) {
-			return caps, fmt.Errorf("in capability-data: %v", dec.Err())
+		cap, err := internal.ExpectCap(dec)
+		if err != nil {
+			return caps, fmt.Errorf("in capability-data: %w", err)
 		}
-		caps[imap.Cap(name)] = struct{}{}
+		caps[cap] = struct{}{}
 	}
 	return caps, nil
 }

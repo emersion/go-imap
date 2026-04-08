@@ -295,9 +295,9 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 	} else if !dec.ExpectAtom(&name) {
 		return "", nil, dec.Err()
 	}
-	data.UID = name == "UID"
+	isUID := name == "UID"
 
-	if data.UID {
+	if isUID {
 		if !dec.SP() {
 			return tag, data, nil
 		} else if !dec.ExpectAtom(&name) {
@@ -325,7 +325,7 @@ func readESearchResponse(dec *imapwire.Decoder) (tag string, data *imap.SearchDa
 			data.Max = num
 		case "ALL":
 			numKind := imapwire.NumKindSeq
-			if data.UID {
+			if isUID {
 				numKind = imapwire.NumKindUID
 			}
 			if !dec.ExpectNumSet(numKind, &data.All) {

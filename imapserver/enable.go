@@ -2,17 +2,18 @@ package imapserver
 
 import (
 	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/internal"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
 func (c *Conn) handleEnable(dec *imapwire.Decoder) error {
 	var requested []imap.Cap
 	for dec.SP() {
-		var c string
-		if !dec.ExpectAtom(&c) {
-			return dec.Err()
+		cap, err := internal.ExpectCap(dec)
+		if err != nil {
+			return err
 		}
-		requested = append(requested, imap.Cap(c))
+		requested = append(requested, cap)
 	}
 	if !dec.ExpectCRLF() {
 		return dec.Err()

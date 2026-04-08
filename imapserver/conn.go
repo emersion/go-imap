@@ -194,6 +194,10 @@ func (c *Conn) serve() {
 }
 
 func (c *Conn) readCommand(dec *imapwire.Decoder) error {
+	if dec.CRLF() {
+		return nil // allow empty newlines
+	}
+
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
 		return fmt.Errorf("in command: %w", dec.Err())
@@ -362,7 +366,8 @@ func (c *Conn) handleRename(dec *imapwire.Decoder) error {
 	if err := c.checkState(imap.ConnStateAuthenticated); err != nil {
 		return err
 	}
-	return c.session.Rename(oldName, newName)
+	var options imap.RenameOptions
+	return c.session.Rename(oldName, newName, &options)
 }
 
 func (c *Conn) handleSubscribe(dec *imapwire.Decoder) error {

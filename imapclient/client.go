@@ -45,11 +45,9 @@ const (
 
 	cmdWriteTimeout     = 30 * time.Second
 	literalWriteTimeout = 5 * time.Minute
-)
 
-var dialer = &net.Dialer{
-	Timeout: 30 * time.Second,
-}
+	defaultDialTimeout = 30 * time.Second
+)
 
 // SelectedMailbox contains metadata for the currently selected mailbox.
 type SelectedMailbox struct {
@@ -77,6 +75,9 @@ type Options struct {
 	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
+	// Dialer to use when establishing connections with the Dial* functions.
+	// If nil, a default dialer with a 30 second timeout is used.
+	Dialer *net.Dialer
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -112,11 +113,18 @@ func (options *Options) unilateralDataHandler() *UnilateralDataHandler {
 }
 
 func (options *Options) tlsConfig() *tls.Config {
-	if options != nil && options.TLSConfig != nil {
+	if options.TLSConfig != nil {
 		return options.TLSConfig.Clone()
 	} else {
 		return new(tls.Config)
 	}
+}
+
+func (options *Options) dialer() *net.Dialer {
+	if options.Dialer == nil {
+		return &net.Dialer{Timeout: defaultDialTimeout}
+	}
+	return options.Dialer
 }
 
 // Client is an IMAP client.
@@ -212,7 +220,11 @@ func NewStartTLS(conn net.Conn, options *Options) (*Client, error) {
 
 // DialInsecure connects to an IMAP server without any encryption at all.
 func DialInsecure(address string, options *Options) (*Client, error) {
-	conn, err := dialer.Dial("tcp", address)
+	if options == nil {
+		options = &Options{}
+	}
+
+	conn, err := options.dialer().Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
@@ -221,11 +233,16 @@ func DialInsecure(address string, options *Options) (*Client, error) {
 
 // DialTLS connects to an IMAP server with implicit TLS.
 func DialTLS(address string, options *Options) (*Client, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
 	tlsConfig := options.tlsConfig()
 	if tlsConfig.NextProtos == nil {
 		tlsConfig.NextProtos = []string{"imap"}
 	}
 
+	dialer := options.dialer()
 	conn, err := tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
@@ -244,7 +261,7 @@ func DialStartTLS(address string, options *Options) (*Client, error) {
 		return nil, err
 	}
 
-	conn, err := dialer.Dial("tcp", address)
+	conn, err := options.dialer().Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
@@ -366,6 +383,15 @@ func (c *Client) Mailbox() *SelectedMailbox {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.mailbox
+}
+
+// Closed returns a channel that is closed when the connection is closed.
+//
+// This channel cannot be used to reliably determine whether a connection is healthy. If
+// the underlying connection times out, the channel will be closed eventually, but not
+// immediately. To check whether the connection is healthy, send a command (such as Noop).
+func (c *Client) Closed() <-chan struct{} {
+	return c.decCh
 }
 
 // Close immediately closes the connection.
@@ -879,6 +905,10 @@ func (c *Client) readResponseData(typ string) error {
 				}
 			case "NOMODSEQ":
 				// ignore
+			case "NOTIFICATIONOVERFLOW":
+				if handler := c.options.unilateralDataHandler().NotificationOverflow; handler != nil {
+					handler()
+				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
 					c.dec.DiscardUntilByte(']')
@@ -1044,7 +1074,9 @@ func (c *Client) Delete(mailbox string) *Command {
 }
 
 // Rename sends a RENAME command.
-func (c *Client) Rename(mailbox, newName string) *Command {
+//
+// A nil options pointer is equivalent to a zero options value.
+func (c *Client) Rename(mailbox, newName string, options *imap.RenameOptions) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("RENAME", cmd)
 	enc.SP().Mailbox(mailbox).SP().Mailbox(newName)
@@ -1061,7 +1093,7 @@ func (c *Client) Subscribe(mailbox string) *Command {
 	return cmd
 }
 
-// Subscribe sends an UNSUBSCRIBE command.
+// Unsubscribe sends an UNSUBSCRIBE command.
 func (c *Client) Unsubscribe(mailbox string) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("UNSUBSCRIBE", cmd)
@@ -1160,14 +1192,35 @@ type UnilateralDataMailbox struct {
 //
 // The handler will be invoked in an arbitrary goroutine.
 //
+// These handlers are important when using the IDLE or NOTIFY commands, as the
+// server will send unsolicited STATUS, FETCH, and EXPUNGE responses for
+// mailbox events.
+//
 // See Options.UnilateralDataHandler.
 type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
 
-	// requires ENABLE METADATA or ENABLE SERVER-METADATA
+	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)
+
+	// Called when the server sends an unsolicited LIST response.
+	//
+	// Used with NOTIFY MailboxName events (RFC 5465) to detect mailbox
+	// creation, deletion, or renaming, and for subscription changes.
+	List func(data *imap.ListData)
+
+	// Called when the server sends an unsolicited STATUS response.
+	//
+	// Commonly used with NOTIFY to receive mailbox status updates
+	// for non-selected mailboxes (RFC 5465).
+	Status func(data *imap.StatusData)
+
+	// Called when the server sends NOTIFICATIONOVERFLOW (RFC 5465).
+	//
+	// Indicates the server has disabled all NOTIFY notifications.
+	NotificationOverflow func()
 }
 
 // command is an interface for IMAP commands.

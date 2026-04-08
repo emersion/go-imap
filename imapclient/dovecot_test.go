@@ -13,10 +13,14 @@ func newDovecotClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 	tempDir := t.TempDir()
 
 	cfgFilename := filepath.Join(tempDir, "dovecot.conf")
-	cfg := `log_path      = "` + tempDir + `/dovecot.log"
+	cfg := `dovecot_config_version  = 2.4.0
+dovecot_storage_version = 2.4.0
+
+log_path      = "` + tempDir + `/dovecot.log"
 ssl           = no
-mail_home     = "` + tempDir + `/%u"
-mail_location = maildir:~/Mail
+mail_home     = "` + tempDir + `/%{user}"
+mail_driver   = maildir
+mail_path     = "~/Mail"
 
 namespace inbox {
 	separator = /
@@ -24,13 +28,17 @@ namespace inbox {
 	inbox = yes
 }
 
-mail_plugins = $mail_plugins acl
+mail_plugins {
+	acl = yes
+}
+
 protocol imap {
-	mail_plugins = $mail_plugins imap_acl
+	mail_plugins {
+		imap_acl = yes
+	}
 }
-plugin {
-  acl = vfile
-}
+
+acl_driver = vfile
 `
 	if err := os.WriteFile(cfgFilename, []byte(cfg), 0666); err != nil {
 		t.Fatalf("failed to write Dovecot config: %v", err)

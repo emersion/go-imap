@@ -119,6 +119,12 @@ func (c *Client) handleList() error {
 		cmd.data.List = data
 	}
 
+	if cmd == nil {
+		if handler := c.options.unilateralDataHandler().List; handler != nil {
+			handler(data)
+		}
+	}
+
 	return nil
 }
 

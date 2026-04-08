@@ -135,6 +135,8 @@ func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options 
 			options.SelectRemote = true
 		case "RECURSIVEMATCH":
 			options.SelectRecursiveMatch = true
+		case "SPECIAL-USE":
+			options.SelectSpecialUse = true
 		default:
 			return newClientBugError("Unknown LIST select option")
 		}
@@ -229,6 +231,8 @@ func readReturnOption(dec *imapwire.Decoder, options *imap.ListOptions) error {
 		options.ReturnSubscribed = true
 	case "CHILDREN":
 		options.ReturnChildren = true
+	case "SPECIAL-USE":
+		options.ReturnSpecialUse = true
 	case "STATUS":
 		if !dec.ExpectSP() {
 			return dec.Err()

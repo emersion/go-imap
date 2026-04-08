@@ -69,6 +69,14 @@ func ExpectFlagList(dec *imapwire.Decoder) ([]imap.Flag, error) {
 	return flags, err
 }
 
+func ExpectCap(dec *imapwire.Decoder) (imap.Cap, error) {
+	var name string
+	if !dec.ExpectAtom(&name) {
+		return "", dec.Err()
+	}
+	return canonicalCap(name), nil
+}
+
 func ExpectFlag(dec *imapwire.Decoder) (imap.Flag, error) {
 	isSystem := dec.Special('\\')
 	if isSystem && dec.Special('*') {
@@ -167,4 +175,14 @@ func canonicalMailboxAttr(s string) imap.MailboxAttr {
 		return attr
 	}
 	return imap.MailboxAttr(s)
+}
+
+func canonicalCap(s string) imap.Cap {
+	// Only two caps are not fully uppercase
+	for _, cap := range []imap.Cap{imap.CapIMAP4rev1, imap.CapIMAP4rev2} {
+		if strings.EqualFold(s, string(cap)) {
+			return cap
+		}
+	}
+	return imap.Cap(strings.ToUpper(s))
 }

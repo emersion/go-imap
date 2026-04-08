@@ -975,9 +975,9 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	}
 
 	// Content-Transfer-Encoding should always be set, but some non-standard
-	// servers leave it NIL. Default to 7BIT.
+	// servers leave it NIL. Default to 7bit.
 	if bs.Encoding == "" {
-		bs.Encoding = "7BIT"
+		bs.Encoding = "7bit"
 	}
 
 	// TODO: handle errors
@@ -1318,7 +1318,7 @@ type fetchLiteralReader struct {
 
 func (lit *fetchLiteralReader) Read(b []byte) (int, error) {
 	n, err := lit.LiteralReader.Read(b)
-	if err == io.EOF && lit.ch != nil {
+	if err != nil && lit.ch != nil {
 		close(lit.ch)
 		lit.ch = nil
 	}
