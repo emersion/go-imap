@@ -1,8 +1,6 @@
 package imapclient
 
 import (
-	"fmt"
-
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -31,7 +29,11 @@ func readRespCodeCopyUID(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, ds
 		return 0, nil, nil, dec.Err()
 	}
 	if srcUIDs.Dynamic() || dstUIDs.Dynamic() {
-		return 0, nil, nil, fmt.Errorf("imapclient: server returned dynamic number set in COPYUID response")
+		// Some servers (e.g. Purelymail) return wildcard "*" in
+		// COPYUID UID sets, violating RFC 4315. Treat this as if
+		// the server didn't send COPYUID at all rather than
+		// tearing down the connection.
+		return 0, nil, nil, nil
 	}
 	return uidValidity, srcUIDs, dstUIDs, nil
 }
