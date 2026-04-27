@@ -587,23 +587,9 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 }
 
 // FindCustomAttribute returns the decoded value for a custom FETCH attribute,
-// matched case-insensitively.
+// matched case-insensitively. Equivalent to buf.CustomAttributes.Get(name).
 func (buf *FetchMessageBuffer) FindCustomAttribute(name string) (CustomAttribute, bool) {
-	if buf.CustomAttributes == nil {
-		return CustomAttribute{}, false
-	}
-	if v, ok := buf.CustomAttributes[name]; ok {
-		return v, true
-	}
-	if v, ok := buf.CustomAttributes[strings.ToUpper(name)]; ok {
-		return v, true
-	}
-	for k, v := range buf.CustomAttributes {
-		if strings.EqualFold(k, name) {
-			return v, true
-		}
-	}
-	return CustomAttribute{}, false
+	return buf.CustomAttributes.Get(name)
 }
 
 // FindBodySection returns the contents of a requested body section.
