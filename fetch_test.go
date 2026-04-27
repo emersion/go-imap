@@ -74,44 +74,74 @@ func TestFetchOptions_Clone_Nil(t *testing.T) {
 	}
 }
 
-func TestFetchOptions_WithAttributes_AppendsAndDoesNotMutate(t *testing.T) {
+func TestFetchOptions_WithCustomAttributes_AppendsAndDoesNotMutate(t *testing.T) {
 	orig := &imap.FetchOptions{
 		UID:              true,
 		CustomAttributes: []string{"X-GM-MSGID"},
 	}
-	got := orig.WithAttributes("X-GM-THRID", "X-GM-LABELS")
+	got := orig.WithCustomAttributes("X-GM-THRID", "X-GM-LABELS")
 
 	wantAttrs := []string{"X-GM-MSGID", "X-GM-THRID", "X-GM-LABELS"}
 	if !reflect.DeepEqual(got.CustomAttributes, wantAttrs) {
-		t.Errorf("WithAttributes attrs = %v, want %v", got.CustomAttributes, wantAttrs)
+		t.Errorf("WithCustomAttributes attrs = %v, want %v", got.CustomAttributes, wantAttrs)
 	}
 	if !got.UID {
-		t.Error("WithAttributes dropped UID flag")
+		t.Error("WithCustomAttributes dropped UID flag")
 	}
 	if !reflect.DeepEqual(orig.CustomAttributes, []string{"X-GM-MSGID"}) {
-		t.Errorf("WithAttributes mutated original: %v", orig.CustomAttributes)
+		t.Errorf("WithCustomAttributes mutated original: %v", orig.CustomAttributes)
 	}
 }
 
-func TestFetchOptions_WithAttributes_NilReceiver(t *testing.T) {
+func TestFetchOptions_WithCustomAttributes_DedupesCaseInsensitively(t *testing.T) {
+	orig := &imap.FetchOptions{
+		CustomAttributes: []string{"X-GM-MSGID", "X-GM-LABELS"},
+	}
+	got := orig.WithCustomAttributes(
+		"X-GM-MSGID",   // exact dup
+		"x-gm-labels",  // case-insensitive dup
+		"X-GM-THRID",   // new
+		"X-GM-Thrid",   // case-insensitive dup of the new one
+	)
+
+	wantAttrs := []string{"X-GM-MSGID", "X-GM-LABELS", "X-GM-THRID"}
+	if !reflect.DeepEqual(got.CustomAttributes, wantAttrs) {
+		t.Errorf("CustomAttributes = %v, want %v (first-seen casing, deduped)", got.CustomAttributes, wantAttrs)
+	}
+}
+
+func TestFetchOptions_WithCustomAttributes_DedupesPreExistingDuplicates(t *testing.T) {
+	// Pre-existing duplicates in the receiver are also collapsed so the
+	// returned options always satisfy the unique-values invariant.
+	orig := &imap.FetchOptions{
+		CustomAttributes: []string{"X-A", "x-a", "X-B"},
+	}
+	got := orig.WithCustomAttributes()
+	wantAttrs := []string{"X-A", "X-B"}
+	if !reflect.DeepEqual(got.CustomAttributes, wantAttrs) {
+		t.Errorf("CustomAttributes = %v, want %v", got.CustomAttributes, wantAttrs)
+	}
+}
+
+func TestFetchOptions_WithCustomAttributes_NilReceiver(t *testing.T) {
 	var orig *imap.FetchOptions
-	got := orig.WithAttributes("X-GM-MSGID")
+	got := orig.WithCustomAttributes("X-GM-MSGID", "x-gm-msgid")
 	if got == nil {
-		t.Fatal("WithAttributes on nil receiver returned nil")
+		t.Fatal("WithCustomAttributes on nil receiver returned nil")
 	}
 	if !reflect.DeepEqual(got.CustomAttributes, []string{"X-GM-MSGID"}) {
 		t.Errorf("CustomAttributes = %v, want [X-GM-MSGID]", got.CustomAttributes)
 	}
 }
 
-func TestFetchOptions_WithAttributes_NoAttrs(t *testing.T) {
+func TestFetchOptions_WithCustomAttributes_NoAttrs(t *testing.T) {
 	orig := sampleFetchOptions()
-	got := orig.WithAttributes()
+	got := orig.WithCustomAttributes()
 	if !reflect.DeepEqual(got, orig) {
-		t.Errorf("WithAttributes() with no args should return a clone equal to original")
+		t.Errorf("WithCustomAttributes() with no args should return a clone equal to original")
 	}
 	if got == orig {
-		t.Errorf("WithAttributes() must return a fresh pointer, not the original")
+		t.Errorf("WithCustomAttributes() must return a fresh pointer, not the original")
 	}
 }
 

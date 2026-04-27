@@ -64,17 +64,40 @@ func (o *FetchOptions) Clone() *FetchOptions {
 	return &c
 }
 
-// WithAttributes returns a deep copy of o with the given custom attribute
-// names appended to CustomAttributes. The original is left untouched, so the
-// method is safe to chain off a shared base FetchOptions. A nil receiver
-// produces a fresh FetchOptions carrying just attrs.
-func (o *FetchOptions) WithAttributes(attrs ...string) *FetchOptions {
+// WithCustomAttributes returns a deep copy of o with attrs merged into
+// CustomAttributes. Names are deduplicated case-insensitively (matching how
+// the parser canonicalises wire names), preserving the first-seen casing
+// and the original order. The receiver is left untouched, so the method is
+// safe to chain off a shared base FetchOptions. A nil receiver produces a
+// fresh FetchOptions carrying just attrs.
+func (o *FetchOptions) WithCustomAttributes(attrs ...string) *FetchOptions {
 	c := o.Clone()
 	if c == nil {
 		c = &FetchOptions{}
 	}
-	if len(attrs) > 0 {
-		c.CustomAttributes = append(c.CustomAttributes, attrs...)
+
+	merged := make([]string, 0, len(c.CustomAttributes)+len(attrs))
+	seen := make(map[string]struct{}, cap(merged))
+	for _, name := range c.CustomAttributes {
+		key := strings.ToUpper(name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		merged = append(merged, name)
+	}
+	for _, name := range attrs {
+		key := strings.ToUpper(name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		merged = append(merged, name)
+	}
+	if len(merged) == 0 {
+		c.CustomAttributes = nil
+	} else {
+		c.CustomAttributes = merged
 	}
 	return c
 }
