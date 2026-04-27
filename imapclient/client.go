@@ -78,6 +78,11 @@ type Options struct {
 	// Dialer to use when establishing connections with the Dial* functions.
 	// If nil, a default dialer with a 30 second timeout is used.
 	Dialer *net.Dialer
+	// CustomAttributeDecoders maps a server-defined FETCH attribute name
+	// (e.g. "X-GM-MSGID") to a decoder for its value. Names are matched
+	// case-insensitively. Decoded values are surfaced as
+	// FetchItemDataCustomAttribute items.
+	CustomAttributeDecoders map[string]CustomAttributeDecoderFunc
 }
 
 func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
@@ -103,6 +108,25 @@ func (options *Options) decodeText(s string) (string, error) {
 		return s, err
 	}
 	return out, nil
+}
+
+func (options *Options) customAttributeDecoder(name string) CustomAttributeDecoderFunc {
+	if options.CustomAttributeDecoders == nil {
+		return nil
+	}
+	if dec, ok := options.CustomAttributeDecoders[name]; ok {
+		return dec
+	}
+	upper := strings.ToUpper(name)
+	if dec, ok := options.CustomAttributeDecoders[upper]; ok {
+		return dec
+	}
+	for k, dec := range options.CustomAttributeDecoders {
+		if strings.EqualFold(k, name) {
+			return dec
+		}
+	}
+	return nil
 }
 
 func (options *Options) unilateralDataHandler() *UnilateralDataHandler {

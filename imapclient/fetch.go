@@ -73,6 +73,9 @@ func writeFetchItems(enc *imapwire.Encoder, numKind imapwire.NumKind, options *i
 	for _, bss := range options.BinarySectionSize {
 		writeFetchItemBinarySectionSize(listEnc.Item(), bss)
 	}
+	for _, name := range options.CustomAttributes {
+		listEnc.Item().Atom(name)
+	}
 
 	listEnc.End()
 }
@@ -356,7 +359,22 @@ var (
 	_ FetchItemData = FetchItemDataRFC822Size{}
 	_ FetchItemData = FetchItemDataUID{}
 	_ FetchItemData = FetchItemDataBodyStructure{}
+	_ FetchItemData = FetchItemDataCustomAttribute{}
 )
+
+// CustomAttributeDecoderFunc decodes the value of a server-defined FETCH
+// attribute. It is invoked after the attribute name and its separating space
+// have been consumed and must consume exactly the value.
+type CustomAttributeDecoderFunc func(d *AttributeDecoder) (CustomAttribute, error)
+
+// FetchItemDataCustomAttribute holds the decoded value of a custom FETCH
+// attribute.
+type FetchItemDataCustomAttribute struct {
+	Name  string
+	Value CustomAttribute
+}
+
+func (FetchItemDataCustomAttribute) fetchItemData() {}
 
 type discarder interface {
 	discard()
@@ -508,6 +526,9 @@ type FetchMessageBuffer struct {
 	BinarySection     []FetchBinarySectionBuffer
 	BinarySectionSize []FetchItemDataBinarySectionSize
 	ModSeq            uint64 // requires CONDSTORE
+	// CustomAttributes holds decoded values keyed by the upper-cased
+	// attribute name as returned by the server.
+	CustomAttributes CustomAttributes
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -554,10 +575,35 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
 	case FetchItemDataModSeq:
 		buf.ModSeq = item.ModSeq
+	case FetchItemDataCustomAttribute:
+		if buf.CustomAttributes == nil {
+			buf.CustomAttributes = make(CustomAttributes)
+		}
+		buf.CustomAttributes[item.Name] = item.Value
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
 	return nil
+}
+
+// FindCustomAttribute returns the decoded value for a custom FETCH attribute,
+// matched case-insensitively.
+func (buf *FetchMessageBuffer) FindCustomAttribute(name string) (CustomAttribute, bool) {
+	if buf.CustomAttributes == nil {
+		return CustomAttribute{}, false
+	}
+	if v, ok := buf.CustomAttributes[name]; ok {
+		return v, true
+	}
+	if v, ok := buf.CustomAttributes[strings.ToUpper(name)]; ok {
+		return v, true
+	}
+	for k, v := range buf.CustomAttributes {
+		if strings.EqualFold(k, name) {
+			return v, true
+		}
+	}
+	return CustomAttribute{}, false
 }
 
 // FindBodySection returns the contents of a requested body section.
@@ -802,6 +848,17 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			}
 			item = FetchItemDataModSeq{ModSeq: modSeq}
 		default:
+			if decoder := c.options.customAttributeDecoder(attName); decoder != nil {
+				if !dec.ExpectSP() {
+					return dec.Err()
+				}
+				value, err := decoder(newAttributeDecoder(dec))
+				if err != nil {
+					return fmt.Errorf("in custom attribute %q: %w", attName, err)
+				}
+				item = FetchItemDataCustomAttribute{Name: attName, Value: value}
+				break
+			}
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
 

@@ -21,6 +21,11 @@ type FetchOptions struct {
 	ModSeq            bool                          // requires CONDSTORE
 
 	ChangedSince uint64 // requires CONDSTORE
+
+	// CustomAttributes are server-defined attribute names (e.g. "X-GM-MSGID")
+	// requested verbatim. Responses are parsed via the client's
+	// imapclient.Options.CustomAttributeDecoders registry.
+	CustomAttributes []string
 }
 
 // FetchItemBodyStructure contains FETCH options for the body structure.
