@@ -105,7 +105,7 @@ func (c *Client) SetMetadata(mailbox string, entries map[string]*[]byte) *Comman
 func (c *Client) handleMetadata() error {
 	data, err := readMetadataResp(c.dec)
 	if err != nil {
-		return fmt.Errorf("in metadata-resp: %v", err)
+		return fmt.Errorf("in metadata-resp: %w", err)
 	}
 
 	cmd := c.findPendingCmdFunc(func(anyCmd command) bool {

@@ -55,7 +55,7 @@ func (c *Client) Status(mailbox string, options *imap.StatusOptions) *StatusComm
 func (c *Client) handleStatus() error {
 	data, err := readStatus(c.dec)
 	if err != nil {
-		return fmt.Errorf("in status: %v", err)
+		return fmt.Errorf("in status: %w", err)
 	}
 
 	cmd := c.findPendingCmdFunc(func(cmd command) bool {
@@ -107,7 +107,7 @@ func readStatus(dec *imapwire.Decoder) (*imap.StatusData, error) {
 
 	err := dec.ExpectList(func() error {
 		if err := readStatusAttVal(dec, &data); err != nil {
-			return fmt.Errorf("in status-att-val: %v", dec.Err())
+			return fmt.Errorf("in status-att-val: %w", dec.Err())
 		}
 		return nil
 	})
