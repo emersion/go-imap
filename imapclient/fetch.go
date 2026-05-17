@@ -33,8 +33,18 @@ func (c *Client) Fetch(numSet imap.NumSet, options *imap.FetchOptions) *FetchCom
 	enc := c.beginCommand(uidCmdName("FETCH", numKind), cmd)
 	enc.SP().NumSet(numSet).SP()
 	writeFetchItems(enc.Encoder, numKind, options)
-	if options.ChangedSince != 0 {
-		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
+	if options.ChangedSince != 0 || options.Vanished {
+		enc.SP().Special('(')
+		// VANISHED requires CHANGEDSINCE (RFC 7162 §3.2.10); emit
+		// CHANGEDSINCE even when its value is zero so a "give me
+		// everything that vanished" client request still validates.
+		if options.ChangedSince != 0 || options.Vanished {
+			enc.Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince)
+		}
+		if options.Vanished {
+			enc.SP().Atom("VANISHED")
+		}
+		enc.Special(')')
 	}
 	enc.end()
 	return cmd
@@ -156,6 +166,21 @@ type FetchCommand struct {
 
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
+
+	// vanished accumulates UIDs from a "* VANISHED (EARLIER) ..."
+	// response, which the server emits in reply to a UID FETCH
+	// (... VANISHED) command (RFC 7162 §3.2.10). Read it after the
+	// command completes via VanishedUIDs.
+	vanished imap.UIDSet
+}
+
+// VanishedUIDs returns the UIDs surfaced by a VANISHED (EARLIER)
+// response — non-empty only when this FETCH used the (CHANGEDSINCE n
+// VANISHED) modifier and the server reported at least one expunged
+// UID in the requested range. Safe to call after the command has
+// been fully consumed (e.g. after Close or Collect).
+func (cmd *FetchCommand) VanishedUIDs() imap.UIDSet {
+	return cmd.vanished
 }
 
 func (cmd *FetchCommand) recvSeqNum(seqNum uint32) bool {

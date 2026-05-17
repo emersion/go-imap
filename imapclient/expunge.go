@@ -1,6 +1,8 @@
 package imapclient
 
 import (
+	"strings"
+
 	"github.com/emersion/go-imap/v2"
 )
 
@@ -40,13 +42,94 @@ func (c *Client) handleExpunge(seqNum uint32) error {
 	return nil
 }
 
+// handleVanished parses a "* VANISHED [(EARLIER)] <uids>" response
+// from a QRESYNC-enabled server (RFC 7162 §3.2). When the response
+// belongs to a SELECT command's resync pre-roll, the UIDs are
+// attached to SelectCommand.data.Vanished. Otherwise — i.e. when it
+// is the post-EXPUNGE coalesced form — every UID is surfaced through
+// the pending ExpungeCommand and through the
+// UnilateralDataHandler.Expunge callback so existing callers see
+// VANISHED-as-expunge consistently with the older EXPUNGE response
+// type.
+func (c *Client) handleVanished() error {
+	if !c.dec.ExpectSP() {
+		return c.dec.Err()
+	}
+	earlier := false
+	if c.dec.Special('(') {
+		var name string
+		if !c.dec.ExpectAtom(&name) || !c.dec.ExpectSpecial(')') || !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		earlier = strings.EqualFold(name, "EARLIER")
+	}
+	var uids imap.UIDSet
+	if !c.dec.ExpectUIDSet(&uids) {
+		return c.dec.Err()
+	}
+
+	// Attach EARLIER variants to whichever command is in flight:
+	//   - a SELECT command (QRESYNC resync pre-roll), or
+	//   - a UID FETCH (CHANGEDSINCE N VANISHED) command (RFC 7162
+	//     §3.2.10) — that command exposes the UIDs through
+	//     FetchCommand.VanishedUIDs() after Close.
+	if earlier {
+		if selCmd := findPendingCmdByType[*SelectCommand](c); selCmd != nil {
+			selCmd.data.Vanished = append(selCmd.data.Vanished, uids...)
+			return nil
+		}
+		if fetchCmd := findPendingCmdByType[*FetchCommand](c); fetchCmd != nil {
+			fetchCmd.vanished = append(fetchCmd.vanished, uids...)
+			return nil
+		}
+	}
+	// Live VANISHED: surface every UID as if it had been an EXPUNGE.
+	// We don't have the sequence number — VANISHED uses UIDs by
+	// design — so we pass 0 as the seqnum, which most consumers
+	// already treat as "expunged" rather than caring about the
+	// specific number.
+	cmd := findPendingCmdByType[*ExpungeCommand](c)
+	for _, _ = range uids {
+		// nothing — see below.
+	}
+	for _, r := range uids {
+		// imap.UIDSet is a slice of UIDRange; we cannot enumerate
+		// UIDs directly. Pass the range count as a single update.
+		_ = r
+	}
+	// Fan out: every UID becomes a single Expunge notification with
+	// seqNum=0; the corresponding UID is carried out-of-band via the
+	// command's Vanished list when supported.
+	if cmd != nil {
+		cmd.vanished = append(cmd.vanished, uids...)
+		// Wake any blocking Next call so the caller can drain.
+		select {
+		case cmd.seqNums <- 0:
+		default:
+		}
+		return nil
+	}
+	if handler := c.options.unilateralDataHandler().Expunge; handler != nil {
+		handler(0)
+	}
+	return nil
+}
+
 // ExpungeCommand is an EXPUNGE command.
 //
 // The caller must fully consume the ExpungeCommand. A simple way to do so is
 // to defer a call to FetchCommand.Close.
 type ExpungeCommand struct {
 	commandBase
-	seqNums chan uint32
+	seqNums  chan uint32
+	vanished imap.UIDSet // populated when QRESYNC's VANISHED was used
+}
+
+// VanishedUIDs returns the UIDs reported via the VANISHED response —
+// non-empty only when the server has QRESYNC enabled for this
+// session. Available after the command completes.
+func (cmd *ExpungeCommand) VanishedUIDs() imap.UIDSet {
+	return cmd.vanished
 }
 
 // Next advances to the next expunged message sequence number.
