@@ -152,14 +152,11 @@ func (enc *Encoder) stringLiteral(s string) {
 func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
-	} else {
-		if enc.QuotedUTF8 {
-			name = utf7.Escape(name)
-		} else {
-			name = utf7.Encode(name)
-		}
-		return enc.String(name)
 	}
+	if !enc.QuotedUTF8 {
+		name = utf7.Encode(name)
+	}
+	return enc.String(name)
 }
 
 func (enc *Encoder) NumSet(numSet imap.NumSet) *Encoder {
