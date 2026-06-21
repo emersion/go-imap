@@ -17,7 +17,21 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
-	if options != nil && options.CondStore {
+	if options != nil && options.QResync != nil {
+		// QRESYNC implies CONDSTORE, so it takes precedence over CondStore.
+		qr := options.QResync
+		enc.SP().Special('(').Atom("QRESYNC").SP().Special('(')
+		enc.Number(qr.UIDValidity).SP().ModSeq(qr.ModSeq)
+		if len(qr.KnownUIDs) > 0 {
+			enc.SP().NumSet(qr.KnownUIDs)
+			if qr.SeqMatchData != nil {
+				enc.SP().Special('(')
+				enc.NumSet(qr.SeqMatchData.KnownSeqSet).SP().NumSet(qr.SeqMatchData.KnownUIDSet)
+				enc.Special(')')
+			}
+		}
+		enc.Special(')').Special(')')
+	} else if options != nil && options.CondStore {
 		enc.SP().Special('(').Atom("CONDSTORE").Special(')')
 	}
 	enc.end()
