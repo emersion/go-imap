@@ -34,7 +34,14 @@ func (c *Client) Fetch(numSet imap.NumSet, options *imap.FetchOptions) *FetchCom
 	enc.SP().NumSet(numSet).SP()
 	writeFetchItems(enc.Encoder, numKind, options)
 	if options.ChangedSince != 0 {
-		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince).Special(')')
+		enc.SP().Special('(').Atom("CHANGEDSINCE").SP().ModSeq(options.ChangedSince)
+		if options.Vanished {
+			// The VANISHED modifier (RFC 7162) asks the server to also report,
+			// via a VANISHED (EARLIER) response, the UIDs expunged since
+			// ChangedSince. It requires QRESYNC to be enabled.
+			enc.SP().Atom("VANISHED")
+		}
+		enc.Special(')')
 	}
 	enc.end()
 	return cmd

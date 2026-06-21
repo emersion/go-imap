@@ -1,6 +1,8 @@
 package imapclient
 
 import (
+	"strings"
+
 	"github.com/emersion/go-imap/v2"
 )
 
@@ -20,6 +22,32 @@ func (c *Client) UIDExpunge(uids imap.UIDSet) *ExpungeCommand {
 	enc.SP().NumSet(uids)
 	enc.end()
 	return cmd
+}
+
+// handleVanished parses a VANISHED response (RFC 7162) and delivers the expunged
+// UIDs to the unilateral VANISHED handler. The grammar is:
+//
+//	"VANISHED" [SP "(EARLIER)"] SP known-uids
+func (c *Client) handleVanished() error {
+	if !c.dec.ExpectSP() {
+		return c.dec.Err()
+	}
+	var earlier bool
+	if c.dec.Special('(') {
+		var name string
+		if !c.dec.ExpectAtom(&name) || !c.dec.ExpectSpecial(')') || !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		earlier = strings.EqualFold(name, "EARLIER")
+	}
+	var uids imap.UIDSet
+	if !c.dec.ExpectUIDSet(&uids) {
+		return c.dec.Err()
+	}
+	if handler := c.options.unilateralDataHandler().Vanished; handler != nil {
+		handler(uids, earlier)
+	}
+	return nil
 }
 
 func (c *Client) handleExpunge(seqNum uint32) error {
