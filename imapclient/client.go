@@ -1204,10 +1204,12 @@ type UnilateralDataHandler struct {
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
 
-	// Called when the server sends a VANISHED response (RFC 7162), reporting the
-	// UIDs of expunged messages. earlier is true for VANISHED (EARLIER), sent in
-	// response to a QRESYNC SELECT or a FETCH with the VANISHED modifier for
-	// messages expunged earlier; false for a VANISHED reporting a live expunge.
+	// Called when the server sends an unsolicited VANISHED response (RFC 7162),
+	// reporting the UIDs of expunged messages. earlier indicates whether the
+	// response covers messages that were expunged earlier (VANISHED (EARLIER),
+	// sent in reply to a QRESYNC SELECT or a FETCH with the VANISHED modifier)
+	// rather than a live expunge.
+	//
 	// Requires QRESYNC.
 	Vanished func(uids imap.UIDSet, earlier bool)
 
