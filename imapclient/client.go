@@ -986,6 +986,8 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleFetch(num)
 	case "EXPUNGE":
 		return c.handleExpunge(num)
+	case "VANISHED":
+		return c.handleVanished()
 	case "SEARCH":
 		return c.handleSearch()
 	case "ESEARCH":
@@ -1201,6 +1203,13 @@ type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
+
+	// Called when the server sends a VANISHED response (RFC 7162), reporting the
+	// UIDs of expunged messages. earlier is true for VANISHED (EARLIER), sent in
+	// response to a QRESYNC SELECT or a FETCH with the VANISHED modifier for
+	// messages expunged earlier; false for a VANISHED reporting a live expunge.
+	// Requires QRESYNC.
+	Vanished func(uids imap.UIDSet, earlier bool)
 
 	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)
