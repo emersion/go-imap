@@ -183,7 +183,6 @@ func (c *Conn) serve() {
 			break
 		}
 
-		c.setReadTimeout(cmdReadTimeout)
 		if err := c.readCommand(dec); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				c.server.logger().Printf("failed to read command: %v", err)
