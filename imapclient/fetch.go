@@ -57,6 +57,7 @@ func writeFetchItems(enc *imapwire.Encoder, numKind imapwire.NumKind, options *i
 		"INTERNALDATE":  options.InternalDate,
 		"RFC822.SIZE":   options.RFC822Size,
 		"MODSEQ":        options.ModSeq,
+		"X-GM-LABELS":   options.GmailLabels,
 	}
 	for k, req := range m {
 		if req {
@@ -356,6 +357,7 @@ var (
 	_ FetchItemData = FetchItemDataRFC822Size{}
 	_ FetchItemData = FetchItemDataUID{}
 	_ FetchItemData = FetchItemDataBodyStructure{}
+	_ FetchItemData = FetchItemDataGmailLabels{}
 )
 
 type discarder interface {
@@ -479,6 +481,18 @@ type FetchItemDataModSeq struct {
 
 func (FetchItemDataModSeq) fetchItemData() {}
 
+// FetchItemDataGmailLabels holds data returned by FETCH X-GM-LABELS.
+//
+// This requires the X-GM-EXT-1 extension advertised by Gmail. Each entry is a
+// Gmail label: system labels are returned with a leading backslash (e.g.
+// "\\Inbox", "\\Sent", "\\Important", "\\Starred"), user labels are returned
+// verbatim (decoded from modified UTF-7 when non-ASCII).
+type FetchItemDataGmailLabels struct {
+	Labels []string
+}
+
+func (FetchItemDataGmailLabels) fetchItemData() {}
+
 // FetchBodySectionBuffer is a buffer for the data returned by
 // FetchItemBodySection.
 type FetchBodySectionBuffer struct {
@@ -507,7 +521,8 @@ type FetchMessageBuffer struct {
 	BodySection       []FetchBodySectionBuffer
 	BinarySection     []FetchBinarySectionBuffer
 	BinarySectionSize []FetchItemDataBinarySectionSize
-	ModSeq            uint64 // requires CONDSTORE
+	ModSeq            uint64   // requires CONDSTORE
+	GmailLabels       []string // requires the X-GM-EXT-1 extension (Gmail)
 }
 
 func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
@@ -554,6 +569,8 @@ func (buf *FetchMessageBuffer) populateItemData(item FetchItemData) error {
 		buf.BinarySectionSize = append(buf.BinarySectionSize, item)
 	case FetchItemDataModSeq:
 		buf.ModSeq = item.ModSeq
+	case FetchItemDataGmailLabels:
+		buf.GmailLabels = item.Labels
 	default:
 		panic(fmt.Errorf("unsupported fetch item data %T", item))
 	}
@@ -801,6 +818,15 @@ func (c *Client) handleFetch(seqNum uint32) error {
 				return dec.Err()
 			}
 			item = FetchItemDataModSeq{ModSeq: modSeq}
+		case "X-GM-LABELS":
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+			labels, err := readGmailLabels(dec)
+			if err != nil {
+				return fmt.Errorf("in x-gm-labels: %v", err)
+			}
+			item = FetchItemDataGmailLabels{Labels: labels}
 		default:
 			return fmt.Errorf("unsupported msg-att name: %q", attName)
 		}
@@ -826,6 +852,44 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 func isMsgAttNameChar(ch byte) bool {
 	return ch != '[' && imapwire.IsAtomChar(ch)
+}
+
+// readGmailLabels parses the parenthesised label list returned by the Gmail
+// X-GM-EXT-1 "X-GM-LABELS" FETCH data item, e.g.
+//
+//	(\Inbox \Sent "Travel" "Receipts/2024")
+//
+// System labels are flag-like (a backslash followed by an atom) and are
+// returned with their leading backslash preserved. User labels are astrings
+// (quoted strings or atoms) and are returned verbatim. An empty list "()" is
+// valid (a message with no labels) and yields a nil slice.
+func readGmailLabels(dec *imapwire.Decoder) ([]string, error) {
+	var labels []string
+	err := dec.ExpectList(func() error {
+		// Tolerate a stray leading space inside the list, mirroring the
+		// flag-list leniency in internal.ExpectFlagList.
+		dec.SP()
+
+		if dec.Special('\\') {
+			// System label: a backslash followed by an atom (\Inbox, \Sent,
+			// \Important, \Starred, \Trash, \Spam, \Draft, ...).
+			var name string
+			if !dec.ExpectAtom(&name) {
+				return dec.Err()
+			}
+			labels = append(labels, "\\"+name)
+			return nil
+		}
+		// User label: an astring (atom or quoted string; may contain spaces
+		// when quoted, and is modified-UTF-7 encoded when non-ASCII).
+		var label string
+		if !dec.ExpectAString(&label) {
+			return dec.Err()
+		}
+		labels = append(labels, label)
+		return nil
+	})
+	return labels, err
 }
 
 func readEnvelope(dec *imapwire.Decoder, options *Options) (*imap.Envelope, error) {
