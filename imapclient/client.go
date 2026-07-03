@@ -736,13 +736,22 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 		case "APPENDUID":
 			var (
 				uidValidity uint32
-				uid         imap.UID
+				uidSet      imap.UIDSet
 			)
-			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUID(&uid) {
+			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUIDSet(&uidSet) {
 				return nil, fmt.Errorf("in resp-code-apnd: %w", c.dec.Err())
 			}
-			if cmd, ok := cmd.(*AppendCommand); ok {
+			var uid imap.UID
+			if len(uidSet) > 0 {
+				uid = uidSet[0].Start
+			}
+			switch cmd := cmd.(type) {
+			case *AppendCommand:
 				cmd.data.UID = uid
+				cmd.data.UIDValidity = uidValidity
+			case *MultiAppendCommand:
+				cmd.data.UID = uid
+				cmd.data.UIDs = uidSet
 				cmd.data.UIDValidity = uidValidity
 			}
 		case "COPYUID":

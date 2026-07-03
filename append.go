@@ -16,3 +16,11 @@ type AppendData struct {
 	UID         UID
 	UIDValidity uint32
 }
+
+// MultiAppendData is the data returned by an APPEND command with multiple messages.
+type MultiAppendData struct {
+	// requires UIDPLUS or IMAP4rev2
+	UID         UID
+	UIDs        UIDSet
+	UIDValidity uint32
+}
