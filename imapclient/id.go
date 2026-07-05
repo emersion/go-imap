@@ -2,6 +2,7 @@ package imapclient
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
@@ -60,6 +61,18 @@ func (c *Client) ID(idData *imap.IDData) *IDCommand {
 	if idData.Environment != "" {
 		addIDKeyValue(enc, &isFirstKey, "environment", idData.Environment)
 	}
+	if idData.Raw != nil {
+		stdKeys := map[string]struct{}{
+			"name": {}, "version": {}, "os": {}, "os-version": {}, "vendor": {},
+			"support-url": {}, "address": {}, "date": {}, "command": {},
+			"arguments": {}, "environment": {},
+		}
+		for k, v := range idData.Raw {
+			if _, ok := stdKeys[strings.ToLower(k)]; !ok {
+				addIDKeyValue(enc, &isFirstKey, k, v)
+			}
+		}
+	}
 
 	enc.Special(')')
 	enc.end()
@@ -91,7 +104,9 @@ func (c *Client) handleID() error {
 }
 
 func (c *Client) readID(dec *imapwire.Decoder) (*imap.IDData, error) {
-	var data = imap.IDData{}
+	var data = imap.IDData{
+		Raw: make(map[string]string),
+	}
 
 	if !dec.ExpectSP() {
 		return nil, dec.Err()
@@ -113,7 +128,10 @@ func (c *Client) readID(dec *imapwire.Decoder) (*imap.IDData, error) {
 			return nil
 		}
 
-		switch currKey {
+		lowerKey := strings.ToLower(currKey)
+		data.Raw[lowerKey] = keyOrValue
+
+		switch lowerKey {
 		case "name":
 			data.Name = keyOrValue
 		case "version":
@@ -138,6 +156,7 @@ func (c *Client) readID(dec *imapwire.Decoder) (*imap.IDData, error) {
 			data.Environment = keyOrValue
 		default:
 			// Ignore unknown key
+			// Unknown key is already stored in Raw
 			// Yahoo server sends "host" and "remote-host" keys
 			// which are not defined in RFC 2971
 		}
