@@ -76,6 +76,10 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 		num := uint32(len(mbox.l))
 		data.NumMessages = &num
 	}
+	if options.NumRecent {
+		num := mbox.countByFlagLocked("\\Recent")
+		data.NumRecent = &num
+	}
 	if options.UIDNext {
 		data.UIDNext = mbox.uidNext
 	}
@@ -93,10 +97,6 @@ func (mbox *Mailbox) statusDataLocked(options *imap.StatusOptions) *imap.StatusD
 	if options.Size {
 		size := mbox.sizeLocked()
 		data.Size = &size
-	}
-	if options.NumRecent {
-		num := uint32(0)
-		data.NumRecent = &num
 	}
 	return &data
 }
@@ -146,6 +146,7 @@ func (mbox *Mailbox) appendBytes(buf []byte, options *imap.AppendOptions) *imap.
 		msg.t = options.Time
 	}
 
+	msg.flags[canonicalFlag("\\Recent")] = struct{}{}
 	for _, flag := range options.Flags {
 		msg.flags[canonicalFlag(flag)] = struct{}{}
 	}
@@ -188,12 +189,14 @@ func (mbox *Mailbox) selectDataLocked() *imap.SelectData {
 	// TODO: skip if IMAP4rev1 is disabled by the server, or IMAP4rev2 is
 	// enabled by the client
 	firstUnseenSeqNum := mbox.firstUnseenSeqNumLocked()
+	numRecent := mbox.countByFlagLocked("\\Recent")
 
 	return &imap.SelectData{
 		Flags:             flags,
 		PermanentFlags:    permanentFlags,
 		NumMessages:       uint32(len(mbox.l)),
 		FirstUnseenSeqNum: firstUnseenSeqNum,
+		NumRecent:         numRecent,
 		UIDNext:           mbox.uidNext,
 		UIDValidity:       mbox.uidValidity,
 	}
@@ -283,10 +286,12 @@ func (mbox *Mailbox) expungeLocked(expunged map[*message]struct{}) (seqNums []ui
 // NewView creates a new view into this mailbox.
 //
 // Callers must call MailboxView.Close once they are done with the mailbox view.
-func (mbox *Mailbox) NewView() *MailboxView {
+func (mbox *Mailbox) NewView(options *imap.SelectOptions) *MailboxView {
 	return &MailboxView{
-		Mailbox: mbox,
-		tracker: mbox.tracker.NewSession(),
+		Mailbox:  mbox,
+		tracker:  mbox.tracker.NewSession(),
+		readOnly: options.ReadOnly,
+		recent:   make(map[imap.UID]struct{}),
 	}
 }
 
@@ -300,8 +305,11 @@ func (mbox *Mailbox) NewView() *MailboxView {
 // selected state.
 type MailboxView struct {
 	*Mailbox
-	tracker   *imapserver.SessionTracker
-	searchRes imap.UIDSet
+	readOnly      bool // immutable
+	tracker       *imapserver.SessionTracker
+	searchRes     imap.UIDSet
+	recent        map[imap.UID]struct{}
+	prevNumRecent uint32
 }
 
 // Close releases the resources allocated for the mailbox view.
@@ -330,7 +338,8 @@ func (mbox *MailboxView) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, op
 		}
 
 		respWriter := w.CreateMessage(mbox.tracker.EncodeSeqNum(seqNum))
-		err = msg.fetch(respWriter, options)
+		_, isRecent := mbox.recent[msg.uid]
+		err = msg.fetch(respWriter, options, isRecent)
 	})
 	return err
 }
@@ -349,7 +358,8 @@ func (mbox *MailboxView) Search(numKind imapserver.NumKind, criteria *imap.Searc
 	for i, msg := range mbox.l {
 		seqNum := mbox.tracker.EncodeSeqNum(uint32(i) + 1)
 
-		if !msg.search(seqNum, criteria) {
+		_, isRecent := mbox.recent[msg.uid]
+		if !msg.search(seqNum, criteria, isRecent) {
 			continue
 		}
 
@@ -429,7 +439,19 @@ func (mbox *MailboxView) Store(w *imapserver.FetchWriter, numSet imap.NumSet, fl
 }
 
 func (mbox *MailboxView) Poll(w *imapserver.UpdateWriter, allowExpunge bool) error {
-	return mbox.tracker.Poll(w, allowExpunge)
+	if err := mbox.tracker.Poll(w, allowExpunge); err != nil {
+		return err
+	}
+	mbox.mutex.Lock()
+	mbox.pollRecentLocked()
+	numRecent := uint32(len(mbox.recent))
+	sendNumRecent := numRecent != mbox.prevNumRecent
+	mbox.prevNumRecent = numRecent
+	mbox.mutex.Unlock()
+	if sendNumRecent {
+		w.WriteNumRecent(numRecent)
+	}
+	return nil
 }
 
 func (mbox *MailboxView) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) error {
@@ -507,5 +529,17 @@ func staticNumRange(start, stop *uint32, max uint32) {
 	}
 	if dyn && *start > *stop {
 		*start, *stop = *stop, *start
+	}
+}
+
+func (mbox *MailboxView) pollRecentLocked() {
+	if mbox.readOnly {
+		return
+	}
+	for _, msg := range mbox.l {
+		if _, ok := msg.flags[canonicalFlag("\\Recent")]; ok {
+			mbox.recent[msg.uid] = struct{}{}
+			delete(msg.flags, canonicalFlag("\\Recent"))
+		}
 	}
 }
