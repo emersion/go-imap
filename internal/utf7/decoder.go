@@ -116,3 +116,34 @@ func decode(b64 []byte) []byte {
 	}
 	return s[:j]
 }
+
+// Unescape passes through raw UTF-8 as-is and unescapes the special UTF-7 marker
+// (the "&-" sequence back to "&").
+func Unescape(src string) (string, error) {
+	if !utf8.ValidString(src) {
+		return "", errors.New("invalid UTF-8")
+	}
+
+	var sb strings.Builder
+	sb.Grow(len(src))
+
+	for i := 0; i < len(src); i++ {
+		ch := src[i]
+
+		if ch != '&' {
+			sb.WriteByte(ch)
+			continue
+		}
+
+		// Check if this is an escape sequence "&-"
+		if i+1 < len(src) && src[i+1] == '-' {
+			sb.WriteByte('&')
+			i++ // Skip the '-'
+		} else {
+			// This is not an escape sequence, keep the '&' as-is
+			sb.WriteByte(ch)
+		}
+	}
+
+	return sb.String(), nil
+}

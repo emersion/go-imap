@@ -43,6 +43,9 @@ func (c *Client) handleEnabled() error {
 	for name := range caps {
 		c.enabled[name] = struct{}{}
 	}
+
+	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	c.dec.QuotedUTF8 = quotedUTF8
 	c.mutex.Unlock()
 
 	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {

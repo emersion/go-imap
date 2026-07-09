@@ -55,6 +55,9 @@ type Decoder struct {
 	// MaxSize defines a maximum number of bytes to be read from the input.
 	// Literals are ignored.
 	MaxSize int64
+	// QuotedUTF8 allows raw UTF-8 in quoted strings. This requires IMAP4rev2
+	// to be available, or UTF8=ACCEPT to be enabled.
+	QuotedUTF8 bool
 
 	r         *bufio.Reader
 	side      ConnSide
@@ -517,7 +520,13 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 		*ptr = "INBOX"
 		return true
 	}
-	name, err := utf7.Decode(name)
+
+	var err error
+	if dec.QuotedUTF8 {
+		name, err = utf7.Unescape(name)
+	} else {
+		name, err = utf7.Decode(name)
+	}
 	if err == nil {
 		*ptr = name
 	}
