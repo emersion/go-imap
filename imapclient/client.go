@@ -986,6 +986,11 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleFetch(num)
 	case "EXPUNGE":
 		return c.handleExpunge(num)
+	case "VANISHED":
+		if !c.dec.ExpectSP() {
+			return c.dec.Err()
+		}
+		return c.handleVanished()
 	case "SEARCH":
 		return c.handleSearch()
 	case "ESEARCH":
@@ -1221,6 +1226,13 @@ type UnilateralDataHandler struct {
 	//
 	// Indicates the server has disabled all NOTIFY notifications.
 	NotificationOverflow func()
+
+	// Called when the server sends an untagged VANISHED response.
+	//
+	// Requires QRESYNC extension (RFC 4551/7162). The parameter earlier
+	// indicates whether this response covers earlier expunges (true for
+	// SELECT QRESYNC responses, false for UID FETCH VANISHED responses).
+	Vanished func(uids imap.UIDSet, earlier bool)
 }
 
 // command is an interface for IMAP commands.
