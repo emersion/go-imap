@@ -29,7 +29,7 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return dec.Err()
 	}
 
-	if options.NumRecent && !c.server.options.caps().Has(imap.CapIMAP4rev1) {
+	if options.NumRecent && !c.server.options.caps().set().Has(imap.CapIMAP4rev1) {
 		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
 			Text: "Unknown STATUS data item",

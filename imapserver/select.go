@@ -41,7 +41,7 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	if err := c.writeExists(data.NumMessages); err != nil {
 		return err
 	}
-	if !c.enabled.Has(imap.CapIMAP4rev2) && c.server.options.caps().Has(imap.CapIMAP4rev1) {
+	if !c.enabled.Has(imap.CapIMAP4rev2) && c.server.options.caps().set().Has(imap.CapIMAP4rev1) {
 		if err := c.writeObsoleteRecent(data.NumRecent); err != nil {
 			return err
 		}
