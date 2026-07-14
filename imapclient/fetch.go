@@ -101,7 +101,8 @@ func writeFetchItemBodySection(enc *imapwire.Encoder, item *imap.FetchItemBodySe
 
 		if len(headerList) > 0 {
 			enc.SP().List(len(headerList), func(i int) {
-				enc.String(headerList[i])
+				// This should be a string, but some servers don't recognize that
+				enc.Atom(headerList[i])
 			})
 		}
 	}
