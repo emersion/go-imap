@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -470,8 +471,15 @@ func TestClient_Append_failed(t *testing.T) {
 	tag, _ := s.ScanCmd()
 	s.WriteString(tag + " BAD APPEND failed\r\n")
 
-	if err := <-done; err == nil {
+	err := <-done
+	if err == nil {
 		t.Fatal("c.Append() = nil, want an error from the server")
+	}
+	if strings.Contains(err.Error(), "no continuation request received") {
+		t.Fatalf("c.Append() = %v, want the server's response, not the generic literal error", err)
+	}
+	if !strings.Contains(err.Error(), "APPEND failed") {
+		t.Fatalf("c.Append() = %v, want an error carrying the server's response", err)
 	}
 
 	// Try a second time, the server accepts

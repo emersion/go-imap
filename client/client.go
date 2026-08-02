@@ -267,6 +267,16 @@ func (c *Client) execute(cmdr imap.Commander, h responses.Handler) (*imap.Status
 			return nil, err
 		}
 
+		// The server may have replied with a tagged status response (e.g.
+		// NO/BAD) instead of a continuation request for a synchronizing literal.
+		// In that case the handler already captured the real response;
+		// prefer it over the generic write error.
+		select {
+		case result := <-doneHandle:
+			return result.status, result.err
+		default:
+		}
+
 		return nil, err
 	}
 	// Flush writer if we are upgrading
