@@ -149,14 +149,15 @@ func extractPartial(b []byte, partial *imap.SectionPartial) []byte {
 		return b
 	}
 
-	end := partial.Offset + partial.Size
 	if partial.Offset > int64(len(b)) {
 		return nil
 	}
-	if end > int64(len(b)) {
-		end = int64(len(b))
+	// Offset+Size can overflow int64, so clamp the remaining length instead.
+	size := int64(len(b)) - partial.Offset
+	if partial.Size >= 0 && partial.Size < size {
+		size = partial.Size
 	}
-	return b[partial.Offset:end]
+	return b[partial.Offset : partial.Offset+size]
 }
 
 func ExtractBinarySection(r io.Reader, item *imap.FetchItemBinarySection) []byte {
