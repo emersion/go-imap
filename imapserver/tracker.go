@@ -212,6 +212,25 @@ func (t *SessionTracker) Idle(w *UpdateWriter, stop <-chan struct{}) error {
 		t.mutex.Unlock()
 	}()
 
+	// Flush updates queued while nothing was listening.
+	//
+	// queueUpdate always appends to the queue, but only signals a listener that
+	// already exists, and t.updates is nil whenever Idle is not running. Two
+	// windows follow from that:
+	//
+	//   - handleIdle writes the "+ idling" continuation before starting the
+	//     goroutine that calls Idle, so the client believes it is idling before
+	//     this registration happens;
+	//   - a client that sends DONE to run a command and then IDLEs again is not
+	//     listening in between.
+	//
+	// An update queued in either window is never announced: the loop below only
+	// polls when signalled, so it waits for the *next* update to carry it, and
+	// on a quiet mailbox that may never arrive.
+	if err := t.Poll(w, true); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-updates:
