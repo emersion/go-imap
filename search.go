@@ -14,6 +14,12 @@ type SearchOptions struct {
 	ReturnCount bool
 	// Requires IMAP4rev2 or SEARCHRES
 	ReturnSave bool
+	// Requires CONDSTORE. RFC 7162 §3.1.5: when the search criteria
+	// reference MODSEQ, the server includes the highest mod-sequence
+	// of the matched set in the ESEARCH response under the MODSEQ
+	// item. Servers should set this automatically when criteria.ModSeq
+	// is non-nil; clients leave it false on the request side.
+	ReturnModSeq bool
 }
 
 // SearchCriteria is a criteria for the SEARCH command.

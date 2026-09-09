@@ -986,6 +986,8 @@ func (c *Client) readResponseData(typ string) error {
 		return c.handleFetch(num)
 	case "EXPUNGE":
 		return c.handleExpunge(num)
+	case "VANISHED":
+		return c.handleVanished()
 	case "SEARCH":
 		return c.handleSearch()
 	case "ESEARCH":
