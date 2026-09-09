@@ -68,6 +68,17 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 			return err
 		}
 	}
+	if c.enabled.Has(imap.CapCondStore) {
+		if data.HighestModSeq > 0 {
+			if err := c.writeHighestModSeq(data.HighestModSeq); err != nil {
+				return err
+			}
+		} else {
+			if err := c.writeNoModSeq(); err != nil {
+				return err
+			}
+		}
+	}
 
 	c.state = imap.ConnStateSelected
 	// TODO: forbid write commands in read-only mode
@@ -170,5 +181,23 @@ func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 		enc.Flag(flags[i])
 	}).Special(']')
 	enc.SP().Text("Permanent flags")
+	return enc.CRLF()
+}
+
+func (c *Conn) writeHighestModSeq(highestModSeq uint64) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("HIGHESTMODSEQ").SP().ModSeq(highestModSeq).Special(']')
+	enc.SP().Text("Highest modification sequence")
+	return enc.CRLF()
+}
+
+func (c *Conn) writeNoModSeq() error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("NOMODSEQ").Special(']')
+	enc.SP().Text("Mailbox does not support modification sequences")
 	return enc.CRLF()
 }
