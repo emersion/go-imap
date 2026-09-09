@@ -7,12 +7,17 @@ import (
 
 // Select sends a SELECT or EXAMINE command.
 //
+// If you haven't sent an ENABLE command, this will first enable
+// the recommended set of extensions.
+//
 // A nil options pointer is equivalent to a zero options value.
 func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectCommand {
 	cmdName := "SELECT"
 	if options != nil && options.ReadOnly {
 		cmdName = "EXAMINE"
 	}
+
+	c.maybeAutoEnable()
 
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
