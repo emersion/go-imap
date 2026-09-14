@@ -990,7 +990,11 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 		return &bs, nil
 	}
 
-	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global")) {
+	// If the Content-Type is message/rfc822, the envelope, body structure, and number of
+	// lines must come next. If it's message/global, IMAP4rev2 servers will include them,
+	// but IMAP4rev1 servers may not. So in that case, we can go by whether the next byte
+	// is '(', since the envelope is a parenthesized list.
+	if strings.EqualFold(bs.Type, "message") && (strings.EqualFold(bs.Subtype, "rfc822") || strings.EqualFold(bs.Subtype, "global") && dec.NextByteIs('(')) {
 		var msg imap.BodyStructureMessageRFC822
 
 		msg.Envelope, err = readEnvelope(dec, options)
