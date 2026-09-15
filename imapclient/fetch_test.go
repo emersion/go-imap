@@ -37,3 +37,32 @@ func TestFetch(t *testing.T) {
 		t.Errorf("body mismatch: got \n%v\n but want \n%v", body, simpleRawMessage)
 	}
 }
+
+func TestFetchPartialOffsetEcho(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateSelected)
+	defer client.Close()
+	defer server.Close()
+
+	const offset = int64(1)<<32 + 5
+
+	bodySection := &imap.FetchItemBodySection{
+		Partial: &imap.SectionPartial{Offset: offset, Size: 10},
+	}
+	messages, err := client.Fetch(imap.SeqSetNum(1), &imap.FetchOptions{
+		BodySection: []*imap.FetchItemBodySection{bodySection},
+	}).Collect()
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if len(messages) != 1 || len(messages[0].BodySection) != 1 {
+		t.Fatalf("got %v messages", len(messages))
+	}
+
+	got := messages[0].BodySection[0].Section.Partial
+	if got == nil || got.Offset != offset {
+		t.Errorf("echoed partial offset = %v, want %v", got, offset)
+	}
+	if messages[0].FindBodySection(bodySection) == nil {
+		t.Errorf("FindBodySection() = nil, want the section the client asked for")
+	}
+}

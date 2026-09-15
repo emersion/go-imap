@@ -423,7 +423,7 @@ func writeItemBodySection(enc *imapwire.Encoder, section *imap.FetchItemBodySect
 	}
 	enc.Special(']')
 	if partial := section.Partial; partial != nil {
-		enc.Special('<').Number(uint32(partial.Offset)).Special('>')
+		enc.Special('<').Number64(partial.Offset).Special('>')
 	}
 }
 
