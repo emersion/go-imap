@@ -14,8 +14,9 @@ import (
 // A nil options pointer is equivalent to a zero options value.
 func (c *Client) Store(numSet imap.NumSet, store *imap.StoreFlags, options *imap.StoreOptions) *FetchCommand {
 	cmd := &FetchCommand{
-		numSet: numSet,
-		msgs:   make(chan *FetchMessageData, 128),
+		numSet:  numSet,
+		isStore: true,
+		msgs:    make(chan *FetchMessageData, 128),
 	}
 	enc := c.beginCommand(uidCmdName("STORE", imapwire.NumSetKind(numSet)), cmd)
 	enc.SP().NumSet(numSet).SP()

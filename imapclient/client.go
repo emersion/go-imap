@@ -765,6 +765,16 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				cmd.data.SourceUIDs = srcUIDs
 				cmd.data.DestUIDs = dstUIDs
 			}
+		case "MODIFIED":
+			var modifiedUIDs imap.UIDSet
+			if !c.dec.ExpectSP() || !c.dec.ExpectUIDSet(&modifiedUIDs) {
+				return nil, fmt.Errorf("in resp-code-modified: %w", c.dec.Err())
+			}
+			if cmd, ok := cmd.(*FetchCommand); ok && cmd.isStore {
+				if _, ok := cmd.numSet.(imap.UIDSet); ok {
+					cmd.modifiedUIDs = modifiedUIDs
+				}
+			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {
 				c.dec.DiscardUntilByte(']')

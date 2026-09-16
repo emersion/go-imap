@@ -157,12 +157,27 @@ func writeSectionPartial(enc *imapwire.Encoder, partial *imap.SectionPartial) {
 type FetchCommand struct {
 	commandBase
 
-	numSet     imap.NumSet
-	recvSeqSet imap.SeqSet
-	recvUIDSet imap.UIDSet
+	numSet       imap.NumSet
+	isStore      bool
+	modifiedUIDs imap.UIDSet
+	recvSeqSet   imap.SeqSet
+	recvUIDSet   imap.UIDSet
 
 	msgs chan *FetchMessageData
 	prev *FetchMessageData
+}
+
+// ModifiedUIDs returns the UIDs reported by a tagged STORE MODIFIED response.
+// It returns nil for FETCH commands and sequence-number STORE commands.
+// Call it after Close or Collect has completed.
+func (cmd *FetchCommand) ModifiedUIDs() imap.UIDSet {
+	if !cmd.isStore {
+		return nil
+	}
+	if _, ok := cmd.numSet.(imap.UIDSet); !ok {
+		return nil
+	}
+	return append(imap.UIDSet(nil), cmd.modifiedUIDs...)
 }
 
 func (cmd *FetchCommand) recvSeqNum(seqNum uint32) bool {
