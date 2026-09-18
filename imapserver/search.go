@@ -79,6 +79,13 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	if !options.ReturnMin && !options.ReturnMax && !options.ReturnAll && !options.ReturnCount {
 		options.ReturnAll = true
 	}
+	// RFC 7162 §3.1.5: when a search references MODSEQ, the server
+	// must include the highest mod-sequence of the matched set in the
+	// extended response. Surface that for the session so it knows it
+	// has to compute the value.
+	if containsModSeq(&criteria) {
+		options.ReturnModSeq = true
+	}
 
 	data, err := c.session.Search(numKind, &criteria, &options)
 	if err != nil {
@@ -90,6 +97,29 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	} else {
 		return c.writeSearch(data.All)
 	}
+}
+
+// containsModSeq reports whether any branch of the criteria tree has
+// a MODSEQ key. Used to set ReturnModSeq when the client did not pass
+// an explicit return option but referenced MODSEQ in the criteria.
+func containsModSeq(c *imap.SearchCriteria) bool {
+	if c == nil {
+		return false
+	}
+	if c.ModSeq != nil {
+		return true
+	}
+	for i := range c.Not {
+		if containsModSeq(&c.Not[i]) {
+			return true
+		}
+	}
+	for i := range c.Or {
+		if containsModSeq(&c.Or[i][0]) || containsModSeq(&c.Or[i][1]) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.SearchOptions, numKind NumKind) error {
@@ -116,6 +146,11 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	}
 	if options.ReturnCount {
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
+	}
+	// RFC 7162 §3.1.5: the MODSEQ data item in an ESEARCH response is
+	// the highest mod-sequence across the matched messages.
+	if options.ReturnModSeq && data.ModSeq != 0 {
+		enc.SP().Atom("MODSEQ").SP().ModSeq(data.ModSeq)
 	}
 	return enc.CRLF()
 }
@@ -302,6 +337,33 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 		case "SMALLER":
 			criteria.And(&imap.SearchCriteria{Smaller: n})
 		}
+	case "MODSEQ":
+		// RFC 7162 §3.1.5:
+		//   search-modsequence = "MODSEQ" [search-modseq-ext] SP
+		//                        search-modseq-value
+		//   search-modseq-ext  = SP search-modseq-name SP
+		//                        search-modseq-attrib
+		// We accept both the bare "MODSEQ n" form and the extended
+		// form with a per-entry name + attribute, surfacing them on
+		// criteria.ModSeq for the session to interpret.
+		if !dec.ExpectSP() {
+			return dec.Err()
+		}
+		mq := &imap.SearchCriteriaModSeq{}
+		if dec.Quoted(&mq.MetadataName) {
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+			var attr string
+			if !dec.ExpectAtom(&attr) || !dec.ExpectSP() {
+				return dec.Err()
+			}
+			mq.MetadataType = imap.SearchCriteriaMetadataType(strings.ToLower(attr))
+		}
+		if !dec.ExpectModSeq(&mq.ModSeq) {
+			return dec.Err()
+		}
+		criteria.ModSeq = mq
 	case "NOT":
 		if !dec.ExpectSP() {
 			return dec.Err()

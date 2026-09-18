@@ -75,12 +75,30 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		}
 	}
 
+	// Optional fetch-modifiers, RFC 7162 §3.2:
+	//   fetch-modifiers = SP "(" fetch-modifier *(SP fetch-modifier) ")"
+	if dec.SP() {
+		if err := readFetchModifiers(dec, &options); err != nil {
+			return err
+		}
+	}
+
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
 
 	if err := c.checkState(imap.ConnStateSelected); err != nil {
 		return err
+	}
+
+	// RFC 7162 §3.2.10 also forbids VANISHED on a seqnum FETCH (it
+	// only operates on UIDs). The CHANGEDSINCE-required check is
+	// already in readFetchModifiers.
+	if options.Vanished && numKind != NumKindUID {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Text: "VANISHED FETCH modifier requires UID FETCH",
+		}
 	}
 
 	if numKind == NumKindUID {
@@ -108,6 +126,11 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		options.RFC822Size = true
 	case "UID":
 		options.UID = true
+	case "MODSEQ":
+		// RFC 7162 §3.1.4: a MODSEQ data item asks the server to
+		// include the mod-sequence value in the FETCH response. The
+		// session emits it via FetchResponseWriter.WriteModSeq.
+		options.ModSeq = true
 	case "RFC822": // equivalent to BODY[]
 		bs := &imap.FetchItemBodySection{}
 		writerOptions.obsolete[bs] = attName
@@ -203,6 +226,46 @@ func readFetchAttName(dec *imapwire.Decoder) (string, error) {
 		return "", dec.Err()
 	}
 	return strings.ToUpper(attName), nil
+}
+
+// readFetchModifiers parses the optional parenthesised modifier list
+// that follows a FETCH item list, per RFC 7162 §3.2. Supported:
+// CHANGEDSINCE (CONDSTORE) and VANISHED (QRESYNC).
+//
+// VANISHED requires CHANGEDSINCE; the check uses sawChangedSince
+// rather than options.ChangedSince != 0 so that CHANGEDSINCE 0 (a
+// legitimate "give me everything vanished" floor) is accepted.
+func readFetchModifiers(dec *imapwire.Decoder, options *imap.FetchOptions) error {
+	var sawChangedSince bool
+	err := dec.ExpectList(func() error {
+		var name string
+		if !dec.ExpectAtom(&name) {
+			return dec.Err()
+		}
+		switch strings.ToUpper(name) {
+		case "CHANGEDSINCE":
+			if !dec.ExpectSP() || !dec.ExpectModSeq(&options.ChangedSince) {
+				return dec.Err()
+			}
+			sawChangedSince = true
+		case "VANISHED":
+			// Bare keyword — no argument (RFC 7162 §3.2.10).
+			options.Vanished = true
+		default:
+			return newClientBugError("unknown FETCH modifier")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if options.Vanished && !sawChangedSince {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeBad,
+			Text: "VANISHED FETCH modifier requires CHANGEDSINCE",
+		}
+	}
+	return nil
 }
 
 func isMsgAttNameChar(ch byte) bool {
@@ -337,6 +400,23 @@ func (cmd *FetchWriter) CreateMessage(seqNum uint32) *FetchResponseWriter {
 	return &FetchResponseWriter{enc: enc, options: cmd.options}
 }
 
+// WriteVanished emits one "* VANISHED (EARLIER) <uids>" line, the
+// response to UID FETCH ... (CHANGEDSINCE n VANISHED) per RFC 7162
+// §3.2.10. Sessions call it before (or after) the per-message
+// CreateMessage calls; the framework keeps both kinds of responses
+// in the same command's output stream.
+func (cmd *FetchWriter) WriteVanished(uids imap.UIDSet) error {
+	if cmd.conn == nil || len(uids) == 0 {
+		return nil
+	}
+	enc := newResponseEncoder(cmd.conn)
+	defer enc.end()
+	enc.Atom("*").SP().Atom("VANISHED").SP()
+	enc.Special('(').Atom("EARLIER").Special(')')
+	enc.SP().NumSet(uids)
+	return enc.CRLF()
+}
+
 // FetchResponseWriter writes a single FETCH response for a message.
 type FetchResponseWriter struct {
 	enc     *responseEncoder
@@ -364,6 +444,16 @@ func (w *FetchResponseWriter) WriteFlags(flags []imap.Flag) {
 	w.enc.Atom("FLAGS").SP().List(len(flags), func(i int) {
 		w.enc.Flag(flags[i])
 	})
+}
+
+// WriteModSeq writes the message's mod-sequence value (RFC 7162
+// §3.1.4). The value is emitted parenthesised, as the spec wire
+// format requires:
+//
+//	MODSEQ (12345)
+func (w *FetchResponseWriter) WriteModSeq(modSeq uint64) {
+	w.writeItemSep()
+	w.enc.Atom("MODSEQ").SP().Special('(').ModSeq(modSeq).Special(')')
 }
 
 // WriteRFC822Size writes the message's full size.

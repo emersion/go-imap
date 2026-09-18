@@ -17,7 +17,20 @@ func (c *Client) Select(mailbox string, options *imap.SelectOptions) *SelectComm
 	cmd := &SelectCommand{mailbox: mailbox}
 	enc := c.beginCommand(cmdName, cmd)
 	enc.SP().Mailbox(mailbox)
-	if options != nil && options.CondStore {
+	switch {
+	case options != nil && options.QResync != nil:
+		// (QRESYNC (uidvalidity modseq [known-uids]))
+		// — the simple form, per RFC 7162 §3.2. The optional
+		// reconciliation pair is not emitted; the server is allowed
+		// to treat its absence as the common case.
+		q := options.QResync
+		enc.SP().Special('(').Atom("QRESYNC").SP()
+		enc.Special('(').Number(q.UIDValidity).SP().ModSeq(q.ModSeq)
+		if len(q.KnownUIDs) > 0 {
+			enc.SP().NumSet(q.KnownUIDs)
+		}
+		enc.Special(')').Special(')')
+	case options != nil && options.CondStore:
 		enc.SP().Special('(').Atom("CONDSTORE").Special(')')
 	}
 	enc.end()

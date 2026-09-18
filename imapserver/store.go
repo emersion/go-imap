@@ -10,10 +10,24 @@ import (
 
 func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	var (
-		numSet imap.NumSet
-		item   string
+		numSet  imap.NumSet
+		item    string
+		options imap.StoreOptions
 	)
-	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() {
+		return dec.Err()
+	}
+	// Optional store-modifiers, RFC 7162 §3.1.3:
+	//   store-modifiers = "(" store-modifier *(SP store-modifier) ")" SP
+	if dec.Special('(') {
+		if err := readStoreModifiers(dec, &options); err != nil {
+			return err
+		}
+		if !dec.ExpectSpecial(')') || !dec.ExpectSP() {
+			return dec.Err()
+		}
+	}
+	if !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 	var flags []imap.Flag
@@ -69,10 +83,32 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c}
-	options := imap.StoreOptions{}
 	return c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,
 	}, &options)
+}
+
+// readStoreModifiers parses the parenthesised modifier list that may
+// precede the STORE flag operation, RFC 7162 §3.1.3. Currently
+// supported: UNCHANGEDSINCE (CONDSTORE).
+func readStoreModifiers(dec *imapwire.Decoder, options *imap.StoreOptions) error {
+	for {
+		var name string
+		if !dec.ExpectAtom(&name) {
+			return dec.Err()
+		}
+		switch strings.ToUpper(name) {
+		case "UNCHANGEDSINCE":
+			if !dec.ExpectSP() || !dec.ExpectModSeq(&options.UnchangedSince) {
+				return dec.Err()
+			}
+		default:
+			return newClientBugError("unknown STORE modifier")
+		}
+		if !dec.SP() {
+			return nil
+		}
+	}
 }

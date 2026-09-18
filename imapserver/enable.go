@@ -23,11 +23,28 @@ func (c *Conn) handleEnable(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	available := c.server.options.caps()
 	var enabled []imap.Cap
 	for _, req := range requested {
 		switch req {
 		case imap.CapIMAP4rev2, imap.CapUTF8Accept:
 			enabled = append(enabled, req)
+		case imap.CapCondStore:
+			// RFC 7162 §3.6: ENABLE CONDSTORE is a separate
+			// activation; only honoured when the backend supports
+			// it.
+			if available.Has(imap.CapCondStore) {
+				enabled = append(enabled, req)
+			}
+		case imap.CapQResync:
+			// RFC 7162 §3.7: enabling QRESYNC implicitly enables
+			// CONDSTORE. Both must be backend-supported.
+			if available.Has(imap.CapQResync) {
+				enabled = append(enabled, req)
+				if available.Has(imap.CapCondStore) {
+					enabled = append(enabled, imap.CapCondStore)
+				}
+			}
 		}
 	}
 
