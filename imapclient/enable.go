@@ -6,12 +6,43 @@ import (
 	"github.com/emersion/go-imap/v2"
 )
 
+// maybeAutoEnable is the auto-call described on Enable: on the first
+// Select, if the server supports ENABLE and the caller hasn't run
+// Enable themselves, enable whatever go-imap-supported extensions the
+// server advertises.
+func (c *Client) maybeAutoEnable() {
+	c.mutex.Lock()
+	if c.enableAttempted {
+		c.mutex.Unlock()
+		return
+	}
+	c.mutex.Unlock()
+
+	caps := c.Caps()
+	if !caps.Has(imap.CapIMAP4rev2) && !caps.Has(imap.CapEnable) {
+		return
+	}
+
+	c.Enable(imap.CapIMAP4rev2, imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer)
+}
+
 // Enable sends an ENABLE command.
 //
 // This command requires support for IMAP4rev2 or the ENABLE extension.
+//
+// If the caller never invokes Enable explicitly, Select will call it
+// on first use with the full set of extensions go-imap supports
+// (intersected with what the server advertises), so that callers who
+// trust go-imap's defaults get sensible behaviour without ceremony.
+// Calling Enable yourself (even with no arguments) suppresses that
+// auto-call.
 func (c *Client) Enable(caps ...imap.Cap) *EnableCommand {
+	c.mutex.Lock()
+	c.enableAttempted = true
+	c.mutex.Unlock()
+
 	// Enabling an extension may change the IMAP syntax, so only allow the
-	// extensions we support here
+	// extensions we'll be able to parse.
 	for _, name := range caps {
 		switch name {
 		case imap.CapIMAP4rev2, imap.CapUTF8Accept, imap.CapMetadata, imap.CapMetadataServer:
@@ -43,7 +74,12 @@ func (c *Client) handleEnabled() error {
 	for name := range caps {
 		c.enabled[name] = struct{}{}
 	}
+	quotedUTF8 := c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
 	c.mutex.Unlock()
+
+	if quotedUTF8 {
+		c.dec.QuotedUTF8 = true
+	}
 
 	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {
 		cmd.data.Caps = caps

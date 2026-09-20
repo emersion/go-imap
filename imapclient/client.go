@@ -154,16 +154,17 @@ type Client struct {
 	decCh  chan struct{}
 	decErr error
 
-	mutex        sync.Mutex
-	state        imap.ConnState
-	caps         imap.CapSet
-	enabled      imap.CapSet
-	pendingCapCh chan struct{}
-	mailbox      *SelectedMailbox
-	cmdTag       uint64
-	pendingCmds  []command
-	contReqs     []continuationRequest
-	closed       bool
+	mutex           sync.Mutex
+	state           imap.ConnState
+	caps            imap.CapSet
+	enabled         imap.CapSet
+	enableAttempted bool
+	pendingCapCh    chan struct{}
+	mailbox         *SelectedMailbox
+	cmdTag          uint64
+	pendingCmds     []command
+	contReqs        []continuationRequest
+	closed          bool
 }
 
 // New creates a new IMAP client.
@@ -437,7 +438,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	}
 
 	c.pendingCmds = append(c.pendingCmds, cmd)
-	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	quotedUTF8 := c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	literalPlus := c.caps.Has(imap.CapLiteralPlus)
 
@@ -530,7 +531,9 @@ func (c *Client) completeCommand(cmd command, err error) {
 			c.state = imap.ConnStateNotAuthenticated
 			c.mailbox = nil
 			c.enabled = make(imap.CapSet)
+			c.enableAttempted = false
 			c.mutex.Unlock()
+			c.dec.QuotedUTF8 = false
 		}
 	case *SelectCommand:
 		if err == nil {

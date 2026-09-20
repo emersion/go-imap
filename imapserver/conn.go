@@ -178,6 +178,9 @@ func (c *Conn) serve() {
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
 		dec.MaxSize = maxCommandSize
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
+		c.mutex.Lock()
+		dec.QuotedUTF8 = c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+		c.mutex.Unlock()
 
 		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break

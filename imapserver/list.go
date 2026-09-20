@@ -206,6 +206,9 @@ func readListMailbox(dec *imapwire.Decoder) (string, error) {
 			return "", dec.Err()
 		}
 	}
+	if dec.QuotedUTF8 {
+		return mailbox, nil
+	}
 	return utf7.Decode(mailbox)
 }
 
