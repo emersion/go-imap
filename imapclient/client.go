@@ -631,20 +631,20 @@ func (c *Client) readResponse() error {
 
 	if c.dec.Special('+') {
 		if err := c.readContinueReq(); err != nil {
-			return fmt.Errorf("in continue-req: %v", err)
+			return fmt.Errorf("in continue-req: %w", err)
 		}
 		return nil
 	}
 
 	var tag, typ string
 	if !c.dec.Expect(c.dec.Special('*') || c.dec.Atom(&tag), "'*' or atom") {
-		return fmt.Errorf("in response: cannot read tag: %v", c.dec.Err())
+		return fmt.Errorf("in response: cannot read tag: %w", c.dec.Err())
 	}
 	if !c.dec.ExpectSP() {
-		return fmt.Errorf("in response: %v", c.dec.Err())
+		return fmt.Errorf("in response: %w", c.dec.Err())
 	}
 	if !c.dec.ExpectAtom(&typ) {
-		return fmt.Errorf("in response: cannot read type: %v", c.dec.Err())
+		return fmt.Errorf("in response: cannot read type: %w", c.dec.Err())
 	}
 
 	// Change typ to uppercase, as it's case-insensitive
@@ -663,11 +663,11 @@ func (c *Client) readResponse() error {
 		err = c.readResponseData(typ)
 	}
 	if err != nil {
-		return fmt.Errorf("in %v: %v", token, err)
+		return fmt.Errorf("in %v: %w", token, err)
 	}
 
 	if !c.dec.ExpectCRLF() {
-		return fmt.Errorf("in response: %v", c.dec.Err())
+		return fmt.Errorf("in response: %w", c.dec.Err())
 	}
 
 	if startTLS != nil {
@@ -723,14 +723,14 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 	var code string
 	if hasSP && c.dec.Special('[') { // resp-text-code
 		if !c.dec.ExpectAtom(&code) {
-			return nil, fmt.Errorf("in resp-text-code: %v", c.dec.Err())
+			return nil, fmt.Errorf("in resp-text-code: %w", c.dec.Err())
 		}
 		// TODO: LONGENTRIES and MAXSIZE from METADATA
 		switch code {
 		case "CAPABILITY": // capability-data
 			caps, err := readCapabilities(c.dec)
 			if err != nil {
-				return nil, fmt.Errorf("in capability-data: %v", err)
+				return nil, fmt.Errorf("in capability-data: %w", err)
 			}
 			c.setCaps(caps)
 		case "APPENDUID":
@@ -739,7 +739,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				uid         imap.UID
 			)
 			if !c.dec.ExpectSP() || !c.dec.ExpectNumber(&uidValidity) || !c.dec.ExpectSP() || !c.dec.ExpectUID(&uid) {
-				return nil, fmt.Errorf("in resp-code-apnd: %v", c.dec.Err())
+				return nil, fmt.Errorf("in resp-code-apnd: %w", c.dec.Err())
 			}
 			if cmd, ok := cmd.(*AppendCommand); ok {
 				cmd.data.UID = uid
@@ -751,7 +751,7 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			}
 			uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 			if err != nil {
-				return nil, fmt.Errorf("in resp-code-copy: %v", err)
+				return nil, fmt.Errorf("in resp-code-copy: %w", err)
 			}
 			switch cmd := cmd.(type) {
 			case *CopyCommand:
@@ -771,13 +771,13 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 			}
 		}
 		if !c.dec.ExpectSpecial(']') {
-			return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
+			return nil, fmt.Errorf("in resp-text: %w", c.dec.Err())
 		}
 		hasSP = c.dec.SP()
 	}
 	var text string
 	if hasSP && !c.dec.ExpectText(&text) {
-		return nil, fmt.Errorf("in resp-text: %v", c.dec.Err())
+		return nil, fmt.Errorf("in resp-text: %w", c.dec.Err())
 	}
 
 	var cmdErr error
@@ -836,13 +836,13 @@ func (c *Client) readResponseData(typ string) error {
 		var code string
 		if hasSP && c.dec.Special('[') { // resp-text-code
 			if !c.dec.ExpectAtom(&code) {
-				return fmt.Errorf("in resp-text-code: %v", c.dec.Err())
+				return fmt.Errorf("in resp-text-code: %w", c.dec.Err())
 			}
 			switch code {
 			case "CAPABILITY": // capability-data
 				caps, err := readCapabilities(c.dec)
 				if err != nil {
-					return fmt.Errorf("in capability-data: %v", err)
+					return fmt.Errorf("in capability-data: %w", err)
 				}
 				c.setCaps(caps)
 			case "PERMANENTFLAGS":
@@ -888,7 +888,7 @@ func (c *Client) readResponseData(typ string) error {
 				}
 				uidValidity, srcUIDs, dstUIDs, err := readRespCodeCopyUID(c.dec)
 				if err != nil {
-					return fmt.Errorf("in resp-code-copy: %v", err)
+					return fmt.Errorf("in resp-code-copy: %w", err)
 				}
 				if cmd := findPendingCmdByType[*MoveCommand](c); cmd != nil {
 					cmd.data.UIDValidity = uidValidity
@@ -905,20 +905,24 @@ func (c *Client) readResponseData(typ string) error {
 				}
 			case "NOMODSEQ":
 				// ignore
+			case "NOTIFICATIONOVERFLOW":
+				if handler := c.options.unilateralDataHandler().NotificationOverflow; handler != nil {
+					handler()
+				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
 					c.dec.DiscardUntilByte(']')
 				}
 			}
 			if !c.dec.ExpectSpecial(']') {
-				return fmt.Errorf("in resp-text: %v", c.dec.Err())
+				return fmt.Errorf("in resp-text: %w", c.dec.Err())
 			}
 			hasSP = c.dec.SP()
 		}
 
 		var text string
 		if hasSP && !c.dec.ExpectText(&text) {
-			return fmt.Errorf("in resp-text: %v", c.dec.Err())
+			return fmt.Errorf("in resp-text: %w", c.dec.Err())
 		}
 
 		if code == "CLOSED" {
@@ -1029,7 +1033,7 @@ func (c *Client) WaitGreeting() error {
 		return c.greetingErr
 	case <-c.decCh:
 		if c.decErr != nil {
-			return fmt.Errorf("got error before greeting: %v", c.decErr)
+			return fmt.Errorf("got error before greeting: %w", c.decErr)
 		}
 		return fmt.Errorf("connection closed before greeting")
 	}
@@ -1188,14 +1192,35 @@ type UnilateralDataMailbox struct {
 //
 // The handler will be invoked in an arbitrary goroutine.
 //
+// These handlers are important when using the IDLE or NOTIFY commands, as the
+// server will send unsolicited STATUS, FETCH, and EXPUNGE responses for
+// mailbox events.
+//
 // See Options.UnilateralDataHandler.
 type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
 
-	// requires ENABLE METADATA or ENABLE SERVER-METADATA
+	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)
+
+	// Called when the server sends an unsolicited LIST response.
+	//
+	// Used with NOTIFY MailboxName events (RFC 5465) to detect mailbox
+	// creation, deletion, or renaming, and for subscription changes.
+	List func(data *imap.ListData)
+
+	// Called when the server sends an unsolicited STATUS response.
+	//
+	// Commonly used with NOTIFY to receive mailbox status updates
+	// for non-selected mailboxes (RFC 5465).
+	Status func(data *imap.StatusData)
+
+	// Called when the server sends NOTIFICATIONOVERFLOW (RFC 5465).
+	//
+	// Indicates the server has disabled all NOTIFY notifications.
+	NotificationOverflow func()
 }
 
 // command is an interface for IMAP commands.

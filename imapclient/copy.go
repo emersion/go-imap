@@ -1,8 +1,6 @@
 package imapclient
 
 import (
-	"fmt"
-
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
@@ -31,7 +29,14 @@ func readRespCodeCopyUID(dec *imapwire.Decoder) (uidValidity uint32, srcUIDs, ds
 		return 0, nil, nil, dec.Err()
 	}
 	if srcUIDs.Dynamic() || dstUIDs.Dynamic() {
-		return 0, nil, nil, fmt.Errorf("imapclient: server returned dynamic number set in COPYUID response")
+		// RFC 4315 forbids "*" in COPYUID UID sets, but some servers
+		// (Purelymail observed in #749) send it anyway after MOVE. The
+		// COPY/MOVE itself already succeeded on the server side; only
+		// the response metadata is malformed. Treat it the same as a
+		// server that doesn't support UIDPLUS at all — return empty UID
+		// mapping and no error — so the read loop doesn't tear down the
+		// whole connection over an advisory field.
+		return 0, nil, nil, nil
 	}
 	return uidValidity, srcUIDs, dstUIDs, nil
 }

@@ -194,6 +194,10 @@ func (c *Conn) serve() {
 }
 
 func (c *Conn) readCommand(dec *imapwire.Decoder) error {
+	if dec.CRLF() {
+		return nil // allow empty newlines
+	}
+
 	var tag, name string
 	if !dec.ExpectAtom(&tag) || !dec.ExpectSP() || !dec.ExpectAtom(&name) {
 		return fmt.Errorf("in command: %w", dec.Err())

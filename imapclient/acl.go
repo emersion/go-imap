@@ -64,7 +64,7 @@ func (cmd *GetACLCommand) Wait() (*GetACLData, error) {
 func (c *Client) handleMyRights() error {
 	data, err := readMyRights(c.dec)
 	if err != nil {
-		return fmt.Errorf("in myrights-response: %v", err)
+		return fmt.Errorf("in myrights-response: %w", err)
 	}
 	if cmd := findPendingCmdByType[*MyRightsCommand](c); cmd != nil {
 		cmd.data = *data
@@ -75,7 +75,7 @@ func (c *Client) handleMyRights() error {
 func (c *Client) handleGetACL() error {
 	data, err := readGetACL(c.dec)
 	if err != nil {
-		return fmt.Errorf("in getacl-response: %v", err)
+		return fmt.Errorf("in getacl-response: %w", err)
 	}
 	if cmd := findPendingCmdByType[*GetACLCommand](c); cmd != nil {
 		cmd.data = *data

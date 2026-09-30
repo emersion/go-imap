@@ -41,7 +41,7 @@ func (c *Client) handleThread() error {
 	for c.dec.SP() {
 		data, err := readThreadList(c.dec)
 		if err != nil {
-			return fmt.Errorf("in thread-list: %v", err)
+			return fmt.Errorf("in thread-list: %w", err)
 		}
 		if cmd != nil {
 			cmd.data = append(cmd.data, *data)
