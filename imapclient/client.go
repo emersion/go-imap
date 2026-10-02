@@ -1145,6 +1145,15 @@ func (ce *commandEncoder) flush() {
 
 // Literal encodes a literal.
 func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
+	return ce.literal(size, false)
+}
+
+// Literal8 encodes a literal8 (RFC 3516).
+func (ce *commandEncoder) Literal8(size int64) io.WriteCloser {
+	return ce.literal(size, true)
+}
+
+func (ce *commandEncoder) literal(size int64, binary bool) io.WriteCloser {
 	var contReq *imapwire.ContinuationRequest
 	ce.client.mutex.Lock()
 	hasCapLiteralMinus := ce.client.caps.Has(imap.CapLiteralMinus)
@@ -1153,8 +1162,14 @@ func (ce *commandEncoder) Literal(size int64) io.WriteCloser {
 		contReq = ce.client.registerContReq(ce.cmd)
 	}
 	ce.client.setWriteTimeout(literalWriteTimeout)
+	var wc io.WriteCloser
+	if binary {
+		wc = ce.Encoder.Literal8(size, contReq)
+	} else {
+		wc = ce.Encoder.Literal(size, contReq)
+	}
 	return literalWriter{
-		WriteCloser: ce.Encoder.Literal(size, contReq),
+		WriteCloser: wc,
 		client:      ce.client,
 	}
 }
