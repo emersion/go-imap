@@ -91,13 +91,13 @@ func (c *Conn) handleAppend(tag string, dec *imapwire.Decoder) error {
 
 	data, appendErr := c.session.Append(mailbox, lit, &options)
 	if _, discardErr := io.Copy(io.Discard, lit); discardErr != nil {
-		return err
+		return discardErr
 	}
 	if dataExt != "" && !dec.ExpectSpecial(')') {
 		return dec.Err()
 	}
 	if !dec.ExpectCRLF() {
-		return err
+		return dec.Err()
 	}
 	if appendErr != nil {
 		return appendErr
