@@ -93,6 +93,8 @@ func (c *Conn) availableCaps() []imap.Cap {
 			imap.CapCreateSpecialUse,
 			imap.CapLiteralPlus,
 			imap.CapUnauthenticate,
+			imap.CapCondStore, // RFC 7162 §3 — see fetch/store/search/select/status.go
+			imap.CapQResync,   // RFC 7162 §4 — see enable.go, expunge.go, select.go
 		})
 
 		if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {

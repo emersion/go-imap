@@ -21,6 +21,13 @@ type FetchOptions struct {
 	ModSeq            bool                          // requires CONDSTORE
 
 	ChangedSince uint64 // requires CONDSTORE
+
+	// Vanished, when paired with a non-zero ChangedSince, asks the
+	// server to emit "* VANISHED (EARLIER) <uids>" for every UID in
+	// the fetch set that has been expunged since the floor (RFC 7162
+	// §3.2.10). Only valid on UID FETCH; the server returns BAD
+	// otherwise.
+	Vanished bool // requires QRESYNC
 }
 
 // FetchItemBodyStructure contains FETCH options for the body structure.

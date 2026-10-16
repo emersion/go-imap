@@ -49,6 +49,12 @@ const (
 
 	// APPENDLIMIT
 	ResponseCodeTooBig ResponseCode = "TOOBIG"
+
+	// CONDSTORE (RFC 7162 §3.1.3): STORE (UNCHANGEDSINCE N) replies
+	// MODIFIED <set> for messages whose mod-sequence has moved past
+	// the floor. Callers format their own UID set: e.g.
+	//   imap.ResponseCode(string(ResponseCodeModified) + " 1:5")
+	ResponseCodeModified ResponseCode = "MODIFIED"
 )
 
 // StatusResponse is a generic status response.

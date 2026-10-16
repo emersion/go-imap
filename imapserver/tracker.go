@@ -65,11 +65,24 @@ func (t *MailboxTracker) queueUpdate(update *trackerUpdate, source *SessionTrack
 }
 
 // QueueExpunge queues a new EXPUNGE update.
+//
+// Sessions that may serve QRESYNC-enabled clients should prefer
+// QueueExpungeWithUID so the framework can emit a VANISHED response
+// (RFC 7162 §3.7) instead of EXPUNGE. The UID-less form here stays
+// for backward compatibility and for non-QRESYNC servers.
 func (t *MailboxTracker) QueueExpunge(seqNum uint32) {
+	t.QueueExpungeWithUID(seqNum, 0)
+}
+
+// QueueExpungeWithUID is QueueExpunge plus the UID. When a session
+// has enabled QRESYNC, the framework emits "* VANISHED <uid>" using
+// the UID; otherwise it falls back to "* <seqNum> EXPUNGE". A UID of
+// 0 disables the VANISHED upgrade for that update.
+func (t *MailboxTracker) QueueExpungeWithUID(seqNum uint32, uid imap.UID) {
 	if seqNum == 0 {
 		panic("imapserver: invalid expunge message sequence number")
 	}
-	t.queueUpdate(&trackerUpdate{expunge: seqNum}, nil)
+	t.queueUpdate(&trackerUpdate{expunge: seqNum, expungeUID: uid}, nil)
 }
 
 // QueueNumMessages queues a new EXISTS update.
@@ -99,6 +112,7 @@ func (t *MailboxTracker) QueueMessageFlags(seqNum uint32, uid imap.UID, flags []
 
 type trackerUpdate struct {
 	expunge      uint32
+	expungeUID   imap.UID // optional, for VANISHED emission to QRESYNC sessions
 	numMessages  uint32
 	mailboxFlags []imap.Flag
 	fetch        *trackerUpdateFetch
@@ -172,7 +186,12 @@ func (t *SessionTracker) Poll(w *UpdateWriter, allowExpunge bool) error {
 		var err error
 		switch {
 		case update.expunge != 0:
-			err = w.WriteExpunge(update.expunge)
+			// QRESYNC sessions get VANISHED instead of EXPUNGE
+			// when the queued update carries a UID. UID-less
+			// updates (legacy QueueExpunge callers) fall back to
+			// EXPUNGE, which is also accepted by every QRESYNC
+			// client in the wild.
+			err = w.WriteExpungeUID(update.expunge, update.expungeUID)
 		case update.numMessages != 0:
 			err = w.WriteNumMessages(update.numMessages)
 		case update.mailboxFlags != nil:

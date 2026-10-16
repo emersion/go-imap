@@ -592,6 +592,27 @@ func (w *UpdateWriter) WriteExpunge(seqNum uint32) error {
 	return w.conn.writeExpunge(seqNum)
 }
 
+// WriteExpungeUID is WriteExpunge plus the UID. When the connection
+// has enabled QRESYNC and uid != 0, this emits "* VANISHED <uid>"
+// (RFC 7162 §3.7). Otherwise it falls back to WriteExpunge with the
+// sequence number. Callers that already track UIDs alongside their
+// expunge updates (typically through MailboxTracker.QueueExpungeWithUID)
+// should prefer this so QRESYNC clients see the modern response form.
+func (w *UpdateWriter) WriteExpungeUID(seqNum uint32, uid imap.UID) error {
+	if !w.allowExpunge {
+		return fmt.Errorf("imapserver: EXPUNGE updates are not allowed in this context")
+	}
+	if uid != 0 && w.conn != nil && w.conn.enabled.Has(imap.CapQResync) {
+		enc := newResponseEncoder(w.conn)
+		defer enc.end()
+		var uids imap.UIDSet
+		uids.AddNum(uid)
+		enc.Atom("*").SP().Atom("VANISHED").SP().NumSet(uids)
+		return enc.CRLF()
+	}
+	return w.conn.writeExpunge(seqNum)
+}
+
 // WriteNumMessages writes an EXISTS response.
 func (w *UpdateWriter) WriteNumMessages(n uint32) error {
 	return w.conn.writeExists(n)
