@@ -80,11 +80,13 @@ type Server struct {
 	options Options
 
 	listenerWaitGroup sync.WaitGroup
+	connWaitGroup     sync.WaitGroup
 
-	mutex     sync.Mutex
-	listeners map[net.Listener]struct{}
-	conns     map[*Conn]struct{}
-	closed    bool
+	mutex      sync.Mutex
+	listeners  map[net.Listener]struct{}
+	conns      map[*Conn]struct{}
+	closed     bool
+	shutdownCh chan struct{}
 }
 
 // New creates a new server.
@@ -93,9 +95,10 @@ func New(options *Options) *Server {
 		panic("imapserver: at least IMAP4rev1 must be supported")
 	}
 	return &Server{
-		options:   *options,
-		listeners: make(map[net.Listener]struct{}),
-		conns:     make(map[*Conn]struct{}),
+		options:    *options,
+		listeners:  make(map[net.Listener]struct{}),
+		conns:      make(map[*Conn]struct{}),
+		shutdownCh: make(chan struct{}),
 	}
 }
 
@@ -217,6 +220,33 @@ func (s *Server) Close() error {
 		c.mutex.Unlock()
 	}
 	s.mutex.Unlock()
+
+	return err
+}
+
+func (s *Server) Shutdown() error {
+	var err error
+
+	s.mutex.Lock()
+	ok := true
+	select {
+	case <-s.shutdownCh:
+		ok = false
+	default:
+		close(s.shutdownCh)
+		for l := range s.listeners {
+			if closeErr := l.Close(); closeErr != nil && err == nil {
+				err = closeErr
+			}
+		}
+	}
+	s.mutex.Unlock()
+	if !ok {
+		return errClosed
+	}
+
+	s.listenerWaitGroup.Wait()
+	s.connWaitGroup.Wait()
 
 	return err
 }
