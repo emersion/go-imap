@@ -21,6 +21,64 @@ type Logger interface {
 	Printf(format string, args ...interface{})
 }
 
+// SupportedCaps describes capabilities supported by the server.
+type SupportedCaps struct {
+	// IMAP protocol version
+	IMAP4rev1 bool // RFC 3501
+	IMAP4rev2 bool // RFC 9051
+
+	// Capabilities which are part of IMAP4rev2 and need to be explicitly
+	// enabled by IMAP4rev1-only servers
+	Namespace    bool // RFC 2342
+	UIDPlus      bool // RFC 4315
+	ESearch      bool // RFC 4731
+	SearchRes    bool // RFC 5182
+	ListExtended bool // RFC 5258
+	ListStatus   bool // RFC 5819
+	Move         bool // RFC 6851
+	StatusSize   bool // RFC 8438
+	Binary       bool // RFC 3516
+	Children     bool // RFC 3348
+
+	// Capabilities which need to be explicitly enabled on both IMAP4rev1 and
+	// IMAP4rev2 servers
+	SpecialUse       bool // RFC 6154
+	CreateSpecialUse bool // RFC 6154
+	LiteralPlus      bool // RFC 7888
+	Unauthenticate   bool // RFC 8437
+	AppendLimit      bool // RFC 7889
+}
+
+func (caps *SupportedCaps) set() imap.CapSet {
+	m := map[imap.Cap]bool{
+		imap.CapIMAP4rev1:        caps.IMAP4rev1,
+		imap.CapIMAP4rev2:        caps.IMAP4rev2,
+		imap.CapNamespace:        caps.Namespace,
+		imap.CapUIDPlus:          caps.UIDPlus,
+		imap.CapESearch:          caps.ESearch,
+		imap.CapSearchRes:        caps.SearchRes,
+		imap.CapListExtended:     caps.ListExtended,
+		imap.CapListStatus:       caps.ListStatus,
+		imap.CapMove:             caps.Move,
+		imap.CapStatusSize:       caps.StatusSize,
+		imap.CapBinary:           caps.Binary,
+		imap.CapChildren:         caps.Children,
+		imap.CapSpecialUse:       caps.SpecialUse,
+		imap.CapCreateSpecialUse: caps.CreateSpecialUse,
+		imap.CapLiteralPlus:      caps.LiteralPlus,
+		imap.CapUnauthenticate:   caps.Unauthenticate,
+		imap.CapAppendLimit:      caps.AppendLimit,
+	}
+
+	set := make(imap.CapSet, len(m))
+	for name, ok := range m {
+		if ok {
+			set[name] = struct{}{}
+		}
+	}
+	return set
+}
+
 // Options contains server options.
 //
 // The only required field is NewSession.
@@ -29,18 +87,7 @@ type Options struct {
 	NewSession func(*Conn) (Session, *GreetingData, error)
 	// Supported capabilities. If nil, only IMAP4rev1 is advertised. This set
 	// must contain at least IMAP4rev1 or IMAP4rev2.
-	//
-	// The following capabilities are part of IMAP4rev2 and need to be
-	// explicitly enabled by IMAP4rev1-only servers:
-	//
-	//   - NAMESPACE
-	//   - UIDPLUS
-	//   - ESEARCH
-	//   - LIST-EXTENDED
-	//   - LIST-STATUS
-	//   - MOVE
-	//   - STATUS=SIZE
-	Caps imap.CapSet
+	Caps *SupportedCaps
 	// Logger is a logger to print error messages. If nil, log.Default is used.
 	Logger Logger
 	// TLSConfig is a TLS configuration for STARTTLS. If nil, STARTTLS is
@@ -68,11 +115,11 @@ func (options *Options) wrapReadWriter(rw io.ReadWriter) io.ReadWriter {
 	}
 }
 
-func (options *Options) caps() imap.CapSet {
+func (options *Options) caps() *SupportedCaps {
 	if options.Caps != nil {
 		return options.Caps
 	}
-	return imap.CapSet{imap.CapIMAP4rev1: {}}
+	return &SupportedCaps{IMAP4rev1: true}
 }
 
 // Server is an IMAP server.
@@ -89,7 +136,7 @@ type Server struct {
 
 // New creates a new server.
 func New(options *Options) *Server {
-	if caps := options.caps(); !caps.Has(imap.CapIMAP4rev2) && !caps.Has(imap.CapIMAP4rev1) {
+	if caps := options.caps().set(); !caps.Has(imap.CapIMAP4rev2) && !caps.Has(imap.CapIMAP4rev1) {
 		panic("imapserver: at least IMAP4rev1 must be supported")
 	}
 	return &Server{
