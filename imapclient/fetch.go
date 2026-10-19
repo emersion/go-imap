@@ -970,7 +970,7 @@ func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*im
 	}
 
 	var description string
-	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNString(&description) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectBodyFldOctets(&bs.Size) {
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.ID) || !dec.ExpectSP() || !dec.ExpectNStringWithDoubleQuoteCompat(&description) || !dec.ExpectSP() || !dec.ExpectNString(&bs.Encoding) || !dec.ExpectSP() || !dec.ExpectBodyFldOctets(&bs.Size) {
 		return nil, dec.Err()
 	}
 
@@ -1170,7 +1170,7 @@ func readBodyFldParam(dec *imapwire.Decoder, options *Options) (map[string]strin
 	)
 	err := dec.ExpectNList(func() error {
 		var s string
-		if !dec.ExpectString(&s) {
+		if !dec.ExpectStringWithDoubleQuoteCompat(&s) {
 			return dec.Err()
 		}
 
