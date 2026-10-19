@@ -21,6 +21,12 @@ type FetchOptions struct {
 	ModSeq            bool                          // requires CONDSTORE
 
 	ChangedSince uint64 // requires CONDSTORE
+
+	// Vanished requests a VANISHED (EARLIER) response listing the UIDs expunged
+	// since ChangedSince. It requires QRESYNC to be enabled and is only valid
+	// together with ChangedSince on a UID FETCH. The expunged UIDs are delivered
+	// to UnilateralDataHandler.Vanished.
+	Vanished bool // requires QRESYNC
 }
 
 // FetchItemBodyStructure contains FETCH options for the body structure.
