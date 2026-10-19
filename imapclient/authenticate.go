@@ -1,6 +1,7 @@
 package imapclient
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/emersion/go-sasl"
@@ -76,7 +77,12 @@ type authenticateCommand struct {
 }
 
 func (c *Client) writeSASLResp(resp []byte) error {
-	respStr := internal.EncodeSASL(resp)
+	// A continuation response is base64 (RFC 3501). A zero-length response must be
+	// an empty line: the "=" zero-length marker (RFC 4959) is valid only in the
+	// AUTHENTICATE initial-response slot, not in a continuation, where strict
+	// servers (e.g. Dovecot) reject "=" as invalid base64. This matters for
+	// multi-step mechanisms like GSSAPI, whose mutual-auth step sends an empty token.
+	respStr := base64.StdEncoding.EncodeToString(resp)
 	if _, err := c.bw.WriteString(respStr + "\r\n"); err != nil {
 		return err
 	}
