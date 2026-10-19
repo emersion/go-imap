@@ -282,3 +282,20 @@ func (t *SessionTracker) EncodeSeqNum(seqNum uint32) uint32 {
 	}
 	return seqNum
 }
+
+// EncodeNumMessages returns the number of messages in the mailbox from the
+// client point-of-view.
+func (t *SessionTracker) EncodeNumMessages() uint32 {
+	n := t.mailbox.numMessages
+	for i := len(t.queue) - 1; i >= 0; i-- {
+		update := t.queue[i]
+		// TODO: this doesn't handle increments > 1
+		if update.numMessages != 0 {
+			n--
+		}
+		if update.expunge != 0 {
+			n++
+		}
+	}
+	return n
+}
