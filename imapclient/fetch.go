@@ -643,7 +643,10 @@ func (c *Client) handleFetch(seqNum uint32) error {
 	defer handleMsg()
 
 	numAtts := 0
-	return dec.ExpectList(func() error {
+	emptyLiteral := false
+	readItem := func() error {
+		emptyLiteral = false
+
 		var attName string
 		if !dec.Expect(dec.Func(&attName, isMsgAttNameChar), "msg-att name") {
 			return dec.Err()
@@ -738,6 +741,7 @@ func (c *Client) handleFetch(seqNum uint32) error {
 
 				var fetchLit imap.LiteralReader
 				if lit != nil {
+					emptyLiteral = lit.Size() == 0
 					done = make(chan struct{})
 					fetchLit = &fetchLiteralReader{
 						LiteralReader: lit,
@@ -821,7 +825,29 @@ func (c *Client) handleFetch(seqNum uint32) error {
 			c.setReadTimeout(respReadTimeout)
 		}
 		return nil
-	})
+	}
+
+	if !dec.ExpectSpecial('(') {
+		return dec.Err()
+	}
+	if dec.Special(')') {
+		return nil
+	}
+	for {
+		if err := readItem(); err != nil {
+			return err
+		}
+		if dec.Special(')') {
+			return nil
+		}
+		// Workaround: some servers (e.g. Open-Xchange) omit the SP after an
+		// empty literal, e.g. "BODY[HEADER.FIELDS (REFERENCES)] {0}\r\nUID 42".
+		// See:
+		// https://github.com/emersion/go-imap/issues/774
+		if !dec.SP() && !dec.Expect(emptyLiteral, "SP") {
+			return dec.Err()
+		}
+	}
 }
 
 func isMsgAttNameChar(ch byte) bool {
