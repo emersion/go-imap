@@ -55,6 +55,8 @@ type SelectedMailbox struct {
 	NumMessages    uint32
 	Flags          []imap.Flag
 	PermanentFlags []imap.Flag
+	// ReadOnly indicates that the mailbox is read-only.
+	ReadOnly bool
 }
 
 func (mbox *SelectedMailbox) copy() *SelectedMailbox {
@@ -541,6 +543,7 @@ func (c *Client) completeCommand(cmd command, err error) {
 				NumMessages:    cmd.data.NumMessages,
 				Flags:          cmd.data.Flags,
 				PermanentFlags: cmd.data.PermanentFlags,
+				ReadOnly:       cmd.data.ReadOnly,
 			}
 			c.mutex.Unlock()
 		}
@@ -733,6 +736,14 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				return nil, fmt.Errorf("in capability-data: %w", err)
 			}
 			c.setCaps(caps)
+		case "READ-ONLY": // select
+			if cmd, ok := cmd.(*SelectCommand); ok {
+				cmd.data.ReadOnly = true
+			}
+		case "READ-WRITE": // select
+			if cmd, ok := cmd.(*SelectCommand); ok {
+				cmd.data.ReadOnly = false
+			}
 		case "APPENDUID":
 			var (
 				uidValidity uint32

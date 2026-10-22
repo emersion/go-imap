@@ -29,7 +29,6 @@ type SelectData struct {
 
 	HighestModSeq uint64 // requires CONDSTORE
 
-	// ReadOnly indicates that the mailbox is read-only (e.g. a shared mailbox).
-	// Server-only, not supported in imapclient.
+	// ReadOnly indicates that the mailbox is read-only.
 	ReadOnly bool
 }
