@@ -28,4 +28,7 @@ type SelectData struct {
 	List *ListData // requires IMAP4rev2
 
 	HighestModSeq uint64 // requires CONDSTORE
+
+	// ReadOnly indicates that the mailbox is read-only.
+	ReadOnly bool
 }
