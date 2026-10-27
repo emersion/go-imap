@@ -224,6 +224,9 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLogout(dec)
 	case "CAPABILITY":
 		err = c.handleCapability(dec)
+	case "ID":
+		err = c.handleID(tag, dec)
+		sendOK = false
 	case "STARTTLS":
 		err = c.handleStartTLS(tag, dec)
 		sendOK = false
