@@ -124,3 +124,11 @@ type SessionAppendLimit interface {
 	// this server in an APPEND command.
 	AppendLimit() uint32
 }
+
+// SessionNotify is an IMAP session which supports NOTIFY.
+type SessionNotify interface {
+	Session
+
+	// Authenticated state
+	Notify(w *UpdateWriter, options *imap.NotifyOptions) error
+}
