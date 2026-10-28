@@ -224,6 +224,16 @@ func (dec *Decoder) Special(b byte) bool {
 	return dec.acceptByte(b)
 }
 
+// PeekSpecial reports whether the next byte is b, without consuming it.
+func (dec *Decoder) PeekSpecial(b byte) bool {
+	got, ok := dec.readByte()
+	if !ok {
+		return false
+	}
+	dec.mustUnreadByte()
+	return got == b
+}
+
 func (dec *Decoder) ExpectSpecial(b byte) bool {
 	return dec.Expect(dec.Special(b), fmt.Sprintf("'%v'", string(b)))
 }
