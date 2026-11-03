@@ -461,6 +461,9 @@ func (dec *Decoder) List(f func() error) (isList bool, err error) {
 	if !dec.Special('(') {
 		return false, nil
 	}
+	// Some servers send extra SPs in lists: "( \Seen)", "(\Seen  \Draft )"
+	for dec.Special(' ') {
+	}
 	if dec.Special(')') {
 		return true, nil
 	}
@@ -483,6 +486,11 @@ func (dec *Decoder) List(f func() error) (isList bool, err error) {
 			return true, nil
 		} else if !dec.ExpectSP() {
 			return true, dec.Err()
+		}
+		for dec.Special(' ') {
+		}
+		if dec.Special(')') {
+			return true, nil
 		}
 	}
 }
