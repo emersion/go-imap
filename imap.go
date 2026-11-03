@@ -100,6 +100,9 @@ const (
 	FlagWildcard Flag = "\\*"
 
 	// RFC 9979
+	FlagMailFlagBit0    Flag = "$MailFlagBit0"
+	FlagMailFlagBit1    Flag = "$MailFlagBit1"
+	FlagMailFlagBit2    Flag = "$MailFlagBit2"
 	FlagHasAttachment   Flag = "$hasattachment"
 	FlagHasNoAttachment Flag = "$hasnoattachment"
 	FlagMemo            Flag = "$memo"
