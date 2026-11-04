@@ -281,3 +281,21 @@ func TestWaitGreeting_eof(t *testing.T) {
 		t.Fatalf("WaitGreeting() should fail")
 	}
 }
+
+func TestWaitGreeting_capabilityTrailingSP(t *testing.T) {
+	// bad server: trailing SP before the "]" closing the CAPABILITY resp-text-code
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	client := imapclient.New(clientConn, nil)
+	defer client.Close()
+
+	go serverConn.Write([]byte("* OK [CAPABILITY IMAP4rev1 IDLE ] Service ready\r\n"))
+
+	if err := client.WaitGreeting(); err != nil {
+		t.Fatalf("WaitGreeting() = %v", err)
+	}
+	if !client.Caps().Has(imap.CapIdle) {
+		t.Errorf("Caps() = %v, want IDLE", client.Caps())
+	}
+}

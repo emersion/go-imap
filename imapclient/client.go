@@ -504,23 +504,7 @@ func findPendingCmdByType[T command](c *Client) T {
 }
 
 func (c *Client) completeCommand(cmd command, err error) {
-	done := cmd.base().done
-	done <- err
-	close(done)
-
-	// Ensure the command is not blocked waiting on continuation requests
-	c.mutex.Lock()
-	var filtered []continuationRequest
-	for _, contReq := range c.contReqs {
-		if contReq.cmd != cmd.base() {
-			filtered = append(filtered, contReq)
-		} else {
-			contReq.Cancel(err)
-		}
-	}
-	c.contReqs = filtered
-	c.mutex.Unlock()
-
+	// Update the state before unblocking Wait, so callers see it when it returns
 	switch cmd := cmd.(type) {
 	case *authenticateCommand, *loginCommand:
 		if err == nil {
@@ -555,6 +539,26 @@ func (c *Client) completeCommand(cmd command, err error) {
 		if err == nil {
 			c.setState(imap.ConnStateLogout)
 		}
+	}
+
+	done := cmd.base().done
+	done <- err
+	close(done)
+
+	// Ensure the command is not blocked waiting on continuation requests
+	c.mutex.Lock()
+	var filtered []continuationRequest
+	for _, contReq := range c.contReqs {
+		if contReq.cmd != cmd.base() {
+			filtered = append(filtered, contReq)
+		} else {
+			contReq.Cancel(err)
+		}
+	}
+	c.contReqs = filtered
+	c.mutex.Unlock()
+
+	switch cmd := cmd.(type) {
 	case *ListCommand:
 		if cmd.pendingData != nil {
 			cmd.mailboxes <- cmd.pendingData
