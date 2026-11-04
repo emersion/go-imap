@@ -119,6 +119,54 @@ const (
 	FlagNotify          Flag = "$notify"
 )
 
+// FlagColor describes message flag colors defined in RFC 9979 section 3.1.
+type FlagColor int
+
+const (
+	FlagColorRed    FlagColor = 0b000
+	FlagColorOrange FlagColor = 0b001
+	FlagColorYellow FlagColor = 0b010
+	FlagColorGreen  FlagColor = 0b011
+	FlagColorBlue   FlagColor = 0b100
+	FlagColorPurple FlagColor = 0b101
+	FlagColorGray   FlagColor = 0b110
+)
+
+func ParseFlagColor(flags []Flag) (color FlagColor, ok bool) {
+	flagged := false
+	for _, flag := range flags {
+		switch flag {
+		case FlagFlagged:
+			flagged = true
+		case FlagMailFlagBit0:
+			color |= 0b001
+		case FlagMailFlagBit1:
+			color |= 0b001
+		case FlagMailFlagBit2:
+			color |= 0b100
+		}
+	}
+	// All bits set is the only undefined color combination
+	if !flagged || color == 0b111 {
+		return 0, false
+	}
+	return color, true
+}
+
+func (color FlagColor) Flags() []Flag {
+	flags := make([]Flag, 0, 3)
+	if color & 0b001 {
+		flags = append(flags, FlagMailFlagBit0)
+	}
+	if color & 0b010 {
+		flags = append(flags, FlagMailFlagBit1)
+	}
+	if color & 0b100 {
+		flags = append(flags, FlagMailFlagBit2)
+	}
+	return flags
+}
+
 // LiteralReader is a reader for IMAP literals.
 type LiteralReader interface {
 	io.Reader
