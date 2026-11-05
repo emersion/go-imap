@@ -11,6 +11,7 @@ type ListOptions struct {
 	ReturnChildren   bool
 	ReturnStatus     *StatusOptions // requires IMAP4rev2 or LIST-STATUS
 	ReturnSpecialUse bool           // requires SPECIAL-USE
+	ReturnMetadata   []string       // requires LIST-METADATA
 }
 
 // ListData is the mailbox data returned by a LIST command.
@@ -23,6 +24,7 @@ type ListData struct {
 	ChildInfo *ListDataChildInfo
 	OldName   string
 	Status    *StatusData
+	Metadata  struct{} // TODO: *GetMetadataData
 }
 
 type ListDataChildInfo struct {

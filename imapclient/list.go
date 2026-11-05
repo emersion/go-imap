@@ -49,6 +49,9 @@ func getReturnOpts(options *imap.ListOptions) []string {
 	if options.ReturnSpecialUse {
 		l = append(l, "SPECIAL-USE")
 	}
+	if options.ReturnMetadata {
+		l = append(l, "METADATA")
+	}
 	return l
 }
 
@@ -63,8 +66,9 @@ func getReturnOpts(options *imap.ListOptions) []string {
 // extension.
 func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListCommand {
 	cmd := &ListCommand{
-		mailboxes:    make(chan *imap.ListData, 64),
-		returnStatus: options != nil && options.ReturnStatus != nil,
+		mailboxes:      make(chan *imap.ListData, 64),
+		returnStatus:   options != nil && options.ReturnStatus != nil,
+		returnMetadata: options != nil && options.ReturnMetadata != nil,
 	}
 	enc := c.beginCommand("LIST", cmd)
 	if selectOpts := getSelectOpts(options); len(selectOpts) > 0 {
@@ -77,10 +81,15 @@ func (c *Client) List(ref, pattern string, options *imap.ListOptions) *ListComma
 		enc.SP().Atom("RETURN").SP().List(len(returnOpts), func(i int) {
 			opt := returnOpts[i]
 			enc.Atom(opt)
-			if opt == "STATUS" {
+			switch opt {
+			case "STATUS":
 				returnStatus := statusItems(options.ReturnStatus)
 				enc.SP().List(len(returnStatus), func(j int) {
 					enc.Atom(returnStatus[j])
+				})
+			case "METADATA":
+				enc.SP().List(len(options.ReturnMetadata), func(j int) {
+					enc.String(options.ReturnMetadata[j])
 				})
 			}
 		})
@@ -133,8 +142,9 @@ type ListCommand struct {
 	commandBase
 	mailboxes chan *imap.ListData
 
-	returnStatus bool
-	pendingData  *imap.ListData
+	returnStatus   bool
+	returnMetadata bool
+	pendingData    *imap.ListData
 }
 
 // Next advances to the next mailbox.

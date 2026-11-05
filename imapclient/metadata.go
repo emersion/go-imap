@@ -108,26 +108,46 @@ func (c *Client) handleMetadata() error {
 		return fmt.Errorf("in metadata-resp: %w", err)
 	}
 
-	cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
-		cmd, ok := anyCmd.(*GetMetadataCommand)
-		return ok && cmd.mailbox == data.Mailbox
-	})
-	if cmd != nil && len(data.EntryValues) > 0 {
-		cmd := cmd.(*GetMetadataCommand)
-		cmd.data.Mailbox = data.Mailbox
-		if cmd.data.Entries == nil {
-			cmd.data.Entries = make(map[string]*[]byte)
+	cmd := c.findPendingCmdFunc(func(cmd command) bool {
+		switch cmd := cmd.(type) {
+		case *GetMetadataCommand:
+			return cmd.mailbox == data.Mailbox
+		case *ListCommand:
+			return cmd.returnMetadata && cmd.pendingData != nil && cmd.pendingData.Mailbox == data.Mailbox
+		default:
+			return false
 		}
+	})
+	if len(data.EntryValues) == 0 {
+		cmd = nil // Response is unsolicited
+	}
+	switch cmd := cmd.(type) {
+	case *GetMetadataCommand:
 		// The server might send multiple METADATA responses for a single
 		// METADATA command
-		for k, v := range data.EntryValues {
-			cmd.data.Entries[k] = v
+		populateMetadata(cmd.data, data)
+	case *ListCommand:
+		// TODO: populateMetadata(cmd.pendingData.Metadata, data)
+		// TODO: send to chan
+	default:
+		if handler := c.options.unilateralDataHandler().Metadata; handler != nil && len(data.EntryList) > 0 {
+			handler(data.Mailbox, data.EntryList)
 		}
-	} else if handler := c.options.unilateralDataHandler().Metadata; handler != nil && len(data.EntryList) > 0 {
-		handler(data.Mailbox, data.EntryList)
 	}
 
 	return nil
+}
+
+func populateMetadata(dst, src *GetMetadataData) {
+	cmd.data.Mailbox = data.Mailbox
+	if cmd.data.Entries == nil {
+		cmd.data.Entries = make(map[string]*[]byte)
+	}
+	// The server might send multiple METADATA responses for a single
+	// METADATA command
+	for k, v := range data.EntryValues {
+		cmd.data.Entries[k] = v
+	}
 }
 
 // GetMetadataCommand is a GETMETADATA command.
