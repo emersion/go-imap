@@ -605,9 +605,10 @@ func (dec *Decoder) LiteralReader() (lit *LiteralReader, nonSync, ok bool) {
 	}
 	dec.literal = true
 	lit = &LiteralReader{
-		dec:  dec,
-		size: size,
-		r:    io.LimitReader(dec.r, size),
+		dec:       dec,
+		size:      size,
+		remaining: size,
+		r:         io.LimitReader(dec.r, size),
 	}
 	return lit, nonSync, true
 }
@@ -621,15 +622,18 @@ func (dec *Decoder) ExpectLiteralReader() (lit *LiteralReader, nonSync bool, err
 }
 
 type LiteralReader struct {
-	dec  *Decoder
-	size int64
-	r    io.Reader
+	dec       *Decoder
+	size      int64
+	remaining int64
+	r         io.Reader
+	err       error
 }
 
 func newLiteralReaderFromString(s string) *LiteralReader {
 	return &LiteralReader{
-		size: int64(len(s)),
-		r:    strings.NewReader(s),
+		size:      int64(len(s)),
+		remaining: int64(len(s)),
+		r:         strings.NewReader(s),
 	}
 }
 
@@ -638,8 +642,19 @@ func (lit *LiteralReader) Size() int64 {
 }
 
 func (lit *LiteralReader) Read(b []byte) (int, error) {
+	if lit.err != nil {
+		return 0, lit.err
+	}
 	n, err := lit.r.Read(b)
-	if err == io.EOF {
+	lit.remaining -= int64(n)
+	if err == io.EOF && lit.remaining > 0 {
+		err = io.ErrUnexpectedEOF
+	}
+	if err != nil {
+		lit.err = err
+		if err != io.EOF && lit.dec != nil {
+			lit.dec.returnErr(err)
+		}
 		lit.cancel()
 	}
 	return n, err
