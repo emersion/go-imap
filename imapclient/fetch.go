@@ -936,6 +936,12 @@ func readBody(dec *imapwire.Decoder, options *Options) (imap.BodyStructure, erro
 	if dec.String(&mediaType) {
 		token = "body-type-1part"
 		bs, err = readBodyType1part(dec, mediaType, options)
+	} else if dec.ExpectNIL() {
+		// Some servers (e.g. QQ Mail) send NIL instead of a media type for a
+		// single part. Treat it as a single part with an empty media type
+		// instead of misinterpreting it as a multipart.
+		token = "body-type-1part"
+		bs, err = readBodyType1part(dec, "", options)
 	} else {
 		token = "body-type-mpart"
 		bs, err = readBodyTypeMpart(dec, options)
@@ -960,7 +966,7 @@ func readBody(dec *imapwire.Decoder, options *Options) (imap.BodyStructure, erro
 func readBodyType1part(dec *imapwire.Decoder, typ string, options *Options) (*imap.BodyStructureSinglePart, error) {
 	bs := imap.BodyStructureSinglePart{Type: typ}
 
-	if !dec.ExpectSP() || !dec.ExpectString(&bs.Subtype) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNString(&bs.Subtype) || !dec.ExpectSP() {
 		return nil, dec.Err()
 	}
 	var err error
