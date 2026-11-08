@@ -93,6 +93,7 @@ func (c *Conn) availableCaps() []imap.Cap {
 			imap.CapCreateSpecialUse,
 			imap.CapLiteralPlus,
 			imap.CapUnauthenticate,
+			imap.CapNotify,
 		})
 
 		if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
