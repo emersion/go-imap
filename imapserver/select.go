@@ -70,6 +70,7 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	}
 
 	c.state = imap.ConnStateSelected
+	c.readOnly = readOnly || data.ReadOnly
 	// TODO: forbid write commands in read-only mode
 
 	var (
@@ -103,7 +104,7 @@ func (c *Conn) handleUnselect(dec *imapwire.Decoder, expunge bool) error {
 		return err
 	}
 
-	if expunge {
+	if expunge && !c.readOnly {
 		w := &ExpungeWriter{}
 		if err := c.session.Expunge(w, nil); err != nil {
 			return err
