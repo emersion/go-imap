@@ -21,6 +21,11 @@ type Encoder struct {
 	// QuotedUTF8 allows raw UTF-8 in quoted strings. This requires IMAP4rev2
 	// to be available, or UTF8=ACCEPT to be enabled.
 	QuotedUTF8 bool
+	// QuotedUTF8Strings allows raw UTF-8 in quoted strings, like QuotedUTF8,
+	// but leaves mailbox names in modified UTF-7. It is a client-side opt-in
+	// for IMAP4rev1 servers that accept 8-bit quoted strings but mishandle
+	// synchronizing literals.
+	QuotedUTF8Strings bool
 	// LiteralMinus enables non-synchronizing literals for short payloads.
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
 	// clients.
@@ -121,7 +126,7 @@ func (enc *Encoder) validQuoted(s string) bool {
 			return false
 		}
 
-		if !enc.QuotedUTF8 && ch > unicode.MaxASCII {
+		if !enc.QuotedUTF8 && !enc.QuotedUTF8Strings && ch > unicode.MaxASCII {
 			return false
 		}
 	}

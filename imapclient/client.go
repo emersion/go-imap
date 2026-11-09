@@ -75,6 +75,14 @@ type Options struct {
 	UnilateralDataHandler *UnilateralDataHandler
 	// Decoder for RFC 2047 words.
 	WordDecoder *mime.WordDecoder
+	// QuotedUTF8Strings sends strings containing non-ASCII characters (such as
+	// SEARCH keys) as quoted UTF-8 instead of literals. Mailbox names are still
+	// encoded in modified UTF-7.
+	//
+	// Only enable this for servers known to accept 8-bit quoted strings. Some
+	// IMAP4rev1 servers (e.g. QQ Mail) answer a command without waiting for a
+	// synchronizing literal, which garbles the command and the connection.
+	QuotedUTF8Strings bool
 	// Dialer to use when establishing connections with the Dial* functions.
 	// If nil, a default dialer with a 30 second timeout is used.
 	Dialer *net.Dialer
@@ -447,6 +455,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 
 	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
 	wireEnc.QuotedUTF8 = quotedUTF8
+	wireEnc.QuotedUTF8Strings = c.options.QuotedUTF8Strings
 	wireEnc.LiteralMinus = literalMinus
 	wireEnc.LiteralPlus = literalPlus
 	wireEnc.NewContinuationRequest = func() *imapwire.ContinuationRequest {
