@@ -61,6 +61,10 @@ type Session interface {
 	Rename(mailbox, newName string, options *imap.RenameOptions) error
 	Subscribe(mailbox string) error
 	Unsubscribe(mailbox string) error
+	// List serves the LIST and LSUB commands.
+	//
+	// LSUB is deprecated in IMAP4rev2 and is served by calling List with
+	// SelectSubscribed and SelectRecursiveMatch set.
 	List(w *ListWriter, ref string, patterns []string, options *imap.ListOptions) error
 	Status(mailbox string, options *imap.StatusOptions) (*imap.StatusData, error)
 	Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error)
