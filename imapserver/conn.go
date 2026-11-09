@@ -44,8 +44,9 @@ type Conn struct {
 	conn    net.Conn
 	enabled imap.CapSet
 
-	state   imap.ConnState
-	session Session
+	state    imap.ConnState
+	session  Session
+	readOnly bool
 }
 
 func newConn(c net.Conn, server *Server) *Conn {
