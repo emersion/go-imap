@@ -43,7 +43,12 @@ func (c *Conn) handleLSub(dec *imapwire.Decoder) error {
 		return err
 	}
 
-	options := &imap.ListOptions{SelectSubscribed: true}
+	// LSUB has a special meaning for \Noselect flag - if the single-level wildcard hides
+	// a child subscribed mailbox, the parent mailbox should be returned with \Noselect
+	// attribute unless it is also subscribed to (RFC 5258 section 3.5). This matches
+	// LIST (SUBSCRIBED RECURSIVEMATCH), not just LIST (SUBSCRIBED). writeLsub
+	// converts RECURSIVEMATCH output into LSUB output (CHILDINFO mapped to \Noselect).
+	options := &imap.ListOptions{SelectSubscribed: true, SelectRecursiveMatch: true}
 	w := &ListWriter{
 		conn: c,
 		lsub: true,
@@ -102,9 +107,23 @@ func (c *Conn) writeLSub(data *imap.ListData) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
 
+	// RFC 3501 section 6.3.9: a mailbox that is not subscribed but has
+	// subscribed descendants is reported with \Noselect. This is what
+	// CHILDINFO means in a LIST (SUBSCRIBED RECURSIVEMATCH) response, see
+	// RFC 5258 section 3.5.
+	attrs := data.Attrs
+	if data.ChildInfo != nil && data.ChildInfo.Subscribed &&
+		!hasMailboxAttr(attrs, imap.MailboxAttrSubscribed) &&
+		!hasMailboxAttr(attrs, imap.MailboxAttrNoSelect) {
+
+		// Copy attributes if adding NoSelect to avoid aliasing issues (backend returns same
+		// shared slice for multiple mailboxes).
+		attrs = append(append([]imap.MailboxAttr(nil), attrs...), imap.MailboxAttrNoSelect)
+	}
+
 	enc.Atom("*").SP().Atom("LSUB").SP()
-	enc.List(len(data.Attrs), func(i int) {
-		enc.MailboxAttr(data.Attrs[i])
+	enc.List(len(attrs), func(i int) {
+		enc.MailboxAttr(attrs[i])
 	})
 	enc.SP()
 	if data.Delim == 0 {
@@ -114,6 +133,15 @@ func (c *Conn) writeLSub(data *imap.ListData) error {
 	}
 	enc.SP().Mailbox(data.Mailbox)
 	return enc.CRLF()
+}
+
+func hasMailboxAttr(attrs []imap.MailboxAttr, attr imap.MailboxAttr) bool {
+	for _, a := range attrs {
+		if a == attr {
+			return true
+		}
+	}
+	return false
 }
 
 func readListCmd(dec *imapwire.Decoder) (ref string, patterns []string, options *imap.ListOptions, err error) {
