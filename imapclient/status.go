@@ -101,17 +101,23 @@ func (cmd *StatusCommand) Wait() (*imap.StatusData, error) {
 func readStatus(dec *imapwire.Decoder) (*imap.StatusData, error) {
 	var data imap.StatusData
 
-	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() {
+	if !dec.ExpectMailbox(&data.Mailbox) || !dec.ExpectSP() || !dec.ExpectSpecial('(') {
 		return nil, dec.Err()
 	}
 
-	err := dec.ExpectList(func() error {
+	// Not using ExpectList: imap.139.com sends a SP before the closing paren
+	for !dec.Special(')') {
 		if err := readStatusAttVal(dec, &data); err != nil {
-			return fmt.Errorf("in status-att-val: %w", dec.Err())
+			return &data, fmt.Errorf("in status-att-val: %w", dec.Err())
 		}
-		return nil
-	})
-	return &data, err
+		if !dec.SP() {
+			if !dec.ExpectSpecial(')') {
+				return &data, dec.Err()
+			}
+			break
+		}
+	}
+	return &data, nil
 }
 
 func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
