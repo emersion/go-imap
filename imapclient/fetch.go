@@ -819,6 +819,9 @@ func (c *Client) handleFetch(seqNum uint32) error {
 		if done != nil {
 			<-done
 			c.setReadTimeout(respReadTimeout)
+			if err := dec.Err(); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
