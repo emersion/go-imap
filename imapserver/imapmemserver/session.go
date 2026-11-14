@@ -19,7 +19,10 @@ type UserSession struct {
 	*mailbox // may be nil
 }
 
-var _ imapserver.SessionIMAP4rev2 = (*UserSession)(nil)
+var (
+	_ imapserver.SessionIMAP4rev2 = (*UserSession)(nil)
+	_ imapserver.SessionQuota     = (*UserSession)(nil)
+)
 
 // NewUserSession creates a new user session.
 func NewUserSession(user *User) *UserSession {
@@ -137,4 +140,44 @@ func (sess *UserSession) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) 
 		return nil // TODO
 	}
 	return sess.mailbox.Idle(w, stop)
+}
+
+// QuotaResourceTypes returns the supported quota resource types.
+func (sess *UserSession) QuotaResourceTypes() []imap.QuotaResourceType {
+	return []imap.QuotaResourceType{imap.QuotaResourceStorage, imap.QuotaResourceMessage}
+}
+
+// GetQuota returns the usage and limits for a quota root.
+func (sess *UserSession) GetQuota(root string) (*imap.QuotaData, error) {
+	sess.user.mutex.Lock()
+	defer sess.user.mutex.Unlock()
+
+	var data *imap.QuotaData
+	if root == quotaRoot {
+		data = sess.user.quotaLocked()
+	}
+	if data == nil {
+		return nil, &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeNonExistent,
+			Text: "No such quota root",
+		}
+	}
+	return data, nil
+}
+
+// GetQuotaRoot returns the quota roots for a mailbox.
+func (sess *UserSession) GetQuotaRoot(mailbox string) ([]imap.QuotaData, error) {
+	sess.user.mutex.Lock()
+	defer sess.user.mutex.Unlock()
+
+	if _, err := sess.user.mailboxLocked(mailbox); err != nil {
+		return nil, err
+	}
+
+	data := sess.user.quotaLocked()
+	if data == nil {
+		return nil, nil
+	}
+	return []imap.QuotaData{*data}, nil
 }

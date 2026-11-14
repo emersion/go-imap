@@ -256,6 +256,12 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 		err = c.handleLSub(dec)
 	case "NAMESPACE":
 		err = c.handleNamespace(dec)
+	case "GETQUOTAROOT":
+		err = c.handleGetQuotaRoot(dec)
+	case "GETQUOTA":
+		err = c.handleGetQuota(dec)
+	case "SETQUOTA":
+		err = c.handleSetQuota(dec)
 	case "IDLE":
 		err = c.handleIdle(dec)
 	case "SELECT", "EXAMINE":
