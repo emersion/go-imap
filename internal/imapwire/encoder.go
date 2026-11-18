@@ -31,6 +31,7 @@ type Encoder struct {
 	// NewContinuationRequest creates a new continuation request. This is only
 	// meaningful for clients.
 	NewContinuationRequest func() *ContinuationRequest
+	MailboxUTF8            bool
 
 	w       *bufio.Writer
 	side    ConnSide
@@ -153,9 +154,7 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
 	} else {
-		if enc.QuotedUTF8 {
-			name = utf7.Escape(name)
-		} else {
+		if !enc.MailboxUTF8 {
 			name = utf7.Encode(name)
 		}
 		return enc.String(name)

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapnum"
@@ -52,6 +53,7 @@ type Decoder struct {
 	// CheckBufferedLiteralFunc is called when a literal is about to be decoded
 	// and needs to be fully buffered in memory.
 	CheckBufferedLiteralFunc func(size int64, nonSync bool) error
+	MailboxUTF8              bool
 	// MaxSize defines a maximum number of bytes to be read from the input.
 	// Literals are ignored.
 	MaxSize int64
@@ -517,7 +519,7 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 		*ptr = "INBOX"
 		return true
 	}
-	name, err := utf7.Decode(name)
+	name, err := dec.DecodeMailbox(name)
 	if err != nil {
 		return dec.returnErr(&DecoderExpectError{
 			Message: fmt.Sprintf("invalid mailbox name: %v", err),
@@ -525,6 +527,21 @@ func (dec *Decoder) ExpectMailbox(ptr *string) bool {
 	}
 	*ptr = name
 	return true
+}
+
+func (dec *Decoder) DecodeMailbox(name string) (string, error) {
+	if !dec.MailboxUTF8 {
+		return utf7.Decode(name)
+	}
+	if !utf8.ValidString(name) {
+		return "", fmt.Errorf("invalid UTF-8")
+	}
+	for i := 0; i < len(name); i++ {
+		if ch := name[i]; ch < utf8.RuneSelf && unicode.IsControl(rune(ch)) {
+			return "", fmt.Errorf("invalid control character")
+		}
+	}
+	return name, nil
 }
 
 func (dec *Decoder) ExpectUID(ptr *imap.UID) bool {

@@ -39,6 +39,8 @@ protocol imap {
 }
 
 acl_driver = vfile
+
+mail_utf8_extensions = yes
 `
 	if err := os.WriteFile(cfgFilename, []byte(cfg), 0666); err != nil {
 		t.Fatalf("failed to write Dovecot config: %v", err)

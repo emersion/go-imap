@@ -55,3 +55,49 @@ func TestCreate(t *testing.T) {
 		testCreate(t, "Angus & Julia", true)
 	})
 }
+
+func testCreateThenEnable(t *testing.T, name string, capability imap.Cap) {
+	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
+	defer client.Close()
+	defer server.Close()
+
+	if !client.Caps().Has(capability) {
+		t.Skipf("missing %v support", capability)
+	}
+
+	if err := client.Create(name, nil).Wait(); err != nil {
+		t.Fatalf("Create() = %v", err)
+	}
+
+	if data, err := client.Enable(capability).Wait(); err != nil {
+		t.Fatalf("Enable(%v) = %v", capability, err)
+	} else if !data.Caps.Has(capability) {
+		t.Fatalf("server refused to enable %v", capability)
+	}
+
+	mailboxes, err := client.List("", name, nil).Collect()
+	if err != nil {
+		t.Errorf("List() = %v", err)
+	} else if len(mailboxes) != 1 || mailboxes[0].Mailbox != name {
+		t.Errorf("List() = %v, want exactly one entry with correct name", mailboxes)
+	}
+
+	if _, err := client.Select(name, nil).Wait(); err != nil {
+		t.Errorf("Select() = %v", err)
+	}
+}
+
+func TestCreateThenEnable(t *testing.T) {
+	t.Run("unicode_utf8", func(t *testing.T) {
+		testCreateThenEnable(t, "Cafè", imap.CapUTF8Accept)
+	})
+	t.Run("ampersand_utf8", func(t *testing.T) {
+		testCreateThenEnable(t, "Angus & Julia", imap.CapUTF8Accept)
+	})
+	t.Run("unicode_imap4rev2", func(t *testing.T) {
+		testCreateThenEnable(t, "Cafè", imap.CapIMAP4rev2)
+	})
+	t.Run("ampersand_imap4rev2", func(t *testing.T) {
+		testCreateThenEnable(t, "Angus & Julia", imap.CapIMAP4rev2)
+	})
+}
