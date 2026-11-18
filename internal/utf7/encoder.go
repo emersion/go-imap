@@ -70,19 +70,3 @@ func encode(s []byte) []byte {
 	b64[n-1] = '-'
 	return b64
 }
-
-// Escape passes through raw UTF-8 as-is and escapes the special UTF-7 marker
-// (the ampersand character).
-func Escape(src string) string {
-	var sb strings.Builder
-	sb.Grow(len(src))
-
-	for _, ch := range src {
-		sb.WriteRune(ch)
-		if ch == '&' {
-			sb.WriteByte('-')
-		}
-	}
-
-	return sb.String()
-}
