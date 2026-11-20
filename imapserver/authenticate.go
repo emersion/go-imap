@@ -1,6 +1,7 @@
 package imapserver
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -25,7 +26,7 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 			return dec.Err()
 		}
 		var err error
-		initialResp, err = internal.DecodeSASL(initialRespStr)
+		initialResp, err = internal.DecodeSASLInitialResp(initialRespStr)
 		if err != nil {
 			return err
 		}
@@ -84,10 +85,9 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 			break
 		}
 
-		var challengeStr string
-		if challenge != nil {
-			challengeStr = internal.EncodeSASL(challenge)
-		}
+		// An empty challenge is an empty continuation line, not "=": the
+		// zero-length marker is only valid for the initial response.
+		challengeStr := base64.StdEncoding.EncodeToString(challenge)
 		if err := writeContReq(enc.Encoder, challengeStr); err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func (c *Conn) handleAuthenticate(tag string, dec *imapwire.Decoder) error {
 }
 
 func decodeSASL(s string) ([]byte, error) {
-	b, err := internal.DecodeSASL(s)
+	b, err := internal.DecodeSASLContinuation(s)
 	if err != nil {
 		return nil, &imap.Error{
 			Type: imap.StatusResponseTypeBad,
