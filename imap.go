@@ -68,6 +68,11 @@ const (
 	MailboxAttrSent      MailboxAttr = "\\Sent"
 	MailboxAttrTrash     MailboxAttr = "\\Trash"
 	MailboxAttrImportant MailboxAttr = "\\Important" // RFC 8457
+
+	// RFC 9979
+	MailboxAttrSnoozed   MailboxAttr = "Snoozed"
+	MailboxAttrScheduled MailboxAttr = "Scheduled"
+	MailboxAttrMemos     MailboxAttr = "Memos"
 )
 
 // Flag is a message flag.
@@ -93,6 +98,25 @@ const (
 
 	// Permanent flags
 	FlagWildcard Flag = "\\*"
+
+	// RFC 9979
+	FlagMailFlagBit0    Flag = "$MailFlagBit0"
+	FlagMailFlagBit1    Flag = "$MailFlagBit1"
+	FlagMailFlagBit2    Flag = "$MailFlagBit2"
+	FlagHasAttachment   Flag = "$hasattachment"
+	FlagHasNoAttachment Flag = "$hasnoattachment"
+	FlagMemo            Flag = "$memo"
+	FlagHasMemo         Flag = "$hasmemo"
+	FlagCanUnsubscribe  Flag = "$canunsubscribe"
+	FlagUnsubscribed    Flag = "$unsubscribed"
+	FlagAutoSent        Flag = "$autosent"
+	FlagFollowed        Flag = "$followed"
+	FlagImported        Flag = "$imported"
+	FlagIsTrusted       Flag = "$istrusted"
+	FlagMaskedEmail     Flag = "$maskedemail"
+	FlagMuted           Flag = "$muted"
+	FlagNew             Flag = "$new"
+	FlagNotify          Flag = "$notify"
 )
 
 // LiteralReader is a reader for IMAP literals.

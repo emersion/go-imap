@@ -129,6 +129,23 @@ func canonInit() {
 		imap.FlagNotJunk,
 		imap.FlagPhishing,
 		imap.FlagImportant,
+		imap.FlagMailFlagBit0,
+		imap.FlagMailFlagBit1,
+		imap.FlagMailFlagBit2,
+		imap.FlagHasAttachment,
+		imap.FlagHasNoAttachment,
+		imap.FlagMemo,
+		imap.FlagHasMemo,
+		imap.FlagCanUnsubscribe,
+		imap.FlagUnsubscribed,
+		imap.FlagAutoSent,
+		imap.FlagFollowed,
+		imap.FlagImported,
+		imap.FlagIsTrusted,
+		imap.FlagMaskedEmail,
+		imap.FlagMuted,
+		imap.FlagNew,
+		imap.FlagNotify,
 	}
 	mailboxAttrs := []imap.MailboxAttr{
 		imap.MailboxAttrNonExistent,
@@ -148,6 +165,9 @@ func canonInit() {
 		imap.MailboxAttrSent,
 		imap.MailboxAttrTrash,
 		imap.MailboxAttrImportant,
+		imap.MailboxAttrSnoozed,
+		imap.MailboxAttrScheduled,
+		imap.MailboxAttrMemos,
 	}
 
 	canonFlag = make(map[string]imap.Flag)

@@ -1266,18 +1266,18 @@ func readSectionSpec(dec *imapwire.Decoder) (*imap.FetchItemBodySection, error) 
 		return nil, err
 	}
 	if offset != nil {
-		section.Partial = &imap.SectionPartial{Offset: int64(*offset)}
+		section.Partial = &imap.SectionPartial{Offset: *offset}
 	}
 
 	return &section, nil
 }
 
-func readPartialOffset(dec *imapwire.Decoder) (*uint32, error) {
+func readPartialOffset(dec *imapwire.Decoder) (*int64, error) {
 	if !dec.Special('<') {
 		return nil, nil
 	}
-	var offset uint32
-	if !dec.ExpectNumber(&offset) || !dec.ExpectSpecial('>') {
+	var offset int64
+	if !dec.ExpectNumber64(&offset) || !dec.ExpectSpecial('>') {
 		return nil, dec.Err()
 	}
 	return &offset, nil

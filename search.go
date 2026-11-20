@@ -81,7 +81,7 @@ func (criteria *SearchCriteria) And(other *SearchCriteria) {
 	if criteria.Larger == 0 || other.Larger > criteria.Larger {
 		criteria.Larger = other.Larger
 	}
-	if criteria.Smaller == 0 || other.Smaller < criteria.Smaller {
+	if other.Smaller != 0 && (criteria.Smaller == 0 || other.Smaller < criteria.Smaller) {
 		criteria.Smaller = other.Smaller
 	}
 
