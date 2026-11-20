@@ -30,7 +30,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 	enc := c.beginCommand("AUTHENTICATE", cmd)
 	enc.SP().Atom(mech)
 	if initialResp != nil && hasSASLIR {
-		enc.SP().Atom(internal.EncodeSASL(initialResp))
+		enc.SP().Atom(internal.EncodeSASLInitialResp(initialResp))
 		initialResp = nil
 	}
 	enc.flush()
@@ -55,7 +55,7 @@ func (c *Client) Authenticate(saslClient sasl.Client) error {
 			continue
 		}
 
-		challenge, err := internal.DecodeSASL(challengeStr)
+		challenge, err := internal.DecodeSASLContinuation(challengeStr)
 		if err != nil {
 			return err
 		}
