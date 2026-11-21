@@ -114,9 +114,9 @@ func main() {
 		NewSession: func(conn *imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
 			return memServer.NewSession(), nil, nil
 		},
-		Caps: imap.CapSet{
-			imap.CapIMAP4rev1: {},
-			imap.CapIMAP4rev2: {},
+		Caps: &imapserver.SupportedCaps{
+			IMAP4rev1: true,
+			IMAP4rev2: true,
 		},
 		TLSConfig:    tlsConfig,
 		InsecureAuth: insecureAuth,

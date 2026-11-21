@@ -31,15 +31,15 @@ func (c *Conn) availableCaps() []imap.Cap {
 	available := c.server.options.caps()
 
 	var caps []imap.Cap
-	addAvailableCaps(&caps, available, []imap.Cap{
-		imap.CapIMAP4rev2,
-		imap.CapIMAP4rev1,
+	addAvailableCaps(&caps, map[imap.Cap]bool{
+		imap.CapIMAP4rev2: available.IMAP4rev1,
+		imap.CapIMAP4rev1: available.IMAP4rev2,
 	})
 	if len(caps) == 0 {
 		panic("imapserver: must support at least IMAP4rev1 or IMAP4rev2")
 	}
 
-	if available.Has(imap.CapIMAP4rev1) {
+	if available.IMAP4rev1 {
 		caps = append(caps, []imap.Cap{
 			imap.CapSASLIR,
 			imap.CapLiteralMinus,
@@ -60,7 +60,7 @@ func (c *Conn) availableCaps() []imap.Cap {
 		caps = append(caps, imap.CapLoginDisabled)
 	}
 	if c.state == imap.ConnStateAuthenticated || c.state == imap.ConnStateSelected {
-		if available.Has(imap.CapIMAP4rev1) {
+		if available.IMAP4rev1 {
 			// IMAP4rev1-specific capabilities that don't require backend
 			// support and are not applicable to IMAP4rev2
 			caps = append(caps, []imap.Cap{
@@ -72,42 +72,42 @@ func (c *Conn) availableCaps() []imap.Cap {
 
 			// IMAP4rev1-specific capabilities which require backend support
 			// and are not applicable to IMAP4rev2
-			addAvailableCaps(&caps, available, []imap.Cap{
-				imap.CapNamespace,
-				imap.CapUIDPlus,
-				imap.CapESearch,
-				imap.CapSearchRes,
-				imap.CapListExtended,
-				imap.CapListStatus,
-				imap.CapMove,
-				imap.CapStatusSize,
-				imap.CapBinary,
-				imap.CapChildren,
+			addAvailableCaps(&caps, map[imap.Cap]bool{
+				imap.CapNamespace: available.Namespace,
+				imap.CapUIDPlus:   available.UIDPlus,
+				imap.CapESearch:   available.ESearch,
+				//imap.CapSearchRes: available.SearchRes,
+				imap.CapListExtended: available.ListExtended,
+				imap.CapListStatus:   available.ListStatus,
+				imap.CapMove:         available.Move,
+				imap.CapStatusSize:   available.StatusSize,
+				//imap.CapBinary: available.Binary,
+				//imap.CapChildren: available.Children,
 			})
 		}
 
 		// Capabilities which require backend support and apply to both
 		// IMAP4rev1 and IMAP4rev2
-		addAvailableCaps(&caps, available, []imap.Cap{
-			imap.CapSpecialUse,
-			imap.CapCreateSpecialUse,
-			imap.CapLiteralPlus,
-			imap.CapUnauthenticate,
+		addAvailableCaps(&caps, map[imap.Cap]bool{
+			imap.CapSpecialUse:       available.SpecialUse,
+			imap.CapCreateSpecialUse: available.CreateSpecialUse,
+			imap.CapLiteralPlus:      available.LiteralPlus,
+			imap.CapUnauthenticate:   available.Unauthenticate,
 		})
 
 		if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
 			limit := appendLimitSession.AppendLimit()
 			caps = append(caps, imap.Cap(fmt.Sprintf("APPENDLIMIT=%d", limit)))
 		} else {
-			addAvailableCaps(&caps, available, []imap.Cap{imap.CapAppendLimit})
+			addAvailableCaps(&caps, map[imap.Cap]bool{imap.CapAppendLimit: available.AppendLimit})
 		}
 	}
 	return caps
 }
 
-func addAvailableCaps(caps *[]imap.Cap, available imap.CapSet, l []imap.Cap) {
-	for _, c := range l {
-		if available.Has(c) {
+func addAvailableCaps(caps *[]imap.Cap, available map[imap.Cap]bool) {
+	for c, ok := range available {
+		if ok {
 			*caps = append(*caps, c)
 		}
 	}
