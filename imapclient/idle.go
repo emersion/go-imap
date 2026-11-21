@@ -32,6 +32,20 @@ func (c *Client) Idle() (*IdleCommand, error) {
 	return cmd, nil
 }
 
+func (c *Client) IdleWithInterval(restartInterval *time.Duration) (*IdleCommand, error) {
+	child, err := c.idle()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := &IdleCommand{
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
+	}
+	go cmd.runWithInterval(c, child, restartInterval)
+	return cmd, nil
+}
+
 // IdleCommand is an IDLE command.
 //
 // Initially, the IDLE command is running. The server may send unilateral
@@ -75,6 +89,41 @@ func (cmd *IdleCommand) run(c *Client, child *idleCommand) {
 		case <-c.decCh:
 			cmd.lastChild = child
 			return
+		case <-cmd.stop:
+			cmd.lastChild = child
+			return
+		}
+	}
+}
+
+func (cmd *IdleCommand) runWithInterval(c *Client, child *idleCommand, restartInterval *time.Duration) {
+	defer close(cmd.done)
+
+	timer := time.NewTimer(*restartInterval)
+	defer timer.Stop()
+
+	defer func() {
+		if child != nil {
+			if err := child.Close(); err != nil && cmd.err == nil {
+				cmd.err = err
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-timer.C:
+			timer.Reset(*restartInterval)
+
+			if cmd.err = child.Close(); cmd.err != nil {
+				return
+			}
+			if cmd.err = child.Wait(); cmd.err != nil {
+				return
+			}
+			if child, cmd.err = c.idle(); cmd.err != nil {
+				return
+			}
 		case <-cmd.stop:
 			cmd.lastChild = child
 			return
