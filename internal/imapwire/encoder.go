@@ -257,11 +257,26 @@ func (enc *Encoder) UID(uid imap.UID) *Encoder {
 // nil to be sent to the channel before writing the literal data. If an error
 // is sent to the channel, the literal will be cancelled.
 func (enc *Encoder) Literal(size int64, sync *ContinuationRequest) io.WriteCloser {
+	return enc.writeLiteral(size, false, sync)
+}
+
+// Literal8 writes a literal8 (RFC 3516): a literal prefixed with "~" that may
+// carry arbitrary binary data. It is only valid where the grammar allows it,
+// e.g. as APPEND data when the server advertises the BINARY capability.
+//
+// The semantics are otherwise identical to Literal.
+func (enc *Encoder) Literal8(size int64, sync *ContinuationRequest) io.WriteCloser {
+	return enc.writeLiteral(size, true, sync)
+}
+
+func (enc *Encoder) writeLiteral(size int64, binary bool, sync *ContinuationRequest) io.WriteCloser {
 	if sync != nil && enc.side == ConnSideServer {
 		panic("imapwire: sync must be nil on a server-side Encoder.Literal")
 	}
 
-	// TODO: literal8
+	if binary {
+		enc.writeString("~")
+	}
 	enc.writeString("{")
 	enc.Number64(size)
 	if sync == nil && enc.side == ConnSideClient {
