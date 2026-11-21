@@ -45,6 +45,11 @@ func readCapabilities(dec *imapwire.Decoder) (imap.CapSet, error) {
 		// https://github.com/emersion/go-imap/pull/652
 		for dec.SP() {
 		}
+		// Some IMAP servers send a trailing SP in a CAPABILITY resp-text-code:
+		// "[CAPABILITY IMAP4rev1 IDLE ]"
+		if dec.PeekSpecial(']') {
+			break
+		}
 
 		cap, err := internal.ExpectCap(dec)
 		if err != nil {
