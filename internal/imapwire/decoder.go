@@ -406,6 +406,46 @@ func (dec *Decoder) Quoted(ptr *string) bool {
 	return true
 }
 
+func (dec *Decoder) QuotedCompatDoubleQuote(ptr *string) bool {
+	if !dec.Special('"') {
+		return false
+	}
+	var sb strings.Builder
+	for {
+		ch, ok := dec.readByte()
+		if !ok {
+			return false
+		}
+
+		if ch == '"' {
+			if peekBytes, err := dec.r.Peek(2); err == nil {
+				allQuotes := true
+				for _, b := range peekBytes {
+					if b != '"' {
+						allQuotes = false
+						break
+					}
+				}
+				if allQuotes {
+					_, _ = dec.r.Discard(2)
+				}
+			}
+			break
+		}
+
+		if ch == '\\' {
+			ch, ok = dec.readByte()
+			if !ok {
+				return false
+			}
+		}
+
+		sb.WriteByte(ch)
+	}
+	*ptr = sb.String()
+	return true
+}
+
 func (dec *Decoder) ExpectAString(ptr *string) bool {
 	if dec.Quoted(ptr) {
 		return true
@@ -422,8 +462,16 @@ func (dec *Decoder) String(ptr *string) bool {
 	return dec.Quoted(ptr) || dec.Literal(ptr)
 }
 
+func (dec *Decoder) StringWithDoubleQuoteCompat(ptr *string) bool {
+	return dec.QuotedCompatDoubleQuote(ptr) || dec.Literal(ptr)
+}
+
 func (dec *Decoder) ExpectString(ptr *string) bool {
 	return dec.Expect(dec.String(ptr), "string")
+}
+
+func (dec *Decoder) ExpectStringWithDoubleQuoteCompat(ptr *string) bool {
+	return dec.Expect(dec.StringWithDoubleQuoteCompat(ptr), "string")
 }
 
 func (dec *Decoder) ExpectNString(ptr *string) bool {
@@ -436,6 +484,18 @@ func (dec *Decoder) ExpectNString(ptr *string) bool {
 		return true
 	}
 	return dec.ExpectString(ptr)
+}
+
+func (dec *Decoder) ExpectNStringWithDoubleQuoteCompat(ptr *string) bool {
+	var s string
+	if dec.Atom(&s) {
+		if !dec.Expect(s == "NIL", "nstring") {
+			return false
+		}
+		*ptr = ""
+		return true
+	}
+	return dec.ExpectStringWithDoubleQuoteCompat(ptr)
 }
 
 func (dec *Decoder) ExpectNStringReader() (lit *LiteralReader, nonSync, ok bool) {
