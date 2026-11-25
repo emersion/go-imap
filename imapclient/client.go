@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -160,6 +161,8 @@ type Client struct {
 	state        imap.ConnState
 	caps         imap.CapSet
 	enabled      imap.CapSet
+	rev2Only     bool
+	utf8Mailbox  atomic.Bool
 	pendingCapCh chan struct{}
 	mailbox      *SelectedMailbox
 	cmdTag       uint64
@@ -193,6 +196,7 @@ func New(conn net.Conn, options *Options) *Client {
 		state:      imap.ConnStateNone,
 		enabled:    make(imap.CapSet),
 	}
+	client.dec.UTF8Mailbox = client.utf8Mailbox.Load
 	go client.read()
 	return client
 }
@@ -373,7 +377,19 @@ func (c *Client) setCaps(caps imap.CapSet) {
 	c.mutex.Lock()
 	c.caps = caps
 	c.pendingCapCh = capCh
+	c.updateUTF8MailboxLocked()
 	c.mutex.Unlock()
+}
+
+// updateUTF8MailboxLocked recomputes whether mailbox names use UTF-8 instead
+// of modified UTF-7. That is the case once IMAP4rev2 or UTF8=ACCEPT has been
+// enabled (RFC 9051 section 6.1.1, RFC 6855 section 3), or when the server
+// only supports IMAP4rev2. The caller must hold c.mutex.
+func (c *Client) updateUTF8MailboxLocked() {
+	if c.caps != nil {
+		c.rev2Only = c.caps.Has(imap.CapIMAP4rev2) && !c.caps.Has(imap.CapIMAP4rev1)
+	}
+	c.utf8Mailbox.Store(c.rev2Only || c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept))
 }
 
 // Mailbox returns the state of the currently selected mailbox.
@@ -449,6 +465,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 
 	wireEnc := imapwire.NewEncoder(c.bw, imapwire.ConnSideClient)
 	wireEnc.QuotedUTF8 = quotedUTF8
+	wireEnc.UTF8Mailbox = c.utf8Mailbox.Load()
 	wireEnc.LiteralMinus = literalMinus
 	wireEnc.LiteralPlus = literalPlus
 	wireEnc.NewContinuationRequest = func() *imapwire.ContinuationRequest {
@@ -532,6 +549,7 @@ func (c *Client) completeCommand(cmd command, err error) {
 			c.state = imap.ConnStateNotAuthenticated
 			c.mailbox = nil
 			c.enabled = make(imap.CapSet)
+			c.updateUTF8MailboxLocked()
 			c.mutex.Unlock()
 		}
 	case *SelectCommand:

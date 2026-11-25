@@ -179,6 +179,7 @@ func (c *Conn) serve() {
 		dec := imapwire.NewDecoder(c.br, imapwire.ConnSideServer)
 		dec.MaxSize = maxCommandSize
 		dec.CheckBufferedLiteralFunc = c.checkBufferedLiteral
+		dec.UTF8Mailbox = c.utf8Mailbox
 
 		if c.state == imap.ConnStateLogout || dec.EOF() {
 			break
@@ -490,6 +491,16 @@ func (c *Conn) poll(cmd string) error {
 	return c.session.Poll(w, allowExpunge)
 }
 
+// utf8Mailbox reports whether mailbox names are exchanged as UTF-8 instead of
+// modified UTF-7: once IMAP4rev2 or UTF8=ACCEPT is enabled, or when the
+// server doesn't support IMAP4rev1.
+func (c *Conn) utf8Mailbox() bool {
+	c.mutex.Lock()
+	enabled := c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	c.mutex.Unlock()
+	return enabled || !c.server.options.caps().Has(imap.CapIMAP4rev1)
+}
+
 type responseEncoder struct {
 	*imapwire.Encoder
 	conn *Conn
@@ -502,6 +513,7 @@ func newResponseEncoder(conn *Conn) *responseEncoder {
 
 	wireEnc := imapwire.NewEncoder(conn.bw, imapwire.ConnSideServer)
 	wireEnc.QuotedUTF8 = quotedUTF8
+	wireEnc.UTF8Mailbox = conn.utf8Mailbox()
 
 	conn.encMutex.Lock() // released by responseEncoder.end
 	conn.setWriteTimeout(respWriteTimeout)

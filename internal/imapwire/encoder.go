@@ -21,6 +21,10 @@ type Encoder struct {
 	// QuotedUTF8 allows raw UTF-8 in quoted strings. This requires IMAP4rev2
 	// to be available, or UTF8=ACCEPT to be enabled.
 	QuotedUTF8 bool
+	// UTF8Mailbox sends mailbox names as raw UTF-8 instead of modified
+	// UTF-7. This is required once IMAP4rev2 or UTF8=ACCEPT is enabled, or
+	// when talking to an IMAP4rev2-only peer.
+	UTF8Mailbox bool
 	// LiteralMinus enables non-synchronizing literals for short payloads.
 	// This requires IMAP4rev2 or LITERAL-. This is only meaningful for
 	// clients.
@@ -153,9 +157,12 @@ func (enc *Encoder) Mailbox(name string) *Encoder {
 	if strings.EqualFold(name, "INBOX") {
 		return enc.Atom("INBOX")
 	} else {
-		if enc.QuotedUTF8 {
+		switch {
+		case enc.UTF8Mailbox:
+			// Sent as-is
+		case enc.QuotedUTF8:
 			name = utf7.Escape(name)
-		} else {
+		default:
 			name = utf7.Encode(name)
 		}
 		return enc.String(name)

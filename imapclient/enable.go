@@ -43,6 +43,7 @@ func (c *Client) handleEnabled() error {
 	for name := range caps {
 		c.enabled[name] = struct{}{}
 	}
+	c.updateUTF8MailboxLocked()
 	c.mutex.Unlock()
 
 	if cmd := findPendingCmdByType[*EnableCommand](c); cmd != nil {

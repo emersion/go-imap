@@ -234,6 +234,9 @@ func readListMailbox(dec *imapwire.Decoder) (string, error) {
 			return "", dec.Err()
 		}
 	}
+	if dec.UTF8Mailbox != nil && dec.UTF8Mailbox() {
+		return mailbox, nil
+	}
 	return utf7.Decode(mailbox)
 }
 
