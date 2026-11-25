@@ -29,8 +29,24 @@ func (c *Client) startTLS(config *tls.Config) error {
 		return err
 	}
 
-	// The decoder goroutine will invoke Client.upgradeStartTLS
-	<-upgradeDone
+	// The decoder goroutine will invoke Client.upgradeStartTLS. If it stops
+	// before upgrading (e.g. the server sends a malformed line end after the
+	// tagged OK, which completes the command before the CRLF check), decCh is
+	// closed instead: return the decoder error instead of blocking forever.
+	select {
+	case <-upgradeDone:
+	case <-c.decCh:
+		// The upgrade may have completed just before the decoder stopped.
+		// Prefer the successful path in that case.
+		select {
+		case <-upgradeDone:
+		default:
+			if c.decErr != nil {
+				return c.decErr
+			}
+			return io.ErrUnexpectedEOF
+		}
+	}
 
 	return cmd.tlsConn.Handshake()
 }
