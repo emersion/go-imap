@@ -130,16 +130,10 @@ func (cmd *GetQuotaRootCommand) Wait() ([]QuotaData, error) {
 }
 
 // QuotaData is the data returned by a QUOTA response.
-type QuotaData struct {
-	Root      string
-	Resources map[imap.QuotaResourceType]QuotaResourceData
-}
+type QuotaData = imap.QuotaData
 
 // QuotaResourceData contains the usage and limit for a quota resource.
-type QuotaResourceData struct {
-	Usage int64
-	Limit int64
-}
+type QuotaResourceData = imap.QuotaResourceData
 
 func readQuotaResponse(dec *imapwire.Decoder) (*QuotaData, error) {
 	var data QuotaData

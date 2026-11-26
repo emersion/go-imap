@@ -95,6 +95,13 @@ func (c *Conn) availableCaps() []imap.Cap {
 			imap.CapUnauthenticate,
 		})
 
+		if quotaSession, ok := c.session.(SessionQuota); ok {
+			caps = append(caps, imap.CapQuota)
+			for _, typ := range quotaSession.QuotaResourceTypes() {
+				caps = append(caps, imap.Cap("QUOTA=RES-"+string(typ)))
+			}
+		}
+
 		if appendLimitSession, ok := c.session.(SessionAppendLimit); ok {
 			limit := appendLimitSession.AppendLimit()
 			caps = append(caps, imap.Cap(fmt.Sprintf("APPENDLIMIT=%d", limit)))

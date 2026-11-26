@@ -86,6 +86,12 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 
 	memServer.AddUser(user)
 
+	return newMemServerConn(t, memServer.NewSession)
+}
+
+// newMemServerConn starts a server which creates sessions with newSession, and
+// connects to it.
+func newMemServerConn(t *testing.T, newSession func() imapserver.Session) (net.Conn, io.Closer) {
 	cert, err := tls.X509KeyPair([]byte(rsaCertPEM), []byte(rsaKeyPEM))
 	if err != nil {
 		t.Fatalf("tls.X509KeyPair() = %v", err)
@@ -93,7 +99,7 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 
 	server := imapserver.New(&imapserver.Options{
 		NewSession: func(conn *imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
-			return memServer.NewSession(), nil, nil
+			return newSession(), nil, nil
 		},
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{cert},

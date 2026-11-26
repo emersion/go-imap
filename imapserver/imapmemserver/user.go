@@ -12,12 +12,16 @@ import (
 
 const mailboxDelim rune = '/'
 
+// quotaRoot is the name of the quota root of a user.
+const quotaRoot = ""
+
 type User struct {
 	username, password string
 
 	mutex           sync.Mutex
 	mailboxes       map[string]*Mailbox
 	prevUidValidity uint32
+	quotaLimits     map[imap.QuotaResourceType]int64
 }
 
 func NewUser(username, password string) *User {
@@ -36,6 +40,52 @@ func (u *User) Login(username, password string) error {
 		return imapserver.ErrAuthFailed
 	}
 	return nil
+}
+
+// SetQuota sets the quota limits for the user. Only the STORAGE (in units of
+// 1024 octets) and MESSAGE resources are supported, others are ignored.
+// Resources missing from limits have no limit. If no supported resource has
+// a limit, the user has no quota root.
+func (u *User) SetQuota(limits map[imap.QuotaResourceType]int64) {
+	l := make(map[imap.QuotaResourceType]int64)
+	for typ, limit := range limits {
+		switch typ {
+		case imap.QuotaResourceStorage, imap.QuotaResourceMessage:
+			l[typ] = limit
+		}
+	}
+
+	u.mutex.Lock()
+	u.quotaLimits = l
+	u.mutex.Unlock()
+}
+
+// quotaLocked returns the user's quota root, or nil if the user has none.
+func (u *User) quotaLocked() *imap.QuotaData {
+	if len(u.quotaLimits) == 0 {
+		return nil
+	}
+
+	var size, num int64
+	for _, mbox := range u.mailboxes {
+		mbox.mutex.Lock()
+		size += mbox.sizeLocked()
+		num += int64(len(mbox.l))
+		mbox.mutex.Unlock()
+	}
+
+	usage := map[imap.QuotaResourceType]int64{
+		imap.QuotaResourceStorage: (size + 1023) / 1024,
+		imap.QuotaResourceMessage: num,
+	}
+	data := imap.QuotaData{
+		Root:      quotaRoot,
+		Resources: make(map[imap.QuotaResourceType]imap.QuotaResourceData),
+	}
+	for typ, limit := range u.quotaLimits {
+		data.Resources[typ] = imap.QuotaResourceData{Usage: usage[typ], Limit: limit}
+	}
+	return &data
 }
 
 func (u *User) mailboxLocked(name string) (*Mailbox, error) {
