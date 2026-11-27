@@ -25,6 +25,40 @@ func TestSelect(t *testing.T) {
 	}
 }
 
+// A server that offers IMAP4rev2 next to IMAP4rev1 behaves as IMAP4rev1 until
+// IMAP4rev2 is enabled, so a mailbox name goes out in modified UTF-7.
+func TestSelect_nonASCIIWithoutEnable(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	sent := make(chan string, 1)
+	go func() {
+		fmt.Fprint(serverConn, "* OK [CAPABILITY IMAP4rev1 IMAP4rev2] ready\r\n")
+		r := bufio.NewReader(serverConn)
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return
+		}
+		sent <- line
+		tag, _, _ := strings.Cut(line, " ")
+		fmt.Fprint(serverConn, "* 0 EXISTS\r\n")
+		fmt.Fprintf(serverConn, "%s OK [READ-WRITE] SELECT completed\r\n", tag)
+	}()
+
+	client := imapclient.New(clientConn, nil)
+	defer client.Close()
+
+	if !client.Caps().Has(imap.CapIMAP4rev2) {
+		t.Fatal("the greeting's capabilities were not read")
+	}
+	if _, err := client.Select("Entwürfe", nil).Wait(); err != nil {
+		t.Fatalf("Select() = %v", err)
+	}
+	if line := <-sent; !strings.Contains(line, `"Entw&APw-rfe"`) {
+		t.Errorf("sent %q, want the name in modified UTF-7", line)
+	}
+}
+
 // Gmail accepts keywords containing "]" and lists them in FLAGS and
 // PERMANENTFLAGS for every mailbox, so rejecting them fails every SELECT.
 func TestSelect_keywordWithBracket(t *testing.T) {

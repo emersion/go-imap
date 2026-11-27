@@ -417,6 +417,19 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// utf8Enabled reports whether the server takes UTF-8 in quoted strings and
+// mailbox names. A server that speaks both IMAP4rev1 and IMAP4rev2 behaves as
+// IMAP4rev1, with mailbox names in modified UTF-7, until the client enables
+// IMAP4rev2 or UTF8=ACCEPT.
+//
+// The caller must hold c.mutex.
+func (c *Client) utf8Enabled() bool {
+	if c.enabled.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept) {
+		return true
+	}
+	return c.caps.Has(imap.CapIMAP4rev2) && !c.caps.Has(imap.CapIMAP4rev1)
+}
+
 // beginCommand starts sending a command to the server.
 //
 // The command name and a space are written.
@@ -437,7 +450,7 @@ func (c *Client) beginCommand(name string, cmd command) *commandEncoder {
 	}
 
 	c.pendingCmds = append(c.pendingCmds, cmd)
-	quotedUTF8 := c.caps.Has(imap.CapIMAP4rev2) || c.enabled.Has(imap.CapUTF8Accept)
+	quotedUTF8 := c.utf8Enabled()
 	literalMinus := c.caps.Has(imap.CapLiteralMinus)
 	literalPlus := c.caps.Has(imap.CapLiteralPlus)
 
