@@ -82,14 +82,22 @@ func ExpectFlag(dec *imapwire.Decoder) (imap.Flag, error) {
 	if isSystem && dec.Special('*') {
 		return imap.FlagWildcard, nil // flag-perm
 	}
+	// A flag is an atom, which excludes "]", but servers such as Gmail accept
+	// keywords containing it and then list them in FLAGS and PERMANENTFLAGS.
+	// Every place a flag appears is inside a parenthesized list, so accepting
+	// "]" here cannot swallow the end of a response code.
 	var name string
-	if !dec.ExpectAtom(&name) {
+	if !dec.Expect(dec.Func(&name, isFlagChar), "flag") {
 		return "", fmt.Errorf("in flag: %w", dec.Err())
 	}
 	if isSystem {
 		name = "\\" + name
 	}
 	return canonicalFlag(name), nil
+}
+
+func isFlagChar(ch byte) bool {
+	return imapwire.IsAtomChar(ch) || ch == ']'
 }
 
 func ExpectMailboxAttrList(dec *imapwire.Decoder) ([]imap.MailboxAttr, error) {
