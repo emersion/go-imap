@@ -22,12 +22,16 @@ type message struct {
 	t   time.Time
 
 	// mutable, protected by Mailbox.mutex
-	flags map[imap.Flag]struct{}
+	flags  map[imap.Flag]struct{}
+	modSeq uint64
 }
 
 func (msg *message) fetch(w *imapserver.FetchResponseWriter, options *imap.FetchOptions) error {
 	w.WriteUID(msg.uid)
 
+	if options.ModSeq {
+		w.WriteModSeq(msg.modSeq)
+	}
 	if options.Flags {
 		w.WriteFlags(msg.flagList())
 	}
@@ -131,6 +135,9 @@ func (msg *message) search(seqNum uint32, criteria *imap.SearchCriteria) bool {
 		if !uidSet.Contains(msg.uid) {
 			return false
 		}
+	}
+	if criteria.ModSeq != nil && msg.modSeq < criteria.ModSeq.ModSeq {
+		return false
 	}
 	if !matchDate(msg.t, criteria.Since, criteria.Before) {
 		return false
