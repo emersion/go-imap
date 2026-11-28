@@ -13,7 +13,23 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		numSet imap.NumSet
 		item   string
 	)
-	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) || !dec.ExpectSP() || !dec.ExpectAtom(&item) || !dec.ExpectSP() {
+	if !dec.ExpectSP() || !dec.ExpectNumSet(numKind.wire(), &numSet) {
+		return dec.Err()
+	}
+
+	if !dec.ExpectSP() {
+		return dec.Err()
+	}
+
+	// RFC 4466:
+	//    store           = "STORE" SP sequence-set [store-modifiers]
+	//                     SP store-att-flags
+	options, err := readStoreOptions(dec)
+	if err != nil {
+		return err
+	}
+
+	if !dec.ExpectAtom(&item) || !dec.ExpectSP() {
 		return dec.Err()
 	}
 	var flags []imap.Flag
@@ -69,10 +85,44 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c}
-	options := imap.StoreOptions{}
 	return c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,
 	}, &options)
+}
+
+func readStoreOptions(dec *imapwire.Decoder) (imap.StoreOptions, error) {
+	options := imap.StoreOptions{}
+	hasList, err := dec.List(func() error {
+		// store-modifier  = store-modifier-name [SP store-modif-params]
+		// store-modif-params = tagged-ext-val
+		// store-modifier-name = tagged-ext-label
+
+		var modifierName string
+		if !dec.ExpectAtom(&modifierName) {
+			return dec.Err()
+		}
+
+		switch strings.ToUpper(modifierName) {
+		case "UNCHANGEDSINCE":
+			if !dec.ExpectSP() {
+				return dec.Err()
+			}
+			if !dec.ExpectModSeq(&options.UnchangedSince) {
+				return dec.Err()
+			}
+			return nil
+		default:
+			return newClientBugError("Unknown STORE modifier: " + modifierName)
+		}
+	})
+	if !hasList || err != nil {
+		return options, err
+	}
+
+	if !dec.ExpectSP() {
+		return imap.StoreOptions{}, dec.Err()
+	}
+	return options, nil
 }
