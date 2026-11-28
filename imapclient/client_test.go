@@ -102,6 +102,7 @@ func newMemClientServerPair(t *testing.T) (net.Conn, io.Closer) {
 		Caps: imap.CapSet{
 			imap.CapIMAP4rev1: {},
 			imap.CapIMAP4rev2: {},
+			imap.CapCondStore: {},
 		},
 	})
 
