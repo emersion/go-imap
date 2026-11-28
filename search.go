@@ -14,6 +14,8 @@ type SearchOptions struct {
 	ReturnCount bool
 	// Requires IMAP4rev2 or SEARCHRES
 	ReturnSave bool
+	// Requires CONDSTORE
+	ReturnModSeq bool
 }
 
 // SearchCriteria is a criteria for the SEARCH command.
@@ -87,6 +89,23 @@ func (criteria *SearchCriteria) And(other *SearchCriteria) {
 
 	criteria.Not = append(criteria.Not, other.Not...)
 	criteria.Or = append(criteria.Or, other.Or...)
+}
+
+func (criteria *SearchCriteria) HasModSeq() bool {
+	if criteria.ModSeq != nil {
+		return true
+	}
+	for _, not := range criteria.Not {
+		if not.HasModSeq() {
+			return true
+		}
+	}
+	for _, or := range criteria.Or {
+		if or[0].HasModSeq() || or[1].HasModSeq() {
+			return true
+		}
+	}
+	return false
 }
 
 func intersectSince(t1, t2 time.Time) time.Time {

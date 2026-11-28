@@ -80,6 +80,10 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 		options.ReturnAll = true
 	}
 
+	if criteria.HasModSeq() {
+		options.ReturnModSeq = true
+	}
+
 	data, err := c.session.Search(numKind, &criteria, &options)
 	if err != nil {
 		return err
@@ -88,7 +92,7 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 	if c.enabled.Has(imap.CapIMAP4rev2) || extended {
 		return c.writeESearch(tag, data, &options, numKind)
 	} else {
-		return c.writeSearch(data.All)
+		return c.writeSearch(data.All, data.ModSeq)
 	}
 }
 
@@ -117,6 +121,9 @@ func (c *Conn) writeESearch(tag string, data *imap.SearchData, options *imap.Sea
 	if options.ReturnCount {
 		enc.SP().Atom("COUNT").SP().Number(data.Count)
 	}
+	if data.ModSeq != 0 {
+		enc.SP().Atom("MODSEQ").SP().ModSeq(data.ModSeq)
+	}
 	return enc.CRLF()
 }
 
@@ -131,9 +138,11 @@ func isNumSetEmpty(numSet imap.NumSet) bool {
 	}
 }
 
-func (c *Conn) writeSearch(numSet imap.NumSet) error {
+func (c *Conn) writeSearch(numSet imap.NumSet, modSeq uint64) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
+
+	hasMatches := true
 
 	enc.Atom("*").SP().Atom("SEARCH")
 	var ok bool
@@ -142,18 +151,27 @@ func (c *Conn) writeSearch(numSet imap.NumSet) error {
 		var nums []uint32
 		nums, ok = numSet.Nums()
 		for _, num := range nums {
+			hasMatches = true
 			enc.SP().Number(num)
 		}
 	case imap.UIDSet:
 		var uids []imap.UID
 		uids, ok = numSet.Nums()
 		for _, uid := range uids {
+			hasMatches = true
 			enc.SP().UID(uid)
 		}
 	}
 	if !ok {
 		return fmt.Errorf("imapserver: failed to enumerate message numbers in SEARCH response")
 	}
+
+	// * SEARCH 2 5 6 7 11 12 18 19 20 23 (MODSEQ 917162500)
+	// MODSEQ without matching messages is not allowed by syntax.
+	if hasMatches && modSeq != 0 {
+		enc.Special('(').Atom("MODSEQ").SP().ModSeq(modSeq).Special(')')
+	}
+
 	return enc.CRLF()
 }
 
@@ -211,6 +229,29 @@ func readSearchKeyWithAtom(criteria *imap.SearchCriteria, dec *imapwire.Decoder,
 			return dec.Err()
 		}
 		criteria.UID = append(criteria.UID, uidSet)
+	case "MODSEQ":
+		// MODSEQ [<entry-name> <entry-type-req>] <mod-sequence-valzer>
+		modSeq := &imap.SearchCriteriaModSeq{}
+		if !dec.ExpectSP() {
+			return dec.Err()
+		}
+
+		if !dec.ModSeq(&modSeq.ModSeq) {
+			// DQUOTE "/flags/" attr-flag DQUOTE
+			if !dec.ExpectQuoted(&modSeq.MetadataName) {
+				return dec.Err()
+			}
+			// "priv" / "shared"
+			// Quoted because literals/atoms are not allowed here (same as above).
+			if !dec.ExpectQuoted((*string)(&modSeq.MetadataType)) {
+				return dec.Err()
+			}
+			if !dec.ExpectModSeq(&modSeq.ModSeq) {
+				return dec.Err()
+			}
+		}
+
+		criteria.ModSeq = modSeq
 	case "ANSWERED", "DELETED", "DRAFT", "FLAGGED", "RECENT", "SEEN":
 		criteria.Flag = append(criteria.Flag, searchKeyFlag(key))
 	case "UNANSWERED", "UNDELETED", "UNDRAFT", "UNFLAGGED", "UNSEEN":
