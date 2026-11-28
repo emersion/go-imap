@@ -612,11 +612,14 @@ func (w *UpdateWriter) WriteMailboxFlags(flags []imap.Flag) error {
 }
 
 // WriteMessageFlags writes a FETCH response with FLAGS.
-func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag) error {
+func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag, modSeq uint64) error {
 	fetchWriter := &FetchWriter{conn: w.conn}
 	respWriter := fetchWriter.CreateMessage(seqNum)
 	if uid != 0 {
 		respWriter.WriteUID(uid)
+	}
+	if modSeq != 0 && w.conn.EnabledCaps().Has(imap.CapCondStore) {
+		respWriter.WriteModSeq(modSeq)
 	}
 	respWriter.WriteFlags(flags)
 	return respWriter.Close()
