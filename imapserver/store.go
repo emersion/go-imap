@@ -84,6 +84,10 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 		return err
 	}
 
+	if options.UnchangedSince != 0 {
+		c.enable(imap.CapCondStore)
+	}
+
 	w := &FetchWriter{conn: c}
 	return c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,

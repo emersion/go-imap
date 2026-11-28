@@ -42,6 +42,12 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
+	if c.EnabledCaps().Has(imap.CapCondStore) {
+		options.CondStore = true
+	} else if options.CondStore {
+		c.enable(imap.CapCondStore)
+	}
+
 	data, err := c.session.Select(mailbox, &options)
 	if err != nil {
 		return err

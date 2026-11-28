@@ -82,7 +82,10 @@ func (c *Conn) handleSearch(tag string, dec *imapwire.Decoder, numKind NumKind) 
 
 	if criteria.HasModSeq() {
 		options.ReturnModSeq = true
+		c.enable(imap.CapCondStore)
 	}
+	// CONDSTORE-enabled session unlike FETCH does not force MODSEQ return item
+	// for all SEARCH commands.
 
 	data, err := c.session.Search(numKind, &criteria, &options)
 	if err != nil {

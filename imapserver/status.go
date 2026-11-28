@@ -40,6 +40,10 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	if options.HighestModSeq {
+		c.enable(imap.CapCondStore)
+	}
+
 	data, err := c.session.Status(mailbox, &options)
 	if err != nil {
 		return err
