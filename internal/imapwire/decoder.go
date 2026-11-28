@@ -406,6 +406,10 @@ func (dec *Decoder) Quoted(ptr *string) bool {
 	return true
 }
 
+func (dec *Decoder) ExpectQuoted(ptr *string) bool {
+	return dec.Expect(dec.Quoted(ptr), "quoted")
+}
+
 func (dec *Decoder) ExpectAString(ptr *string) bool {
 	if dec.Quoted(ptr) {
 		return true

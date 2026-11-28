@@ -49,6 +49,9 @@ const (
 
 	// APPENDLIMIT
 	ResponseCodeTooBig ResponseCode = "TOOBIG"
+
+	// CONDSTORE (RFC 7162)
+	ResponseCodeModified ResponseCode = "MODIFIED"
 )
 
 // StatusResponse is a generic status response.

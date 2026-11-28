@@ -38,6 +38,60 @@ func TestFetch(t *testing.T) {
 	}
 }
 
+func TestFetchChangedSince(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
+	defer client.Close()
+	defer server.Close()
+
+	if !client.Caps().Has(imap.CapCondStore) {
+		t.Skip("CONDSTORE not supported")
+	}
+
+	// SELECT manually to get HIGHESTMODSEQ.
+	selectData, err := client.Select("INBOX", &imap.SelectOptions{
+		CondStore: true,
+	}).Wait()
+	if err != nil {
+		t.Fatalf("failed to select data: %v", err)
+	}
+	highestModSeq := selectData.HighestModSeq
+	if highestModSeq == 0 {
+		t.Fatalf("highestModSeq = %v, no CONDSTORE support", highestModSeq)
+	}
+
+	// CHANGEDSINCE=HIGHESTMODSEQ will yield empty FETCH.
+	seqSet := imap.SeqSetNum(1)
+	fetchOptions := &imap.FetchOptions{
+		UID:          true,
+		ChangedSince: highestModSeq,
+	}
+	messages, err := client.Fetch(seqSet, fetchOptions).Collect()
+	if err != nil {
+		t.Fatalf("failed to fetch: %v", err)
+	}
+	if len(messages) != 0 {
+		t.Fatalf("len(messages) = %v, want 0", len(messages))
+	}
+
+	// Do STORE to advance MODSEQ.
+	_, err = client.Store(seqSet, &imap.StoreFlags{
+		Op:    imap.StoreFlagsAdd,
+		Flags: []imap.Flag{imap.FlagAnswered},
+	}, nil).Collect()
+	if err != nil {
+		t.Fatalf("failed to store: %v", err)
+	}
+
+	// Now CHANGEDSINCE will include changed message.
+	messages, err = client.Fetch(seqSet, fetchOptions).Collect()
+	if err != nil {
+		t.Fatalf("failed to fetch: %v", err)
+	}
+	if len(messages) != 1 {
+		t.Fatalf("len(messages) = %v, want 1", len(messages))
+	}
+}
+
 func TestFetchPartialOffsetEcho(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateSelected)
 	defer client.Close()

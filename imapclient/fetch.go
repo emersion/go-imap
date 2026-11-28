@@ -617,21 +617,30 @@ func (c *Client) handleFetch(seqNum uint32) error {
 		}
 
 		cmd := c.findPendingCmdFunc(func(anyCmd command) bool {
-			cmd, ok := anyCmd.(*FetchCommand)
-			if !ok {
+			var fetchCmd *FetchCommand
+			switch cmd := anyCmd.(type) {
+			case *FetchCommand:
+				fetchCmd = cmd
+			case *StoreCommand:
+				fetchCmd = &cmd.FetchCommand
+			default:
 				return false
 			}
 
 			// Skip if we haven't requested or already handled this message
-			if _, ok := cmd.numSet.(imap.UIDSet); ok {
-				return uid != 0 && cmd.recvUID(uid)
+			if _, ok := fetchCmd.numSet.(imap.UIDSet); ok {
+				return uid != 0 && fetchCmd.recvUID(uid)
 			} else {
-				return seqNum != 0 && cmd.recvSeqNum(seqNum)
+				return seqNum != 0 && fetchCmd.recvSeqNum(seqNum)
 			}
 		})
 		if cmd != nil {
-			cmd := cmd.(*FetchCommand)
-			cmd.msgs <- msg
+			switch cmd := cmd.(type) {
+			case *FetchCommand:
+				cmd.msgs <- msg
+			case *StoreCommand:
+				cmd.msgs <- msg
+			}
 		} else if handler := c.options.unilateralDataHandler().Fetch; handler != nil {
 			go handler(msg)
 		} else {

@@ -273,7 +273,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "UID EXPUNGE":
 		err = c.handleUIDExpunge(dec)
 	case "STORE", "UID STORE":
-		err = c.handleStore(dec, numKind)
+		err = c.handleStore(tag, dec, numKind)
+		sendOK = false
 	case "COPY", "UID COPY":
 		err = c.handleCopy(tag, dec, numKind)
 		sendOK = false
@@ -612,11 +613,14 @@ func (w *UpdateWriter) WriteMailboxFlags(flags []imap.Flag) error {
 }
 
 // WriteMessageFlags writes a FETCH response with FLAGS.
-func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag) error {
+func (w *UpdateWriter) WriteMessageFlags(seqNum uint32, uid imap.UID, flags []imap.Flag, modSeq uint64) error {
 	fetchWriter := &FetchWriter{conn: w.conn}
 	respWriter := fetchWriter.CreateMessage(seqNum)
 	if uid != 0 {
 		respWriter.WriteUID(uid)
+	}
+	if modSeq != 0 && w.conn.EnabledCaps().Has(imap.CapCondStore) {
+		respWriter.WriteModSeq(modSeq)
 	}
 	respWriter.WriteFlags(flags)
 	return respWriter.Close()

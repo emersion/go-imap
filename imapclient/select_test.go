@@ -34,6 +34,54 @@ func TestSelectReadOnly(t *testing.T) {
 	}
 }
 
+func TestSelectCondStore(t *testing.T) {
+	client, server := newClientServerPair(t, imap.ConnStateAuthenticated)
+	defer client.Close()
+	defer server.Close()
+
+	if !client.Caps().Has(imap.CapCondStore) {
+		t.Skip("CONDSTORE not supported")
+	}
+
+	data, err := client.Select("INBOX", &imap.SelectOptions{
+		CondStore: true,
+	}).Wait()
+	if err != nil {
+		t.Fatalf("Select() = %v", err)
+	}
+	if data.HighestModSeq == 0 {
+		t.Fatalf("No HIGHESTMODSEQ returned")
+	}
+
+	// Do STORE to advance HIGHESTMODSEQ.
+	storeFlags := imap.StoreFlags{
+		Op:    imap.StoreFlagsAdd,
+		Flags: []imap.Flag{imap.FlagDeleted},
+	}
+	msgs, err := client.Store(imap.SeqSetNum(1), &storeFlags, &imap.StoreOptions{
+		UnchangedSince: data.HighestModSeq,
+	}).Collect()
+	if err != nil {
+		t.Fatalf("Store().Collect() = %v", err)
+	} else if len(msgs) != 1 {
+		t.Fatalf("len(msgs) = %v, want %v", len(msgs), 1)
+	}
+
+	if err := client.Unselect().Wait(); err != nil {
+		t.Fatalf("Unselect() = %v", err)
+	}
+
+	data2, err := client.Select("INBOX", &imap.SelectOptions{
+		CondStore: true,
+	}).Wait()
+	if err != nil {
+		t.Fatalf("Select() = %v", err)
+	}
+	if data2.HighestModSeq <= data.HighestModSeq {
+		t.Errorf("HIGHESTMODSEQ should increase after STORE")
+	}
+}
+
 func TestUnselectAndExpungeReadOnly(t *testing.T) {
 	client, server := newClientServerPair(t, imap.ConnStateSelected)
 	defer client.Close()

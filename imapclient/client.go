@@ -560,6 +560,8 @@ func (c *Client) completeCommand(cmd command, err error) {
 			cmd.mailboxes <- cmd.pendingData
 		}
 		close(cmd.mailboxes)
+	case *StoreCommand:
+		close(cmd.msgs)
 	case *FetchCommand:
 		close(cmd.msgs)
 	case *ExpungeCommand:
@@ -775,6 +777,21 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 				cmd.data.UIDValidity = uidValidity
 				cmd.data.SourceUIDs = srcUIDs
 				cmd.data.DestUIDs = dstUIDs
+			}
+		case "MODIFIED":
+			if !c.dec.ExpectSP() {
+				return nil, c.dec.Err()
+			}
+
+			switch cmd := cmd.(type) {
+			case *StoreCommand:
+				data := &imap.StoreData{}
+
+				if !c.dec.ExpectNumSet(imapwire.NumSetKind(cmd.numSet), &data.Modified) {
+					return nil, c.dec.Err()
+				}
+
+				cmd.data = data
 			}
 		default: // [SP 1*<any TEXT-CHAR except "]">]
 			if c.dec.SP() {

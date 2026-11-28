@@ -2,6 +2,7 @@ package imapserver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/internal/imapwire"
@@ -9,7 +10,16 @@ import (
 
 func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) error {
 	var mailbox string
-	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) || !dec.ExpectCRLF() {
+	if !dec.ExpectSP() || !dec.ExpectMailbox(&mailbox) {
+		return dec.Err()
+	}
+
+	options, err := readSelectOptions(dec, readOnly)
+	if err != nil {
+		return err
+	}
+
+	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
 
@@ -32,7 +42,12 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 		}
 	}
 
-	options := imap.SelectOptions{ReadOnly: readOnly}
+	if c.EnabledCaps().Has(imap.CapCondStore) {
+		options.CondStore = true
+	} else if options.CondStore {
+		c.enable(imap.CapCondStore)
+	}
+
 	data, err := c.session.Select(mailbox, &options)
 	if err != nil {
 		return err
@@ -62,6 +77,15 @@ func (c *Conn) handleSelect(tag string, dec *imapwire.Decoder, readOnly bool) er
 	}
 	if err := c.writePermanentFlags(data.PermanentFlags); err != nil {
 		return err
+	}
+	if data.NoModSeq {
+		if err := c.writeNoModSeq(); err != nil {
+			return err
+		}
+	} else if data.HighestModSeq != 0 {
+		if err := c.writeHighestModSeq(data.HighestModSeq); err != nil {
+			return err
+		}
 	}
 	if data.List != nil {
 		if err := c.writeList(data.List); err != nil {
@@ -167,6 +191,26 @@ func (c *Conn) writeFlags(flags []imap.Flag) error {
 	return enc.CRLF()
 }
 
+func (c *Conn) writeNoModSeq() error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("NOMODSEQ")
+	enc.SP().Text("No mod sequence support for this mailbox")
+	return enc.CRLF()
+}
+
+func (c *Conn) writeHighestModSeq(modSeq uint64) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom("*").SP().Atom("OK").SP()
+	enc.Special('[').Atom("HIGHESTMODSEQ").SP().ModSeq(modSeq).Special(']')
+	enc.SP().Text("Highest mod sequence number")
+	return enc.CRLF()
+}
+
 func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 	enc := newResponseEncoder(c)
 	defer enc.end()
@@ -176,4 +220,42 @@ func (c *Conn) writePermanentFlags(flags []imap.Flag) error {
 	}).Special(']')
 	enc.SP().Text("Permanent flags")
 	return enc.CRLF()
+}
+
+func readSelectOptions(dec *imapwire.Decoder, readOnly bool) (imap.SelectOptions, error) {
+	options := imap.SelectOptions{ReadOnly: readOnly}
+
+	if !dec.SP() {
+		return options, nil
+	}
+
+	err := dec.ExpectList(func() error {
+		/*
+			RFC 4466:
+			   select-params   = SP "(" select-param *(SP select-param) ")"
+			   select-param    = select-param-name [SP select-param-value]
+			   select-param-name= tagged-ext-label
+			   select-param-value= tagged-ext-val
+			   tagged-ext-label    = tagged-label-fchar *tagged-label-char
+			                        ;; Is a valid RFC 3501 "atom".
+		*/
+
+		var paramName string
+		if !dec.ExpectAtom(&paramName) {
+			return dec.Err()
+		}
+
+		switch strings.ToUpper(paramName) {
+		case "CONDSTORE":
+			options.CondStore = true
+			return nil
+		default:
+			return newClientBugError("Unknown SELECT parameter: " + paramName)
+		}
+	})
+	if err != nil {
+		return options, err
+	}
+
+	return options, nil
 }

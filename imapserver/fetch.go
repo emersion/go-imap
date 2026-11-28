@@ -75,6 +75,25 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		}
 	}
 
+	/*
+	   fetch           = "FETCH" SP sequence-set SP ("ALL" / "FULL" /
+	                     "FAST" / fetch-att /
+	                     "(" fetch-att *(SP fetch-att) ")")
+	                     [fetch-modifiers]
+	*/
+	if dec.SP() {
+		err = dec.ExpectList(func() error {
+			name, err := readFetchModifierName(dec)
+			if err != nil {
+				return err
+			}
+			return handleFetchModifier(dec, name, &options)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	if !dec.ExpectCRLF() {
 		return dec.Err()
 	}
@@ -87,11 +106,42 @@ func (c *Conn) handleFetch(dec *imapwire.Decoder, numKind NumKind) error {
 		options.UID = true
 	}
 
+	if options.ModSeq || options.ChangedSince != 0 {
+		c.enable(imap.CapCondStore)
+		options.ModSeq = true
+	}
+
 	w := &FetchWriter{conn: c, options: writerOptions}
 	if err := c.session.Fetch(w, numSet, &options); err != nil {
 		return err
 	}
 	return nil
+}
+
+func readFetchModifierName(dec *imapwire.Decoder) (string, error) {
+	var name string
+	if !dec.ExpectAtom(&name) {
+		return "", dec.Err()
+	}
+	return strings.ToUpper(name), nil
+}
+
+func handleFetchModifier(dec *imapwire.Decoder, optName string, options *imap.FetchOptions) error {
+	switch optName {
+	case "CHANGEDSINCE":
+		if !dec.ExpectSP() {
+			return dec.Err()
+		}
+		modSeq := uint64(0)
+		if !dec.ExpectModSeq(&modSeq) {
+			return newClientBugError("expected a mod-sequence-value after CHANGEDSINCE")
+		}
+		options.ChangedSince = modSeq
+		options.ModSeq = true
+		return nil
+	default:
+		return newClientBugError("unknown FETCH option" + optName)
+	}
 }
 
 func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOptions, writerOptions *fetchWriterOptions) error {
@@ -108,6 +158,8 @@ func handleFetchAtt(dec *imapwire.Decoder, attName string, options *imap.FetchOp
 		options.RFC822Size = true
 	case "UID":
 		options.UID = true
+	case "MODSEQ":
+		options.ModSeq = true
 	case "RFC822": // equivalent to BODY[]
 		bs := &imap.FetchItemBodySection{}
 		writerOptions.obsolete[bs] = attName
@@ -356,6 +408,12 @@ func (w *FetchResponseWriter) writeItemSep() {
 func (w *FetchResponseWriter) WriteUID(uid imap.UID) {
 	w.writeItemSep()
 	w.enc.Atom("UID").SP().UID(uid)
+}
+
+// WriteModSeq writes the message's mod sequence value.
+func (w *FetchResponseWriter) WriteModSeq(modSeq uint64) {
+	w.writeItemSep()
+	w.enc.Atom("MODSEQ").SP().Special('(').ModSeq(modSeq).Special(')')
 }
 
 // WriteFlags writes the message's flags.

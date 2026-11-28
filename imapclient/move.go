@@ -44,7 +44,7 @@ type MoveCommand struct {
 	data MoveData
 
 	// Fallback
-	store   *FetchCommand
+	store   *StoreCommand
 	expunge *ExpungeCommand
 }
 

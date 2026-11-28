@@ -40,6 +40,10 @@ func (c *Conn) handleStatus(dec *imapwire.Decoder) error {
 		return err
 	}
 
+	if options.HighestModSeq {
+		c.enable(imap.CapCondStore)
+	}
+
 	data, err := c.session.Status(mailbox, &options)
 	if err != nil {
 		return err
@@ -86,6 +90,9 @@ func (c *Conn) writeStatus(data *imap.StatusData, options *imap.StatusOptions) e
 	if options.NumRecent {
 		listEnc.Item().Atom("RECENT").SP().Number(*data.NumRecent)
 	}
+	if options.HighestModSeq {
+		listEnc.Item().Atom("HIGHESTMODSEQ").SP().ModSeq(data.HighestModSeq)
+	}
 	listEnc.End()
 
 	return enc.CRLF()
@@ -115,6 +122,8 @@ func readStatusItem(dec *imapwire.Decoder, options *imap.StatusOptions) error {
 		options.DeletedStorage = true
 	case "RECENT":
 		options.NumRecent = true
+	case "HIGHESTMODSEQ":
+		options.HighestModSeq = true
 	default:
 		return &imap.Error{
 			Type: imap.StatusResponseTypeBad,
