@@ -76,7 +76,7 @@ type Session interface {
 	Expunge(w *ExpungeWriter, uids *imap.UIDSet) error
 	Search(kind NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error)
 	Fetch(w *FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error
-	Store(w *FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error
+	Store(w *FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) (*imap.StoreData, error)
 	Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error)
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/emersion/go-imap/v2/internal/imapwire"
 )
 
-func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
+func (c *Conn) handleStore(tag string, dec *imapwire.Decoder, numKind NumKind) error {
 	var (
 		numSet imap.NumSet
 		item   string
@@ -89,11 +89,30 @@ func (c *Conn) handleStore(dec *imapwire.Decoder, numKind NumKind) error {
 	}
 
 	w := &FetchWriter{conn: c}
-	return c.session.Store(w, numSet, &imap.StoreFlags{
+	data, err := c.session.Store(w, numSet, &imap.StoreFlags{
 		Op:     op,
 		Silent: silent,
 		Flags:  flags,
 	}, &options)
+	if err != nil {
+		return err
+	}
+
+	return c.writeStoreOK(tag, data)
+}
+
+func (c *Conn) writeStoreOK(tag string, data *imap.StoreData) error {
+	enc := newResponseEncoder(c)
+	defer enc.end()
+
+	enc.Atom(tag).SP().Atom("OK").SP()
+	if data != nil && data.Modified != nil && !isNumSetEmpty(data.Modified) && c.enabled.Has(imap.CapCondStore) {
+		enc.Special('[')
+		enc.Atom("MODIFIED").SP().NumSet(data.Modified)
+		enc.Special(']').SP()
+	}
+	enc.Text("STORE completed")
+	return enc.CRLF()
 }
 
 func readStoreOptions(dec *imapwire.Decoder) (imap.StoreOptions, error) {

@@ -273,7 +273,8 @@ func (c *Conn) readCommand(dec *imapwire.Decoder) error {
 	case "UID EXPUNGE":
 		err = c.handleUIDExpunge(dec)
 	case "STORE", "UID STORE":
-		err = c.handleStore(dec, numKind)
+		err = c.handleStore(tag, dec, numKind)
+		sendOK = false
 	case "COPY", "UID COPY":
 		err = c.handleCopy(tag, dec, numKind)
 		sendOK = false
