@@ -1,6 +1,7 @@
 package imapclient_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/emersion/go-imap/v2"
@@ -65,9 +66,10 @@ func TestStoreUnchangedSince(t *testing.T) {
 		Op:    imap.StoreFlagsAdd,
 		Flags: []imap.Flag{imap.FlagDeleted},
 	}
-	msgs, err := client.Store(seqSet, &storeFlags, &imap.StoreOptions{
+	cmd := client.Store(seqSet, &storeFlags, &imap.StoreOptions{
 		UnchangedSince: originalModSeq,
-	}).Collect()
+	})
+	msgs, err := cmd.Collect()
 	if err != nil {
 		t.Fatalf("Store().Collect() = %v", err)
 	} else if len(msgs) != 1 {
@@ -81,21 +83,35 @@ func TestStoreUnchangedSince(t *testing.T) {
 	if newModSeq == originalModSeq {
 		t.Errorf("modseq is not advanced, msg.ModSeq = %v, want %v", msg.ModSeq, originalModSeq)
 	}
+	data := cmd.Data()
+	if data != nil && data.Modified != nil {
+		t.Errorf("data.Modified = %v, want nil", data.Modified)
+	}
 
 	// Second STORE with UNCHANGEDSINCE=1 will skip message.
 	storeFlags = imap.StoreFlags{
 		Op:    imap.StoreFlagsAdd,
 		Flags: []imap.Flag{imap.FlagDeleted},
 	}
-	msgs, err = client.Store(seqSet, &storeFlags, &imap.StoreOptions{
+	cmd = client.Store(seqSet, &storeFlags, &imap.StoreOptions{
 		UnchangedSince: originalModSeq,
-	}).Collect()
+	})
+	msgs, err = cmd.Collect()
 	if err != nil {
 		t.Fatalf("Store().Collect() = %v", err)
 	} else if len(msgs) != 0 {
 		t.Fatalf("len(msgs) = %v, want %v", len(msgs), 0)
 	}
-
-	// TODO: Store should return OK [MODIFIED 1] here but we don't produce (server)
-	// or parse (client) it yet.
+	data = cmd.Data()
+	if data == nil {
+		t.Fatalf("cmd.Data() = %v, want non-nil", data)
+	}
+	modifiedSeq, ok := data.Modified.(imap.SeqSet)
+	if !ok {
+		t.Fatalf("data.Modified = %v, want imap.SeqSet", data)
+	}
+	modifiedNums, _ := modifiedSeq.Nums()
+	if !reflect.DeepEqual(modifiedNums, []uint32{1}) {
+		t.Errorf("modifiedSeq.Nums() = %v, want %v", modifiedNums, []uint32{1})
+	}
 }
